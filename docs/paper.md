@@ -26,7 +26,9 @@
 - **Tied weights:** $W = E$ (в Qwen3.5 выполнено: `_tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"}`)
 - **Общий словарь:** обе модели используют один токенизатор
 - **Текстовый вход:** без изображений/видео (только `Qwen3_5ForCausalLM`)
-- **Один GPU:** без модельного параллелизма
+- **CPU:** Intel Iris Xe / SYCL, 64GB RAM. `torch.set_num_threads(4)`. float32 вместо float16 (fp16 на CPU слишком медленный).
+- **Qwen3.5-0.8B API:** `model.model` — это `Qwen3_5TextModel` (нет `language_model`). Для Qwen3.5-4B/8B: `model.model.language_model`.
+- **Модель:** Qwen3.5-4B (32 слоя, $D=2560$) вместо 8B для экспериментов
 
 ---
 
@@ -63,7 +65,23 @@ $$J_l^{(t)}\big|_{\mathcal{U}} \in \mathbb{R}^{|\mathcal{U}| \times D}$$
 
 > **⚠️ ГИПОТЕЗА H3.** Проекция через $E_L^T \cdot E_S$ сохраняет семантический смысл для моделей одного семейства. Не доказано. Проверяется Экспериментом 3 (абляция со случайной матрицей).
 
-### 1.4. Empirical Sensitivity Gramian (ESG)
+### 1.4. Коррекция через псевдообратную Грамианову матрицу
+
+**Проблема.** Для реальных эмбеддингов $E^T \cdot E \neq I$ (неортогональность). Это значит, что при $J_L = J_S$ и $E_L = E_S$ (одна и та же модель) лосс не равен нулю — проектция $J \cdot E^T \cdot E$ вращает векторы.
+
+**Решение.** Вместо $J_L \cdot E_L^T$ использовать:
+
+$$\tilde{J}_L = J_L \cdot E_L^T \cdot E_L \cdot G_L^{-1} = J_L \cdot G_L \cdot G_L^{-1} = J_L$$
+
+где $G_L = E_L^T E_L$ и $G_L^{-1} = \text{pinv}(G_L)$ (псевдообратная через SVD для числовой стабильности).
+
+На практике: $J_L$ проецируется через $E_L^T \cdot E_L \cdot \text{pinv}(E_L^T E_L)$, что при идентичных моделях даёт $\mathcal{L}_{\text{bridge}} \approx 10^{-7}$.
+
+**Оптимизация.** $G_L^{-1}$ вычисляется один раз и кэшируется на диск (`results/.gramians/`) с хешем по форме и содержимому $E_L$.
+
+> **Опыт:** без коррекции $\mathcal{L}_{\text{bridge}} \approx 0.6\text{—}0.85$. С коррекцией: $\approx 10^{-7}$.
+
+### 1.5. Empirical Sensitivity Gramian (ESG)
 
 **Определение.** Для слоя $l$ на $N$ калибровочных сэмплах:
 
@@ -73,7 +91,7 @@ $$\bar{G}_l = \frac{1}{N} \sum_{i=1}^{N} J_l^{(i)} \cdot \left(J_l^{(i)}\right)^
 
 > **Примечание.** Это НЕ Neural Tangent Kernel в классическом смысле (Jacot et al., 2018). NTK — градиенты по параметрам. ESG — градиенты по активациям. Термин NTK не использовать.
 
-### 1.5. Функция потерь
+### 1.6. Функция потерь
 
 **Определение.** Якобианов лосс для слоя $l$:
 
@@ -159,25 +177,29 @@ def uniform_layer_mapping(n_layers_large, n_layers_small):
 #### Загрузка моделей
 
 ```python
+import torch
 from transformers import AutoModelForCausalLM
 
+# CPU: float32 обязателен! fp16 на CPU в 10x медленнее.
+torch.set_num_threads(4)
+
 model_large = AutoModelForCausalLM.from_pretrained(
-    "Qwen/Qwen3.5-8B",
-    torch_dtype=torch.float16,
-    device_map="auto",
+    "/data/Qwen/Qwen3.5-4B",
+    torch_dtype=torch.float32,  # float32 на CPU!
     attn_implementation="eager",  # важно: не flash_attention, нужны hidden_states
 )
 model_large.eval()
 
 model_small = AutoModelForCausalLM.from_pretrained(
     "Qwen/Qwen3.5-0.8B",
-    torch_dtype=torch.float16,
-    device_map="auto",
+    torch_dtype=torch.float32,
     attn_implementation="eager",
 )
 model_small.eval()
 
 # Извлекаем матрицы эмбедингов
+# Qwen3.5-0.8B: model.model — это Qwen3_5TextModel (нет language_model)
+# Qwen3.5-4B/8B: model.model.language_model — Qwen3_5TextModel
 E_large = model_large.model.embed_tokens.weight.detach()  # [V, D_L]
 E_small = model_small.model.embed_tokens.weight.detach()  # [V, D_S]
 ```
@@ -318,7 +340,29 @@ def compute_jacobian_for_tokens(
 
 > **⚠️ ЗАМЕЧАНИЕ ПО ПРОИЗВОДИТЕЛЬНОСТИ.** Цикл по $|\mathcal{U}|$ с `autograd.grad` — медленно. Для ускорения использовать `torch.func.jacrev` (PyTorch 2.1+) или `torch.func.vmap`. В первой реализации допустим цикл. Оптимизация — после валидации корректности.
 
-> **⚠️ ЗАМЕЧАНИЕ ПО ПАМЯТИ.** `copy.deepcopy(prefix_cache)` для длинных последовательностей может быть дорогим. Для $S = 2048$ и 32 слоёв это ~1-2 GB. Если не хватает памяти — уменьшить $S$ до 512. Для v1 deepcopy допустим; оптимизация (ручное клонирование тензоров) — после валидации.
+> **⚠️ GDN DEEP CLONE.** `copy.deepcopy(prefix_cache)` не работает для GDN слоёв — `recurrent_state` и `conv_state` мутируют in-place через `cache_params.update_recurrent_state(...)` и `torch_causal_conv1d_update`. Решение: ручной клон всех тензоров в кэше:
+>
+> ```python
+> def _deep_clone_cache(cache):
+>     """Клонирует DynamicCache, учитывая GDN in-place мутации."""
+>     new_cache = DynamicCache()
+>     for layer in cache:
+>         if hasattr(layer, 'keys'):  # DynamicLayer
+>             new_cache.append(DynamicLayer(
+>                 keys=[k.clone() for k in layer.keys],
+>                 values=[v.clone() for v in layer.values],
+>             ))
+>         elif hasattr(layer, 'recurrent_states'):  # LinearAttentionLayer
+>             new_conv = {k: v.clone() for k, v in layer.conv_states.items()}
+>             new_recur = {k: v.clone() for k, v in layer.recurrent_states.items()}
+>             new_cache.append(LinearAttentionLayer(
+>                 conv_states=new_conv,
+>                 recurrent_states=new_recur,
+>             ))
+>     return new_cache
+> ```
+
+> **⚠️ ЗАМЕЧАНИЕ ПО ПАМЯТИ.** Для длинных последовательностей это ~1-2 GB. Если не хватает памяти — уменьшить $S$ до 512.
 
 ### 2.3. Шаг 2: Якобианов Мост
 
@@ -531,11 +575,27 @@ Qwen3.5 использует Multi-dimensional RoPE (MRoPE) с `position_ids` ф
 - Кэше (префикс vs полная последовательность)
 - Выравнивании токенов
 
-### Эксперимент 2: Тепловая карта по слоям
+### Эксперимент 2: Neighbor windows (пропорциональная vs end-mapping)
 
-Qwen3.5-8B → Qwen3.5-0.8B. Вычислить $\mathcal{L}_{\text{bridge}}$ для всех пар слоёв. Построить тепловую карту.
+Qwen3.5-4B → Qwen3.5-0.8B. Вместо полной карты (дорого на CPU) — якорные слои 4B с локальными окнами слоёв 0.8B:
 
-**Ожидание (гипотеза):** монотонная или блочная структура. Хаотичная картина = метод улавливает шум.
+| Якорь 4B | Окно слоёв 0.8B |
+| --- | --- |
+| 0 | {0, 1, 2} |
+| 8 | {0, 3, 6} |
+| 16 | {8, 10, 12} |
+| 24 | {16, 17, 18} |
+| 30 | {21, 22, 23} |
+
+**Интерпретация:**
+
+- минимум у пропорционального партнёра $p(l)$ → реальное функциональное соответствие;
+- минимум у end-mapping $e(l) = l - 8$ → «хвостовая» конфаунд;
+- плоско и высоко → сигнал слабый.
+
+**Бонус:** Якорь 0 — для $l_L < 8$ концевого партнёра нет у младшей модели. Если конфаунд прав, у слоя 0 не будет хорошего партнёра (лосс высокий). Если нет — минимум у 0.
+
+Полная $32 \times 24$ карта — как фигура для статьи, после валидации.
 
 ### Эксперимент 3: Абляция со случайной матрицей
 

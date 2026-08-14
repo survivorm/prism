@@ -1,0 +1,57 @@
+[
+  {
+    "large_layer": 0,
+    "losses": {
+      "small_0": 1.0220013856887817,
+      "small_1": 1.0218797127405803,
+      "small_2": 0.9908913969993591
+    },
+    "proportional": 0,
+    "end_mapping": 0,
+    "min_at": "small_2"
+  },
+  {
+    "large_layer": 8,
+    "losses": {
+      "small_0": 1.0082768201828003,
+      "small_3": 1.0152291854222615,
+      "small_6": 0.9357850154240926
+    },
+    "proportional": 6,
+    "end_mapping": 0,
+    "min_at": "small_6"
+  },
+  {
+    "large_layer": 16,
+    "losses": {
+      "small_8": 0.873856763044993,
+      "small_10": 0.8126226266225179,
+      "small_12": 0.7716149489084879
+    },
+    "proportional": 12,
+    "end_mapping": 8,
+    "min_at": "small_12"
+  },
+  {
+    "large_layer": 24,
+    "losses": {
+      "small_16": 0.6882676482200623,
+      "small_17": 0.6690683960914612,
+      "small_18": 0.6752269268035889
+    },
+    "proportional": 18,
+    "end_mapping": 16,
+    "min_at": "small_17"
+  },
+  {
+    "large_layer": 30,
+    "losses": {
+      "small_21": 0.6066857576370239,
+      "small_22": 0.5498927235603333,
+      "small_23": 0.6632320980230967
+    },
+    "proportional": 22,
+    "end_mapping": 22,
+    "min_at": "small_22"
+  }
+]
