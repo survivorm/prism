@@ -1,0 +1,14 @@
+{
+  "kernel_type": "notebook",
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "language": "python",
+  "code_file": "kernel.ipynb",
+  "id": "voroninmichael/prism-exp14-snr-pr",
+  "title": "Prism: exp14-snr-pr",
+  "slug": "prism-exp14-snr-pr",
+  "kernel_sources": [
+    "voroninmichael/prism-exp14-snr-pr"
+  ]
+}

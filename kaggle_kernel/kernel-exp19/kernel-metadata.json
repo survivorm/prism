@@ -1,0 +1,16 @@
+{
+  "kernel_type": "notebook",
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "language": "python",
+  "code_file": "kernel.ipynb",
+  "title": "Prism: exp19-destruction",
+  "slug": "prism-exp19-destruction",
+  "kernel_sources": [
+    "voroninmichael/prism-exp19-destruction",
+    "voroninmichael/prism-exp16-stage0-targets",
+    "voroninmichael/prism-exp16-readout-pull"
+  ],
+  "id": "voroninmichael/prism-exp19-destruction"
+}
