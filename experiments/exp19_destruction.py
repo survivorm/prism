@@ -106,12 +106,22 @@ def main(
     )
 
     # -- Load target cache ------------------------------------------------
+    # Fallback chain: local dir -> kernel_sources -> error
+    possible_dirs = [targets_dir,
+                     os.path.join("/kaggle/input", "prism-exp16-stage0-targets"),
+                     os.path.join("/kaggle/input", "prism-exp16-stage0-targets", "results", "targets")]
+    for d in possible_dirs:
+        if os.path.isdir(d) and any(f.endswith(".pt") for f in os.listdir(d)):
+            targets_dir = d
+            print(f"Found target cache at {d}")
+            break
+
     cache_files = sorted(
         f for f in os.listdir(targets_dir)
         if f.endswith(".pt") and not f.startswith(".")
     )
     if not cache_files:
-        raise FileNotFoundError(f"No target cache in {targets_dir}. Run Stage 0 first.")
+        raise FileNotFoundError(f"No target cache found in any of: {possible_dirs}. Run Stage 0 first.")
 
     cache_by_pair: dict[str, list[dict]] = {}
     for cf in cache_files:
@@ -232,6 +242,7 @@ def main(
 
     # -- Save --------------------------------------------------------------
     result = {
+        "description": "Calibration of destruction detector using alpha* from Exp16. Four scenarios on last layer: (a) random ΔW, (b) 10×alpha* in target direction, (c) gauge-only ΔW, (d) differential-only ΔW. Each normalized to alpha*·‖W‖_F. Ranks scenarios by bridge cosine similarity — expects (b) best, (d) second, (a) random, (c) gauge-only near zero. Measures bridge cosine and KL per scenario.",
         "alpha_star": alpha_star,
         "target_norm": target_norm,
         "scenarios": scenarios,
@@ -241,7 +252,7 @@ def main(
         "elapsed_seconds": time.time() - start,
     }
     path = os.path.join(results_dir, "exp19_destruction.json")
-    result["params"] = {"small_model": small_model, "max_length": max_length, "min_length": min_length}
+    result["params"] = {"small_model": small_model, "device": device, "max_length": max_length, "min_length": min_length, "targets_dir": targets_dir}
     with open(path, "w") as f:
         json.dump(result, f, indent=2)
 

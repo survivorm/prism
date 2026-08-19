@@ -54,12 +54,22 @@ def main(
     )
 
     # -- Load target cache ------------------------------------------------
+    # Fallback chain: local dir -> kernel_sources -> error
+    possible_dirs = [targets_dir,
+                     os.path.join("/kaggle/input", "prism-exp16-stage0-targets"),
+                     os.path.join("/kaggle/input", "prism-exp16-stage0-targets", "results", "targets")]
+    for d in possible_dirs:
+        if os.path.isdir(d) and any(f.endswith(".pt") for f in os.listdir(d)):
+            targets_dir = d
+            print(f"Found target cache at {d}")
+            break
+
     cache_files = sorted(
         f for f in os.listdir(targets_dir)
         if f.endswith(".pt") and not f.startswith(".")
     )
     if not cache_files:
-        raise FileNotFoundError(f"No target cache in {targets_dir}. Run Stage 0 first.")
+        raise FileNotFoundError(f"No target cache found in any of: {possible_dirs}. Run Stage 0 first.")
 
     cache_by_pair: dict[str, list[dict]] = {}
     for cf in cache_files:
@@ -227,6 +237,7 @@ def main(
 
     # -- Save --------------------------------------------------------------
     result = {
+        "description": "Control experiment for Exp17: same LoRA configuration (r=4 on lm_head) but loss is KL divergence between edited-small logits and large-model logits on token_set, instead of bridge loss. Purpose: compare delta-bridge per unit delta-KL between bridge-guided (Exp17) and logit-KD (Exp18) to test whether bridge guidance is more efficient at aligning sensitivity.",
         "per_layer": per_layer_results,
         "pairs": late_to_early,
         "r": r,
@@ -236,7 +247,7 @@ def main(
         "elapsed_seconds": time.time() - start,
     }
     path = os.path.join(results_dir, "exp18_logit_kd.json")
-    result["params"] = {"small_model": small_model, "max_length": max_length, "min_length": min_length}
+    result["params"] = {"small_model": small_model, "device": device, "max_length": max_length, "min_length": min_length, "targets_dir": targets_dir}
     with open(path, "w") as f:
         json.dump(result, f, indent=2)
 

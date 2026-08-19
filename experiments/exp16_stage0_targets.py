@@ -268,6 +268,7 @@ def main(
     # -- Summary -----------------------------------------------------------
     elapsed = time.time() - start
     summary = {
+        "description": "Stage 0: pre-compute and cache target Jacobians for exp16-19. For each layer pair (l_L, l_S), transports J_L to small-model space via J_tgt = J_L @ E_L.T @ E_S @ G_S_inv, then computes gauge-free variants J_tgt_p and J_S_p using softmax weighting. Saves per-sample .pt checkpoints for each pair.",
         "pairs": [[a, b] for a, b in pairs],
         "n_samples": cfg["n_samples"],
         "K": cfg["K"],
@@ -276,7 +277,7 @@ def main(
         "elapsed_seconds": elapsed,
     }
     summary_path = os.path.join(targets_dir, "stage0_summary.json")
-    summary["params"] = {large_model: large_model, small_model: small_model, device_L: device_L, device_S: device_S, max_length: max_length, min_length: min_length, targets_dir: targets_dir}
+    summary["params"] = {"large_model": large_model, "small_model": small_model, "device_L": device_L, "device_S": device_S, "max_length": max_length, "min_length": min_length}
     with open(summary_path, "w") as f:
         json.dump(summary, f, indent=2)
 
