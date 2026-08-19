@@ -1,0 +1,204 @@
+{
+  "raw": {
+    "per_layer": [
+      {
+        "layer": "0->0",
+        "loss": 1.0278738737106323
+      },
+      {
+        "layer": "4->3",
+        "loss": 0.9993696808815002
+      },
+      {
+        "layer": "8->6",
+        "loss": 0.93753981590271
+      },
+      {
+        "layer": "12->9",
+        "loss": 0.8766888976097107
+      },
+      {
+        "layer": "16->12",
+        "loss": 0.7502546310424805
+      },
+      {
+        "layer": "20->15",
+        "loss": 0.71889728307724
+      },
+      {
+        "layer": "24->18",
+        "loss": 0.657981276512146
+      },
+      {
+        "layer": "28->21",
+        "loss": 0.6124957203865051
+      }
+    ],
+    "avg": 0.8226376473903656,
+    "monotonicity": -1.0
+  },
+  "softmax": {
+    "per_layer": [
+      {
+        "layer": "0->0",
+        "loss": 1.0327799320220947
+      },
+      {
+        "layer": "4->3",
+        "loss": 0.9971431493759155
+      },
+      {
+        "layer": "8->6",
+        "loss": 0.921893835067749
+      },
+      {
+        "layer": "12->9",
+        "loss": 0.8621582984924316
+      },
+      {
+        "layer": "16->12",
+        "loss": 0.7623633742332458
+      },
+      {
+        "layer": "20->15",
+        "loss": 0.7126606702804565
+      },
+      {
+        "layer": "24->18",
+        "loss": 0.6298200488090515
+      },
+      {
+        "layer": "28->21",
+        "loss": 0.5369647145271301
+      }
+    ],
+    "avg": 0.8069730028510094,
+    "spearman_vs_raw": 1.0,
+    "monotonicity": -1.0
+  },
+  "defrag_8": {
+    "per_layer": [
+      {
+        "layer": "0->0",
+        "loss": 0.9896318912506104
+      },
+      {
+        "layer": "4->3",
+        "loss": 0.9989515542984009
+      },
+      {
+        "layer": "8->6",
+        "loss": 0.9986559152603149
+      },
+      {
+        "layer": "12->9",
+        "loss": 1.0163395404815674
+      },
+      {
+        "layer": "16->12",
+        "loss": 1.0117684602737427
+      },
+      {
+        "layer": "20->15",
+        "loss": 0.9739249348640442
+      },
+      {
+        "layer": "24->18",
+        "loss": 1.0115939378738403
+      },
+      {
+        "layer": "28->21",
+        "loss": 0.9700396656990051
+      }
+    ],
+    "avg": 0.9963632375001907,
+    "spearman_vs_raw": 0.19047619047619052,
+    "monotonicity": -0.19047619047619052
+  },
+  "defrag_16": {
+    "per_layer": [
+      {
+        "layer": "0->0",
+        "loss": 0.9882377982139587
+      },
+      {
+        "layer": "4->3",
+        "loss": 1.014155626296997
+      },
+      {
+        "layer": "8->6",
+        "loss": 1.0187636613845825
+      },
+      {
+        "layer": "12->9",
+        "loss": 1.0497055053710938
+      },
+      {
+        "layer": "16->12",
+        "loss": 1.0120817422866821
+      },
+      {
+        "layer": "20->15",
+        "loss": 0.9879521727561951
+      },
+      {
+        "layer": "24->18",
+        "loss": 1.0119692087173462
+      },
+      {
+        "layer": "28->21",
+        "loss": 0.9791374802589417
+      }
+    ],
+    "avg": 1.0077503994107246,
+    "spearman_vs_raw": 0.5000000000000001,
+    "monotonicity": -0.5000000000000001
+  },
+  "defrag_32": {
+    "per_layer": [
+      {
+        "layer": "0->0",
+        "loss": 1.0227936506271362
+      },
+      {
+        "layer": "4->3",
+        "loss": 0.9902790188789368
+      },
+      {
+        "layer": "8->6",
+        "loss": 0.9977967739105225
+      },
+      {
+        "layer": "12->9",
+        "loss": 0.9798251986503601
+      },
+      {
+        "layer": "16->12",
+        "loss": 0.9803598523139954
+      },
+      {
+        "layer": "20->15",
+        "loss": 0.9876587986946106
+      },
+      {
+        "layer": "24->18",
+        "loss": 0.9443152546882629
+      },
+      {
+        "layer": "28->21",
+        "loss": 0.9659233093261719
+      }
+    ],
+    "avg": 0.9836189821362495,
+    "spearman_vs_raw": 0.8571428571428572,
+    "monotonicity": -0.8571428571428572
+  },
+  "params": {
+    "large_model": "/data/Qwen/Qwen3.5-4B",
+    "small_model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 1,
+    "max_length": 64,
+    "min_length": 32
+  },
+  "description": "Does defragmentation preserve the bridge signal? For Qwen3.5-4B \u2192 Qwen3.5-0.8B, compares bridge curves across depth for three variants: raw Jacobians, softmax-weighted Jacobians (J^(p)), and defrag-r reconstructed J^(p) at r=8, 16, 32. Reports Spearman correlation between curves and monotonicity (whether bridge loss decreases with depth). Uses |U|=256 token set."
+}

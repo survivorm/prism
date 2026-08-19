@@ -7,5 +7,13 @@
   "perm_layer_23": 1.0016921758651733,
   "inv_perm_layer_0": 4.344958881574712e-08,
   "inv_perm_layer_12": -1.9721897448476966e-09,
-  "inv_perm_layer_23": 4.8315090594996946e-08
+  "inv_perm_layer_23": 4.8315090594996946e-08,
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 2,
+    "K": 8,
+    "max_length": 64,
+    "min_length": 32
+  },
+  "description": "Embedding permutation test: randomly permutes rows of the embedding matrix E and measures the bridge loss under three conditions \u2014 baseline (normal E), permuted (E_perm as source only), and inverse-permuted (E_perm as both source and target). If the bridge breaks under permutation, it confirms that semantic alignment of embeddings matters (the bridge is not just a geometric trick). Tests layers 0, 12, 23 of Qwen3.5-0.8B."
 }

@@ -22,5 +22,13 @@
   "layer_20": 12.232499122619629,
   "layer_21": 11.078344345092773,
   "layer_22": 10.328556060791016,
-  "layer_23": 1.333870530128479
+  "layer_23": 1.333870530128479,
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 1,
+    "K": 8,
+    "max_length": 64,
+    "min_length": 32
+  },
+  "description": "Layer-wise sensitivity: measures the Frobenius norm of the Jacobian J for each layer (all layers of Qwen3.5-0.8B) across calibration samples. Shows which layers carry more or less sensitivity \u2014 i.e., how much the logits change with respect to hidden state perturbations at each depth."
 }

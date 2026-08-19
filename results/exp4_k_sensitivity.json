@@ -26,5 +26,12 @@
     "layer_2": 2.9635746301437393e-08,
     "layer_3": 4.89276210657863e-08,
     "layer_4": 6.146249287297678e-09
-  }
+  },
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 1,
+    "max_length": 64,
+    "min_length": 32
+  },
+  "description": "Sensitivity of the Jacobian bridge loss to K (top-k token set size) within a single model. Tests K values of 4, 8, 16, 32 and measures how the bridge loss stabilizes as the token set grows. Uses identity mapping (model bridged to itself) to isolate the effect of token set granularity on the quality of the Jacobian projection."
 }

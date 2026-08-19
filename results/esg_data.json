@@ -10748,5 +10748,14 @@
         -0.05793343484401703
       ]
     ]
-  }
+  },
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 5,
+    "K": 64,
+    "max_length": 64,
+    "min_length": 32,
+    "n_components": 32
+  },
+  "description": "ESG (Empirical Sensitivity Gramian) visualization: computes the ESG matrix for selected layers (0, 6, 12, 18, 23) of Qwen3.5-0.8B by collecting Jacobians across calibration samples and forming G = J^T @ J. Visualizes eigenvalue spectra (log-scale) and top eigenvectors as heatmaps. Reveals the sensitivity structure of each layer \u2014 how many directions carry meaningful signal."
 }

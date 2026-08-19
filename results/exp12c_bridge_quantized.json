@@ -1,0 +1,97 @@
+{
+  "6": {
+    "orig_vs_map": {
+      "avg": 0.0008979950653156266,
+      "values": [
+        0.0011159837013110518,
+        0.0008051026961766183,
+        0.0011822941014543176,
+        0.0004885997623205185
+      ]
+    },
+    "orig_vs_uniform": {
+      "avg": 0.019993713591247797,
+      "values": [
+        0.02289796620607376,
+        0.019346101209521294,
+        0.02552204020321369,
+        0.012208746746182442
+      ]
+    },
+    "map_vs_uniform": {
+      "avg": 0.020967690739780664,
+      "values": [
+        0.023822566494345665,
+        0.02028995379805565,
+        0.02703126333653927,
+        0.012726979330182076
+      ]
+    }
+  },
+  "12": {
+    "orig_vs_map": {
+      "avg": 0.0006921795138623565,
+      "values": [
+        0.0010563295800238848,
+        0.0004832835984416306,
+        0.0006089333328418434,
+        0.0006201715441420674
+      ]
+    },
+    "orig_vs_uniform": {
+      "avg": 0.01504793157801032,
+      "values": [
+        0.02442106604576111,
+        0.00974455289542675,
+        0.012426240369677544,
+        0.01359986700117588
+      ]
+    },
+    "map_vs_uniform": {
+      "avg": 0.015698029892519116,
+      "values": [
+        0.025564581155776978,
+        0.010062453337013721,
+        0.013113996013998985,
+        0.014051089063286781
+      ]
+    }
+  },
+  "18": {
+    "orig_vs_map": {
+      "avg": 0.0005873465343029238,
+      "values": [
+        0.0006059845327399671,
+        0.00047498641652055085,
+        0.0005132560036145151,
+        0.0007551591843366623
+      ]
+    },
+    "orig_vs_uniform": {
+      "avg": 0.013920016353949904,
+      "values": [
+        0.014150460250675678,
+        0.01066293753683567,
+        0.011043937876820564,
+        0.019822729751467705
+      ]
+    },
+    "map_vs_uniform": {
+      "avg": 0.01466320175677538,
+      "values": [
+        0.014694464392960072,
+        0.010949370451271534,
+        0.012266186997294426,
+        0.020742785185575485
+      ]
+    }
+  },
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 4,
+    "K": 32,
+    "max_length": 48,
+    "min_length": 24
+  },
+  "description": "Bridge between original and quantized Jacobians: for layers {6, 12, 18} of Qwen3.5-0.8B, quantizes rows of J^(p) using two schemes \u2014 map-based (sensitivity-aware bits) and uniform (4-bit). Computes three bridge values: original vs. map-quantized, original vs. uniform-quantized, and map-quantized vs. uniform-quantized. Prediction: uniform scheme raises the bridge (damaged differential directions) while map-based scheme preserves it."
+}

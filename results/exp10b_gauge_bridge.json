@@ -1,0 +1,109 @@
+{
+  "raw": {
+    "per_layer": [
+      {
+        "layer": "0->0",
+        "loss": 1.028343677520752
+      },
+      {
+        "layer": "5->4",
+        "loss": 0.9584019184112549
+      },
+      {
+        "layer": "10->7",
+        "loss": 0.9183999300003052
+      },
+      {
+        "layer": "15->11",
+        "loss": 0.7864050269126892
+      },
+      {
+        "layer": "20->15",
+        "loss": 0.7189457416534424
+      },
+      {
+        "layer": "25->19",
+        "loss": 0.6556317806243896
+      },
+      {
+        "layer": "30->22",
+        "loss": 0.44144779443740845
+      }
+    ],
+    "avg": 0.7867965527943203
+  },
+  "centered": {
+    "per_layer": [
+      {
+        "layer": "0->0",
+        "loss": 1.0199027061462402
+      },
+      {
+        "layer": "5->4",
+        "loss": 0.9558225870132446
+      },
+      {
+        "layer": "10->7",
+        "loss": 0.8831663131713867
+      },
+      {
+        "layer": "15->11",
+        "loss": 0.7729445695877075
+      },
+      {
+        "layer": "20->15",
+        "loss": 0.6919169425964355
+      },
+      {
+        "layer": "25->19",
+        "loss": 0.5968323349952698
+      },
+      {
+        "layer": "30->22",
+        "loss": 0.363160640001297
+      }
+    ],
+    "avg": 0.7548208705016545
+  },
+  "softmax": {
+    "per_layer": [
+      {
+        "layer": "0->0",
+        "loss": 1.0336174964904785
+      },
+      {
+        "layer": "5->4",
+        "loss": 0.9556188583374023
+      },
+      {
+        "layer": "10->7",
+        "loss": 0.8959354162216187
+      },
+      {
+        "layer": "15->11",
+        "loss": 0.7951868772506714
+      },
+      {
+        "layer": "20->15",
+        "loss": 0.7140127420425415
+      },
+      {
+        "layer": "25->19",
+        "loss": 0.6211169362068176
+      },
+      {
+        "layer": "30->22",
+        "loss": 0.3993239998817444
+      }
+    ],
+    "avg": 0.7735446180616107
+  },
+  "params": {
+    "large_model": "/data/Qwen/Qwen3.5-4B",
+    "small_model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 1,
+    "max_length": 64,
+    "min_length": 32
+  },
+  "description": "Gauge-free bridge 4B \u2192 0.8B: compares Jacobian bridge curves computed on three Jacobian variants (raw, uniform-centered, softmax-weighted) for Qwen3.5-4B \u2192 Qwen3.5-0.8B. Uses |U|=128 token set and sampled layer pairs. Reveals whether removing the gauge component changes the bridge signal and its depth profile."
+}

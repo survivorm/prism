@@ -13,5 +13,13 @@
   },
   "n_components=1024": {
     "layer_0": 2.418734723619309e-08
-  }
+  },
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 1,
+    "K": 8,
+    "max_length": 64,
+    "min_length": 32
+  },
+  "description": "SVD ablation: compares full Gramian inversion with truncated SVD of the Gramian matrix (keeping only top-k eigencomponents). Tests n_components values of 16, 64, 256, 512, 1024. Measures how quickly the bridge loss converges as more eigencomponents are retained \u2014 reveals the intrinsic dimensionality of the Gramian correction."
 }

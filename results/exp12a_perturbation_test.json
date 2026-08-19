@@ -1,0 +1,124 @@
+{
+  "6": [
+    {
+      "layer": 6,
+      "sample": 0,
+      "uniformity_vg": 0.8862079381942749,
+      "KL_g_minus": 8.213495254516602,
+      "KL_g_plus": 8.20547103881836,
+      "KL_d_minus": 7.739285945892334,
+      "KL_d_plus": 7.975317478179932
+    },
+    {
+      "layer": 6,
+      "sample": 1,
+      "uniformity_vg": 0.8666486740112305,
+      "KL_g_minus": 7.141127109527588,
+      "KL_g_plus": 7.060498237609863,
+      "KL_d_minus": 6.780043125152588,
+      "KL_d_plus": 7.942479133605957
+    },
+    {
+      "layer": 6,
+      "sample": 2,
+      "uniformity_vg": 0.9733292460441589,
+      "KL_g_minus": 7.203011512756348,
+      "KL_g_plus": 7.1112213134765625,
+      "KL_d_minus": 6.581409454345703,
+      "KL_d_plus": 7.633480072021484
+    },
+    {
+      "layer": 6,
+      "sample": 3,
+      "uniformity_vg": 0.9206839799880981,
+      "KL_g_minus": 7.2060933113098145,
+      "KL_g_plus": 7.214269638061523,
+      "KL_d_minus": 6.698757171630859,
+      "KL_d_plus": 8.280069351196289
+    }
+  ],
+  "12": [
+    {
+      "layer": 12,
+      "sample": 0,
+      "uniformity_vg": 0.8318155407905579,
+      "KL_g_minus": 8.745949745178223,
+      "KL_g_plus": 8.749765396118164,
+      "KL_d_minus": 8.876011848449707,
+      "KL_d_plus": 8.901159286499023
+    },
+    {
+      "layer": 12,
+      "sample": 1,
+      "uniformity_vg": 0.9458964467048645,
+      "KL_g_minus": 7.521284103393555,
+      "KL_g_plus": 7.4791693687438965,
+      "KL_d_minus": 6.277177810668945,
+      "KL_d_plus": 8.021549224853516
+    },
+    {
+      "layer": 12,
+      "sample": 2,
+      "uniformity_vg": 0.7292106747627258,
+      "KL_g_minus": 7.785778045654297,
+      "KL_g_plus": 7.802314758300781,
+      "KL_d_minus": 6.812206745147705,
+      "KL_d_plus": 8.444334983825684
+    },
+    {
+      "layer": 12,
+      "sample": 3,
+      "uniformity_vg": 0.9030372500419617,
+      "KL_g_minus": 7.417376518249512,
+      "KL_g_plus": 7.394248962402344,
+      "KL_d_minus": 7.5378031730651855,
+      "KL_d_plus": 7.620363712310791
+    }
+  ],
+  "18": [
+    {
+      "layer": 18,
+      "sample": 0,
+      "uniformity_vg": 0.9831933975219727,
+      "KL_g_minus": 8.080488204956055,
+      "KL_g_plus": 8.018905639648438,
+      "KL_d_minus": 8.346363067626953,
+      "KL_d_plus": 8.268135070800781
+    },
+    {
+      "layer": 18,
+      "sample": 1,
+      "uniformity_vg": 0.8728460073471069,
+      "KL_g_minus": 7.170214653015137,
+      "KL_g_plus": 7.1877946853637695,
+      "KL_d_minus": 7.027038097381592,
+      "KL_d_plus": 8.261312484741211
+    },
+    {
+      "layer": 18,
+      "sample": 2,
+      "uniformity_vg": 0.7937581539154053,
+      "KL_g_minus": 6.20258903503418,
+      "KL_g_plus": 6.216578483581543,
+      "KL_d_minus": 6.090049743652344,
+      "KL_d_plus": 6.672632217407227
+    },
+    {
+      "layer": 18,
+      "sample": 3,
+      "uniformity_vg": 0.7895088791847229,
+      "KL_g_minus": 6.320842742919922,
+      "KL_g_plus": 6.315554618835449,
+      "KL_d_minus": 6.641819000244141,
+      "KL_d_plus": 8.472795486450195
+    }
+  ],
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 4,
+    "K": 32,
+    "max_length": 48,
+    "min_length": 24
+  },
+  "description": "Perturbation test via sensitivity map: for layers {6, 12, 18} of Qwen3.5-0.8B, identifies two directions \u2014 v_g (right singular vector of J whose left vector is closest to uniform, i.e., gauge direction) and v_d (top right singular vector of J^(p), i.e., differential/semantic direction). Perturbs hidden state by \u00b1\u03b5\u00b7v at equal norm and measures KL(p_orig || p_pert) via full decoder forward. Prediction: KL_g << KL_d (gauge perturbations should have orders of magnitude less impact)."
+}

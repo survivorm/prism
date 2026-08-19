@@ -26,5 +26,13 @@
     "30->22": 0.5009693503379822
   },
   "spearman_corr": -0.7727272727272727,
-  "n_samples": 5
+  "params": {
+    "large_model": "/data/Qwen/Qwen3.5-4B",
+    "small_model": "Qwen/Qwen3.5-0.8B",
+    "K": 8,
+    "max_length": 64,
+    "min_length": 32,
+    "n_samples": 5
+  },
+  "description": "CKA (Centered Kernel Alignment) baseline: computes linear CKA between hidden states of Qwen3.5-4B and Qwen3.5-0.8B across all calibration samples for each sampled layer pair, then compares with Jacobian bridge loss on the same pairs. Spearman correlation between CKA and bridge curves reveals whether the bridge measures something beyond hidden state similarity."
 }

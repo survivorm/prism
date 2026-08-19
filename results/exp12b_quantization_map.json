@@ -1,0 +1,202 @@
+{
+  "6": {
+    "0": [
+      {
+        "sample": 0,
+        "kl_map": 15.198711395263672,
+        "kl_uniform": 15.291513442993164,
+        "ppl_orig": 3727351.25,
+        "ppl_map": 2849963.75,
+        "ppl_uniform": 8339294.0,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.22184285521507263,
+        "delta_h_uniform": 0.8989603519439697
+      }
+    ],
+    "1": [
+      {
+        "sample": 1,
+        "kl_map": 14.661894798278809,
+        "kl_uniform": 14.770651817321777,
+        "ppl_orig": 83042.234375,
+        "ppl_map": 162633.15625,
+        "ppl_uniform": 234748.296875,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.24038249254226685,
+        "delta_h_uniform": 0.9162796139717102
+      }
+    ],
+    "2": [
+      {
+        "sample": 2,
+        "kl_map": 14.849653244018555,
+        "kl_uniform": 14.873780250549316,
+        "ppl_orig": 177328.15625,
+        "ppl_map": 95182.6015625,
+        "ppl_uniform": 124427.40625,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.2565324306488037,
+        "delta_h_uniform": 1.04566490650177
+      }
+    ],
+    "3": [
+      {
+        "sample": 3,
+        "kl_map": 14.938769340515137,
+        "kl_uniform": 15.076403617858887,
+        "ppl_orig": 1470573.875,
+        "ppl_map": 1899062.75,
+        "ppl_uniform": 1180755.0,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.2301245927810669,
+        "delta_h_uniform": 0.9288073778152466
+      }
+    ],
+    "_avg": {
+      "kl_map": 14.912257194519043,
+      "kl_uniform": 15.003087282180786,
+      "ppl_map": 1251710.564453125,
+      "ppl_uniform": 2469806.17578125
+    }
+  },
+  "12": {
+    "0": [
+      {
+        "sample": 0,
+        "kl_map": 15.915064811706543,
+        "kl_uniform": 15.802778244018555,
+        "ppl_orig": 2884658.25,
+        "ppl_map": 2419538.0,
+        "ppl_uniform": 10058053.0,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.20611730217933655,
+        "delta_h_uniform": 0.820178747177124
+      }
+    ],
+    "1": [
+      {
+        "sample": 1,
+        "kl_map": 14.533586502075195,
+        "kl_uniform": 14.76268482208252,
+        "ppl_orig": 4027084.75,
+        "ppl_map": 2828025.0,
+        "ppl_uniform": 111846144.0,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.2872866690158844,
+        "delta_h_uniform": 0.9884364008903503
+      }
+    ],
+    "2": [
+      {
+        "sample": 2,
+        "kl_map": 15.05473804473877,
+        "kl_uniform": 14.873183250427246,
+        "ppl_orig": 33433260.0,
+        "ppl_map": 33146960.0,
+        "ppl_uniform": 16787620.0,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.29035070538520813,
+        "delta_h_uniform": 1.1276028156280518
+      }
+    ],
+    "3": [
+      {
+        "sample": 3,
+        "kl_map": 14.849651336669922,
+        "kl_uniform": 14.909791946411133,
+        "ppl_orig": 26390794.0,
+        "ppl_map": 20765758.0,
+        "ppl_uniform": 64648664.0,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.24518045783042908,
+        "delta_h_uniform": 0.9397387504577637
+      }
+    ],
+    "_avg": {
+      "kl_map": 15.088260173797607,
+      "kl_uniform": 15.087109565734863,
+      "ppl_map": 14790070.25,
+      "ppl_uniform": 50835120.25
+    }
+  },
+  "18": {
+    "0": [
+      {
+        "sample": 0,
+        "kl_map": 15.544134140014648,
+        "kl_uniform": 15.652647972106934,
+        "ppl_orig": 3880063.0,
+        "ppl_map": 4236406.0,
+        "ppl_uniform": 6142170.0,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.6329593062400818,
+        "delta_h_uniform": 2.5209083557128906
+      }
+    ],
+    "1": [
+      {
+        "sample": 1,
+        "kl_map": 15.192462921142578,
+        "kl_uniform": 15.31175708770752,
+        "ppl_orig": 707055.5,
+        "ppl_map": 488342.375,
+        "ppl_uniform": 1196665.5,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.7214888334274292,
+        "delta_h_uniform": 2.829169750213623
+      }
+    ],
+    "2": [
+      {
+        "sample": 2,
+        "kl_map": 14.46071720123291,
+        "kl_uniform": 14.213299751281738,
+        "ppl_orig": 6743532.0,
+        "ppl_map": 1911155.75,
+        "ppl_uniform": 286610.0625,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 1.1536989212036133,
+        "delta_h_uniform": 3.979200601577759
+      }
+    ],
+    "3": [
+      {
+        "sample": 3,
+        "kl_map": 14.897558212280273,
+        "kl_uniform": 14.855810165405273,
+        "ppl_orig": 97968.015625,
+        "ppl_map": 110673.09375,
+        "ppl_uniform": 933499.3125,
+        "top1_map": 0,
+        "top1_uniform": 0,
+        "delta_h_map": 0.8349581360816956,
+        "delta_h_uniform": 3.2037529945373535
+      }
+    ],
+    "_avg": {
+      "kl_map": 15.023718118667603,
+      "kl_uniform": 15.008378744125366,
+      "ppl_map": 1686644.3046875,
+      "ppl_uniform": 2139736.21875
+    }
+  },
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 4,
+    "K": 32,
+    "max_length": 48,
+    "min_length": 24
+  },
+  "description": "Quantization by sensitivity map: simulates directed quantization of the last hidden state for layers {6, 12, 18} of Qwen3.5-0.8B. Uses gauge direction (2 bits) + top-5 differential directions from J^(p) SVD (8 bits each) + remaining dimensions (6 bits). Compares against uniform 4-bit quantization across all dimensions. Metrics: KL divergence, perplexity (PPL), and top-1 agreement between quantized and original predictions."
+}

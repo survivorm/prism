@@ -1,0 +1,188 @@
+{
+  "6": {
+    "8": [
+      {
+        "sample": 0,
+        "t_raw_ms": 135942.60275992565,
+        "t_defrag_ms": 8159.103489946574,
+        "speedup": 16.661463224577183,
+        "recon_fidelity_rel": 23.79301643371582
+      },
+      {
+        "sample": 1,
+        "t_raw_ms": 125395.84909495898,
+        "t_defrag_ms": 6642.800647998229,
+        "speedup": 18.876955025568826,
+        "recon_fidelity_rel": 8.390007972717285
+      }
+    ],
+    "16": [
+      {
+        "sample": 0,
+        "t_raw_ms": 135942.60275992565,
+        "t_defrag_ms": 11593.184763099998,
+        "speedup": 11.72607920309283,
+        "recon_fidelity_rel": 38.087162017822266
+      },
+      {
+        "sample": 1,
+        "t_raw_ms": 125395.84909495898,
+        "t_defrag_ms": 9102.472198195755,
+        "speedup": 13.776021101831903,
+        "recon_fidelity_rel": 12.645407676696777
+      }
+    ],
+    "32": [
+      {
+        "sample": 0,
+        "t_raw_ms": 135942.60275992565,
+        "t_defrag_ms": 18994.013176998124,
+        "speedup": 7.157129011440085,
+        "recon_fidelity_rel": 51.201133728027344
+      },
+      {
+        "sample": 1,
+        "t_raw_ms": 125395.84909495898,
+        "t_defrag_ms": 13754.751665983349,
+        "speedup": 9.116547657923686,
+        "recon_fidelity_rel": 20.951644897460938
+      }
+    ],
+    "raw_time_ms": 125395.84909495898,
+    "projection_raw_FLOPs": 130191196160,
+    "projection_dr8_FLOPs": 4068474880,
+    "projection_dr16_FLOPs": 8136949760,
+    "projection_dr32_FLOPs": 16273899520,
+    "storage_raw_elements": 262144,
+    "storage_dr8_elements": 8192,
+    "storage_dr16_elements": 16384,
+    "storage_dr32_elements": 32768
+  },
+  "12": {
+    "8": [
+      {
+        "sample": 0,
+        "t_raw_ms": 82295.5999020487,
+        "t_defrag_ms": 6969.563171034679,
+        "speedup": 11.807856227239492,
+        "recon_fidelity_rel": 19.026348114013672
+      },
+      {
+        "sample": 1,
+        "t_raw_ms": 59241.46350310184,
+        "t_defrag_ms": 6449.428771156818,
+        "speedup": 9.185536517413203,
+        "recon_fidelity_rel": 10.860946655273438
+      }
+    ],
+    "16": [
+      {
+        "sample": 0,
+        "t_raw_ms": 82295.5999020487,
+        "t_defrag_ms": 10665.349642978981,
+        "speedup": 7.716165212502704,
+        "recon_fidelity_rel": 31.780288696289062
+      },
+      {
+        "sample": 1,
+        "t_raw_ms": 59241.46350310184,
+        "t_defrag_ms": 10069.621628150344,
+        "speedup": 5.883186646418265,
+        "recon_fidelity_rel": 16.758697509765625
+      }
+    ],
+    "32": [
+      {
+        "sample": 0,
+        "t_raw_ms": 82295.5999020487,
+        "t_defrag_ms": 12152.14930404909,
+        "speedup": 6.772102435233886,
+        "recon_fidelity_rel": 48.77007293701172
+      },
+      {
+        "sample": 1,
+        "t_raw_ms": 59241.46350310184,
+        "t_defrag_ms": 14211.507155094296,
+        "speedup": 4.168556005525243,
+        "recon_fidelity_rel": 28.61786460876465
+      }
+    ],
+    "raw_time_ms": 59241.46350310184,
+    "projection_raw_FLOPs": 130191196160,
+    "projection_dr8_FLOPs": 4068474880,
+    "projection_dr16_FLOPs": 8136949760,
+    "projection_dr32_FLOPs": 16273899520,
+    "storage_raw_elements": 262144,
+    "storage_dr8_elements": 8192,
+    "storage_dr16_elements": 16384,
+    "storage_dr32_elements": 32768
+  },
+  "18": {
+    "8": [
+      {
+        "sample": 0,
+        "t_raw_ms": 37865.00205588527,
+        "t_defrag_ms": 5763.277863850817,
+        "speedup": 6.570046238238317,
+        "recon_fidelity_rel": 17.094829559326172
+      },
+      {
+        "sample": 1,
+        "t_raw_ms": 37096.433331025764,
+        "t_defrag_ms": 6233.644389081746,
+        "speedup": 5.95100249703838,
+        "recon_fidelity_rel": 10.749064445495605
+      }
+    ],
+    "16": [
+      {
+        "sample": 0,
+        "t_raw_ms": 37865.00205588527,
+        "t_defrag_ms": 7483.087196946144,
+        "speedup": 5.060077619605708,
+        "recon_fidelity_rel": 26.800676345825195
+      },
+      {
+        "sample": 1,
+        "t_raw_ms": 37096.433331025764,
+        "t_defrag_ms": 6416.150162927806,
+        "speedup": 5.781727731309246,
+        "recon_fidelity_rel": 18.549577713012695
+      }
+    ],
+    "32": [
+      {
+        "sample": 0,
+        "t_raw_ms": 37865.00205588527,
+        "t_defrag_ms": 13846.383034950122,
+        "speedup": 2.734649327378442,
+        "recon_fidelity_rel": 42.208744049072266
+      },
+      {
+        "sample": 1,
+        "t_raw_ms": 37096.433331025764,
+        "t_defrag_ms": 6960.036372998729,
+        "speedup": 5.329919462721552,
+        "recon_fidelity_rel": 32.711952209472656
+      }
+    ],
+    "raw_time_ms": 37096.433331025764,
+    "projection_raw_FLOPs": 130191196160,
+    "projection_dr8_FLOPs": 4068474880,
+    "projection_dr16_FLOPs": 8136949760,
+    "projection_dr32_FLOPs": 16273899520,
+    "storage_raw_elements": 262144,
+    "storage_dr8_elements": 8192,
+    "storage_dr16_elements": 16384,
+    "storage_dr32_elements": 32768
+  },
+  "_offline_basis_ms": 3.2707289792597294,
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 2,
+    "K": 256,
+    "max_length": 64,
+    "min_length": 32
+  },
+  "description": "Cost measurement \u2014 raw vs. defragmented Jacobian computation. For layers {6, 12, 18} of Qwen3.5-0.8B with |U|=256, measures: (1) T_raw: time for compute_jacobian_for_tokens (|U| backward passes), (2) T_defrag(r): time for batched J_r computation (r backward passes in single forward + autograd call), (3) Projection FLOPs: |U|*D*V vs. r*D*V, (4) Storage elements: |U|*D vs. r*D. Tests r values of 8, 16, 32. Reports speedup and reconstruction fidelity."
+}

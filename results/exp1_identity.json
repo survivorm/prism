@@ -31,5 +31,8 @@
   },
   "mean_loss": 1.567242611614598e-08,
   "max_loss": 1.033357506230459e-07,
-  "determinism_pass": true
+  "determinism_pass": true,
+  "max_length": 256,
+  "min_length": 128,
+  "description": "Identity test: verifies that the Jacobian bridge loss L_bridge is approximately zero when bridging a model to itself (same large and small model) with pseudo-inverse Gramian correction. Also checks Jacobian determinism by computing the same Jacobian twice and confirming the result is identical (max difference < 1e-6). Validates that the projection correction pipeline works correctly."
 }

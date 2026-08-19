@@ -50,5 +50,13 @@
     "21->21": 0.860202968120575,
     "22->22": 0.8745040893554688,
     "23->23": 0.7297711968421936
-  }
+  },
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 1,
+    "K": 8,
+    "max_length": 64,
+    "min_length": 32
+  },
+  "description": "Ablation study comparing bridge loss WITH pseudo-inverse Gramian correction versus WITHOUT it (raw J @ E^T @ E). The corrected version should yield near-zero loss for identity mapping (projection correction works), while the raw version should produce significant loss (~0.5-0.8) due to non-orthogonal embeddings. Confirms that Gramian correction is essential for the bridge to function."
 }

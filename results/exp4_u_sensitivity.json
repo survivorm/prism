@@ -201,5 +201,13 @@
       }
     ],
     "avg": 0.7809131393829981
-  }
+  },
+  "params": {
+    "large_model": "/data/Qwen/Qwen3.5-4B",
+    "small_model": "Qwen/Qwen3.5-0.8B",
+    "n_samples": 2,
+    "max_length": 64,
+    "min_length": 32
+  },
+  "description": "Cross-model sensitivity of the Jacobian bridge loss to |U| (token set size) for Qwen3.5-4B \u2192 Qwen3.5-0.8B. Tests |U| values of 8, 16, 32, 64, 128, 256, 512 and measures how bridge loss stabilizes as the token set grows. Answers the question: does L_bridge converge at some |U|, or keep changing? Uses sampled layer pairs to keep runtime manageable."
 }
