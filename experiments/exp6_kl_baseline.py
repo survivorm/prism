@@ -14,7 +14,7 @@ import os
 
 import torch
 
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
 from prism.calibration import (
     extract_embeddings,
@@ -155,19 +155,24 @@ def main(
     corr = scipy.stats.spearmanr(kl_means, bridge_means).correlation
 
     os.makedirs(results_dir, exist_ok=True)
+    output = {
+        "kl_per_layer": kl_all,
+        "bridge_per_layer": bridge_all,
+        "kl_means": kl_means,
+        "bridge_means": bridge_means,
+        "spearman_corr": corr,
+        "n_samples": len(samples),
+        "params": {
+            "large_model": large_model,
+            "small_model": small_model,
+            "n_samples": n_samples,
+            "K": K,
+            "max_length": max_length,
+            "min_length": min_length,
+        },
+    }
     with open(os.path.join(results_dir, "exp6_kl_baseline.json"), "w") as f:
-        json.dump(
-            {
-                "kl_per_layer": kl_all,
-                "bridge_per_layer": bridge_all,
-                "kl_means": kl_means,
-                "bridge_means": bridge_means,
-                "spearman_corr": corr,
-                "n_samples": len(samples),
-            },
-            f,
-            indent=2,
-        )
+        json.dump(output, f, indent=2)
 
     print(f"\nSpearman correlation (KL vs bridge): {corr:.4f}")
     if abs(corr) < 0.5:

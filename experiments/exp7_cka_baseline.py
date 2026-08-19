@@ -164,17 +164,22 @@ def main(
     bridge_vals = list(bridge_data.values())
     corr = scipy.stats.spearmanr(cka_vals, bridge_vals).correlation
 
+    output = {
+        "cka": cka_data,
+        "bridge": bridge_data,
+        "spearman_corr": corr,
+        "n_samples": len(samples),
+        "params": {
+            "large_model": large_model,
+            "small_model": small_model,
+            "n_samples": n_samples,
+            "K": K,
+            "max_length": max_length,
+            "min_length": min_length,
+        },
+    }
     with open(os.path.join(results_dir, "exp7_cka_baseline.json"), "w") as f:
-        json.dump(
-            {
-                "cka": cka_data,
-                "bridge": bridge_data,
-                "spearman_corr": corr,
-                "n_samples": len(samples),
-            },
-            f,
-            indent=2,
-        )
+        json.dump(output, f, indent=2)
 
     print(f"\nSpearman correlation (CKA vs bridge): {corr:.4f}")
 

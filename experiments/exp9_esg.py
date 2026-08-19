@@ -84,6 +84,7 @@ def main(
 
     # Save JSON
     os.makedirs(results_dir, exist_ok=True)
+    all_results["params"] = {model: model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length, n_components: n_components}
     with open(os.path.join(results_dir, "esg_data.json"), "w") as f:
         json.dump(all_results, f, indent=2)
 

@@ -85,6 +85,7 @@ def main(
         print(f"inv_perm layer {layer}: {loss:.2e}")
 
     os.makedirs(results_dir, exist_ok=True)
+    results["params"] = {model: model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length}
     with open(os.path.join(results_dir, "exp5_embedding_perm.json"), "w") as f:
         json.dump(results, f, indent=2)
 

@@ -51,6 +51,7 @@ def main(
         print(f"  Layer {layer}: J.norm = {avg_norm:.4f}")
 
     os.makedirs(results_dir, exist_ok=True)
+    results["params"] = {model: model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length}
     with open(os.path.join(results_dir, "exp5_layer_sensitivity.json"), "w") as f:
         json.dump(results, f, indent=2)
 

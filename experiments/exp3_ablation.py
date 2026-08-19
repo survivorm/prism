@@ -97,15 +97,19 @@ def main(
         results_raw[f"{l_L}->{l_S}"] = sum(losses_r) / len(losses_r)
 
     os.makedirs(results_dir, exist_ok=True)
+    output = {
+        "with_correction": results_corrected,
+        "without_correction": results_raw,
+        "params": {
+            "model": model,
+            "n_samples": n_samples,
+            "K": K,
+            "max_length": max_length,
+            "min_length": min_length,
+        },
+    }
     with open(os.path.join(results_dir, "exp3_ablation.json"), "w") as f:
-        json.dump(
-            {
-                "with_correction": results_corrected,
-                "without_correction": results_raw,
-            },
-            f,
-            indent=2,
-        )
+        json.dump(output, f, indent=2)
 
     print(
         f"\nMean corrected:  {sum(results_corrected.values()) / len(results_corrected):.8f}"

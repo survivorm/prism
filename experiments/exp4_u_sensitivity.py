@@ -100,6 +100,7 @@ def main(
         print(f"|U|={u_size}: avg={avg:.4f}")
 
     os.makedirs(results_dir, exist_ok=True)
+    results["params"] = {large_model: large_model, small_model: small_model, n_samples: n_samples, max_length: max_length, min_length: min_length}
     with open(os.path.join(results_dir, "exp4_u_sensitivity.json"), "w") as f:
         json.dump(results, f, indent=2)
 

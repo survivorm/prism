@@ -95,6 +95,7 @@ def main(
         print(f"n_components={nc}: loss={loss:.8f}")
 
     os.makedirs(results_dir, exist_ok=True)
+    results["params"] = {model: model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length, n_components: n_components}
     with open(os.path.join(results_dir, "exp8_svd_ablation.json"), "w") as f:
         json.dump(results, f, indent=2)
 
