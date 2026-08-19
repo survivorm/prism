@@ -60,7 +60,7 @@ def _inverse_gramian(E: torch.Tensor) -> torch.Tensor:
             _gramian_cache[key] = _compute_inverse_gramian(E)
             os.makedirs(_GRAMIAN_DIR, exist_ok=True)
             torch.save(_gramian_cache[key], path)
-    return _gramian_cache[key]
+    return _gramian_cache[key].to(E.device)
 
 
 def _gramian_key(E: torch.Tensor) -> str:
@@ -70,7 +70,7 @@ def _gramian_key(E: torch.Tensor) -> str:
     248k×1024 matrix would be prohibitively expensive.
     """
     header = f"{tuple(E.shape)}|{str(E.device)}".encode()
-    data = header + E[0].numpy().tobytes() + E[-1].numpy().tobytes()
+    data = header + E[0].cpu().numpy().tobytes() + E[-1].cpu().numpy().tobytes()
     h = hashlib.sha256(data).hexdigest()[:16]
     return f"g_{h}"
 

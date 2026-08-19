@@ -32,7 +32,9 @@ def compute_jacobian_for_tokens(
     S = input_ids.shape[1]
     prefix_cache = _run_prefix_pass(model, input_ids, attention_mask)
     h = _extract_hidden_state(model, input_ids, attention_mask, layer_idx)
-    h = h.float().detach().requires_grad_(True)
+    # Match model dtype to avoid mismatch in decoder (fp16 models on GPU)
+    model_dtype = next(model.parameters()).dtype
+    h = h.to(model_dtype).detach().requires_grad_(True)
     logits = _run_decoder_pass(model, prefix_cache, h, S, layer_idx)
     J = _compute_jacobian_rows(logits, h, token_set)
     return J
@@ -162,3 +164,18 @@ def _compute_jacobian_rows(
         J[i] = grad[0, 0, :]
 
     return J
+
+
+def softmax_jacobian(J: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
+    """Gauge-invariant Jacobian: J^(p) = diag(p) - pp^T @ J.
+
+    J^(p)_i = p_i * (J_i - J_bar_p),  J_bar_p = sum_k p_k * J_k
+    Removes the common-mode shift (gauge) from raw Jacobian.
+    """
+    J_bar = (p[:, None] * J).sum(dim=0, keepdim=True)  # [1, D]
+    return p[:, None] * (J - J_bar)  # [K, D]
+
+
+def uniform_centered(J: torch.Tensor) -> torch.Tensor:
+    """Uniform centering: J - mean(J). Removes average shift."""
+    return J - J.mean(dim=0, keepdim=True)
