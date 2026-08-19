@@ -157,7 +157,7 @@ def main(
 
         for step in range(steps):
             optimizer.zero_grad()
-            total_loss = 0.0
+            total_loss_val = 0.0
 
             for si in range(min(n_samples, len(targets))):
                 s = samples[si]
@@ -187,9 +187,11 @@ def main(
                 kl_loss = (p_ed * torch.log(p_ed / (p_orig + 1e-12))).mean()
 
                 loss = bridge_loss + kl_weight * kl_loss
-                total_loss += loss
+                total_loss_val += loss.item()
+                # Grad accumulation: backward per sample to avoid OOM
+                is_last = si == min(n_samples, len(targets)) - 1
+                loss.backward(retain_graph=not is_last)
 
-            total_loss.backward()
             optimizer.step()
 
             # Trust-region projection
@@ -202,7 +204,7 @@ def main(
 
             if (step + 1) % 10 == 0 or step == 0:
                 print(
-                    f"  step {step + 1}/{steps}: loss={total_loss.item():.4f}, "
+                    f"  step {step + 1}/{steps}: loss={total_loss_val:.4f}, "
                     f"‖ΔW‖_F={delta_W.norm().item():.4f}"
                 )
 
