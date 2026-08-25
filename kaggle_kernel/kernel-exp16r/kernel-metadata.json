@@ -5,11 +5,9 @@
   "accelerator": "gpu",
   "language": "python",
   "code_file": "kernel.ipynb",
-  "id": "voroninmichael/prism-exp16-readout-pull",
-  "title": "Prism Exp16: Readout Pull",
-  "slug": "prism-exp16-readout-pull",
+  "id": "voroninmichael/prism-readout-pull",
+  "title": "Prism: Readout Pull",
   "kernel_sources": [
-    "voroninmichael/prism-exp16-stage0-targets",
-    "voroninmichael/prism-exp16-readout-pull"
+    "voroninmichael/exp16-stage-0-target-jacobian-cache"
   ]
 }

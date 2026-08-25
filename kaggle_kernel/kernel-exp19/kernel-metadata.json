@@ -5,12 +5,10 @@
   "accelerator": "gpu",
   "language": "python",
   "code_file": "kernel.ipynb",
-  "title": "Prism: exp19-destruction",
-  "slug": "prism-exp19-destruction",
+  "id": "voroninmichael/prism-exp19-destruction",
+  "title": "Prism: Destruction Detector",
   "kernel_sources": [
-    "voroninmichael/prism-exp19-destruction",
-    "voroninmichael/prism-exp16-stage0-targets",
-    "voroninmichael/prism-exp16-readout-pull"
-  ],
-  "id": "voroninmichael/prism-exp19-destruction"
+    "voroninmichael/exp16-stage-0-target-jacobian-cache",
+    "voroninmichael/prism-readout-pull"
+  ]
 }

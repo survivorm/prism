@@ -106,11 +106,15 @@ def build_kernel(
             "import traceback\n"
             "import torch\n"
             "\n"
+            "# Fix allocator fragmentation (exp16r OOM: reserved-but-unallocated\n"
+            "# grew to 1.1GB across alphas) — set BEFORE any CUDA use.\n"
+            'os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")\n'
+            "\n"
             "# KAGGLEHUB_CACHE: persist models across sessions\n"
             'os.environ["KAGGLEHUB_CACHE"] = "/kaggle/working/.model_cache"\n'
             'os.makedirs("/kaggle/working/.model_cache", exist_ok=True)\n'
             "\n"
-            'WORKING = "/kaggle/working"\n'
+            'WORKING = "/kaggle/working" if os.path.isdir("/kaggle/working") else os.path.expanduser("~/.kaggle_test")\n'
             "sys.path.insert(0, WORKING)\n"
             "\n"
             "num_gpus = torch.cuda.device_count()\n"
@@ -133,35 +137,56 @@ def build_kernel(
             "os.makedirs(RES, exist_ok=True)\n"
             "\n"
             "\n"
-            "# Resolve models: kernel_sources -> working -> HF, with save_pretrained fallback\n"
+            "# Resolve models: kernel_sources (prev commit outputs) -> working -> HF\n"
             "def resolve_model(hf_id):\n"
-            "    # 1. Check ../input/ from kernel_sources\n"
-            '    for d in ["qwen35-08b", "qwen35-4b", "prism-exp16-stage0-targets"]:\n'
-            '        p = os.path.join("/kaggle/input", d, hf_id.split("/")[-1])\n'
-            "        if os.path.isdir(p):\n"
-            '            print(f"Found {hf_id} at {p}")\n'
-            "            return p\n"
+            '    model_dir = "qwen35-08b" if "0.8B" in hf_id else "qwen35-4b"\n'
+            "    # 1. Check each slug in /kaggle/input/ — listdir only (isdir lies on mounts)\n"
+            '    input_dir = "/kaggle/input"\n'
+            "    try:\n"
+            "        slugs = os.listdir(input_dir)\n"
+            '        print(f"resolve {hf_id}: slugs={slugs}")\n'
+            "        for slug in slugs:\n"
+            "            p_sub = os.path.join(input_dir, slug)\n"
+            "            try:\n"
+            "                contents = os.listdir(p_sub)\n"
+            "            except OSError:\n"
+            "                continue\n"
+            "            if model_dir in contents:\n"
+            "                p = os.path.join(p_sub, model_dir)\n"
+            '                print(f"Found {hf_id} at {p} (via {slug})")\n'
+            "                return p\n"
+            "    except Exception as e:\n"
+            '        print(f"DEBUG: /kaggle/input/ check failed: {e}")\n'
             "    # 2. Check WORKING\n"
-            '    wf = os.path.join(WORKING, "qwen35-08b" if "0.8B" in hf_id else "qwen35-4b")\n'
+            "    wf = os.path.join(WORKING, model_dir)\n"
             "    if os.path.isdir(wf):\n"
             '        print(f"Found {hf_id} at {wf}")\n'
             "        return wf\n"
-            "    # 3. Return HF ID — from_pretrained will download, save_pretrained will persist\n"
-            '    print(f"Loading {hf_id} from HF...")\n'
+            "    # 3. Return HF ID - will download + persist\n"
+            '    print(f"Need to download {hf_id} from HF")\n'
             "    return hf_id\n"
             "\n"
             "# Load + save for persistence (calls from_pretrained, then save_pretrained if from HF)\n"
             "def load_model(cls, hf_id, **kw):\n"
             "    path = resolve_model(hf_id)\n"
             "    model = cls.from_pretrained(path, **kw)\n"
-            "    # If path was HF id (not local), persist it\n"
+            "    # Persist if loaded from HF\n"
             "    if path == hf_id:\n"
             '        dst = os.path.join(WORKING, "qwen35-08b" if "0.8B" in hf_id else "qwen35-4b")\n'
             "        if not os.path.isdir(dst):\n"
             '            print(f"Saving {hf_id} to {dst}...")\n'
             "            model.save_pretrained(dst)\n"
+            "            ensure_tokenizer(hf_id, dst)\n"
             '            print(f"Saved")\n'
             "    return model\n"
+            "\n"
+            "# Ensure tokenizer files exist in a persisted model dir\n"
+            "def ensure_tokenizer(hf_id, dst):\n"
+            "    import transformers\n"
+            '    if not os.path.exists(os.path.join(dst, "tokenizer.json")):\n'
+            '        print(f"Saving tokenizer for {hf_id}...")\n'
+            "        transformers.AutoTokenizer.from_pretrained(hf_id).save_pretrained(dst)\n"
+            "\n"
             "\n"
             'SMALL = resolve_model("Qwen/Qwen3.5-0.8B")\n'
             'LARGE = resolve_model("Qwen/Qwen3.5-4B")\n'
@@ -169,7 +194,13 @@ def build_kernel(
     ]
 
     # Prism modules
-    for mod in ["prism.jacobian", "prism.bridge", "prism.esg", "prism.calibration"]:
+    for mod in [
+        "prism.jacobian",
+        "prism.bridge",
+        "prism.esg",
+        "prism.calibration",
+        "prism.cache_io",
+    ]:
         src = get_source(mod)
         src = strip_docstring(src)
         cells.append(code_cell(src))
@@ -184,6 +215,10 @@ def build_kernel(
     # Runner cell — inspect main() signature, pass appropriate kwargs
     runner_code = (
         f"# ---------- run {exp_name} ----------\n"
+        f"import gc\n"
+        f"# Hard cleanup from previous kernel version (same session, different code)\n"
+        f"gc.collect()\n"
+        f"if torch.cuda.is_available(): torch.cuda.empty_cache()\n"
         f"import inspect\n"
         f"sig = inspect.signature({main_name})\n"
         f"kwargs = {{}}\n"
@@ -198,18 +233,10 @@ def build_kernel(
         f"if 'targets_dir' in params: kwargs['targets_dir'] = os.path.join(RES, 'targets')\n"
         f"# Remove conflicting keys: if both model and small_model, prefer specific\n"
         f"if 'small_model' in kwargs and 'model' in kwargs: del kwargs['model']\n"
-        f"# Ensure models exist in WORKING before running\n"
-        f"import transformers\n"
-        f"if not os.path.isdir('/kaggle/working/qwen35-08b'):\n"
-        f"    print('Loading small model (first run)...')\n"
-        f"    _m = load_model(transformers.AutoModelForCausalLM, 'Qwen/Qwen3.5-0.8B', torch_dtype=torch.float32, attn_implementation='eager')\n"
-        f"    del _m\n"
-        f"    if torch.cuda.is_available(): torch.cuda.empty_cache()\n"
-        f"if not os.path.isdir('/kaggle/working/qwen35-4b'):\n"
-        f"    print('Loading large model (first run)...')\n"
-        f"    _m = load_model(transformers.AutoModelForCausalLM, 'Qwen/Qwen3.5-4B', torch_dtype=torch.float16, attn_implementation='eager')\n"
-        f"    del _m\n"
-        f"    if torch.cuda.is_available(): torch.cuda.empty_cache()\n"
+        f"# Memory diagnostic before experiment\n"
+        f"if torch.cuda.is_available():\n"
+        f"    print(f'cuda:0 alloc={{torch.cuda.memory_allocated(0)/1024**3:.1f}}GiB reserved={{torch.cuda.memory_reserved(0)/1024**3:.1f}}GiB')\n"
+        f"    print(f'cuda:1 alloc={{torch.cuda.memory_allocated(1)/1024**3:.1f}}GiB reserved={{torch.cuda.memory_reserved(1)/1024**3:.1f}}GiB')\n"
         f"t0 = time.time()\n"
         f"try:\n"
         f"    {main_name}(**kwargs)\n"
@@ -266,8 +293,10 @@ def build_kernel(
         meta["id"] = kernel_id
     if kernel_title:
         meta["title"] = kernel_title
-    if "/" in kernel_id:
-        meta["slug"] = kernel_id.split("/")[-1]
+    # slug omitted — let Kaggle derive from title to avoid 409 on stale slugs
+    # if "/" in kernel_id:
+    #     meta["slug"] = kernel_id.split("/")[-1]
+    # If 409 persists: remove meta["id"] to force Kaggle to create new kernel
     if kernel_sources:
         meta["kernel_sources"] = kernel_sources
     with open(meta_path, "w") as f:

@@ -22,53 +22,66 @@ KERNELS = {
         "slug": "prism-exp13-domain-esg",
         "id": "voroninmichael/prism-exp13-domain-esg",
         "title": "Prism: Domain-specific ESG",
+        "sources": ["voroninmichael/prism-exp13-domain-esg"],
     },
     "exp14": {
         "dir": "kernel-exp14",
         "slug": "prism-exp14-snr-pr",
         "id": "voroninmichael/prism-exp14-snr-pr",
         "title": "Prism: SNR & Participation Ratio",
+        "sources": ["voroninmichael/prism-exp14-snr-pr"],
     },
     "exp15": {
         "dir": "kernel-exp15",
         "slug": "prism-exp15-gdn-anchors",
         "id": "voroninmichael/prism-exp15-gdn-anchors",
         "title": "Prism: GDN Anchor Shifts",
+        "sources": ["voroninmichael/prism-exp15-gdn-anchors"],
     },
     "exp6": {
         "dir": "kernel-exp6",
         "slug": "prism-kl-baseline",
         "id": "voroninmichael/prism-kl-baseline",
         "title": "Prism: KL Baseline",
+        "sources": ["voroninmichael/prism-kl-baseline"],
     },
     "exp16_stage0": {
         "dir": "kernel-exp16",
-        "slug": "prism-exp16-stage0-targets",
-        "id": "voroninmichael/prism-exp16-stage0-targets",
-        "title": "Prism: Stage0 Targets",
+        # Canonical slug on Kaggle (title-derived). The old slug
+        # 'prism-exp16-stage0-targets' is a stale handle: `kernels pull`->404,
+        # not in `kaggle kernels list`, rejected as a kernel source by the
+        # server. Only the legacy `kernels output` path still resolves it.
+        "slug": "exp16-stage-0-target-jacobian-cache",
+        "id": "voroninmichael/exp16-stage-0-target-jacobian-cache",
+        "title": "Exp16: Stage 0 - Target Jacobian Cache",
         "exp_file": "experiments/exp16_stage0_targets.py",
+        # Producer: no kernel source (models via HF, targets computed fresh).
+        "sources": [],
     },
     "exp16_readout": {
         "dir": "kernel-exp16r",
-        "slug": "prism-exp16-readout-pull",
-        "id": "voroninmichael/prism-exp16-readout-pull",
+        "slug": "prism-readout-pull",
+        "id": "voroninmichael/prism-readout-pull",
         "title": "Prism: Readout Pull",
         "exp_file": "experiments/exp16_readout_pull.py",
-        "sources": ["voroninmichael/prism-exp16-stage0-targets"],
+        "sources": ["voroninmichael/exp16-stage-0-target-jacobian-cache"],
     },
     "exp17": {
         "dir": "kernel-exp17",
         "slug": "prism-exp17-lora-distill",
         "id": "voroninmichael/prism-exp17-lora-distill",
         "title": "Prism: LoRA Distillation",
-        "sources": ["voroninmichael/prism-exp16-stage0-targets"],
+        # Explicit: glob exp17_*.py now also matches exp17_grad_sanity.py.
+        "exp_file": "experiments/exp17_lora_distill.py",
+        "sources": ["voroninmichael/exp16-stage-0-target-jacobian-cache"],
     },
     "exp18": {
         "dir": "kernel-exp18",
         "slug": "prism-exp18-logit-kd",
         "id": "voroninmichael/prism-exp18-logit-kd",
         "title": "Prism: Logit KD Control",
-        "sources": ["voroninmichael/prism-exp16-stage0-targets"],
+        "exp_file": "experiments/exp18_logit_kd.py",
+        "sources": ["voroninmichael/exp16-stage-0-target-jacobian-cache"],
     },
     "exp19": {
         "dir": "kernel-exp19",
@@ -76,8 +89,8 @@ KERNELS = {
         "id": "voroninmichael/prism-exp19-destruction",
         "title": "Prism: Destruction Detector",
         "sources": [
-            "voroninmichael/prism-exp16-stage0-targets",
-            "voroninmichael/prism-exp16-readout-pull",
+            "voroninmichael/exp16-stage-0-target-jacobian-cache",
+            "voroninmichael/prism-readout-pull",
         ],
     },
 }
@@ -89,7 +102,7 @@ def build(exp_name: str):
 
     # Resolve exp file
     if "exp_file" in meta_dict:
-        exp_path = os.path.join(KAGGLE_DIR, "..", "experiments", meta_dict["exp_file"])
+        exp_path = os.path.join(KAGGLE_DIR, "..", meta_dict["exp_file"])
     else:
         import glob as _glob
 

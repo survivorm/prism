@@ -5,11 +5,9 @@
   "accelerator": "gpu",
   "language": "python",
   "code_file": "kernel.ipynb",
-  "title": "Prism: exp18-logit-kd",
-  "slug": "prism-exp18-logit-kd",
+  "id": "voroninmichael/prism-exp18-logit-kd",
+  "title": "Prism: Logit KD Control",
   "kernel_sources": [
-    "voroninmichael/prism-exp18-logit-kd",
-    "voroninmichael/prism-exp16-stage0-targets"
-  ],
-  "id": "voroninmichael/prism-exp18-logit-kd"
+    "voroninmichael/exp16-stage-0-target-jacobian-cache"
+  ]
 }
