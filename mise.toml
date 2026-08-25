@@ -1,0 +1,19 @@
+# Prism — local automation. Python comes from .venv (uv-managed), never raw binaries.
+[tools]
+python = "3.13.14"
+
+[tasks.test]
+description = "Local dev suite (fast, deterministic, sub-second per test)"
+run = ".venv/bin/python -m pytest tests -q"
+
+[tasks.audit]
+description = "Contract audit vs docs/exp17_change.md (gate source of truth)"
+run = ".venv/bin/python scripts/audit_v23.py"
+
+[tasks.check]
+description = "Release-readiness: full suite + contract audit (== /until-done verifyCommand)"
+run = "mise run test && mise run audit"
+
+[tasks.loc]
+description = "Structural constraint check: files <=450 LOC (400 target), functions <=90 LOC"
+run = ".venv/bin/python scripts/check_loc.py prism experiments scripts"

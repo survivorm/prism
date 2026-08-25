@@ -44,9 +44,38 @@ def strip_main_block(code: str) -> str:
 
 
 def strip_prism_imports(code: str) -> str:
-    code = re.sub(r"\n?\s*from prism\.\w+ import \([\s\S]*?\)\n?", "", code)
-    code = re.sub(r"\n?\s*from prism\.\w+ import [^\n]*\n?", "", code)
-    return code
+    """Drop `from prism.X import ...` lines (incl. multi-line paren blocks).
+
+    Line-based so adjacent code lines are never fused (the old regex's `\n?`
+    gobbled a blank line and glued `Fn` to the next import = SyntaxError).
+    """
+    out: list[str] = []
+    skip_depth = 0
+    for raw in code.split("\n"):
+        s = raw.strip()
+        if skip_depth > 0:
+            skip_depth += raw.count("(") - raw.count(")")
+            if skip_depth <= 0:
+                skip_depth = 0
+            continue
+        if s.startswith("from prism.") or s.startswith("import prism"):
+            if s.endswith("("):
+                skip_depth = raw.count("(") - raw.count(")")
+                if skip_depth < 0:
+                    skip_depth = 0
+            continue
+        out.append(raw)
+    res: list[str] = []
+    blank = 0
+    for ln in out:
+        if ln.strip() == "":
+            blank += 1
+            if blank <= 1:
+                res.append(ln)
+        else:
+            blank = 0
+            res.append(ln)
+    return "\n".join(res)
 
 
 def rename_main(code: str, new_name: str) -> str:
@@ -67,12 +96,38 @@ def code_cell(src: str) -> dict:
     }
 
 
+def assert_no_bare_prism(cells: list[dict]) -> None:
+    """Fail the build if any code cell still contains a bare `prism.*` import.
+
+    build_kernel inlines every prism module and strips prism imports only from
+    the EXPERIMENT cell — not from inlined modules. A prism module with a bare
+    cross-import (e.g. `from prism.calibration import X`) would survive into the
+    notebook and crash on Kaggle (no `prism` package) with ModuleNotFoundError.
+    This guard turns that T4-time crash into a local build failure.
+    """
+    pat = re.compile(r"^\s*(?:from\s+prism[.\w]*\s+import|import\s+prism)")
+    bad: list[str] = []
+    for ci, c in enumerate(cells):
+        if c.get("cell_type") != "code":
+            continue
+        for line in (c.get("source") or []):
+            if pat.match(line):
+                bad.append(f"cell {ci}: {line.strip()}")
+    if bad:
+        raise ValueError(
+            "bare prism import(s) survived into the notebook (would crash on "
+            "Kaggle, no prism package). Make that prism module standalone or "
+            "list its dependency: " + "; ".join(bad)
+        )
+
+
 def build_kernel(
     exp_file: str,
     out_dir: str,
     kernel_id: str = "",
     kernel_title: str = "Prism Experiment",
     kernel_sources: list[str] | None = None,
+    dataset_sources: list[str] | None = None,
 ):
     """Build kernel.ipynb and kernel-metadata.json for one experiment."""
     # Read deps from pyproject.toml
@@ -200,6 +255,7 @@ def build_kernel(
         "prism.esg",
         "prism.calibration",
         "prism.cache_io",
+        "prism.layer_selection",
     ]:
         src = get_source(mod)
         src = strip_docstring(src)
@@ -266,6 +322,8 @@ def build_kernel(
     )
     cells.append(code_cell(runner_code))
 
+    assert_no_bare_prism(cells)
+
     nb = {
         "cells": cells,
         "metadata": {
@@ -299,6 +357,8 @@ def build_kernel(
     # If 409 persists: remove meta["id"] to force Kaggle to create new kernel
     if kernel_sources:
         meta["kernel_sources"] = kernel_sources
+    if dataset_sources:
+        meta["dataset_sources"] = dataset_sources
     with open(meta_path, "w") as f:
         json.dump(meta, f, indent=2)
 
@@ -325,6 +385,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sources", default=[], nargs="*", help="kernel_sources for persistence"
     )
+    parser.add_argument(
+        "--datasets",
+        default=[],
+        nargs="*",
+        help="dataset_sources, e.g. voroninmichael/prism-exp16-targets",
+    )
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
-    build_kernel(args.exp, args.out, args.id, args.title, args.sources)
+    build_kernel(
+        args.exp, args.out, args.id, args.title, args.sources, args.datasets
+    )
