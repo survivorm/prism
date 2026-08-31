@@ -1,6 +1,6 @@
 # GPU-перезапуск: какие эксперименты не выразительны в текущем формате
 
-> **Статус:** черновик, заполняю по одному (по результатам, не по слухам).
+> **Статус:** Готово (2026-08-31) — все эксперименты пройдены; итоговая таблица + GPU-очередь в конце. commit 8a4638a (v1) → финальный commit.
 > **Критерий «не выразительны»:** (a) стат. мощность недостаточна (N/S/K малы), (b) результат
 > самопротиворечив, (c) метрика/формула неверна, (d) баслайн слишком слаб/отсутствует,
 > (e) «minimal run» — данные не финальные.
@@ -15,12 +15,25 @@
 
 ---
 
-## Итоговая таблица (заполняется по мере анализа)
+## Итоговая таблица (final)
 
-| Exp | Текущий формат | Проблема | Нужно на GPU | Prio |
-|-----|---------------|----------|--------------|------|
-| 13  | n=4, K=64, overlap ‖U₁U₂ᵀ‖²/r | **метрика математически = 1** (ортонарм. базисы) → значения 0.30–0.42 невозможны | пересчёт ‖U₁ᵀU₂‖²_F/r, N≥16 | ? |
-| ... | | | | |
+| Exp | Проблема | Тип | GPU re-run? | Prio |
+|-----|----------|-----|-------------|------|
+| **13** | overlap_hidden **good** (0.015→0.998); bridge 1.0-sentinel (3/5 pts), monotonicity −0.894 artifact | sentinel (paper) + N=8 thin | paper-fix; optional 24-layer | MEDIUM |
+| **14** | adequate (n=8 real); JSON missing `params` | reproducibility | no (add params) | LOW |
+| **11** | `recon_fidelity` GROWS with r; K=32 vs K=256 mismatch | likely bug + param mismatch | **YES** (debug 1 layer → r-sweep) | MEDIUM-HIGH |
+| **4_k** | **BROKEN**: self-bridge `jacobian_bridge(J,J,E,E)`, no 4B loaded → all-zeros | code bug (wrong thing) | **YES** (load 4B, K→256, n≥4) | **HIGH** |
+| **15** | 1.0-sentinel (2/4 pts); −0.949 identical across 4 schemes | sentinel (paper) | paper-fix; optional more anchors | MEDIUM |
+| **2** | n=3, K=8, sparse (no full 32×24 map) | thin | YES (n=8, K=64, full map) | LOW-MED |
+| **7** | CKA≈0 vs bridge 1→0.8 — contrast works as intended | — | no | none |
+| **3** | clean ablation (corr 0 / no-corr 0.7 / random 1.0) | — | no | none |
+| **1/5/6b** | self-bridge legitimate (identity/perm/condition-number) | — | no | none |
+| **10a/b/d** | a,d OK; b n=1 thin (gauge invariance robust) | thin | optional (b n=8) | LOW |
+| **6** | n=16 OK but bridge_means sentinel 1.0; spearman −0.09 partly artifact | sentinel (paper) | paper-fix; optional rerun | MEDIUM |
+| **12a/b/c** | quantization destroys both (KL~15) — «comparative destruction» not preservation | framing | paper re-frame; optional smaller-ε | MEDIUM |
+| **16** | `delta_W` saturates identically at alpha 0.1/0.3/1.0 | possible clamp/bug | investigate (CPU) → re-run | MEDIUM-HIGH |
+| **18/19** | GDN pairs fine here (logit-KD/destruction, not o_proj) | — | no | LOW |
+| **17** | dual-cadence «too weak» (pair 2 half at 300) | underpowered | **YES** (500, lr 3e-3 — built, quota) | **HIGH** (pending) |
 
 ---
 
