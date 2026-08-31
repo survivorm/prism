@@ -1,0 +1,54 @@
+{
+  "description": "Readout-only pull: gradient descent on lm_head only, minimizing bridge loss (cosine to transported large-model Jacobian) + KL leash to original predictions. Trust-region projection constrains \u2016\u0394W\u2016_F \u2264 \u03b1\u00b7\u2016W\u2016_F. Jacobian is differentiable: J_S = W[token_set] @ J_norm where J_norm is pre-computed LayerNorm Jacobian (analytical for last_layer). Sweeps alpha values to find elasticity limit alpha* where bridge improvement stalls. Measures bridge_mean, KL_ed_orig, and \u2016\u0394W\u2016/\u2016W\u2016 at each alpha.",
+  "per_alpha": {
+    "0.01": {
+      "alpha": 0.01,
+      "bridge_mean": 0.18978644348680973,
+      "KL_ed_orig": 8.568412024345662e-08,
+      "delta_W_norm": 3.140878915786743,
+      "delta_W_frac": 0.010000000030363295
+    },
+    "0.03": {
+      "alpha": 0.03,
+      "bridge_mean": 0.6179921552538872,
+      "KL_ed_orig": 6.71476973579388e-07,
+      "delta_W_norm": 9.422636032104492,
+      "delta_W_frac": 0.029999997813842785
+    },
+    "0.1": {
+      "alpha": 0.1,
+      "bridge_mean": 0.700801894068718,
+      "KL_ed_orig": 1.0732945199265487e-06,
+      "delta_W_norm": 14.276187896728516,
+      "delta_W_frac": 0.04545284400592614
+    },
+    "0.3": {
+      "alpha": 0.3,
+      "bridge_mean": 0.700801894068718,
+      "KL_ed_orig": 1.0732945199265487e-06,
+      "delta_W_norm": 14.276187896728516,
+      "delta_W_frac": 0.04545284400592614
+    },
+    "1.0": {
+      "alpha": 1.0,
+      "bridge_mean": 0.700801894068718,
+      "KL_ed_orig": 1.0732945199265487e-06,
+      "delta_W_norm": 14.276187896728516,
+      "delta_W_frac": 0.04545284400592614
+    }
+  },
+  "alpha_star": 0.01,
+  "target_pair": "0_0",
+  "n_layers_S": 24,
+  "last_layer": 23,
+  "K": 256,
+  "device": "cuda:1",
+  "elapsed_seconds": 1583.0133011341095,
+  "params": {
+    "small_model": "Qwen/Qwen3.5-0.8B",
+    "device": "cuda:1",
+    "max_length": 64,
+    "min_length": 32,
+    "targets_dir": "/kaggle/input/prism-exp16-stage0-targets/results/targets"
+  }
+}

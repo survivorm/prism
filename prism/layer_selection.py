@@ -22,9 +22,7 @@ def _uniform_layer_mapping(n_L: int, n_S: int) -> dict[int, int]:
     Inlined copy of prism.calibration.uniform_layer_mapping (identical formula)
     so this module stays standalone for kernel inlining.
     """
-    return {
-        i: round(i * (n_S - 1) / (n_L - 1)) for i in range(n_L)
-    }
+    return {i: round(i * (n_S - 1) / (n_L - 1)) for i in range(n_L)}
 
 
 def get_layer_types(model) -> list[str]:
@@ -49,7 +47,9 @@ def get_layer_types(model) -> list[str]:
 def select_pairs(n_L: int, n_S: int, layer_types: list[str]) -> list[tuple[int, int]]:
     """Return (l_L, l_S) pairs: full-attn l_S + 0_0 + last, sorted by l_S."""
     if n_L < 1 or n_S < 1 or len(layer_types) != n_S:
-        raise ValueError(f"invalid: n_L={n_L}, n_S={n_S}, layer_types={len(layer_types)}")
+        raise ValueError(
+            f"invalid: n_L={n_L}, n_S={n_S}, layer_types={len(layer_types)}"
+        )
     mapping = _uniform_layer_mapping(n_L, n_S)
     full_S = {i for i, t in enumerate(layer_types) if t == "full_attention"}
     selected = {0, n_S - 1} | full_S

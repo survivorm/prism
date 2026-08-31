@@ -1,0 +1,43 @@
+{
+  "description": "Calibration of destruction detector using alpha* from Exp16. Four scenarios on last layer: (a) random \u0394W, (b) 10\u00d7alpha* in target direction, (c) gauge-only \u0394W, (d) differential-only \u0394W. Each normalized to alpha*\u00b7\u2016W\u2016_F. Ranks scenarios by bridge cosine similarity \u2014 expects (b) best, (d) second, (a) random, (c) gauge-only near zero. Measures bridge cosine and KL per scenario.",
+  "alpha_star": 0.01,
+  "target_norm": 3.14087890625,
+  "scenarios": {
+    "a_random": {
+      "bridge": 0.006181501841638237,
+      "KL_ed_orig": 1.2124422854586925e-09,
+      "delta_norm": 3.1408793926239014
+    },
+    "b_10x_alpha": {
+      "bridge": 0.05507058039074764,
+      "KL_ed_orig": 5.250987737781543e-05,
+      "delta_norm": 31.40879249572754
+    },
+    "c_gauge": {
+      "bridge": 0.0061070656520314515,
+      "KL_ed_orig": 4.3721256304252165e-07,
+      "delta_norm": 3.1408791542053223
+    },
+    "d_differential": {
+      "bridge": 0.026981296017766,
+      "KL_ed_orig": 1.005635711592845e-06,
+      "delta_norm": 3.1408791542053223
+    }
+  },
+  "ranking_by_bridge": [
+    "c_gauge",
+    "a_random",
+    "d_differential",
+    "b_10x_alpha"
+  ],
+  "target_pair": "0_0",
+  "device": "cuda:1",
+  "elapsed_seconds": 56.889320850372314,
+  "params": {
+    "small_model": "Qwen/Qwen3.5-0.8B",
+    "device": "cuda:1",
+    "max_length": 64,
+    "min_length": 32,
+    "targets_dir": "/kaggle/input/exp16-stage-0-target-jacobian-cache/results/targets"
+  }
+}

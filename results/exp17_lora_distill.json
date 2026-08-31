@@ -1,0 +1,105 @@
+{
+  "description": "v23: per-layer LoRA r=4 on lm_head + attention o_proj of l_S, bridge loss on matrix-free per-sample J_S_p rows (no dense [D,D] graph: refresh steps build rows with W_rows = (W+B_lh@A_lh)[token_set] live, create_graph=True, chunked backward; one backward per row reaches lm_head AND o_proj \u2014 HVP, no D^3). Fill/stale steps use the cheap dense J_norm so the lm_head bridge gradient keeps flowing; o_proj is refresh-only. k=100 fixed. J refresh OOM -> FATAL exit 3 (no degrade). Max 300 steps/pair (CPU smoke 40). Targets matched by exact input_ids; mismatch -> bridge skipped (KL unaffected). After each pair both LoRA deltas are frozen into weights. Two orders (GPU), late-to-early only (CPU).",
+  "per_order": {
+    "late_to_early": {
+      "pairs": [
+        "4_3"
+      ],
+      "per_layer": [
+        {
+          "pair": "4_3",
+          "bridge_mean": 0.08273066766560078,
+          "KL_ed_orig": 2.907152509123989e-05,
+          "k_refresh": 100,
+          "stopped_at": 300,
+          "eval_history": [
+            [
+              0,
+              0.9835405838675797
+            ],
+            [
+              50,
+              0.9062923579476774
+            ],
+            [
+              100,
+              0.8552657812833786
+            ],
+            [
+              150,
+              0.8317447509616613
+            ],
+            [
+              200,
+              0.8183165155351162
+            ],
+            [
+              250,
+              0.8014291934669018
+            ],
+            [
+              300,
+              0.7986638285219669
+            ]
+          ]
+        }
+      ]
+    },
+    "early_to_late": {
+      "pairs": [
+        "4_3"
+      ],
+      "per_layer": [
+        {
+          "pair": "4_3",
+          "bridge_mean": 0.07356745656579733,
+          "KL_ed_orig": 2.367871036312863e-05,
+          "k_refresh": 100,
+          "stopped_at": 300,
+          "eval_history": [
+            [
+              0,
+              0.9831965825287625
+            ],
+            [
+              50,
+              0.9061458017677069
+            ],
+            [
+              100,
+              0.8717571757733822
+            ],
+            [
+              150,
+              0.8396535981446505
+            ],
+            [
+              200,
+              0.8190266937017441
+            ],
+            [
+              250,
+              0.8156173080205917
+            ],
+            [
+              300,
+              0.8123886249959469
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "r": 4,
+  "steps": 300,
+  "kl_weight": 0.1,
+  "device": "cuda:1",
+  "elapsed_seconds": 19724.4797167778,
+  "params": {
+    "small_model": "Qwen/Qwen3.5-0.8B",
+    "device": "cuda:1",
+    "max_length": 64,
+    "min_length": 32,
+    "targets_dir": "/kaggle/input/datasets/voroninmichael/prism-exp16-targets"
+  }
+}

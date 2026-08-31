@@ -65,15 +65,41 @@ KERNELS = {
         "title": "Prism: Readout Pull",
         "exp_file": "experiments/exp16_readout_pull.py",
         "sources": ["voroninmichael/exp16-stage-0-target-jacobian-cache"],
+        # Dataset fallback: targets also as a dataset (kernel-outputs mount
+        # of the stage0 kernel has been unreliable — new slug never mounted).
+        "datasets": ["voroninmichael/prism-exp16-targets"],
     },
     "exp17": {
         "dir": "kernel-exp17",
-        "slug": "prism-exp17-lora-distill",
-        "id": "voroninmichael/prism-exp17-lora-distill",
+        # Live kernel slug: title 'Prism: LoRA Distillation' resolves to
+        # prism-lora-distillation (kaggle derives the handle from the title).
+        # The old prism-exp17-lora-distill id 409-conflicts (title != id).
+        "slug": "prism-lora-distillation",
+        "id": "voroninmichael/prism-lora-distillation",
         "title": "Prism: LoRA Distillation",
         # Explicit: glob exp17_*.py now also matches exp17_grad_sanity.py.
         "exp_file": "experiments/exp17_lora_distill.py",
         "sources": ["voroninmichael/exp16-stage-0-target-jacobian-cache"],
+        "datasets": ["voroninmichael/prism-exp16-targets"],
+    },
+    "exp16_4_3": {
+        # B2 mini-kernel: exp17 v23 on a single pair (4,3) + finite-diff
+        # spot check. 0.8B student (fp32 J chain); 4B targets come from
+        # the stage0 cache (4B never loaded).
+        "dir": "kernel-exp16_4_3",
+        # Actual Kaggle slug is title-derived: prism-exp16-4-3-v23-single-pair-fd-check
+        # (registry id must match it or re-push 409-conflicts, like exp17 did).
+        "slug": "prism-exp16-4-3-v23-single-pair-fd-check",
+        "id": "voroninmichael/prism-exp16-4-3-v23-single-pair-fd-check",
+        "title": "Prism: Exp16 4_3 (v23 single pair + FD check)",
+        "exp_file": "experiments/exp17_lora_distill.py",
+        "sources": ["voroninmichael/exp16-stage-0-target-jacobian-cache"],
+        "datasets": ["voroninmichael/prism-exp16-targets"],
+        "runner_extra": (
+            "if 'pairs' in params: kwargs['pairs'] = '4_3'\n"
+            "if 'steps' in params: kwargs['steps'] = 300\n"
+            "if 'fd_check' in params: kwargs['fd_check'] = 0  # v23.2b: FD off-kernel (OOM-killed T4); run locally\n"
+        ),
     },
     "exp18": {
         "dir": "kernel-exp18",
@@ -82,6 +108,7 @@ KERNELS = {
         "title": "Prism: Logit KD Control",
         "exp_file": "experiments/exp18_logit_kd.py",
         "sources": ["voroninmichael/exp16-stage-0-target-jacobian-cache"],
+        "datasets": ["voroninmichael/prism-exp16-targets"],
     },
     "exp19": {
         "dir": "kernel-exp19",
@@ -92,6 +119,7 @@ KERNELS = {
             "voroninmichael/exp16-stage-0-target-jacobian-cache",
             "voroninmichael/prism-readout-pull",
         ],
+        "datasets": ["voroninmichael/prism-exp16-targets"],
     },
 }
 
@@ -116,23 +144,23 @@ def build(exp_name: str):
         exp_path = matches[0]
 
     kernel_dir = os.path.join(KAGGLE_DIR, meta_dict["dir"])  # type: ignore[index]
-    subprocess.run(
-        [
-            sys.executable,
-            os.path.join(KAGGLE_DIR, "build_kernel.py"),
-            "--exp",
-            exp_path,
-            "--out",
-            kernel_dir,
-            "--id",
-            meta_dict["id"],  # type: ignore[index]
-            "--title",
-            meta_dict["title"],  # type: ignore[index]
-        ]
-        + ["--sources"]
-        + (meta_dict.get("sources", [])),  # type: ignore[attr-defined]
-        check=True,
-    )
+    cmd = [
+        sys.executable,
+        os.path.join(KAGGLE_DIR, "build_kernel.py"),
+        "--exp",
+        exp_path,
+        "--out",
+        kernel_dir,
+        "--id",
+        meta_dict["id"],  # type: ignore[index]
+        "--title",
+        meta_dict["title"],  # type: ignore[index]
+    ]
+    cmd += ["--sources"] + meta_dict.get("sources", [])  # type: ignore[arg-type]
+    cmd += ["--datasets"] + meta_dict.get("datasets", [])  # type: ignore[arg-type]
+    if "runner_extra" in meta_dict:
+        cmd += ["--runner-extra", meta_dict["runner_extra"]]  # type: ignore[index]
+    subprocess.run(cmd, check=True)
 
 
 def push(exp_name: str):

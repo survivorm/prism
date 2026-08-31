@@ -1,0 +1,67 @@
+{
+  "description": "Control experiment for Exp17: same LoRA configuration (r=4 on lm_head) but loss is KL divergence between edited-small logits and large-model logits on token_set, instead of bridge loss. Purpose: compare delta-bridge per unit delta-KL between bridge-guided (Exp17) and logit-KD (Exp18) to test whether bridge guidance is more efficient at aligning sensitivity.",
+  "per_layer": [
+    {
+      "pair": "28_21",
+      "bridge_mean": 0.6061897575855255,
+      "KL_ed_orig": 1.3550366482206755e-06
+    },
+    {
+      "pair": "24_18",
+      "bridge_mean": 0.4923049509525299,
+      "KL_ed_orig": 4.934066266670811e-08
+    },
+    {
+      "pair": "20_15",
+      "bridge_mean": 0.3071742504835129,
+      "KL_ed_orig": 1.207807383621362e-09
+    },
+    {
+      "pair": "16_12",
+      "bridge_mean": 0.19761482626199722,
+      "KL_ed_orig": 4.022966890171453e-10
+    },
+    {
+      "pair": "12_9",
+      "bridge_mean": 0.13166159018874168,
+      "KL_ed_orig": 9.495275399284964e-10
+    },
+    {
+      "pair": "8_6",
+      "bridge_mean": 0.0838914792984724,
+      "KL_ed_orig": 3.594089442292975e-10
+    },
+    {
+      "pair": "4_3",
+      "bridge_mean": 0.017499399138614535,
+      "KL_ed_orig": 2.095993643404237e-10
+    },
+    {
+      "pair": "0_0",
+      "bridge_mean": 0.0025952684954972938,
+      "KL_ed_orig": 8.49027954278464e-10
+    }
+  ],
+  "pairs": [
+    "28_21",
+    "24_18",
+    "20_15",
+    "16_12",
+    "12_9",
+    "8_6",
+    "4_3",
+    "0_0"
+  ],
+  "r": 4,
+  "steps": 100,
+  "comparison_with_exp17": null,
+  "device": "cuda:1",
+  "elapsed_seconds": 2267.2180614471436,
+  "params": {
+    "small_model": "Qwen/Qwen3.5-0.8B",
+    "device": "cuda:1",
+    "max_length": 64,
+    "min_length": 32,
+    "targets_dir": "/kaggle/input/prism-exp16-stage0-targets/results/targets"
+  }
+}

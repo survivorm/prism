@@ -1,0 +1,22 @@
+{
+  "ignore": [
+    "kaggle_kernel/**"
+  ],
+  "rules": {
+    "reportMissingImports": {
+      "disable": ["reportMissingImports"]
+    },
+    "reportGeneralTypeIssues": {
+      "disable": ["reportGeneralTypeIssues"]
+    },
+    "reportArgumentType": {
+      "disable": ["reportArgumentType"]
+    },
+    "trailofbits.python.pickles-in-pytorch.pickles-in-pytorch": {
+      "disable": ["trailofbits.python.pickles-in-pytorch.pickles-in-pytorch"]
+    },
+    "unchecked-throwing-call-python": {
+      "disable": ["unchecked-throwing-call-python"]
+    }
+  }
+}

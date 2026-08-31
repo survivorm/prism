@@ -5,9 +5,12 @@
   "accelerator": "gpu",
   "language": "python",
   "code_file": "kernel.ipynb",
-  "id": "voroninmichael/prism-exp17-lora-distill",
+  "id": "voroninmichael/prism-lora-distillation",
   "title": "Prism: LoRA Distillation",
   "kernel_sources": [
     "voroninmichael/exp16-stage-0-target-jacobian-cache"
+  ],
+  "dataset_sources": [
+    "voroninmichael/prism-exp16-targets"
   ]
 }

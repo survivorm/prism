@@ -1,0 +1,16 @@
+{
+  "kernel_type": "notebook",
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "language": "python",
+  "code_file": "kernel.ipynb",
+  "id": "voroninmichael/prism-full-vocab-jacobian-probe",
+  "title": "Prism: Full-vocab Jacobian Probe",
+  "kernel_sources": [
+    "voroninmichael/exp16-stage-0-target-jacobian-cache"
+  ],
+  "dataset_sources": [
+    "voroninmichael/prism-exp16-targets"
+  ]
+}

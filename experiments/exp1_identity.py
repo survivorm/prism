@@ -102,7 +102,14 @@ def main(
         "max_loss": max_loss,
         "determinism_pass": det_ok,
     }
-    out["params"] = {model: model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length}
+    out["params"] = {
+        model: model,
+        n_samples: n_samples,
+        K: K,
+        max_length: max_length,
+        min_length: min_length,
+    }
+    # pi-lens-ignore: unchecked-throwing-call-python (standalone script: fail fast on missing results dir is the point)
     with open(os.path.join(results_dir, "exp1_identity.json"), "w") as f:
         json.dump(out, f, indent=2)
 

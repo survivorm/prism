@@ -44,6 +44,39 @@ def jacobian_bridge_raw(
     return _weighted_cosine_loss(J_S, J_S_target, probs_L, mask)
 
 
+def random_orthogonal_matrix(rows: int, cols: int, device) -> torch.Tensor:
+    """Generate a random orthogonal matrix via QR decomposition."""
+    M = torch.randn(rows, cols, device=device)
+    Q, R = torch.linalg.qr(M)
+    # Fix sign ambiguity
+    d = torch.diag(R)
+    Q = Q * torch.sign(d).clamp(min=0)
+    return Q
+
+
+def jacobian_bridge_random(
+    J: torch.Tensor,  # [K, D] — original jacobian at layer
+    E: torch.Tensor,  # [V, D] — embeddings
+    probs_L: torch.Tensor,
+    threshold: float = 1e-6,
+) -> float:
+    """Bridge with RANDOM orthogonal R replacing learned W.
+
+    Protocol:
+      1. Build R: random orthogonal in R^{D×D}
+      2. J_rand = J @ R^T
+      3. Project both through vocab: J_proj = J @ E^T, J_rand_proj = J_rand @ E^T
+      4. Compare cosine similarity
+    """
+    D = J.shape[1]
+    R = random_orthogonal_matrix(D, D, J.device)
+    J_rand = J @ R.T  # [K, D]
+    mask = _valid_mask(J_rand, J, threshold)
+    if mask.sum() == 0:
+        return 1.0
+    return _weighted_cosine_loss(J_rand, J, probs_L, mask)
+
+
 def main(
     model="Qwen/Qwen3.5-0.8B",
     n_samples=1,
@@ -74,11 +107,12 @@ def main(
 
     results_corrected = {}
     results_raw = {}
+    results_random = {}
 
-    print("Running ablation (corrected vs raw)...")
+    print("Running ablation (corrected vs raw vs random)...")
 
     for l_L, l_S in mapping.items():
-        losses_c, losses_r = [], []
+        losses_c, losses_r, losses_rand = [], [], []
         for sample in samples:
             ids = sample["input_ids"].to(model_obj.device)
             attn = sample["attention_mask"].to(model_obj.device)
@@ -90,16 +124,20 @@ def main(
 
             l_c = jacobian_bridge(J, J, E, E, probs)
             l_r = jacobian_bridge_raw(J, J, E, E, probs)
+            l_rand = jacobian_bridge_random(J, E, probs)
             losses_c.append(l_c)
             losses_r.append(l_r)
+            losses_rand.append(l_rand)
 
         results_corrected[f"{l_L}->{l_S}"] = sum(losses_c) / len(losses_c)
         results_raw[f"{l_L}->{l_S}"] = sum(losses_r) / len(losses_r)
+        results_random[f"{l_L}->{l_S}"] = sum(losses_rand) / len(losses_rand)
 
     os.makedirs(results_dir, exist_ok=True)
     output = {
         "with_correction": results_corrected,
         "without_correction": results_raw,
+        "random_orthogonal": results_random,
         "params": {
             "model": model,
             "n_samples": n_samples,
@@ -115,6 +153,7 @@ def main(
         f"\nMean corrected:  {sum(results_corrected.values()) / len(results_corrected):.8f}"
     )
     print(f"Mean without:    {sum(results_raw.values()) / len(results_raw):.8f}")
+    print(f"Mean random:     {sum(results_random.values()) / len(results_random):.4f}")
 
 
 if __name__ == "__main__":

@@ -18,16 +18,18 @@ import os
 import time
 
 import torch
+import torch.nn.functional as F
 
 from prism.calibration import (
     extract_embeddings,
+    get_layer_types,
     load_calibration_data,
-    uniform_layer_mapping,
 )
 from prism.jacobian import (
     compute_jacobian_for_tokens,
     softmax_jacobian,
 )
+from prism.layer_selection import select_pairs
 
 from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
@@ -44,7 +46,7 @@ def _gpu_config(device: str) -> dict:
         return {
             "n_samples": 4,
             "K": 256,
-            "dtype_L": torch.float16,
+            "dtype_L": torch.bfloat16,
             "dtype_S": torch.float32,
         }
     return {
@@ -100,7 +102,7 @@ def main(
         torch_dtype=cfg["dtype_L"],
         attn_implementation="eager",
         low_cpu_mem_usage=True,
-    ).to(device_L)
+    ).to(device_L)  # type: ignore[arg-type]
     mL.eval()
 
     print(f"Loading small model: {small_model}")
@@ -109,7 +111,7 @@ def main(
         torch_dtype=cfg["dtype_S"],
         attn_implementation="eager",
         low_cpu_mem_usage=True,
-    ).to(device_S)
+    ).to(device_S)  # type: ignore[arg-type]
     mS.eval()
 
     n_L = mL.config.num_hidden_layers
@@ -117,11 +119,11 @@ def main(
     print(f"Large: {n_L} layers, {mL.config.hidden_size} hidden")
     print(f"Small: {n_S} layers, {mS.config.hidden_size} hidden")
 
-    # -- Layer mapping: ~7 pairs at uniform step --------------------------
-    mapping = uniform_layer_mapping(n_L, n_S)
-    step = max(1, len(mapping) // 7)
-    pairs = list(mapping.items())[::step]
-    print(f"Layer pairs ({len(pairs)}): {pairs}")
+    # -- Re-selection (contract 0.1/0.2): per l_S = full-attn + 0_0 + last --
+    layer_types = get_layer_types(mS)  # type: ignore[arg-type]
+    pairs = select_pairs(n_L, n_S, layer_types)
+    print(f"layer_types: {layer_types}")
+    print(f"Selected pairs ({len(pairs)}): {pairs}")
 
     # -- Calibration data --------------------------------------------------
     print(f"Loading {cfg['n_samples']} calibration samples...")
@@ -133,8 +135,8 @@ def main(
     )
 
     # -- Embeddings --------------------------------------------------------
-    E_L = extract_embeddings(mL).to(device_L)  # [V, D_L]
-    E_S = extract_embeddings(mS).to(device_S)  # [V, D_S]
+    E_L = extract_embeddings(mL).to(device_L)  # [V, D_L]  # type: ignore[arg-type]
+    E_S = extract_embeddings(mS).to(device_S)  # [V, D_S]  # type: ignore[arg-type]
     print(f"E_L: {E_L.shape}, E_S: {E_S.shape}")
 
     # -- G_S_inv = (E_S^T E_S)^{-1} float64 for invertibility ------------
@@ -152,16 +154,30 @@ def main(
     print(f"Token set size: {len(token_set)}")
 
     # -- Check existing cache ----------------------------------------------
+    # A pair is "done" only if every sample file exists AND has the v2
+    # schema (p_L_full, input_ids). v1 files (pre-pairing era) are recomputed.
     done_pairs: list[tuple[int, int]] = []
     for pair in pairs:
         pair_key = f"{pair[0]}_{pair[1]}"
-        all_found = all(
-            os.path.exists(os.path.join(targets_dir, f"{pair_key}_{si}.pt"))
-            for si in range(cfg["n_samples"])
-        )
-        if all_found:
+        ok = True
+        for si in range(cfg["n_samples"]):
+            path = os.path.join(targets_dir, f"{pair_key}_{si}.pt")
+            if not os.path.exists(path):
+                ok = False
+                break
+            try:
+                d = torch.load(path, weights_only=True)
+            except Exception:
+                ok = False
+                break
+            if "p_L_full" not in d or "input_ids" not in d:
+                ok = False
+                break
+        if ok:
             done_pairs.append(pair)
             print(f"  Pair {pair_key}: cached, skipping")
+        else:
+            print(f"  Pair {pair_key}: recompute (missing or pre-v2 cache)")
 
     # -- Check checkpoint --------------------------------------------------
     ckpt_path = os.path.join(targets_dir, ".checkpoint.json")
@@ -192,16 +208,20 @@ def main(
         print(f"\n=== Pair {pair_key} ===")
 
         # -- Runtime guard: measure first Jacobian time --------------------
+        # GPU: ~0.5s per token-row is normal (K=256 -> ~135s on T4); the
+        # threshold only fires on CPU or a broken CUDA environment.
+        _guard_thresh = 300 if device_L.startswith("cuda") else 60
+        _probe_J = None
         if not _guard_checked:
             _guard_checked = True
             print(f"  Probing J_L (layer {l_L}) timing...")
             t0 = time.time()
             _probe_J = compute_jacobian_for_tokens(mL, l_L, ids0, attn0, token_set)
             t_jL = time.time() - t0
-            del _probe_J
-            if t_jL > 60:
+            if t_jL > _guard_thresh:
+                _probe_J = None
                 print(
-                    f"  WARNING: Jacobian took {t_jL:.1f}s (>60s). "
+                    f"  WARNING: Jacobian took {t_jL:.1f}s (>{_guard_thresh}s). "
                     f"Reducing K and n_samples."
                 )
                 _guard_k = max(32, cfg["K"] // 2)
@@ -210,56 +230,66 @@ def main(
                 token_set = sorted(lg0.topk(_guard_k, dim=-1).indices[0].cpu().tolist())
                 print(f"  New K={_guard_k}, n_samples={_guard_n}")
             else:
-                print(f"  Jacobian time: {t_jL:.1f}s — OK")
-
-        # p_L = softmax of large model logits on token_set (first sample)
-        with torch.no_grad():
-            logits_L = mL(input_ids=ids0, attention_mask=attn0).logits[:, -1, :]
-            p_L = torch.softmax(logits_L[0, token_set], dim=-1).to(device_S)
-
-        # J_L at layer l_L on first sample
-        print(f"  Computing J_L (layer {l_L})...")
-        J_L = compute_jacobian_for_tokens(mL, l_L, ids0, attn0, token_set)
-
-        # Transport: J_L @ E_L.T @ E_S @ G_S_inv
-        print("  Transporting...")
-        J_L_proj = J_L.float().to(device_S) @ E_L.float().to(device_S).T  # [|U|, V]
-        J_tgt = J_L_proj @ E_S.float() @ G_S_inv  # [|U|, D_S]
-
-        # Gauge-free targets
-        J_tgt_p = softmax_jacobian(J_tgt, p_L)  # [|U|, D_S]
+                print(f"  Jacobian time: {t_jL:.1f}s — OK, reused for sample 1")
 
         for si, s in enumerate(samples[:_guard_n]):
             ids_s = s["input_ids"].to(device_S)
             attn_s = s["attention_mask"].to(device_S)
+            ids_L_s = ids_s.to(device_L)
+            attn_L_s = attn_s.to(device_L)
 
-            # J_S_p on this sample
+            # -- J_L + transport for THIS sample --------------------------
+            if _probe_J is not None and si == 0:
+                # Probe computed exactly this (same model, same sample 0).
+                J_L_s = _probe_J
+                _probe_J = None
+            else:
+                print(f"  Computing J_L (layer {l_L}, sample {si + 1})...")
+                J_L_s = compute_jacobian_for_tokens(
+                    mL, l_L, ids_L_s, attn_L_s, token_set
+                )
+
+            with torch.no_grad():
+                logits_L_s = mL(input_ids=ids_L_s, attention_mask=attn_L_s).logits[
+                    :, -1, :
+                ]
+                p_s = torch.softmax(logits_L_s[0, token_set], dim=-1).to(device_S)
+
+            print(f"  Transporting (sample {si + 1})...")
+            J_L_proj_s = (
+                J_L_s.float().to(device_S) @ E_L.float().to(device_S).T
+            )  # [|U|, V]
+            J_tgt_s = J_L_proj_s @ E_S.float() @ G_S_inv  # [|U|, D_S]
+            J_tgt_p_s = softmax_jacobian(J_tgt_s, p_s)  # [|U|, D_S]
+
+            # -- J_S_p on this sample ------------------------------------
             print(f"  Computing J_S (layer {l_S}, sample {si + 1})...")
             J_S = compute_jacobian_for_tokens(mS, l_S, ids_s, attn_s, token_set)
-            # p for gauge: use large model probs on this sample
-            with torch.no_grad():
-                logits_L_s = mL(
-                    input_ids=ids_s.to(device_L), attention_mask=attn_s.to(device_L)
-                ).logits[:, -1, :]
-                p_s = torch.softmax(logits_L_s[0, token_set], dim=-1).to(device_S)
             J_S_p = softmax_jacobian(J_S, p_s)
 
             # Cache
             cache_path = os.path.join(targets_dir, f"{pair_key}_{si}.pt")
             torch.save(
                 {
-                    "J_tgt_p": J_tgt_p.cpu(),
+                    "J_tgt_p": J_tgt_p_s.cpu(),
                     "J_S_p": J_S_p.cpu(),
                     "p": p_s.cpu(),
+                    # Full-vocab p_L for THIS sample: exp18 needs per-sample
+                    # KL(p_ed||p_L) without a layer-mismatched J target.
+                    "p_L_full": F.softmax(logits_L_s[0], dim=-1).float().cpu(),
                     "pair": pair_key,
                     "l_S": l_S,
                     "l_L": l_L,
                     "token_set": token_set,
                     "K": len(token_set),
+                    # Per-sample ids: lets consumers verify sample<->target
+                    # pairing across kernel runs (no silent position pairing).
+                    "input_ids": ids_s.cpu(),
                 },
                 cache_path,
             )
             print(f"  Saved: {cache_path}")
+            del J_L_s, J_L_proj_s, J_tgt_s, J_tgt_p_s, J_S, J_S_p
 
         done_pairs.append((l_L, l_S))
         _save_checkpoint(targets_dir, pairs, done_pairs)
@@ -268,16 +298,24 @@ def main(
     # -- Summary -----------------------------------------------------------
     elapsed = time.time() - start
     summary = {
-        "description": "Stage 0: pre-compute and cache target Jacobians for exp16-19. For each layer pair (l_L, l_S), transports J_L to small-model space via J_tgt = J_L @ E_L.T @ E_S @ G_S_inv, then computes gauge-free variants J_tgt_p and J_S_p using softmax weighting. Saves per-sample .pt checkpoints for each pair.",
+        "description": "Stage 0: pre-compute and cache target Jacobians for exp16-19. Pairs = runtime re-selection (full-attention small-model layers + 0_0 + last, contract 0.1/0.2). For each layer pair (l_L, l_S) transports J_L to small-model space via J_tgt = J_L @ E_L.T @ E_S @ G_S_inv, then gauge-free variants J_tgt_p / J_S_p via softmax weighting. Each per-sample cache holds J targets, gauge-free p over token_set, p_L_full (full-vocab p_L for exp18), token_set, and input_ids (pairing verification).",
+        "layer_types": layer_types,
         "pairs": [[a, b] for a, b in pairs],
-        "n_samples": cfg["n_samples"],
-        "K": cfg["K"],
+        "n_samples": _guard_n,
+        "K": _guard_k,
         "device_L": device_L,
         "device_S": device_S,
         "elapsed_seconds": elapsed,
     }
     summary_path = os.path.join(targets_dir, "stage0_summary.json")
-    summary["params"] = {"large_model": large_model, "small_model": small_model, "device_L": device_L, "device_S": device_S, "max_length": max_length, "min_length": min_length}
+    summary["params"] = {
+        "large_model": large_model,
+        "small_model": small_model,
+        "device_L": device_L,
+        "device_S": device_S,
+        "max_length": max_length,
+        "min_length": min_length,
+    }
     with open(summary_path, "w") as f:
         json.dump(summary, f, indent=2)
 
@@ -291,7 +329,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Stage 0: Compute target Jacobians")
     parser.add_argument("--large-model", default="/data/Qwen/Qwen3.5-4B")
     parser.add_argument("--small-model", default="Qwen/Qwen3.5-0.8B")
-    parser.add_argument("--device", default="auto")
+    parser.add_argument("--device-L", default="auto", dest="device_L")
+    parser.add_argument("--device-S", default="auto", dest="device_S")
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--min-length", type=int, default=32)
     parser.add_argument("--targets-dir", default="results/targets")

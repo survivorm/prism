@@ -1,0 +1,180 @@
+208.1s	33	torch 2.5.1+cu121 | L=cuda:0, S=cuda:1
+208.1s	34	resolve Qwen/Qwen3.5-0.8B: slugs=['prism-exp16-stage0-targets', 'prism-exp16-targets']
+208.1s	35	Need to download Qwen/Qwen3.5-0.8B from HF
+208.1s	36	resolve Qwen/Qwen3.5-4B: slugs=['prism-exp16-stage0-targets', 'prism-exp16-targets']
+208.1s	37	Need to download Qwen/Qwen3.5-4B from HF
+218.6s	38	cuda:0 alloc=0.0GiB reserved=0.0GiB
+218.6s	39	cuda:1 alloc=0.0GiB reserved=0.0GiB
+218.6s	40	Device: cuda:1
+218.6s	41	Loading 4 calibration samples...
+224.3s	42	Using target cache at /kaggle/input/prism-exp16-stage0-targets/results/targets
+226.9s	43
+226.9s	44	============================================================
+226.9s	45	Order: late_to_early (9 pairs)
+226.9s	46	============================================================
+238.5s	47
+238.5s	48	  Pair 31_23 (l_S=23, 4 targets)
+239.0s	49	        J_norm: 0/1024 (0/s, eta=0s)
+239.0s	50	        J_norm: 128/1024 (1140/s, eta=1s)
+239.0s	51	        J_norm: 256/1024 (1230/s, eta=1s)
+239.2s	52	        J_norm: 384/1024 (1278/s, eta=1s)
+239.2s	53	        J_norm: 512/1024 (1350/s, eta=0s)
+239.2s	54	        J_norm: 640/1024 (1395/s, eta=0s)
+239.5s	55	        J_norm: 768/1024 (1429/s, eta=0s)
+239.5s	56	        J_norm: 896/1024 (1465/s, eta=0s)
+239.5s	57	        J_norm done: 1024/1024 in 0.7s
+239.5s	58	    J refresh: k=2, use_fresh=True, t_J=1.1s
+240.2s	59	    [smoke_j] dL/dA_attn=0.00e+00, dL/dB_attn=9.37e-02 -> OK
+242.1s	60	    step 1/100: bridge=0.4000, kl=-0.0000, step=2s, eta=171s
+257.4s	61	    step 5/100: bridge=0.3988, kl=0.0000, step=6s, eta=611s
+272.8s	62	    step 10/100: bridge=0.3915, kl=0.0000, step=1s, eta=81s
+294.0s	63	    step 15/100: bridge=0.3714, kl=0.0000, step=6s, eta=552s
+309.5s	64	    step 20/100: bridge=0.3489, kl=0.0000, step=1s, eta=73s
+330.3s	65	    step 25/100: bridge=0.3269, kl=0.0001, step=6s, eta=480s
+346.0s	66	    step 30/100: bridge=0.3006, kl=0.0000, step=1s, eta=64s
+366.8s	67	    step 35/100: bridge=0.2706, kl=0.0000, step=6s, eta=407s
+382.4s	68	    step 40/100: bridge=0.2435, kl=0.0001, step=1s, eta=54s
+403.3s	69	    step 45/100: bridge=0.2161, kl=0.0001, step=7s, eta=359s
+418.5s	70	    step 50/100: bridge=0.1945, kl=0.0001, step=1s, eta=46s
+439.6s	71	    step 55/100: bridge=0.1743, kl=0.0001, step=6s, eta=291s
+455.0s	72	    step 60/100: bridge=0.1592, kl=0.0001, step=1s, eta=37s
+475.8s	73	    step 65/100: bridge=0.1455, kl=0.0001, step=6s, eta=218s
+491.1s	74	    step 70/100: bridge=0.1352, kl=0.0001, step=1s, eta=28s
+512.1s	75	    step 75/100: bridge=0.1260, kl=0.0001, step=6s, eta=158s
+527.9s	76	    step 80/100: bridge=0.1193, kl=0.0001, step=1s, eta=18s
+549.2s	77	    step 85/100: bridge=0.1134, kl=0.0001, step=7s, eta=99s
+564.6s	78	    step 90/100: bridge=0.1089, kl=0.0001, step=1s, eta=9s
+585.8s	79	    step 95/100: bridge=0.1050, kl=0.0001, step=7s, eta=33s
+600.9s	80	    step 100/100: bridge=0.1020, kl=0.0001, step=1s, eta=0s
+602.5s	81	    Layer 31_23 done in 364s
+602.5s	82	    bridge=0.8975, KL=0.0000
+603.2s	83
+603.2s	84	  Pair 28_21 (l_S=21, 4 targets)
+603.6s	85	        J_norm: 0/1024 (0/s, eta=0s)
+607.4s	86	        J_norm: 128/1024 (33/s, eta=27s)
+611.4s	87	        J_norm: 256/1024 (33/s, eta=24s)
+615.4s	88	        J_norm: 384/1024 (32/s, eta=20s)
+619.3s	89	        J_norm: 512/1024 (32/s, eta=16s)
+623.4s	90	        J_norm: 640/1024 (32/s, eta=12s)
+627.3s	91	        J_norm: 768/1024 (32/s, eta=8s)
+631.3s	92	        J_norm: 896/1024 (32/s, eta=4s)
+635.2s	93	        J_norm done: 1024/1024 in 31.6s
+635.2s	94	    J refresh: k=100, use_fresh=True, t_J=32.0s
+218.6s	95	Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+218.6s	96
+218.6s	97	Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+226.8s	98	[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+226.8s	99
+226.8s	100	[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+916.0s	101	    step 1/100: bridge=0.8334, kl=0.0000, step=281s, eta=27795s
+919.6s	102	    step 5/100: bridge=0.8330, kl=0.0000, step=1s, eta=87s
+924.2s	103	    step 10/100: bridge=0.8310, kl=0.0000, step=1s, eta=82s
+928.7s	104	    step 15/100: bridge=0.8264, kl=0.0000, step=1s, eta=76s
+933.3s	105	    step 20/100: bridge=0.8193, kl=0.0000, step=1s, eta=72s
+937.9s	106	    step 25/100: bridge=0.8106, kl=0.0000, step=1s, eta=67s
+942.4s	107	    step 30/100: bridge=0.8013, kl=0.0000, step=1s, eta=63s
+946.9s	108	    step 35/100: bridge=0.7897, kl=0.0000, step=1s, eta=60s
+951.5s	109	    step 40/100: bridge=0.7748, kl=0.0000, step=1s, eta=57s
+956.0s	110	    step 45/100: bridge=0.7550, kl=0.0000, step=1s, eta=50s
+960.5s	111	    step 50/100: bridge=0.7277, kl=0.0000, step=1s, eta=45s
+965.2s	112	    step 55/100: bridge=0.6929, kl=0.0000, step=1s, eta=41s
+969.7s	113	    step 60/100: bridge=0.6579, kl=0.0000, step=1s, eta=37s
+974.3s	114	    step 65/100: bridge=0.6258, kl=0.0000, step=1s, eta=32s
+979.0s	115	    step 70/100: bridge=0.5939, kl=0.0000, step=1s, eta=27s
+983.6s	116	    step 75/100: bridge=0.5658, kl=0.0000, step=1s, eta=23s
+988.2s	117	    step 80/100: bridge=0.5435, kl=0.0000, step=1s, eta=18s
+992.8s	118	    step 85/100: bridge=0.5250, kl=0.0000, step=1s, eta=14s
+997.3s	119	    step 90/100: bridge=0.5077, kl=0.0000, step=1s, eta=9s
+1001.9s	120	    step 95/100: bridge=0.4920, kl=0.0000, step=1s, eta=5s
+1006.3s	121	    step 100/100: bridge=0.4782, kl=0.0000, step=1s, eta=0s
+1114.1s	122	    Layer 28_21 done in 511s
+1114.1s	123	    bridge=0.5192, KL=0.0000
+1114.8s	124
+1114.8s	125	  Pair 24_18 (l_S=18, 4 targets)
+1115.3s	126	        J_norm: 0/1024 (0/s, eta=0s)
+1126.2s	127	        J_norm: 128/1024 (12/s, eta=77s)
+1137.1s	128	        J_norm: 256/1024 (12/s, eta=66s)
+1148.4s	129	        J_norm: 384/1024 (12/s, eta=55s)
+1160.9s	130	        J_norm: 512/1024 (11/s, eta=46s)
+1163.1s	131	    [warn] create_graph J OOM on 24_18 — o_proj falls back to KL-only, lm_head keeps detached-J bridge
+1164.8s	132	    J refresh: k=100, use_fresh=False, t_J=OOM
+1464.4s	133	    step 1/100: bridge=0.5917, kl=-0.0000, step=300s, eta=29653s
+1468.0s	134	    step 5/100: bridge=0.5911, kl=-0.0000, step=1s, eta=86s
+1472.6s	135	    step 10/100: bridge=0.5893, kl=-0.0000, step=1s, eta=82s
+1477.1s	136	    step 15/100: bridge=0.5857, kl=0.0000, step=1s, eta=79s
+1481.8s	137	    step 20/100: bridge=0.5802, kl=0.0000, step=1s, eta=76s
+1486.3s	138	    step 25/100: bridge=0.5728, kl=0.0000, step=1s, eta=68s
+1490.9s	139	    step 30/100: bridge=0.5641, kl=0.0000, step=1s, eta=64s
+1495.5s	140	    step 35/100: bridge=0.5545, kl=0.0000, step=1s, eta=58s
+1500.0s	141	    step 40/100: bridge=0.5447, kl=0.0000, step=1s, eta=55s
+1504.5s	142	    step 45/100: bridge=0.5351, kl=0.0000, step=1s, eta=49s
+1509.1s	143	    step 50/100: bridge=0.5258, kl=0.0000, step=1s, eta=45s
+1513.7s	144	    step 55/100: bridge=0.5168, kl=0.0000, step=1s, eta=41s
+1518.2s	145	    step 60/100: bridge=0.5084, kl=0.0000, step=1s, eta=36s
+1522.8s	146	    step 65/100: bridge=0.5005, kl=0.0000, step=1s, eta=33s
+1527.3s	147	    step 70/100: bridge=0.4933, kl=0.0000, step=1s, eta=28s
+1531.9s	148	    step 75/100: bridge=0.4867, kl=0.0000, step=1s, eta=23s
+1536.4s	149	    step 80/100: bridge=0.4806, kl=0.0000, step=1s, eta=18s
+1541.0s	150	    step 85/100: bridge=0.4752, kl=0.0000, step=1s, eta=14s
+1545.6s	151	    step 90/100: bridge=0.4703, kl=0.0000, step=1s, eta=9s
+1550.1s	152	    step 95/100: bridge=0.4659, kl=0.0000, step=1s, eta=4s
+1554.7s	153	    step 100/100: bridge=0.4619, kl=0.0000, step=1s, eta=0s
+1854.8s	154	    Layer 24_18 done in 740s
+1854.8s	155	    bridge=0.5421, KL=0.0000
+1855.5s	156
+1855.5s	157	  Pair 20_15 (l_S=15, 4 targets)
+1856.1s	158	        J_norm: 0/1024 (0/s, eta=0s)
+1877.4s	159	        J_norm: 128/1024 (6/s, eta=150s)
+1898.8s	160	        J_norm: 256/1024 (6/s, eta=129s)
+1900.3s	161	    [warn] create_graph J OOM on 20_15 — o_proj falls back to KL-only, lm_head keeps detached-J bridge
+1901.5s	162	    J refresh: k=100, use_fresh=False, t_J=OOM
+2500.7s	163	    step 1/100: bridge=0.6784, kl=-0.0000, step=599s, eta=59319s
+2506.9s	164	    step 5/100: bridge=0.6778, kl=0.0000, step=2s, eta=147s
+2514.8s	165	    step 10/100: bridge=0.6757, kl=0.0000, step=2s, eta=141s
+2522.6s	166	    step 15/100: bridge=0.6718, kl=0.0000, step=2s, eta=134s
+2530.4s	167	    step 20/100: bridge=0.6666, kl=0.0000, step=2s, eta=124s
+2538.2s	168	    step 25/100: bridge=0.6608, kl=0.0000, step=2s, eta=117s
+2545.8s	169	    step 30/100: bridge=0.6544, kl=0.0000, step=2s, eta=106s
+2553.4s	170	    step 35/100: bridge=0.6476, kl=0.0000, step=2s, eta=99s
+2561.0s	171	    step 40/100: bridge=0.6407, kl=0.0000, step=2s, eta=93s
+2568.6s	172	    step 45/100: bridge=0.6342, kl=0.0000, step=2s, eta=84s
+2576.3s	173	    step 50/100: bridge=0.6280, kl=0.0000, step=2s, eta=76s
+2584.0s	174	    step 55/100: bridge=0.6223, kl=0.0000, step=2s, eta=72s
+2591.7s	175	    step 60/100: bridge=0.6170, kl=0.0000, step=2s, eta=63s
+2599.4s	176	    step 65/100: bridge=0.6121, kl=0.0000, step=2s, eta=53s
+2607.0s	177	    step 70/100: bridge=0.6075, kl=0.0000, step=2s, eta=46s
+2614.8s	178	    step 75/100: bridge=0.6032, kl=0.0000, step=2s, eta=39s
+2622.4s	179	    step 80/100: bridge=0.5992, kl=0.0000, step=2s, eta=31s
+2630.1s	180	    step 85/100: bridge=0.5954, kl=0.0000, step=2s, eta=23s
+2637.8s	181	    step 90/100: bridge=0.5918, kl=0.0000, step=2s, eta=15s
+2645.4s	182	    step 95/100: bridge=0.5884, kl=0.0000, step=2s, eta=8s
+2653.1s	183	    step 100/100: bridge=0.5852, kl=0.0000, step=2s, eta=0s
+3237.3s	184	    Layer 20_15 done in 1382s
+3237.3s	185	    bridge=0.3724, KL=0.0000
+3238.0s	186
+3238.0s	187	  Pair 16_12 (l_S=12, 4 targets)
+3238.7s	188	        J_norm: 0/1024 (0/s, eta=0s)
+3267.6s	189	        J_norm: 128/1024 (4/s, eta=204s)
+3284.0s	190	    [warn] create_graph J OOM on 16_12 — o_proj falls back to KL-only, lm_head keeps detached-J bridge
+3285.2s	191	    J refresh: k=100, use_fresh=False, t_J=OOM
+4069.1s	192	    step 1/100: bridge=0.8207, kl=-0.0000, step=784s, eta=77607s
+4072.7s	193	    step 5/100: bridge=0.8201, kl=0.0000, step=1s, eta=86s
+4077.3s	194	    step 10/100: bridge=0.8177, kl=0.0000, step=1s, eta=82s
+4081.9s	195	    step 15/100: bridge=0.8131, kl=0.0000, step=1s, eta=81s
+4086.4s	196	    step 20/100: bridge=0.8063, kl=0.0000, step=1s, eta=73s
+4091.0s	197	    step 25/100: bridge=0.7985, kl=0.0000, step=1s, eta=68s
+4095.6s	198	    step 30/100: bridge=0.7908, kl=0.0000, step=1s, eta=63s
+4100.2s	199	    step 35/100: bridge=0.7834, kl=0.0000, step=1s, eta=59s
+4104.7s	200	    step 40/100: bridge=0.7760, kl=0.0000, step=1s, eta=54s
+4109.2s	201	    step 45/100: bridge=0.7685, kl=0.0000, step=1s, eta=50s
+4113.8s	202	    step 50/100: bridge=0.7614, kl=0.0000, step=1s, eta=46s
+4118.4s	203	    step 55/100: bridge=0.7546, kl=0.0000, step=1s, eta=41s
+4123.0s	204	    step 60/100: bridge=0.7481, kl=0.0000, step=1s, eta=36s
+4127.5s	205	    step 65/100: bridge=0.7419, kl=0.0000, step=1s, eta=32s
+4132.1s	206	    step 70/100: bridge=0.7361, kl=0.0000, step=1s, eta=28s
+4136.7s	207	    step 75/100: bridge=0.7307, kl=0.0000, step=1s, eta=23s
+4141.2s	208	    step 80/100: bridge=0.7255, kl=0.0000, step=1s, eta=19s
+4145.8s	209	    step 85/100: bridge=0.7206, kl=0.0000, step=1s, eta=14s
+4150.4s	210	    step 90/100: bridge=0.7160, kl=0.0000, step=1s, eta=9s
+4155.0s	211	    step 95/100: bridge=0.7116, kl=0.0000, step=1s, eta=5s
+4159.5s	212	    step 100/100: bridge=0.7074, kl=0.0000, step=1s, eta=0s

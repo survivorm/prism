@@ -128,6 +128,7 @@ def build_kernel(
     kernel_title: str = "Prism Experiment",
     kernel_sources: list[str] | None = None,
     dataset_sources: list[str] | None = None,
+    runner_extra: str = "",
 ):
     """Build kernel.ipynb and kernel-metadata.json for one experiment."""
     # Read deps from pyproject.toml
@@ -289,7 +290,8 @@ def build_kernel(
         f"if 'targets_dir' in params: kwargs['targets_dir'] = os.path.join(RES, 'targets')\n"
         f"# Remove conflicting keys: if both model and small_model, prefer specific\n"
         f"if 'small_model' in kwargs and 'model' in kwargs: del kwargs['model']\n"
-        f"# Memory diagnostic before experiment\n"
+        + runner_extra
+        + f"# Memory diagnostic before experiment\n"
         f"if torch.cuda.is_available():\n"
         f"    print(f'cuda:0 alloc={{torch.cuda.memory_allocated(0)/1024**3:.1f}}GiB reserved={{torch.cuda.memory_reserved(0)/1024**3:.1f}}GiB')\n"
         f"    print(f'cuda:1 alloc={{torch.cuda.memory_allocated(1)/1024**3:.1f}}GiB reserved={{torch.cuda.memory_reserved(1)/1024**3:.1f}}GiB')\n"
@@ -391,8 +393,19 @@ if __name__ == "__main__":
         nargs="*",
         help="dataset_sources, e.g. voroninmichael/prism-exp16-targets",
     )
+    parser.add_argument(
+        "--runner-extra",
+        default="",
+        help="extra lines injected into the runner cell before the memory diagnostic",
+    )
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
     build_kernel(
-        args.exp, args.out, args.id, args.title, args.sources, args.datasets
+        args.exp,
+        args.out,
+        args.id,
+        args.title,
+        args.sources,
+        args.datasets,
+        runner_extra=args.runner_extra,
     )
