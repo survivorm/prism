@@ -149,12 +149,40 @@ def main(
     max_length=64,
     min_length=32,
     results_dir="results",
+    samples_from_targets: bool = False,
+    targets_dir: str = "results/targets",
 ):
     torch.set_num_threads(4)
     torch.manual_seed(42)
 
-    print(f"Loading {n_samples} samples...")
-    samples = load_calibration_data(model, max_length, min_length, n_samples)
+    if samples_from_targets:
+        # OFFLINE mode (no HF network): cached input_ids ARE the calibration
+        # samples (stage 0 was built from them); token set from the cache.
+        from prism.cache_io import find_targets_dir as _ftd
+
+        tdir = _ftd(targets_dir)
+        t0 = None
+        for cf in sorted(os.listdir(tdir)):
+            if cf.endswith(".pt"):
+                d = torch.load(os.path.join(tdir, cf), weights_only=True)
+                t0 = d
+                break
+        assert t0 is not None
+        ids0 = t0["input_ids"]
+        samples = [
+            {
+                "input_ids": ids0.clone(),
+                "attention_mask": torch.ones_like(ids0),
+            }
+            for _ in range(n_samples)
+        ]
+        token_set = list(t0["token_set"])
+        print(f"  (offline: {n_samples} samples from target cache, K={len(token_set)})")
+        print(f"Loading {n_samples} samples... (offline)")
+        samples = samples
+    else:
+        print(f"Loading {n_samples} samples...")
+        samples = load_calibration_data(model, max_length, min_length, n_samples)
 
     from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
@@ -168,14 +196,15 @@ def main(
     D = m.config.hidden_size
     V = m.config.vocab_size
 
-    # Token set from first sample
-    s0 = samples[0]
-    ids0 = s0["input_ids"].to(m.device)
-    attn0 = s0["attention_mask"].to(m.device)
-    with torch.no_grad():
-        lg0 = m(input_ids=ids0, attention_mask=attn0).logits[:, -1, :]
-    top_k = lg0.topk(K, dim=-1).indices[0].tolist()
-    token_set = sorted(top_k)
+    if not samples_from_targets:
+        # Token set from first sample
+        s0 = samples[0]
+        ids0 = s0["input_ids"].to(m.device)
+        attn0 = s0["attention_mask"].to(m.device)
+        with torch.no_grad():
+            lg0 = m(input_ids=ids0, attention_mask=attn0).logits[:, -1, :]
+        top_k = lg0.topk(K, dim=-1).indices[0].tolist()
+        token_set = sorted(top_k)
     K_actual = len(token_set)
 
     all_results = {}
@@ -219,8 +248,16 @@ def main(
                 torch.cuda.synchronize() if torch.cuda.is_available() else None
                 t_defrag = time.perf_counter() - t0
 
-                # Reconstruction fidelity
-                J_tilde = U_r @ J_r  # [K, D]
+                # Reconstruction fidelity. The v1 line `U_r @ J_r` compared
+                # a projection of the RAW J against J_p — two different
+                # matrices. At r=K it reduces to ‖J − J_p‖/‖J_p‖ (the gauge
+                # gap, a constant independent of r), which is why the metric
+                # GREW with r (19→31→48) instead of shrinking. The correct
+                # truncation error: project the gauge-transformed J_p onto
+                # U_r's span (the subspace U_r was built to span — top-r
+                # eigenvectors of G_p = J_p J_p.T) and measure the tail:
+                #   ‖U_r U_r.T J_p − J_p‖/‖J_p‖  (monotone decreasing, 0 at r=K)
+                J_tilde = U_r @ U_r.T @ J_p  # [K, D], in U_r's span
                 recon_fidelity = (J_tilde - J_p).norm() / (J_p.norm() + 1e-10)
 
                 speedup = t_raw / (t_defrag + 1e-9)
@@ -274,5 +311,8 @@ if __name__ == "__main__":
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--min-length", type=int, default=32)
     parser.add_argument("--results-dir", default="results")
+    parser.add_argument("--targets-dir", default="results/targets")
+    parser.add_argument("--samples-from-targets", action="store_true",
+                        help="offline: use cached input_ids as calibration samples")
     args = parser.parse_args()
     main(**vars(args))

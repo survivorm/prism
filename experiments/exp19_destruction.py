@@ -1,45 +1,120 @@
-"""Experiment 19: Calibration of destruction detector.
+"""Experiment 19: Destruction scenarios at a controlled dose (v2, 2026-08-31).
 
-Using α* from Exp16, four edits on the last layer (same budget):
-  (a) random ΔW of same norm
-  (b) 10×α* (overshoot)
-  (c) pull only by gauge component: ΔJ_gauge = mean_rows(ΔJ)
-  (d) pull only by differential: ΔJ − ΔJ_gauge
+Same experiment, correct scaffolding. v1 (results/voided/) is void for
+three independent reasons:
+  1. target pair fell back to 0_0 — the GDN kl_only pair, a NULL target
+     (cross-layer bridge ≈ 0 by construction) → every "bridge" value was
+     noise on noise;
+  2. the dose came from exp16 v1's α*=0.01 — a first-slope artifact of
+     voided data, not a real knee;
+  3. no no-edit baseline — with a null target you cannot even tell which
+     scenario did the least damage.
 
-Battery ranks destruction: (b) > (a) ≫ (c)≈0.
-Leash metrics catch (b); hit5_in_U drops before PPL rises (early indicator).
+v2 (this file):
+  - target pair = LAST-layer pair (asserted, like exp16);
+  - input_ids pairing (mismatched sample → its bridge term skipped,
+    like exp16 — no silent position-based pairing);
+  - dose ‖ΔW‖ = the knee from the exp16 v2 DOSE CURVE
+    (results/exp16_readout_pull.json: curve[knee_step].dose);
+    if exp16 v2 has not run yet: FATAL (no more silent default dose);
+  - scenarios, all at the SAME dose ‖ΔW‖ (Frobenius):
+      no_edit   — ΔW = 0 (THE baseline; everything is a delta from it);
+      a_random  — random ΔW;
+      b_target  — pull direction ΔJ (per-token rows), 1× dose;
+      c_10x     — pull direction, 10× dose (overshoot);
+      d_gauge   — gauge component of ΔJ only (common-mode rows);
+      e_diff    — differential component of ΔJ only;
+  - reported per scenario: bridge, KL(ed‖orig), Δbridge = bridge −
+    bridge(no_edit), ΔKL = KL − KL(no_edit). The paper reads the DELTAS.
+  - sanity: baseline bridge must match exp16's step-0 curve point
+    (±0.05) — if not, the detector isn't calibrated; the run aborts
+    with FATAL instead of publishing inconsistent numbers.
 """
 
 import argparse
 import json
 import os
+import re
 import time
 
 import torch
 
 from prism.calibration import load_calibration_data
+from prism.cache_io import find_targets_dir
 from prism.jacobian import compute_jacobian_for_tokens, softmax_jacobian
 
 from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
+# resolve_model is provided by build_kernel.py runner cell on Kaggle
+resolve_model = lambda hf_id: hf_id  # noqa: E731  # stub for local type checking
 
-def _eval_bridge(mS, l_S, targets, token_set, samples, n_samples, device):
-    """Evaluate bridge cosine on cached targets."""
+
+def _find_exp16_knee(results_dir: str) -> tuple[float, float]:
+    """Read the exp16 v2 dose curve. Returns (knee_dose, baseline_bridge).
+
+    FATAL if missing: a destruction experiment without a measured dose
+    is the exact v1 bug (silent default). No fallback."""
+    cands = [os.path.join(results_dir, "exp16_readout_pull.json")]
+    if os.path.exists("/kaggle/input"):
+        for d in os.listdir("/kaggle/input"):
+            base = os.path.join("/kaggle/input", d)
+            cands.append(os.path.join(base, "exp16_readout_pull.json"))
+            cands.append(os.path.join(base, "results", "exp16_readout_pull.json"))
+    for p in cands:
+        if not os.path.isfile(p):
+            continue
+        try:
+            with open(p) as f:
+                d = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            continue
+        knee = d.get("knee_step")
+        curve = d.get("curve")
+        if knee is None or not curve:
+            continue  # v1-format or incomplete file — not usable
+        dose = None
+        for pt in curve:
+            if pt.get("step") == knee:
+                dose = pt["dose"]
+                break
+        if dose is not None:
+            base_bridge = next(
+                (pt["bridge"] for pt in curve if pt["step"] == 0), 0.0
+            )
+            print(f"exp16 v2 curve: knee dose ‖ΔW‖={dose:.4f}, "
+                  f"baseline bridge={base_bridge:.4f} ({os.path.basename(os.path.dirname(p))})")
+            return dose, base_bridge
+    raise SystemExit(
+        "FATAL: exp16 v2 dose curve not found (need results/exp16_readout_pull.json "
+        "with 'curve' and 'knee_step'). Run exp16 first — a destruction experiment "
+        "without a measured knee dose is the v1 bug."
+    )
+
+
+def _eval_bridge(
+    mS, l_S, targets, token_set, samples, n_samples, device, pairing_ok
+):
+    """Bridge cosine on cached targets, input_ids-paired samples only."""
     bridges = []
     for si in range(min(n_samples, len(targets))):
+        if not pairing_ok[si]:
+            continue
+        tgt = targets[si]
         s = samples[si]
         ids = s["input_ids"].to(device)
         attn = s["attention_mask"].to(device)
-        tgt = targets[si]
-        J_tgt_p = tgt["J_tgt_p"].to(device)
         J_S = compute_jacobian_for_tokens(mS, l_S, ids, attn, token_set)
         p_L = tgt["p"].to(device)
         J_S_p = softmax_jacobian(J_S, p_L)
-        cos = torch.nn.functional.cosine_similarity(
-            J_S_p.float(), J_tgt_p.float(), dim=1
-        ).mean().item()
+        cos = (
+            torch.nn.functional.cosine_similarity(
+                J_S_p.float(), tgt["J_tgt_p"].to(device).float(), dim=1
+            )
+            .mean()
+            .item()
+        )
         bridges.append(cos)
-    return sum(bridges) / len(bridges) if bridges else 0
+    return sum(bridges) / len(bridges) if bridges else 0.0
 
 
 def _eval_kl(mS, samples, orig_logits_cache, n_samples, device):
@@ -49,10 +124,12 @@ def _eval_kl(mS, samples, orig_logits_cache, n_samples, device):
         s = samples[si]
         ids = s["input_ids"].to(device)
         attn = s["attention_mask"].to(device)
-        logits_ed = mS(input_ids=ids, attention_mask=attn).logits[:, -1, :]
+        with torch.no_grad():
+            logits_ed = mS(input_ids=ids, attention_mask=attn).logits[:, -1, :]
         p_ed = torch.softmax(logits_ed.float(), dim=-1)
         p_orig = torch.softmax(orig_logits_cache[si].float(), dim=-1)
-        kl = (p_ed * torch.log(p_ed / (p_orig + 1e-12))).mean().item()
+        # p_ed clamped: 0 * log(0/...) = NaN otherwise
+        kl = (p_ed * torch.log(p_ed.clamp_min(1e-12) / (p_orig + 1e-12))).mean().item()
         kl_sum += kl
     return kl_sum / min(n_samples, len(orig_logits_cache))
 
@@ -75,23 +152,22 @@ def main(
     print(f"Device: {device}")
     os.makedirs(results_dir, exist_ok=True)
 
-    # -- Load α* from Exp16 ------------------------------------------------
-    exp16_path = os.path.join(results_dir, "exp16_readout_pull.json")
-    if os.path.exists(exp16_path):
-        with open(exp16_path) as f:
-            exp16_data = json.load(f)
-        alpha_star = exp16_data.get("alpha_star", 0.1)
-        print(f"α* from Exp16: {alpha_star}")
-    else:
-        alpha_star = 0.1
-        print(f"Exp16 not found, using default α*={alpha_star}")
+    # -- Dose from the exp16 v2 dose curve (FATAL if absent) ----------------
+    knee_dose, exp16_base_bridge = _find_exp16_knee(results_dir)
 
-    # -- Load small model -----------------------------------------------------
-    print(f"Loading small model: {small_model}")
+    # -- Load small model -------------------------------------------------
+    model_path = small_model
+    from contextlib import suppress
+
+    with suppress(NameError):
+        model_path = resolve_model(small_model)  # noqa: F821
+    print(f"Loading small model: {model_path}")
     mS = AutoModelForCausalLM.from_pretrained(
-        small_model, torch_dtype=torch.float32, attn_implementation="eager",
+        model_path,
+        torch_dtype=torch.float32,
+        attn_implementation="eager",
         low_cpu_mem_usage=True,
-    ).to(device)
+    ).to(device)  # type: ignore[arg-type]
     mS.eval()
 
     n_S = mS.config.num_hidden_layers
@@ -102,51 +178,74 @@ def main(
     n_samples = 2 if device == "cpu" else 4
     print(f"Loading {n_samples} calibration samples...")
     samples = load_calibration_data(
-        small_model, max_length=max_length, min_length=min_length, n_samples=n_samples,
+        small_model,
+        max_length=max_length,
+        min_length=min_length,
+        n_samples=n_samples,
     )
 
     # -- Load target cache ------------------------------------------------
-    # Fallback chain: local dir -> kernel_sources -> error
-    possible_dirs = [targets_dir,
-                     os.path.join("/kaggle/input", "prism-exp16-stage0-targets"),
-                     os.path.join("/kaggle/input", "prism-exp16-stage0-targets", "results", "targets")]
-    for d in possible_dirs:
-        if os.path.isdir(d) and any(f.endswith(".pt") for f in os.listdir(d)):
-            targets_dir = d
-            print(f"Found target cache at {d}")
-            break
+    targets_dir = find_targets_dir(targets_dir)
+    print(f"Using target cache at {targets_dir}")
 
     cache_files = sorted(
-        f for f in os.listdir(targets_dir)
+        f
+        for f in os.listdir(targets_dir)
         if f.endswith(".pt") and not f.startswith(".")
     )
     if not cache_files:
-        raise FileNotFoundError(f"No target cache found in any of: {possible_dirs}. Run Stage 0 first.")
+        raise FileNotFoundError(
+            f"No target cache .pt files found at {targets_dir}. Run Stage 0 first."
+        )
 
     cache_by_pair: dict[str, list[dict]] = {}
     for cf in cache_files:
         data = torch.load(os.path.join(targets_dir, cf), weights_only=True)
         pair = data["pair"]
+        m = re.search(r"_(\d+)\.pt$", cf)
+        data["_si"] = int(m.group(1)) if m else -1
         cache_by_pair.setdefault(pair, []).append(data)
+    for pair in cache_by_pair:
+        cache_by_pair[pair].sort(key=lambda t: t["_si"])
 
-    # Find last-layer pair
+    # Last-layer pair — ASSERTED (v1's silent fallback to 0_0 was the null
+    # target that voided v1).
     target_pair = None
-    for p in cache_by_pair:
-        if int(p.split("_")[1]) == last_layer:
+    for p in sorted(cache_by_pair):
+        _, ls = p.split("_")
+        if int(ls) == last_layer:
             target_pair = p
             break
     if target_pair is None:
-        target_pair = list(cache_by_pair.keys())[0]
+        raise SystemExit(
+            f"FATAL: no pair with l_S={last_layer} in {targets_dir} "
+            f"(have: {sorted(cache_by_pair)}). Re-run stage 0 with the "
+            f"last-layer pair included."
+        )
     targets = cache_by_pair[target_pair]
     token_set = targets[0]["token_set"]
     print(f"Using pair {target_pair}, K={len(token_set)}")
 
-    # -- Original weights -------------------------------------------------
+    # -- input_ids pairing (v1 had none — position-based = broken) ---------
+    pairing_ok: list[bool] = []
+    for si in range(min(n_samples, len(targets))):
+        t = targets[si]
+        ids = samples[si]["input_ids"]
+        ok = (
+            t.get("input_ids") is not None
+            and t["input_ids"].shape[0] == ids.shape[0]
+            and bool((t["input_ids"].view(-1) == ids.view(-1)).all())
+        )
+        pairing_ok.append(ok)
+        if not ok:
+            print(f"  WARNING: sample {si} <-> target {target_pair}_{si} "
+                  f"input_ids mismatch — its bridge term is skipped")
+    print(f"Pairing verified: {sum(pairing_ok)}/{len(pairing_ok)} samples")
+
+    # -- Original weights / logits ------------------------------------------
     lm_head = mS.lm_head
     W_orig = lm_head.weight.data.clone()
-    W_norm = W_orig.norm().item()
 
-    # -- Original logits cache (for KL) -----------------------------------
     orig_logits_cache: list[torch.Tensor] = []
     with torch.no_grad():
         for s in samples[:n_samples]:
@@ -156,103 +255,143 @@ def main(
                 mS(input_ids=ids, attention_mask=attn).logits[:, -1, :]
             )
 
-    # -- Compute target ΔJ direction from Stage 0 targets -----------------
+    # -- Baseline: no edit (THE reference) ---------------------------------
+    print("\n--- Scenario: no_edit (baseline) ---")
+    base_bridge = _eval_bridge(
+        mS, last_layer, targets, token_set, samples, n_samples, device, pairing_ok
+    )
+    base_kl = _eval_kl(mS, samples, orig_logits_cache, n_samples, device)
+    print(f"  bridge={base_bridge:.4f}, KL={base_kl:.6f}")
+
+    # Sanity: the detector must reproduce exp16's step-0 bridge.
+    if abs(base_bridge - exp16_base_bridge) > 0.05:
+        raise SystemExit(
+            f"FATAL: baseline bridge {base_bridge:.4f} vs exp16 step-0 "
+            f"{exp16_base_bridge:.4f} (Δ>0.05). Detector not calibrated — "
+            f"aborting instead of publishing inconsistent numbers."
+        )
+    print(f"  matches exp16 step-0 bridge ({exp16_base_bridge:.4f}) — calibrated")
+
+    # -- Target ΔJ direction (sample 0, paired) -----------------------------
     s0 = samples[0]
     ids0 = s0["input_ids"].to(device)
     attn0 = s0["attention_mask"].to(device)
     tgt0 = targets[0]
-
     J_S_orig = compute_jacobian_for_tokens(mS, last_layer, ids0, attn0, token_set)
     p0 = tgt0["p"].to(device)
     J_S_orig_p = softmax_jacobian(J_S_orig, p0)
     J_tgt_p = tgt0["J_tgt_p"].to(device)
-
-    ΔJ = J_tgt_p - J_S_orig_p  # [|U|, D]
-
-    # Decompose: gauge (common mode) vs differential
+    ΔJ = J_tgt_p - J_S_orig_p  # [K, D]
     ΔJ_gauge = ΔJ.mean(dim=0, keepdim=True)  # [1, D]
-    ΔJ_diff = ΔJ - ΔJ_gauge  # [|U|, D]
+    ΔJ_diff = ΔJ - ΔJ_gauge  # [K, D]
+    print(f"‖ΔJ‖={ΔJ.norm():.4f}, ‖ΔJ_gauge‖={ΔJ_gauge.norm():.4f}, "
+          f"‖ΔJ_diff‖={ΔJ_diff.norm():.4f}")
 
-    V, D = W_orig.shape
-    target_norm = alpha_star * W_norm
-    print(f"Target ‖ΔW‖_F = {target_norm:.4f} (α*={alpha_star} × ‖W‖={W_norm:.4f})")
+    def build_ΔW(rows: torch.Tensor, scale: float) -> torch.Tensor:
+        """Rows [K, D] → sparse ΔW [V, D] at tokens, scaled to ‖·‖=scale."""
+        V, D = W_orig.shape
+        ΔW = torch.zeros(V, D, device=device)
+        for i, t in enumerate(token_set):
+            ΔW[t] = rows[i]
+        n = ΔW.norm()
+        if n > 1e-8:
+            ΔW *= scale / n
+        return ΔW
 
-    # -- Build ΔW for each scenario ---------------------------------------
-    scenarios = {}
+    # -- Scenarios (all at the knee dose; 10× for the overshoot) -----------
+    print(f"\nDose ‖ΔW‖ = {knee_dose:.4f} (knee of the exp16 v2 dose curve)")
+    scenarios = {"no_edit": {"bridge": base_bridge, "KL_ed_orig": base_kl,
+                             "delta_norm": 0.0}}
 
-    # (a) Random ΔW of same norm
-    print("\n--- Scenario (a): random ΔW ---")
-    rand_ΔW = torch.randn(V, D, device=device)
-    rand_ΔW = rand_ΔW * (target_norm / rand_ΔW.norm())
-    lm_head.weight.data.copy_(W_orig + rand_ΔW)
-    bridge_a = _eval_bridge(mS, last_layer, targets, token_set, samples, n_samples, device)
-    kl_a = _eval_kl(mS, samples, orig_logits_cache, n_samples, device)
-    scenarios["a_random"] = {"bridge": bridge_a, "KL_ed_orig": kl_a, "delta_norm": float(rand_ΔW.norm())}
-    print(f"  bridge={bridge_a:.4f}, KL={kl_a:.4f}")
+    names = [
+        ("a_random", lambda: torch.randn_like(W_orig)),
+        ("b_target_1x", lambda: ΔJ),
+        ("c_target_10x", None),  # built below (10× dose)
+        ("d_gauge", lambda: ΔJ_gauge),
+        ("e_differential", lambda: ΔJ_diff),
+    ]
+    for name, mk in names:
+        if mk is None:
+            continue
+        print(f"\n--- Scenario ({name}) ---")
+        ΔW = build_ΔW(mk(), knee_dose)
+        lm_head.weight.data.copy_(W_orig + ΔW)
+        b = _eval_bridge(
+            mS, last_layer, targets, token_set, samples, n_samples, device, pairing_ok
+        )
+        k = _eval_kl(mS, samples, orig_logits_cache, n_samples, device)
+        scenarios[name] = {"bridge": b, "KL_ed_orig": k,
+                           "delta_norm": float(ΔW.norm())}
+        print(f"  bridge={b:.4f} (Δ={b - base_bridge:+.4f}), "
+              f"KL={k:.6f} (Δ={k - base_kl:+.2e}), ‖ΔW‖={ΔW.norm():.4f}")
 
-    # (b) 10×α* in target direction
-    print("\n--- Scenario (b): 10×α* ---")
-    ΔW_target = torch.zeros(V, D, device=device)
-    for i, t in enumerate(token_set):
-        ΔW_target[t] = ΔJ[i]
-    if ΔW_target.norm() > 1e-8:
-        ΔW_target = ΔW_target * (target_norm / ΔW_target.norm())
-    ΔW_b = ΔW_target * 10
-    lm_head.weight.data.copy_(W_orig + ΔW_b)
-    bridge_b = _eval_bridge(mS, last_layer, targets, token_set, samples, n_samples, device)
-    kl_b = _eval_kl(mS, samples, orig_logits_cache, n_samples, device)
-    scenarios["b_10x_alpha"] = {"bridge": bridge_b, "KL_ed_orig": kl_b, "delta_norm": float(ΔW_b.norm())}
-    print(f"  bridge={bridge_b:.4f}, KL={kl_b:.4f}")
+    print("\n--- Scenario (c_target_10x) ---")
+    ΔW10 = build_ΔW(ΔJ, 10 * knee_dose)
+    lm_head.weight.data.copy_(W_orig + ΔW10)
+    b = _eval_bridge(
+        mS, last_layer, targets, token_set, samples, n_samples, device, pairing_ok
+    )
+    k = _eval_kl(mS, samples, orig_logits_cache, n_samples, device)
+    scenarios["c_target_10x"] = {"bridge": b, "KL_ed_orig": k,
+                                 "delta_norm": float(ΔW10.norm())}
+    print(f"  bridge={b:.4f} (Δ={b - base_bridge:+.4f}), "
+          f"KL={k:.6f} (Δ={k - base_kl:+.2e}), ‖ΔW‖={ΔW10.norm():.4f}")
 
-    # (c) Gauge only
-    print("\n--- Scenario (c): gauge component ---")
-    ΔW_gauge = torch.zeros(V, D, device=device)
-    gauge_vec = ΔJ_gauge[0]  # [D]
-    for t in token_set:
-        ΔW_gauge[t] = gauge_vec
-    if ΔW_gauge.norm() > 1e-8:
-        ΔW_gauge = ΔW_gauge * (target_norm / ΔW_gauge.norm())
-    lm_head.weight.data.copy_(W_orig + ΔW_gauge)
-    bridge_c = _eval_bridge(mS, last_layer, targets, token_set, samples, n_samples, device)
-    kl_c = _eval_kl(mS, samples, orig_logits_cache, n_samples, device)
-    scenarios["c_gauge"] = {"bridge": bridge_c, "KL_ed_orig": kl_c, "delta_norm": float(ΔW_gauge.norm())}
-    print(f"  bridge={bridge_c:.4f}, KL={kl_c:.4f}")
-
-    # (d) Differential only
-    print("\n--- Scenario (d): differential component ---")
-    ΔW_diff = torch.zeros(V, D, device=device)
-    for i, t in enumerate(token_set):
-        ΔW_diff[t] = ΔJ_diff[i]
-    if ΔW_diff.norm() > 1e-8:
-        ΔW_diff = ΔW_diff * (target_norm / ΔW_diff.norm())
-    lm_head.weight.data.copy_(W_orig + ΔW_diff)
-    bridge_d = _eval_bridge(mS, last_layer, targets, token_set, samples, n_samples, device)
-    kl_d = _eval_kl(mS, samples, orig_logits_cache, n_samples, device)
-    scenarios["d_differential"] = {"bridge": bridge_d, "KL_ed_orig": kl_d, "delta_norm": float(ΔW_diff.norm())}
-    print(f"  bridge={bridge_d:.4f}, KL={kl_d:.4f}")
-
-    # -- Restore original -------------------------------------------------
     lm_head.weight.data.copy_(W_orig)
 
-    # -- Rank by destruction (lower bridge = more destructive) -------------
-    ranking = sorted(scenarios.items(), key=lambda x: x[1]["bridge"])
-    print("\nRanking by bridge (best first):")
-    for name, vals in ranking:
-        print(f"  {name}: bridge={vals['bridge']:.4f}, KL={vals['KL_ed_orig']:.4f}")
+    # -- Report: deltas from the no-edit baseline --------------------------
+    for name, sc in scenarios.items():
+        sc["delta_bridge"] = sc["bridge"] - base_bridge
+        sc["delta_KL"] = sc["KL_ed_orig"] - base_kl
+    ranking = sorted(
+        (n for n in scenarios if n != "no_edit"),
+        key=lambda n: scenarios[n]["delta_bridge"],
+    )
+    print("\nRanking by bridge damage (most → least):")
+    for n in ranking:
+        print(f"  {n}: Δbridge={scenarios[n]['delta_bridge']:+.4f}, "
+              f"ΔKL={scenarios[n]['delta_KL']:+.2e}")
 
-    # -- Save --------------------------------------------------------------
     result = {
-        "description": "Calibration of destruction detector using alpha* from Exp16. Four scenarios on last layer: (a) random ΔW, (b) 10×alpha* in target direction, (c) gauge-only ΔW, (d) differential-only ΔW. Each normalized to alpha*·‖W‖_F. Ranks scenarios by bridge cosine similarity — expects (b) best, (d) second, (a) random, (c) gauge-only near zero. Measures bridge cosine and KL per scenario.",
-        "alpha_star": alpha_star,
-        "target_norm": target_norm,
+        "description": (
+            "Destruction scenarios at a controlled dose (v2). Dose ‖ΔW‖ = "
+            "the knee of the exp16 v2 dose curve (FATAL if absent — no "
+            "silent default). Scenarios, all at equal dose except the 10× "
+            "overshoot: random ΔW; pull direction ΔJ (per-token rows); "
+            "10× overshoot; gauge component of ΔJ; differential component "
+            "of ΔJ. Plus THE no-edit baseline. Target pair = last-layer "
+            "pair (asserted; v1's silent fallback to 0_0 was a null "
+            "target that voided v1). input_ids pairing (v1 had none). "
+            "All quantities are reported as deltas from no_edit; the "
+            "baseline bridge must match exp16's step-0 curve point ±0.05 "
+            "or the run aborts (detector calibration check)."
+        ),
+        "dose_norm": knee_dose,
+        "exp16_baseline_bridge": exp16_base_bridge,
+        "baseline_bridge": base_bridge,
+        "baseline_KL": base_kl,
         "scenarios": scenarios,
-        "ranking_by_bridge": [name for name, _ in ranking],
+        "ranking_by_damage": ranking,
         "target_pair": target_pair,
+        "pairing": {
+            "mode": "input_ids",
+            "verified": int(sum(pairing_ok)),
+            "total": int(len(pairing_ok)),
+        },
+        "n_layers_S": n_S,
+        "last_layer": last_layer,
+        "K": len(token_set),
         "device": device,
         "elapsed_seconds": time.time() - start,
+        "params": {
+            "small_model": small_model,
+            "device": device,
+            "max_length": max_length,
+            "min_length": min_length,
+            "targets_dir": targets_dir,
+        },
     }
     path = os.path.join(results_dir, "exp19_destruction.json")
-    result["params"] = {"small_model": small_model, "device": device, "max_length": max_length, "min_length": min_length, "targets_dir": targets_dir}
     with open(path, "w") as f:
         json.dump(result, f, indent=2)
 
@@ -261,7 +400,7 @@ def main(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Exp 19: Destruction detector calibration")
+    parser = argparse.ArgumentParser(description="Exp 19: destruction scenarios (v2)")
     parser.add_argument("--small-model", default="Qwen/Qwen3.5-0.8B")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--max-length", type=int, default=64)

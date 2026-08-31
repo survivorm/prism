@@ -31,7 +31,7 @@
 | **10a/b/d** | a,d OK; b n=1 thin (gauge invariance robust) | thin | optional (b n=8) | LOW |
 | **6** | n=16 OK but bridge_means sentinel 1.0; spearman −0.09 partly artifact | sentinel (paper) | paper-fix; optional rerun | MEDIUM |
 | **12a/b/c** | quantization destroys both (KL~15) — «comparative destruction» not preservation | framing | paper re-frame; optional smaller-ε | MEDIUM |
-| **16** | `delta_W` saturates identically at alpha 0.1/0.3/1.0 | possible clamp/bug | investigate (CPU) → re-run | MEDIUM-HIGH |
+| **16** | **VOID**: α was a trust-region cap, not a dose — at α≥0.1 the cap never binds → bit-identical runs; "α\*=0.01" = first-slope artifact | design bug (v1 uninterpretable) | **YES** — v2 dose-curve rebuilt (one unclamped run, per-step (‖ΔW‖, bridge, KL), α\*=knee) **~5 min T4** | **HIGH (cheap)** |
 | **18/19** | GDN pairs fine here (logit-KD/destruction, not o_proj) | — | no | LOW |
 | **17** | dual-cadence «too weak» (pair 2 half at 300) | underpowered | **YES** (500, lr 3e-3 — built, quota) | **HIGH** (pending) |
 
@@ -93,16 +93,16 @@ universal (overlap>0.9), дифф. подпространства доменно
 **Код vs замысел (адекватность) — KEY:**
 - ⚠️ **exp11a и exp11b use РАЗНЫЕ params**: exp11a = **K=32, n=4** (params `{K:32, n:4, max_len:48}`); exp11b = **K=256, n=2** (code line 147-148). Audit's «contradiction» — **apples-to-oranges** (two differently-configured runs).
 - exp11a: output KL **r-invariant** (dr4=dr8=dr16=dr32=gf=8.517) — clean «defrag preserves output at r=4».
-- **exp11b: `recon_fidelity_rel = ‖J_tilde−J_p‖/‖J_p‖` GROWS with r** (19→31→48 at r=8→16→32). **Counterintuitive**: more r = more basis vectors = better recon → error should DECREASE. Growing = **likely bug** (defrag basis not clean top-r SVD, or num-instability, or wrong normalization). For K=256, r=32 = 32/256 space → 10-48 relative error plausible as magnitude, but the *trend* is wrong.
+- **exp11b: `recon_fidelity_rel = ‖J_tilde−J_p‖/‖J_p‖` GROWS with r** (19→31→48). **ROOT CAUSE (this session, code-level)**: v1 computed `J_tilde = U_r @ J_r` with J_r = U_r·J → J_tilde = U_r·U_rᵀ·**J** (projection of the RAW J) compared against **J_p** — two different matrices. At r=K the projector is the identity → metric = ‖J − J_p‖/‖J_p‖ = the **gauge gap, a constant independent of r** (10–48× — matches the observed plateau/growth); residual r-dependence = projecting J (not J_p) in G_p's eigenbasis. The intended truncation tail ‖U_r U_rᵀ·J_p − J_p‖ never entered. **Fix applied** (`experiments/exp11b_defrag_cost.py`): `J_tilde = U_r @ U_r.T @ J_p` — monotone decreasing, 0 at r=K by construction. The defrag *basis* (eigh of G_p = J_p·J_pᵀ) is sound; the *cost* measurements (times/speedups/storage) stand.
 
 **Проблема:**
-1. exp11b recon_fidelity растёт с r — **bug** (verify: is the defrag basis the true top-r SVD of the mean-J? if so, error must decrease with r).
-2. exp11a/exp11b inconsistent params (K=32 vs K=256) → audit's contradiction partly artificial.
+1. exp11b recon_fidelity — **metric bug found + fixed** (not a basis bug).
+2. exp11a/exp11b inconsistent params (K=32 vs K=256) → audit's «contradiction» partly artificial.
 
-**Что переделать на GPU:**
-1. **Debug first (CPU, tiny model)**: reconstruct exp11b's defrag basis; confirm it IS top-r SVD of the mean-J (or of what?); recompute recon_fidelity for r=1,4,8,16,32,64,128,256 on ONE layer — curve should monotonically decrease to 0 at r=K. If not → fix basis/recon code.
-2. **Re-run exp11b with r sweeping 1..256** (full K=256) + n_samples=8 (match exp11a) so both exps share params → «contradiction» resolved by one consistent sweep. Real GPU re-run (full-K SVD on 0.8B, a few layers).
-3. **Paper fix**: state exp11a (output, K=32) vs exp11b (recon, K=256) are different measurements, not a contradiction; or re-run both at same K.
+**Что переделать:**
+1. **CPU verify (cheap, no model-forward changes)**: recompute the fixed recon_fidelity for r = 1,4,8,16,32,64,128,256 on ONE layer/sample from an already-computed J_p — curve must decrease monotonically to 0 at r=K. (A few matmuls on [K,D]; minutes.)
+2. **GPU re-run only if the paper needs fresh T4 cost numbers** (times/speedups) — otherwise the existing exp11b cost data + the fixed fidelity curve is enough.
+3. **Paper fix**: state exp11a (output, K=32) vs exp11b (recon, K=256) are different measurements, not a contradiction; note the v1 fidelity metric was void and replaced.
 
 **Prio: MEDIUM-HIGH** — likely a real bug in the defrag recon (the headline «defrag is cheap AND accurate» claim rests on exp11b's fidelity, which is currently non-sensical).
 
@@ -151,12 +151,16 @@ universal (overlap>0.9), дифф. подпространства доменно
 - n=16, K=64, 11 layer pairs. **spearman_kl_vs_bridge = −0.094 ≈ 0** ("KL loss doesn't correlate with the bridge" — a null/interesting result). **BUT `bridge_means=[1.0, 1.0, ...]`** — the early pairs (0->0, 3->2, ...) are the **sentinel 1.0** again. The −0.09 spearman is partly computed over sentinel points. **Paper fix**: exclude sentinel pairs before computing the KL-vs-bridge correlation. **GPU re-run optional** (n=16 is OK; the issue is the sentinel, not N). **Prio: MEDIUM**.
 
 ### exp16_readout_pull — **delta_W saturates identically at alpha 0.1/0.3/1.0 (possible clamp/bug)**
-- alpha sweep 0.01→1.0. **bridge_mean and delta_W are IDENTICAL at alpha=0.1, 0.3, 1.0** (bridge 0.7008, delta_W_norm 14.276, delta_W_frac 0.0455). A pull that doesn't scale with alpha past 0.1 = **either a hard norm-clamp (~4.5% of ‖W‖) or a bug where alpha stops being applied.** alpha_star=0.01 (smallest is best). **Investigate** (CPU, read the pull code): is there a `min(alpha, ...)` or a projection onto a fixed subspace that saturates? If it's a deliberate clamp, document it; if not, fix. **GPU re-run** after the fix (the saturation makes the alpha-sweep meaningless above 0.1). **Prio: MEDIUM-HIGH**.
+## exp16_readout_pull — VERDICT: design bug (not a clamp) — re-run cheap
 
-### exp18_logit_kd / exp19_destruction — probably OK (GDN pairs fine here)
-- **exp18**: logit-KD on 8 pairs (incl. GDN 24_18, 28_21 from the old cache), r=4, steps=100. bridge 0.606/0.492. **Logit-KD is about the KL on the output distribution, not o_proj**, so GDN student layers are fine here (unlike exp17's 2nd-order refresh). Prio: LOW (verify the claim is about output-KD, not o_proj).
-- **exp19**: 4 destruction scenarios at equal delta_norm (3.14); ranking c_gauge≈a_random (0.006) < d_differential (0.027) < b_10x (0.055) — "gauge and random perturbations destroy the bridge about equally; differential and 10×-alpha destroy more." Small (single-pair targets) but the point is made. Prio: LOW.
+- **ROOT CAUSE (this session, code-level)**: `alpha` was never a dose knob. In v1 each pair ran a 10-step LR trajectory with a per-step trust-region cap on ‖ΔW‖ ≈ 0.01·‖W‖; at α≥0.1 the cap never binds, so the trajectories are **bit-identical** (bridge 0.7008 / ‖ΔW‖ 14.276 identical at 0.1/0.3/1.0 — not a clamp). The "α*=0.01" headline = first-slope artifact: at α=0.01 the cap binds on the FIRST step and ΔW ≈ 0.01·‖W‖. The v1 "dose curve" was never a dose curve.
+- **Fix (applied, in place)**: v2 = one unclamped run (trust-region off) → per-step (‖ΔW‖, bridge gap, KL) → the real dose curve; α* = knee (first step where |slope| ≥ 0.9·max). Stage-0 targets cache consumed as-is (v2 format, 175/176 pairs; 1 null-target pair honestly flagged). v1 JSON → results/voided/. **GPU re-run: one unclamped run on 0.8B ≈ 5 min (v1 log: ~3 s/step).** exp19 consumes this α* (see exp19).
 
+### exp16_readout_pull v2 / exp19_destruction v2 — rewritten this session
+
+
+- **exp18**: logit-KD on 8 pairs (incl. GDN 24_18, 28_21), r=4, steps=100, bridge 0.606/0.492 — **GDN fine here** (KL on outputs, not o_proj). No re-run.
+- **exp19 v2 (rewritten)**: 4 scenarios (full 176-pair set, full edit, no-edit baseline, α*=knee from the exp16 v2 JSON — refuses to run without it) on the LAST layer (l23) with correct per-target input_ids pairing. v1 consumed a VOID artifact (α*=0.01) and fell back to the null target 0_0 (input mismatch → garbage) — voided → results/voided/. GPU re-run: 4 short runs, **~10 min T4**.
 ---
 
 ## ИТОГО (summary table) — what to re-run on GPU vs paper-fix vs leave
@@ -164,7 +168,7 @@ universal (overlap>0.9), дифф. подпространства доменно
 | Exp | Problem | Type | GPU re-run? | Prio |
 |-----|---------|------|-------------|------|
 | **exp4_k_sensitivity** | **BROKEN**: self-bridge `jacobian_bridge(J,J,E,E)`, no 4B loaded → all-zeros | code bug (wrong thing tested) | **YES** (4B+0.8B, K sweep to 256, n≥4) | **HIGH** |
-| **exp11 (defrag)** | `recon_fidelity` GROWS with r (19→31→48); exp11a K=32 vs exp11b K=256 mismatch | likely bug + param mismatch | **YES** (r sweep 1..256, K=256, n=8, 1 layer first to debug) | **MEDIUM-HIGH** |
+| **exp11 (defrag)** | `recon_fidelity` GROWS with r (19→31→48) — **metric bug found+fixed**: v1 compared U_r·U_rᵀ·J against J_p (at r=K = gauge gap, r-independent); now projects J_p (monotone ↓, 0 at r=K) | metric bug (basis itself fine) | CPU-verify fixed curve (no GPU); GPU re-run only if fresh cost numbers needed | **MEDIUM** |
 | **exp17 (power-up)** | dual-cadence "too weak" (pair 2 half at 300) | underpowered | **YES** (500 steps, lr 3e-3 — built, blocked by weekly quota) | **HIGH** (pending) |
 | **exp16_readout_pull** | delta_W saturates identically at alpha 0.1/0.3/1.0 | possible clamp/bug | investigate (CPU) then **YES** if bug | **MEDIUM-HIGH** |
 | **exp13_domain_esg** | bridge 1.0 sentinel (3/5 pts); monotonicity −0.894 identical artifact | sentinel (paper) + N=8 thin | paper-fix now; **optional** 24-layer/K=128 rerun | **MEDIUM** |
@@ -185,8 +189,8 @@ universal (overlap>0.9), дифф. подпространства доменно
 ### GPU queue (after the weekly 30h quota resets) — in priority order
 1. **exp17 power-up** (500 steps, lr 3e-3) — already built + committed; just needs the slot.
 2. **exp4_k_sensitivity** — fix to `bridge(J_L, J_S, E_L, E_S)` + load 4B + K up to 256 + n≥4 (4B+0.8B, 1–2h).
-3. **exp11 defrag** — debug recon_fidelity on 1 layer first (CPU), then full r-sweep 1..256 at K=256/n=8 (a few layers, 2–3h).
-4. **exp16_readout_pull** — after the clamp/bug investigation, re-run the alpha sweep (0.8B only, ~30min).
+3. **exp11 defrag** — CPU-verify the fixed recon_fidelity curve (r=1..256, eigh+matmuls only, no model); GPU re-run only if fresh T4 cost numbers are needed.
+4. **exp16_readout_pull v2** — dose-curve re-run (one unclamped run, per-step ‖ΔW‖/bridge/KL, α*=knee). 0.8B only, **~5 min on T4** (v1 log: ~3 s/step). Run BEFORE exp19 (exp19 must consume a real knee, use pair 31_23, add a no-edit baseline — see exp16 section).
 5. **exp2_heatmap** — full 32×24 map at n=8/K=64 (4B+0.8B, ~1h).
 6. Optional: exp13/exp15 24-layer/6-anchor rerun; exp6 rerun; exp10b n=8.
 
