@@ -35,6 +35,7 @@ DO NOT TRY DOING ALL SIMULTANEOSELY!!! ONE POINT AT A TIME!!! UPDATE PLAN, ANALY
 | §H exp16 v2 (dose curve) | ⏳ v2 committed, **GPU push BLOCKED by weekly 30h quota** | Root cause: v1 `alpha` was a **trust-region cap, not a dose** — at α≥0.1 the cap never binds → 0.1/0.3/1.0 bit-identical; "α*=0.01" = first-slope artifact. v2 = one unclamped Adam run → per-eval (‖ΔW‖, bridge, KL) → dose curve; α*=knee (Δbridge). Source committed at **`experiments/exp16_readout_pull.py`** (not `kaggle_kernel/` — that path was my smoke bug); **kernel-exp16r committed with v2 inlined** (dose/knee/alpha_star/unclamped confirmed). Consumes stage-0 v2 cache (input_ids pairing asserted, last-layer pair only — v1's silent 0_0 fallback was the void bug). v1 JSON → results/voided/. **pyright 0**. **CPU smoke NOT runnable on this host**: full 0.8B+J_norm+Adam = SIGKILL-137 (host swap exhausted; bare model loads fine → it's memory-on-top, not code). Real validation = the GPU run (§K). |
 | §I exp19 v2 (destruction) | ✅ rewritten, **push held pending user approval** | 4 scenarios (full 176-pair set, full edit, no-edit baseline, α*=knee from exp16 v2 JSON — refuses to run without it), last layer l23, per-target input_ids pairing. v1 consumed the VOID α*=0.01 + fell back to null target 0_0 (input mismatch → garbage) → results/voided/. Kernel rebuilt (kernel-exp19). |
 | §J exp11b metric fix | ✅ DONE + CPU-verified | recon_fidelity v1 compared U_r·U_rᵀ·**J** (raw) against J_p; at r=K projector=identity → gauge gap, r-independent (10–48×, matches observed growth/plateau). Fix: project **J_p** → monotone ↓, 0 at r=K. CPU smoke: r=8/16/32 → recon 0.251/0.156/0.077 (decreasing ✓). No GPU needed unless fresh T4 cost numbers wanted. |
+| §HANDOFF | ✅ WRITTEN + committed (`d6fe0f9`) | **`docs/HANDOFF_exp17_powerup.md`** = resume point for the new session. ONE pending action: push `prism-lora-distillation` (kernel-exp17, full 7-pair power-up: dual-cadence + lr=3e-3 + 500) after the Kaggle weekly-30h quota resets (currently 404/deleted). 4_3 project CLOSED (clean vanilla single-pair baseline: v23.2b single-cadence lr=1e-3 300 → bridge 0.98→0.799/0.812). 9-pair artifacts = none (stale dataset was only on killed runs). | 
 | §K re-push 16r + 17 (v2) | ⛔ BLOCKED: weekly GPU quota 30h exhausted | Both kernels built + **committed** (kernel-exp16r v2 dose-curve, kernel-exp17 500-steps/lr3e-3). Push via standard **`kaggle kernels push -p .`** in each kernel dir (NOT the phantom `kaggle_cli`/`_push_v2.sh` — that module doesn't exist in this env; the real tool is the system `kaggle` CLI / kagglesdk). Push → “Maximum weekly GPU quota of 30.00 hours reached” (prior 17+18 ≈ 33h). **Re-run the push after the Kaggle weekly quota resets.** exp19 held (not approved). |
 
 ## v23 body
@@ -133,8 +134,12 @@ truncation. No S shrink. (v22 §A5, unchanged.)
 
 - New dir `kaggle_kernel/exp16_4_3/` (build_kernel.py, id
   voroninmichael/prism-exp16-4-3, T4, sources=exp16 stage0).
-- 4B student (fp16) vs 0.8B teacher (fp32), 1 GPU, pair (4,3), K=128, C=8,
-  k=50, 300 steps, 5 ckpt, A-implementation, fail-fast, VRAM log (A2).
+- **0.8B student (fp32 J chain) vs 4B teacher — 4B is NEVER loaded; its
+  J_tgt_p/p_L_full targets are read from the stage0 cache.** (v23 text below
+  originally said "4B student vs 0.8B teacher" = REVERSED, corrected here.)
+  K=**256** (cache built K=256; the K=128 number was stale), C=8, k=**100**
+  (v23.2b; later superseded by v23.2c dual-cadence — see §F), 300 steps,
+  5 ckpt, matrix-free rows, fail-fast, VRAM log (A2).
 - Success = all 300 steps (or early-stop), peak VRAM logged < 16GB,
   dL/dA_attn>0 AND dL/dB_attn>0 (smoke_j), finite-diff spot check (B1.2 on
   GPU): J_S_p[0] (row 0) vs (h_norm(h+1e-4 e_0)@W[0] − h_norm@W[0])/(1e-4)
