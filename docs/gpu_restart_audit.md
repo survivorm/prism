@@ -1,199 +1,212 @@
-# GPU-перезапуск: какие эксперименты не выразительны в текущем формате
+# GPU-аудит: какие эксперименты не выразительны в текущем формате
 
-> **Статус:** Готово (2026-08-31) — все эксперименты пройдены; итоговая таблица + GPU-очередь в конце. commit 8a4638a (v1) → финальный commit.
-> **Критерий «не выразительны»:** (a) стат. мощность недостаточна (N/S/K малы), (b) результат
-> самопротиворечив, (c) метрика/формула неверна, (d) баслайн слишком слаб/отсутствует,
-> (e) «minimal run» — данные не финальные.
-> **Адекватность кода (по требованию):** для каждого — сверка КОДА с замыслом (spec в
-> `docs/Exps.md` / `paper.md`): (i) параметры (n_samples, K, max_length, слои, пары) — тот
-> диапазон, что заявлен? (ii) формулы метрик — считаем то, что написано в статье? (iii)
-> фолбэки/тихие подмены (данные, модели, дефолты) — не изменили ли смысл эксперимента?
-> Если код ≠ замысел → эксперимент «мертв» вне зависимости от результата.
-> **Исход:** `docs/paper_audit.md` (критический разбор), `docs/deferred_items.md`.
-> **GPU-квота:** weekly 30h исчерпана (08-31) → пересчёты только после сброса.
+> **Статус (2026-09-01):** полная сверка ВСЕХ `experiments/*.py` (код + замысел + params;
+> §L-аудит 09-01 влит, старая v1-таблица 08-31 заменена). Итоговая таблица — ниже,
+> GPU-очередь — в конце.
+> **Критерий «не выразительны»:** (a) стат. мощность недостаточна (N/S/K малы),
+> (b) результат самопротиворечив, (c) метрика/формула неверна, (d) баслайн слишком
+> слаб/отсутствует, (e) «minimal run» — данные не финальные.
+> **Адекватность кода:** для каждого — (i) параметры (n, K, max_length, слои, пары) —
+> тот диапазон, что в spec (`docs/Exps.md`)? (ii) формулы метрик — то, что в статье?
+> (iii) фолбэки/тихие подмены (данные, модели, дефолты) — не изменили ли смысл?
+> Код ≠ замысел → эксперимент «мертв» вне зависимости от результата.
+> **Исход:** `docs/paper_audit.md`, `docs/deferred_items.md`; live-статус exp17 —
+> `docs/HANDOFF_exp17_powerup.md`.
+> **GPU-квота:** Kaggle weekly 30h (исчерпана 08-31, сброс = конец недели Mon–Sun).
 > Формат записи: **замысел → код (адекват?) → результат → проблема → что переделать → prio**.
 
 ---
 
-## Итоговая таблица (final)
+## Итоговая таблица (все экспериментные скрипты)
 
-| Exp | Проблема | Тип | GPU re-run? | Prio |
-|-----|----------|-----|-------------|------|
-| **13** | overlap_hidden **good** (0.015→0.998); bridge 1.0-sentinel (3/5 pts), monotonicity −0.894 artifact | sentinel (paper) + N=8 thin | paper-fix; optional 24-layer | MEDIUM |
-| **14** | adequate (n=8 real); JSON missing `params` | reproducibility | no (add params) | LOW |
-| **11** | `recon_fidelity` GROWS with r; K=32 vs K=256 mismatch | likely bug + param mismatch | **YES** (debug 1 layer → r-sweep) | MEDIUM-HIGH |
-| **4_k** | **BROKEN**: self-bridge `jacobian_bridge(J,J,E,E)`, no 4B loaded → all-zeros | code bug (wrong thing) | **YES** (load 4B, K→256, n≥4) | **HIGH** |
-| **15** | 1.0-sentinel (2/4 pts); −0.949 identical across 4 schemes | sentinel (paper) | paper-fix; optional more anchors | MEDIUM |
-| **2** | n=3, K=8, sparse (no full 32×24 map) | thin | YES (n=8, K=64, full map) | LOW-MED |
-| **7** | CKA≈0 vs bridge 1→0.8 — contrast works as intended | — | no | none |
-| **3** | clean ablation (corr 0 / no-corr 0.7 / random 1.0) | — | no | none |
-| **1/5/6b** | self-bridge legitimate (identity/perm/condition-number) | — | no | none |
-| **10a/b/d** | a,d OK; b n=1 thin (gauge invariance robust) | thin | optional (b n=8) | LOW |
-| **6** | n=16 OK but bridge_means sentinel 1.0; spearman −0.09 partly artifact | sentinel (paper) | paper-fix; optional rerun | MEDIUM |
-| **12a/b/c** | quantization destroys both (KL~15) — «comparative destruction» not preservation | framing | paper re-frame; optional smaller-ε | MEDIUM |
-| **16** | **VOID**: α was a trust-region cap, not a dose — at α≥0.1 the cap never binds → bit-identical runs; "α\*=0.01" = first-slope artifact | design bug (v1 uninterpretable) | **YES** — v2 dose-curve rebuilt (one unclamped run, per-step (‖ΔW‖, bridge, KL), α\*=knee) **~5 min T4** | **HIGH (cheap)** |
-| **18/19** | GDN pairs fine here (logit-KD/destruction, not o_proj) | — | no | LOW |
-| **17** | dual-cadence «too weak» (pair 2 half at 300) | underpowered | **YES** (500, lr 3e-3 — built, quota) | **HIGH** (pending) |
-
----
-
-## Exp 13 — доменная специфичность ESG/мостов
-
-**Замысел (Exps.md):** 4 домена (wiki/math/code/chat), n=4, K=64, max_len=64; слои
-[0, n/4, n/2, 3n/4, n−1]; топ-8 eigenvectors ESG на слой; overlap подпространств между
-доменами; bridge 4B→0.8B по sampled-парам (step=len(mapping)//5). Ожидания: gauge (v1)
-universal (overlap>0.9), дифф. подпространства доменно-специфичны, bridge монотонен (ρ≤−0.7).
-
-**Код vs замысел (проверка адекватности):**
-- `n_samples=8` (код) vs `n=4` (spec) — код лучше spec (8>4).
-- TWO overlap-метрики (token + hidden) — spec упомянул один, extra = бонус.
-- **paper_audit's «overlap = 1» — WRONG**: `compute_esg` returns eigenvectors **[8,K]** (orthonormal rows, `[:, idx].T`), `_subspace_overlap` делит на `shape[0]=8` = ‖U₁U₂ᵀ‖²_F/8 = Σcos²(principal angles) — **correct**, 1 iff same subspace, 0 if orthogonal. 0.30–0.42 plausible. Audit's identity holds only for square full bases.
-- **token_set SHARED across domains** (line 31: sum softmax, top-K) → token-space overlap compares identical K-spaces = valid.
-- ⚠️ `jacobian_bridge` returns **sentinel 1.0** when `_valid_mask.sum()==0` (`bridge.py`: `if mask.sum()==0: return 1.0`) — NOT a real cosine loss. Mask = rows with `J_S` or `J_S_target` norm < 1e-6.
-
-**Результат (exp13_domain_esg.json, N=8, K=64):**
-- **overlap_hidden (the good one)**: layer 0 ≈ 0.015–0.044 (domain-specific), monotonically ↑ to layer 23 ≈ 0.994–0.998 (universal). Clean domain-grad across all 6 cross-pairs. **Выразительно.**
-- **overlap_token**: 0.30–0.42 (early) → 1.0 (layer 23). Also clean.
-- **bridge: 3 of 5 points = exactly 1.0 in ALL domains** (layers 0→0, 6→4, 12→9) = the sentinel, not real loss. Only 2 of 5 points (18→13, 24→18) are genuine cosine. **monotonicity −0.8944271909999157 identical for all 4 domains** — artifact of the shared 1.0 plateau (rank ties in 5-point Spearman), NOT a data leak.
-
-**Проблема:**
-1. `jacobian_bridge`'s `1.0` sentinel (mask empty, early layers) reported in the paper as a real loss value + used in monotonicity → the "bridge decays monotonically" claim rests on 2 real points + 3 sentinels.
-2. Root cause of empty early-layer mask: early-layer `J_S` or `J_S_target` (via `J_L@E_Lᵀ@E_S@G_inv`) has norm < 1e-6 — early layers have small-norm Jacobians (plausible) or the pinv(G) amplifies noise (bug). Need to distinguish.
-3. N=8 power for Spearman: 5 points is thin (audit right on this, even if the "-0.95 impossible" was a misread of the code).
-
-**Что переделать на GPU (после сброса weekly 30h):**
-1. **Debug first (no GPU needed, but 0.8B on GPU is fast)**: for one early layer (0→0), dump `‖J_S‖` and `‖J_S_target‖` row-norms to confirm why the mask is empty. If early `J_S` is legitimately tiny → early layers truly have no decodable direction → document, exclude from monotonicity (use only 2 real points OR add intermediate layers so the curve has ≥4 real points).
-2. **Fix the paper**: drop the 1.0 sentinel values from the monotonicity claim (they're not a cosine loss); or replace sentinel with `None` and compute Spearman on the non-None points only (N=2 minimum, ideally 4+).
-3. **Optional GPU**: rerun bridge with `n_samples=16`, `K=128`, all 24 layers (not 5 anchors) so the curve has 24 real points and the early-layer pattern is a statement, not an artifact.
-4. The **overlap_hidden** (0.015→0.998) is the real, beautiful result — promote it to the paper's main bridge figure; the current 5-anchor version under-sells it.
-
-**Prio:** MEDIUM — the overlap_hidden result is already good and needs no recompute; the bridge-1.0-sentinel is a paper-fix (no recompute) + optional GPU for a 24-layer curve.
+| Exp | Вердикт / проблема | Action | GPU? | Prio |
+|-----|-------------------|--------|------|------|
+| **exp4_k_sensitivity** | **BROKEN**: self-bridge `jacobian_bridge(J,J,E,E)`, 4B не загружен → все 0.0 (identity-кейс, не «sensitivity») | fix: `bridge(J_L,J_S,E_L,E_S)` (по образцу exp4_u:92) + load 4B + K→256 + n≥4 | **YES** | **HIGH** |
+| **exp16 v1→v2** | v1 **VOID** (results/voided/): α = trust-region cap, не dose; cap не binds при α≥0.1 → 0.1/0.3/1.0 bit-identical; «α*=0.01» = first-slope artifact. v2 rewritten: one unclamped run, dose-curve, α*=knee/null | run v2 (0.8B, **~5 min T4**) | **YES** (cheap) | **HIGH** |
+| **exp17_lora_distill** | не сломан, но **SLOW**: 2nd-order (HVP) refresh растёт с длиной decoder-tail; full 7-pair = 14 pair-runs ≈ 40–45h > 12h-лимита kernel | push `--pairs 4_3` + single order (≈4.6h; both orders ≈9.2h тоже влезает) | **YES** | **HIGH** |
+| **exp11 a/b/c (defrag)** | 11b-v1: recon_fidelity **растёт** с r = **metric bug (found+fixed)**; 11a K=32 vs 11b K=256 — разные замеры, не contradiction; **11c: defrag выглаживает bridge (ρ≈0) — реальный negative result, в tension с 11a** | CPU-verify кривая 11b (r=1..256, без модели); paper: a/b/c = 3 разных измерения; 11c optional n=8 | CPU / opt | MEDIUM |
+| **exp13_domain_esg** | overlap_hidden **good** (0.015→0.998); bridge: 3/5 pts = sentinel 1.0 → monotonicity −0.894 identical во всех доменах = rank-tie artifact | paper-fix (exclude sentinels; overlap_hidden в main figure); optional 24-layer/K=128 | opt | MEDIUM |
+| **exp15_gdn_anchors** | то же sentinel (2/4 pts = 1.0); −0.949 identical во всех schemes = rank-tie artifact; реальное различие только в 2 real pts | paper-fix; optional 6 anchors + K=128 | opt | MEDIUM |
+| **exp6_kl_baseline** | n=16 OK; bridge_means = sentinel 1.0 в ранних парах → spearman −0.09 partly artifact | paper-fix (exclude sentinel pairs); optional rerun | opt | MEDIUM |
+| **exp12 a/b/c** | код correct; при выбранном ε/budget **оба** варианта разрушают модель (KL≈15, PPL 1e6–1e8) — «comparative destruction» (Δh_map 0.24 < Δh_uniform 0.95), не preservation | paper re-frame (free); optional ε/budget 10× sweep (~1h) | opt | MEDIUM |
+| **exp4_top_p_tokens** | код CORRECT (re-verified 09-01: `probs` внутри per-set loop — v1-audit misread); **never ran** (4B on CPU) | run, если token-set-bias claim в paper (~1h) | opt | LOW-MED |
+| **exp2_heatmap** | thin: n=3, K=8, sparse (no full 32×24 map); bridge on 8 tokens noisy | YES (n=8, K=64, full map, ~1h) | opt | LOW-MED |
+| **exp14_snr_pr** | adequate (n=8 real, 8 distinct snr values); JSON не пишет params | add params в JSON (no GPU) | no | LOW |
+| **exp10b_gauge_bridge** | n=1 thin; conclusion robust (3 gauges agree, 7-layer shape) | optional n=8 | opt | LOW |
+| **exp2a_cka_identity** | v1 bug: H1≡H2 (same tensor twice) → vacuous CKA control; **FIXED** (disjoint groups + `--self-check` **PASSED**: CKA(X,X)=1, CKA(X,5X)=1, translation/perm ~1e-8); never ran | one CPU run (~10 min, 0.8B+4B) — within-model point | no (CPU) | LOW |
+| exp1 / exp3 / exp5_perm / exp6b | self-bridge legitimate (identity ~1e-8 / clean ablation 0–0.7–1.0 / perm = signal / cond(EᵀE)) | none | no | none |
+| exp4_u_sensitivity | correct cross-bridge (pattern для exp4k-fix) | none | no | none |
+| exp5_layer_sensitivity | n=1/K=8, descriptive (‖J‖ 272→16.8), no claim | none (optional n=8/K=64 if в paper) | no | none |
+| exp7_cka_baseline | contrast works: CKA≈0.001 vs bridge 1.03→0.796; null linear-CKA inflated при N≪D (indep 64×128 ≈0.34) → measured 0.001 **far below** → conclusion stands | paper note | no | none |
+| exp8_svd_ablation | self-bridge control exactly right: truncated G_inv k=16→1024: 0.89→0.30→2.4e-8 (к≈512–1024 нужен) | none | no | none |
+| exp9_esg | ran (data + 2 PNGs); nuance: token-set = top-K one sample (less rigorous cross-layer) | none | no | none |
+| exp10a / 10c / 10d | OK (10c: top-K 90.6% @K=64 vs top-P K̄ 398/2152 **unbounded** — state the cost) | none | no | none |
+| exp18_logit_kd | GDN pairs fine (logit-KD = KL on outputs, not o_proj): bridge 0.606/0.492 | `comparison_with_exp17: None` — slopes считать вручную из двух JSON | no | none |
 
 ---
 
-## Exp 14 — SNR и Participation Ratio per layer
+## Sentinel 1.0 — shared root cause (exp13 / exp15 / exp6)
 
-**Замысел:** 0.8B, все 24 слоя, n_samples=8, K=64; PR, gauge_share, SNR per layer; PNG PR/SNR vs depth (GDN/full).
+`prism/bridge.py:31` — `if mask.sum() == 0: return 1.0`. Mask = строки с
+‖J_S‖ или ‖J_S_target‖ < 1e-6. Ранние слои → малые по норме Jacobians → маска
+пустая → **1.0 в каждом sample** = sentinel, не cosine loss. Отчёт в paper как
+реальное значение → monotonicity/Spearman считаются по rank-ties (−0.894 и −0.949
+identical = artifact).
+**Paper-fix (free):** исключить sentinel-точки из monotonicity / Spearman /
+bridge-mean; переформулировать claims на real points.
+**Debug (CPU, без forward):** для layer 0→0 выгрузить row-norms ‖J_S‖,
+‖J_S_target‖ — ранний слой реально недекодируем vs pinv(G) amplifies noise (bug).
+**Optional GPU:** больше anchors (all layers / all 6 full-attn) и K=128 (меньше
+near-zero rows) → кривая из 4+ real points.
 
-**Код vs замысел (адекватность):**
-- ✅ `n_samples=8, K=64` (code) = spec. **НЕ minimal run** — `snr_per_sample` has **8 distinct values** → run real, deferred_items' "n=1 minimal" claim is **stale/wrong**.
-- ⚠️ **JSON не записывает n_samples** (top keys = layer indices only) → can't tell from JSON which n produced the run. Trivial fix: record n_samples/K/max_length in JSON (like exp11a's `params`).
+### exp13 (доменная специфичность ESG/мостов)
+- **Замысел (Exps.md):** 4 домена (wiki/math/code/chat), n=4, K=64, max_len=64;
+  слои [0, n/4, n/2, 3n/4, n−1]; топ-8 eigenvectors ESG на слой; overlap
+  подпространств; bridge 4B→0.8B по sampled-парам. Ожидания: gauge universal
+  (overlap>0.9), дифф. подпространства доменно-специфичны, bridge монотонен.
+- **Код vs замысел:** n=8 (code) > 4 (spec) — better. Two overlap-metrics
+  (token+hidden) — extra = бонус. **paper_audit's «overlap = 1» — WRONG**:
+  `compute_esg` возвращает eigenvectors [8,K] (orthonormal rows);
+  `_subspace_overlap` делит на shape[0]=8 → ‖U₁U₂ᵀ‖²_F/8 = Σcos²(principal
+  angles) — correct (1 iff same subspace); 0.30–0.42 plausible. token-set
+  SHARED across domains → token-overlap compares identical K-spaces = valid.
+- **Результат (N=8, K=64):** **overlap_hidden (the good one)**: layer 0 ≈
+  0.015–0.044 → layer 23 ≈ 0.994–0.998, clean domain-grad во всех 6 cross-pairs —
+  **выразительно, promote в main figure** (current 5-anchor version under-sells).
+  overlap_token: 0.30–0.42 → 1.0. Bridge: 3/5 pts sentinel, только 18→13/24→18 real.
+- **Prio MEDIUM**: overlap_hidden не требует recompute; bridge = paper-fix +
+  optional 24-layer rerun.
 
-**Результат:** PR растёт с глубиной (6.4→8+), gauge_share падает, SNR_sample падает к поздним слоям — как ожидалось. Выразительно (24 слоя × 8 сэмплов).
+### exp15 (GDN anchors)
+- n=4 per scheme, K=256, 4 schemes (A=full, B=post-full, C=pre-full, D=full−2).
+  Pairs 3→3 и 11→7 = sentinel [1.0×4]; real только последние 2; max_abs_diff
+  schemes = 0.121. «Anchors don't matter» стоит на 2 real pts per scheme.
 
-**Проблема:** только репродуктивность (n/K не в JSON). Нет GPU-recompute.
-**Что сделать:** добавить `params` в JSON (trivial, no GPU). Опц.: bootstrap-CI (N=8 thin). **Prio: LOW** (не re-run).
-
----
-
-## Exp 11 — defrag (fidelity / cost / bridge)
-
-**Замысел:** exp11a = defrag reconstruction of J (r=4/8/16/32) vs full vs raw (output: KL/TV/cos/top1); exp11b = cost (raw vs defrag time/FLOPs/storage) + recon_fidelity.
-
-**Код vs замысел (адекватность) — KEY:**
-- ⚠️ **exp11a и exp11b use РАЗНЫЕ params**: exp11a = **K=32, n=4** (params `{K:32, n:4, max_len:48}`); exp11b = **K=256, n=2** (code line 147-148). Audit's «contradiction» — **apples-to-oranges** (two differently-configured runs).
-- exp11a: output KL **r-invariant** (dr4=dr8=dr16=dr32=gf=8.517) — clean «defrag preserves output at r=4».
-- **exp11b: `recon_fidelity_rel = ‖J_tilde−J_p‖/‖J_p‖` GROWS with r** (19→31→48). **ROOT CAUSE (this session, code-level)**: v1 computed `J_tilde = U_r @ J_r` with J_r = U_r·J → J_tilde = U_r·U_rᵀ·**J** (projection of the RAW J) compared against **J_p** — two different matrices. At r=K the projector is the identity → metric = ‖J − J_p‖/‖J_p‖ = the **gauge gap, a constant independent of r** (10–48× — matches the observed plateau/growth); residual r-dependence = projecting J (not J_p) in G_p's eigenbasis. The intended truncation tail ‖U_r U_rᵀ·J_p − J_p‖ never entered. **Fix applied** (`experiments/exp11b_defrag_cost.py`): `J_tilde = U_r @ U_r.T @ J_p` — monotone decreasing, 0 at r=K by construction. The defrag *basis* (eigh of G_p = J_p·J_pᵀ) is sound; the *cost* measurements (times/speedups/storage) stand.
-
-**Проблема:**
-1. exp11b recon_fidelity — **metric bug found + fixed** (not a basis bug).
-2. exp11a/exp11b inconsistent params (K=32 vs K=256) → audit's «contradiction» partly artificial.
-
-**Что переделать:**
-1. **CPU verify (cheap, no model-forward changes)**: recompute the fixed recon_fidelity for r = 1,4,8,16,32,64,128,256 on ONE layer/sample from an already-computed J_p — curve must decrease monotonically to 0 at r=K. (A few matmuls on [K,D]; minutes.)
-2. **GPU re-run only if the paper needs fresh T4 cost numbers** (times/speedups) — otherwise the existing exp11b cost data + the fixed fidelity curve is enough.
-3. **Paper fix**: state exp11a (output, K=32) vs exp11b (recon, K=256) are different measurements, not a contradiction; note the v1 fidelity metric was void and replaced.
-
-**Prio: MEDIUM-HIGH** — likely a real bug in the defrag recon (the headline «defrag is cheap AND accurate» claim rests on exp11b's fidelity, which is currently non-sensical).
-
----
-
-## Sweep: remaining experiments (params + red flags)
-
-### exp4_k_sensitivity — **BROKEN (self-bridge bug, top priority)**
-- **Code**: `loss = jacobian_bridge(J, J, E, E, probs)` (line 59) — **same J and E twice** (0.8B self). `main()` **never loads the 4B** (`from_pretrained(model)` only, `model="Qwen/Qwen3.5-0.8B"`).
-- **Intent** (spec): measure how the bridge loss responds to K (token set size). **But a self-bridge is the identity case** (`J_L == J_S`, `E_L == E_S`) → `loss ≈ 0` by construction for every K.
-- **Result**: **all values = 0.0** for K=4/8/16/32, all layers (avg ≈ 0 to 8 decimals). The "sensitivity" is measuring a constant zero.
-- **Verdict**: **not testing what was intended**. Fix = load 4B + `bridge(J_L, J_S, E_L, E_S, probs)` (mirror `exp4_u_sensitivity` which does this correctly at line 92) + n_samples≥4 + K values up to 256. **GPU re-run** (4B+0.8B, K sweep). **Prio: HIGH** — this is the cleanest "we tested the wrong thing" in the repo.
-
-### exp15_gdn_anchors — **sentinel bug (same as exp13) + thin N**
-- **Params**: n_samples=4 (per scheme), K=256 (per spec), 4 anchor schemes (A=full, B=post-full, C=pre-full, D=full−2).
-- **Result**: all 4 schemes show **identical monotonicity −0.949** and A_vs_B=C=D=1.0. **Cause**: pairs `3->3` and `11->7` have **mean=1.0 with values=[1.0,1.0,1.0,1.0]** — the `jacobian_bridge` **sentinel** (empty valid mask) again, just like exp13. Only the last 2 of 4 pairs are real. The identical −0.949 across all 4 schemes is a rank-tie artifact of the shared 1.0 plateau; the real difference between schemes is only in the 2 real points (max_abs_diff=0.121).
-- **Verdict**: the "anchors don't matter" conclusion rests on 2 real points per scheme; the 1.0 plateau is not data. **Paper fix**: drop sentinels from the monotonicity + Spearman(A,B). **GPU re-run (optional)**: more layers (all 6 full-attention anchors) so the real curve has ≥4 points; also K=128 to reduce the empty-mask incidence (smaller K → fewer near-zero rows).
-
-### exp2_heatmap — thin (n=3, K=8)
-- **Params**: n=3, **K=8**, max_len=64. 32×24 full map never generated (only sparse windows per deferred_items #5). K=8 is very small — bridge on 8 tokens is noisy.
-- **Verdict**: thin but directionally OK (losses ≈ 1.0 for far pairs, decay toward min_at). **GPU re-run** to produce the 32×24 full map at n=8, K=64 (deferred item). **Prio: LOW-MEDIUM** (visualization, not a claim-breaker).
-
-### exp7_cka_baseline — OK
-- n=5, K=8, 4B+0.8B. CKA ≈ 0 (0.001) across all pairs; bridge 1.03→0.796 decaying; spearman(cka,bridge)=−0.77. The **contrast** is the point: CKA (representation similarity) ≈ 0 while the bridge captures meaningful decay. Works as intended. **Prio: NONE** (adequate as a contrast baseline).
-
-### exp3_ablation — OK
-- n=4, K=32. with_correction ≈ 0 (1e-8), without_correction ≈ 0.7, random_orthogonal ≈ 1.0. Clean ablation showing the Gramian correction is necessary. **Prio: NONE**.
-
-### exp1_identity / exp5_embedding_perm / exp6b_condition_number — OK (self-bridge legitimate)
-- exp1: identity ~1e-8 (n=1, K=4 — tiny but it's a determinism/identity check, not a measurement). exp5: perm vs baseline vs inv_perm (self-bridge with permuted E — the permutation is the signal, not the cross-model gap). exp6b: condition number of EᵀE. All legitimately self-model. **Prio: NONE**.
-
-### exp12a/b/c — **needs deeper look (audit flagged quantization)**
-- Audit: «KL in both variants ≈ 15, PPL ~10⁶–10⁸ — complete destruction; comparing Δh_map≈0.24 vs Δh_uniform≈0.95 as evidence the map "directs quantization" is invalid — both are unusable.»
-- **Verdict (pending deeper read)**: the experiment as run is **comparative destruction** (map-based perturbation destroys *less* than uniform at the same KL), not "the map preserves the model". Either re-frame in the paper ("map is the minimal-sensitivity direction") or re-run with smaller ε so the model isn't destroyed. **GPU re-run (optional)**: sweep ε smaller to find the regime where the map's advantage is visible without total destruction. **Prio: MEDIUM** (paper re-frame is the cheap fix; re-run is optional).
+### exp6 (KL baseline)
+- n=16, K=64, 11 layer pairs. spearman(KL, bridge) = −0.094 ≈ 0 (null result) —
+  но считается в т.ч. по sentinel-парам (0→0, 3→2, ...). Exclude → пересчитать.
 
 ---
 
-## Newer experiments (10 / 6 / 16 / 18 / 19)
+## exp11 — defrag (fidelity / cost / bridge)
 
-### exp10a/b/d (gauge) — mostly OK, one thin
-- **exp10a** (n=4, K=32): gauge_share varies by layer (0.11→0.62→0.17), raw vs centered vs softmax eigen-spectra differ wildly (raw trace 1.1e7 vs softmax 2438). Works.
-- **exp10b** (n=**1**, K~32, 7 layers): raw/centered/softmax gauge bridge curves ≈ same (avg 0.787/0.755/0.774) → "gauge choice doesn't matter." **n=1 is thin** (single-sample bridge is noisy) but the 3-gauge agreement + 7-layer shape makes the conclusion robust. **Prio: LOW** (optional rerun n=8).
-- **exp10d** (n=4): common-mode c vs hidden h per layer; spearman varies (−0.4..0.4). OK.
+- **11a** (K=32, n=4, max_len=48): output KL **r-invariant** (dr4=dr8=dr16=dr32=
+  gf=8.517) — clean «defrag preserves output at r=4».
+- **11b** (K=256, n=2): v1 `recon_fidelity_rel` **GROWS** with r (19→31→48).
+  **ROOT CAUSE (code-level):** v1 `J_tilde = U_r @ J_r` (J_r = U_r·J) →
+  J_tilde = U_rU_rᵀ·**J** (projection RAW J) vs **J_p** — разные матрицы;
+  at r=K projector = identity → metric = **gauge gap** (константа,
+  r-independent; 10–48× — matches plateau/growth). **FIX APPLIED**
+  (`exp11b_defrag_cost.py:260`): `J_tilde = U_r @ U_r.T @ J_p` → monotone ↓,
+  0 at r=K by construction. Basis (eigh of G_p = J_p·J_pᵀ) sound; cost
+  measurements (times/speedups/storage) stand.
+- **11c** (K=256, n=1, 7 pairs, r∈{8,16,32}): reconstruction CORRECT (projects
+  J_p) — но **defrag_r FLAT ≈0.97–1.05 across all depth** (ρ vs raw
+  0.19/0.50/0.86), no sentinel — flattening real: rank-r (r≤32) truncation
+  256-row gauge-free J выбрасывает ровно тот detail, в котором живёт bridge
+  signal. **Negative result в tension с 11a** (output-faithful vs
+  bridge-destroying). Paper должен state: defrag = output-faithful,
+  bridge-destroying — the bridge IS the high-r structure.
+- **11a vs 11b «contradiction» (audit)** = apples-to-oranges: разные K
+  (32/256) и разные метрики — не contradiction, different measurements.
+- **Action:** CPU-verify: recompute fixed 11b fidelity для r=1,4,8,...,256 на
+  ONE layer/sample из уже посчитанного J_p (matmuls [K,D], minutes; кривая
+  monotone ↓ to 0). GPU re-run только если нужны свежие T4 cost numbers.
+  **Prio MEDIUM-HIGH** (headline «defrag is cheap AND accurate» стоял на
+  non-sensical v1 metric; после fix — coherent, но bridge-flattening нужно
+  отразить).
 
-### exp6_kl_baseline — **sentinel artifact in the headline correlation**
-- n=16, K=64, 11 layer pairs. **spearman_kl_vs_bridge = −0.094 ≈ 0** ("KL loss doesn't correlate with the bridge" — a null/interesting result). **BUT `bridge_means=[1.0, 1.0, ...]`** — the early pairs (0->0, 3->2, ...) are the **sentinel 1.0** again. The −0.09 spearman is partly computed over sentinel points. **Paper fix**: exclude sentinel pairs before computing the KL-vs-bridge correlation. **GPU re-run optional** (n=16 is OK; the issue is the sentinel, not N). **Prio: MEDIUM**.
-
-### exp16_readout_pull — **delta_W saturates identically at alpha 0.1/0.3/1.0 (possible clamp/bug)**
-## exp16_readout_pull — VERDICT: design bug (not a clamp) — re-run cheap
-
-- **ROOT CAUSE (this session, code-level)**: `alpha` was never a dose knob. In v1 each pair ran a 10-step LR trajectory with a per-step trust-region cap on ‖ΔW‖ ≈ 0.01·‖W‖; at α≥0.1 the cap never binds, so the trajectories are **bit-identical** (bridge 0.7008 / ‖ΔW‖ 14.276 identical at 0.1/0.3/1.0 — not a clamp). The "α*=0.01" headline = first-slope artifact: at α=0.01 the cap binds on the FIRST step and ΔW ≈ 0.01·‖W‖. The v1 "dose curve" was never a dose curve.
-- **Fix (applied, in place)**: v2 = one unclamped run (trust-region off) → per-step (‖ΔW‖, bridge gap, KL) → the real dose curve; α* = knee (first step where |slope| ≥ 0.9·max). Stage-0 targets cache consumed as-is (v2 format, 175/176 pairs; 1 null-target pair honestly flagged). v1 JSON → results/voided/. **GPU re-run: one unclamped run on 0.8B ≈ 5 min (v1 log: ~3 s/step).** exp19 consumes this α* (see exp19).
-
-### exp16_readout_pull v2 / exp19_destruction v2 — rewritten this session
-
-
-- **exp18**: logit-KD on 8 pairs (incl. GDN 24_18, 28_21), r=4, steps=100, bridge 0.606/0.492 — **GDN fine here** (KL on outputs, not o_proj). No re-run.
-- **exp19 v2 (rewritten)**: 4 scenarios (full 176-pair set, full edit, no-edit baseline, α*=knee from the exp16 v2 JSON — refuses to run without it) on the LAST layer (l23) with correct per-target input_ids pairing. v1 consumed a VOID artifact (α*=0.01) and fell back to the null target 0_0 (input mismatch → garbage) — voided → results/voided/. GPU re-run: 4 short runs, **~10 min T4**.
 ---
 
-## ИТОГО (summary table) — what to re-run on GPU vs paper-fix vs leave
+## exp16 / exp19 — readout pull (dose) и destruction
 
-| Exp | Problem | Type | GPU re-run? | Prio |
-|-----|---------|------|-------------|------|
-| **exp4_k_sensitivity** | **BROKEN**: self-bridge `jacobian_bridge(J,J,E,E)`, no 4B loaded → all-zeros | code bug (wrong thing tested) | **YES** (4B+0.8B, K sweep to 256, n≥4) | **HIGH** |
-| **exp11 (defrag)** | `recon_fidelity` GROWS with r (19→31→48) — **metric bug found+fixed**: v1 compared U_r·U_rᵀ·J against J_p (at r=K = gauge gap, r-independent); now projects J_p (monotone ↓, 0 at r=K) | metric bug (basis itself fine) | CPU-verify fixed curve (no GPU); GPU re-run only if fresh cost numbers needed | **MEDIUM** |
-| **exp17 (power-up)** | dual-cadence "too weak" (pair 2 half at 300) | underpowered | **YES** (500 steps, lr 3e-3 — built, blocked by weekly quota) | **HIGH** (pending) |
-| **exp16_readout_pull** | delta_W saturates identically at alpha 0.1/0.3/1.0 | possible clamp/bug | investigate (CPU) then **YES** if bug | **MEDIUM-HIGH** |
-| **exp13_domain_esg** | bridge 1.0 sentinel (3/5 pts); monotonicity −0.894 identical artifact | sentinel (paper) + N=8 thin | paper-fix now; **optional** 24-layer/K=128 rerun | **MEDIUM** |
-| **exp15_gdn_anchors** | same 1.0 sentinel (2/4 pts); −0.949 identical across schemes | sentinel (paper) | paper-fix; **optional** more anchors | **MEDIUM** |
-| **exp6_kl_baseline** | bridge_means sentinel 1.0; spearman −0.09 partly artifact | sentinel (paper) | paper-fix; optional rerun | **MEDIUM** |
-| **exp12a/b/c** | quantization destroys both variants (KL~15) — "comparative destruction" not preservation | framing | paper re-frame; **optional** smaller-ε rerun | **MEDIUM** |
-| **exp2_heatmap** | n=3, K=8, sparse (no full 32×24 map) | thin | **YES** (n=8, K=64, full map) | **LOW-MED** |
-| **exp10b** | n=1 thin (gauge invariance) | thin | optional (n=8) | **LOW** |
-| exp1 / exp3 / exp5 / exp6b / exp7 / exp18 / exp19 | OK (self-bridge legitimate / clean ablation / contrast works / logit-KD on GDN fine) | — | no | none |
-| exp14 | adequate (n=8 real); JSON missing `params` | reproducibility | no (add params to JSON) | **LOW** |
+**exp16 v1 — VOID** (results/voided/): α was a one-sided **trust-region cap**
+(‖ΔW‖ ≤ α·‖W‖), не dose. При α≥0.1 cap never binds → trajectories **bit-identical**
+(bridge 0.7008 / ‖ΔW‖ 14.276 at 0.1/0.3/1.0 — не clamp); «α*=0.01» = first-slope
+artifact (at α=0.01 cap binds on FIRST step). v1 «dose curve» never была dose curve.
 
-### Paper-only fixes (no GPU, do first)
-1. **exp13/15/6**: exclude the `1.0` sentinel points from every monotonicity / Spearman / bridge-mean computation (they're not cosine losses). Re-state the claims on the real points only.
-2. **exp11a vs 11b**: state the two use different K (32 vs 256) — not a contradiction, different measurements; or re-run both at the same K.
-3. **exp12**: re-frame as "map is the minimal-sensitivity direction under destructive perturbation," not "map preserves the model."
-4. **exp14**: add `params` (n, K, max_length) to the JSON for reproducibility.
+**exp16 v2 (applied):** one **unclamped** Adam run на lm_head (trust-region block
+removed on purpose). Loss = mean per input_ids-paired sample (1−cos(J_S_p,
+J_tgt)) + 0.1·KL(p_ed‖p_orig); target = **last-layer pair (31_23, asserted** —
+shallow target = null target). Every `eval_every` steps: (dose ‖ΔW‖_F,
+α=‖ΔW‖/‖W‖, bridge via fresh J_norm/h-reuse, true KL). **α* (knee) = largest step
+with Δbridge ≥ tol**; pull that keeps buying bridge has no knee → **α* = null**
+(honest, not first-slope). Stage-0 targets cache consumed as-is (7 pairs;
+1 null-target pair flagged). **~5 min T4** (v1 log: ~3 s/step).
 
-### GPU queue (after the weekly 30h quota resets) — in priority order
-1. **exp17 power-up** (500 steps, lr 3e-3) — already built + committed; just needs the slot.
-2. **exp4_k_sensitivity** — fix to `bridge(J_L, J_S, E_L, E_S)` + load 4B + K up to 256 + n≥4 (4B+0.8B, 1–2h).
-3. **exp11 defrag** — CPU-verify the fixed recon_fidelity curve (r=1..256, eigh+matmuls only, no model); GPU re-run only if fresh T4 cost numbers are needed.
-4. **exp16_readout_pull v2** — dose-curve re-run (one unclamped run, per-step ‖ΔW‖/bridge/KL, α*=knee). 0.8B only, **~5 min on T4** (v1 log: ~3 s/step). Run BEFORE exp19 (exp19 must consume a real knee, use pair 31_23, add a no-edit baseline — see exp16 section).
-5. **exp2_heatmap** — full 32×24 map at n=8/K=64 (4B+0.8B, ~1h).
-6. Optional: exp13/exp15 24-layer/6-anchor rerun; exp6 rerun; exp10b n=8.
+**exp19 v1 — VOID** (3 independent reasons): target fell back to 0_0 (GDN
+kl_only = NULL target, cross-layer bridge ≈ 0 by construction) → «bridge» =
+noise on noise; dose from voided α*=0.01; no no-edit baseline.
 
-**Total estimated GPU:** ~8–10h (fits one weekly 30h window with room for the exp17 power-up + retries).
+**exp19 v2 (applied):** 6 scenarios at the SAME dose ‖ΔW‖ (Frobenius); ~10–15 min T4:
+no_edit (THE baseline) / a_random / b_target (ΔJ pull, 1×) / c_10x / d_gauge /
+e_diff. Target = last layer (asserted); input_ids pairing (mismatch → skip term,
+no silent position pairing); **dose = knee из exp16 v2 JSON — FATAL if missing**
+(no silent default). Sanity: baseline bridge vs exp16 step-0 (±0.05) or abort.
+Paper читает DELTAS от no_edit. **After exp16 v2.**
 
+---
 
+## exp17 — LoRA distillation (dual-cadence power-up)
+
+- **OOM (killed v22/v23 early runs) — FIXED**: A4 chunked bridge backward
+  (C=8) → peak = C+1 2nd-order row-graphs, not K; A3 fail-fast (os._exit(3))
+  on refresh OOM. `t_J=OOM` markers в 9-pair k=100 log = **STALE** (pre-fix);
+  valid post-fix data = completed JSON.
+- **SLOW (not broken):** dominant cost = 2nd-order (HVP, o_proj) J refresh —
+  единственный `create_graph=True` path; backward through decoder-tail retained
+  graph → растёт с длиной tail от l_S (0_0 ≫ 31_23, ~9.5× spread in per-layer
+  walls). Regime v23.2c: 2nd-order refresh every k=100 + 1st-order dense
+  (no-HVP, h-reuse) every step; lr 3e-3; steps 500.
+- **Measured anchor (post-fix):** pair 4_3, k=100, 300 steps, **BOTH orders**,
+  elapsed 19724s = **32.9 s/step** (completed, no OOM; `results/exp17_lora_distill.json`).
+- **Target cache = 7 pairs** (6 full-attn + 0_0 kl_only), NOT 176;
+  `_layer_order` (cuda) = 2 orders → `--pairs ""` = **14 pair-runs ≈ 40–45h**
+  (early-layer pairs slowest) — **не влезает в one 12h kernel**.
+  `--pairs 4_3` + both orders = 1000 steps ≈ **9.2h** → fits; + single order
+  ≈ **4.6h** → headroom (order-symmetry question = второй kernel при желании).
+- **Pending action:** после сброса weekly quota push `kaggle_kernel/kernel-exp17`
+  с `--pairs 4_3` + single order (build committed, `ea20f07`). topk_report (C5)
+  runs with the v2 suite (4B fp16, OOM-skip). exp18's
+  `comparison_with_exp17: None` → Δbridge/ΔKL slopes — вручную из двух JSON
+  (data present, no code gap).
+- Helpers: fd_local (FD spot check — central passes, forward 16% = O(eps)·1000×
+  decoder-tail gain), grad_sanity (bridge backward reaches all 4 LoRA params) — OK.
+- **Prio HIGH (cheap-ish)** — единственный pending push; blocked только на quota.
+
+---
+
+## Paper-only fixes (no GPU, do first)
+
+1. **exp13/15/6:** exclude 1.0-sentinel points из monotonicity / Spearman /
+   bridge-mean (это не cosine losses); переформулировать claims на real points.
+2. **exp13:** promote **overlap_hidden** (0.015→0.998) в main bridge figure —
+   the real, beautiful result; 5-anchor version under-sells.
+3. **exp11a/b/c:** разные K (32/256/256) и разные метрики = different
+   measurements, не contradiction; 11b v1 fidelity void и replaced; 11c:
+   state «defrag output-faithful but bridge-destroying — the bridge IS the
+   high-r structure».
+4. **exp12:** re-frame как «map = minimal-sensitivity direction; при равном
+   destructive budget degrades less» (Δh 0.24 vs 0.95), не «map preserves the
+   model».
+5. **exp14:** add `params` (n, K, max_length) в JSON.
+6. **exp7/2a:** CKA(4B→0.8B)≈0.001 far below inflated linear-CKA null
+   (N≪D) → contrast stands; note в paper.
+7. **exp16/19:** v1 void; paper читает v2 dose curve; exp19 — deltas от no_edit.
+
+---
+
+## GPU queue (после сброса weekly 30h) — in priority order
+
+1. **exp17**: push `--pairs 4_3` + single order (≈4.6h; both orders ≈9.2h тоже
+   влезает) — built, quota-blocked.
+2. **exp4_k**: fix + load 4B + K→256 + n≥4 (4B+0.8B, ~1–2h).
+3. **exp16 v2**: one unclamped run (~5 min T4).
+4. **exp19 v2**: 6 scenarios, dose = exp16 v2 knee (~10–15 min; **after 3**).
+5. **exp2**: full 32×24 map, n=8/K=64 (4B+0.8B, ~1h).
+6. Optional: exp13/15 (24-layer / 6 anchors, K=128); exp6 rerun; exp10b n=8;
+   exp4_top_p (~1h); exp12 ε/budget sweep; exp11c n=8 (~1h).
+   exp11 CPU-verify + exp2a CPU run — no GPU (local, light).
+
+**Total ≈ 7–8h обязательных + ~3–4h optional** — fits one weekly 30h window
+с запасом (12h kernel limit respected: each item ≤ ~9.2h).
