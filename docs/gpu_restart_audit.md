@@ -31,7 +31,7 @@
 | **exp12 a/b/c** | код correct; при выбранном ε/budget **оба** варианта разрушают модель (KL≈15, PPL 1e6–1e8) — «comparative destruction» (Δh_map 0.24 < Δh_uniform 0.95), не preservation | paper re-frame (free); optional ε/budget 10× sweep (~1h) | opt | MEDIUM |
 | **exp4_top_p_tokens** | код CORRECT (re-verified 09-01: `probs` внутри per-set loop — v1-audit misread); **never ran** (4B on CPU) | run, если token-set-bias claim в paper (~1h) | opt | LOW-MED |
 | **exp2_heatmap** | thin: n=3, K=8, sparse (no full 32×24 map); bridge on 8 tokens noisy | YES (n=8, K=64, full map, ~1h) | opt | LOW-MED |
-| **exp14_snr_pr** | adequate (n=8 real, 8 distinct snr values); JSON не пишет params | add params в JSON (no GPU) | no | LOW |
+| **exp14_snr_pr** | adequate (n=8 real, 8 distinct snr values); код пишет `params` (`0514675`), но сохранённый JSON — до fix (без `params`) | trivial CPU re-run для записи JSON | no | LOW |
 | **exp10b_gauge_bridge** | n=1 thin; conclusion robust (3 gauges agree, 7-layer shape) | optional n=8 | opt | LOW |
 | **exp2a_cka_identity** | v1 bug: H1≡H2 (same tensor twice) → vacuous CKA control; **FIXED** (disjoint groups + `--self-check` **PASSED**: CKA(X,X)=1, CKA(X,5X)=1, translation/perm ~1e-8); never ran | one CPU run (~10 min, 0.8B+4B) — within-model point | no (CPU) | LOW |
 | exp1 / exp3 / exp5_perm / exp6b | self-bridge legitimate (identity ~1e-8 / clean ablation 0–0.7–1.0 / perm = signal / cond(EᵀE)) | none | no | none |
@@ -189,7 +189,7 @@ Paper читает DELTAS от no_edit. **After exp16 v2.**
 4. **exp12:** re-frame как «map = minimal-sensitivity direction; при равном
    destructive budget degrades less» (Δh 0.24 vs 0.95), не «map preserves the
    model».
-5. **exp14:** add `params` (n, K, max_length) в JSON.
+5. **exp14:** `params` (n, K, max_length) в JSON уже пишутся кодом (`0514675`); остаётся trivial CPU re-run, чтобы сохранённый JSON их содержал.
 6. **exp7/2a:** CKA(4B→0.8B)≈0.001 far below inflated linear-CKA null
    (N≪D) → contrast stands; note в paper.
 7. **exp16/19:** v1 void; paper читает v2 dose curve; exp19 — deltas от no_edit.
