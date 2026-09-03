@@ -43,7 +43,7 @@
 
 ## NEXT
 
-- [ ] **Commit the 3 files above** (paper.md + audit + exp2a script).
+- [x] **Committed** (e506bc0): paper.md + audit + exp2a script + PLAN.md (4 files, 122+/55-).
 - [ ] **Blocked on GPU:** exp13/14/15/16/17/18/19 «paper sections» (write, not fix); exp11b re-run (flip fidelity trend); exp12a N=4/K=32 rerun; exp12b/12c K=64 rerun; exp6_l18_snr data (mandatory, data lost).
 - [ ] `docs/HANDOFF_exp17_powerup.md` §4 stale: says "push full 7-pair, expect ~12h" — math in §L says 14 pair-runs ≈ 40–45h; push should be `--pairs 4_3` + single order (~9.2h). Update §4/§6 Q1 after user decision.
 
