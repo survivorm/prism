@@ -28,6 +28,7 @@
 | **exp13_domain_esg** | overlap_hidden **good** (0.015→0.998); bridge: 3/5 pts = sentinel 1.0 → monotonicity −0.894 identical во всех доменах = rank-tie artifact | paper-fix (exclude sentinels; overlap_hidden в main figure); optional 24-layer/K=128 | opt | MEDIUM |
 | **exp15_gdn_anchors** | то же sentinel (2/4 pts = 1.0); −0.949 identical во всех schemes = rank-tie artifact; реальное различие только в 2 real pts | paper-fix; optional 6 anchors + K=128 | opt | MEDIUM |
 | **exp6_kl_baseline** | n=16 OK; bridge_means = sentinel 1.0 в ранних парах → spearman −0.09 partly artifact | paper-fix (exclude sentinel pairs); optional rerun | opt | MEDIUM |
+| **exp6_l18_snr** (paper headline) | **ДАННЫЕ ПОТЕРЯНЫ**: `results/exp6_l18_snr.json` отсутствует в репо (git/results/kernels) → ρ=+2.94 неверифицируемо | **mandatory GPU re-run** (v2 spec, ~2h T4) — см. §exp6_l18_snr, GPU queue item 6 | **YES** | **HIGH** |
 | **exp12 a/b/c** | код correct; при выбранном ε/budget **оба** варианта разрушают модель (KL≈15, PPL 1e6–1e8) — «comparative destruction» (Δh_map 0.24 < Δh_uniform 0.95), не preservation | paper re-frame (free); optional ε/budget 10× sweep (~1h) | opt | MEDIUM |
 | **exp4_top_p_tokens** | код CORRECT (re-verified 09-01: `probs` внутри per-set loop — v1-audit misread); **never ran** (4B on CPU) | run, если token-set-bias claim в paper (~1h) | opt | LOW-MED |
 | **exp2_heatmap** | thin: n=3, K=8, sparse (no full 32×24 map); bridge on 8 tokens noisy | YES (n=8, K=64, full map, ~1h) | opt | LOW-MED |
@@ -85,6 +86,9 @@ near-zero rows) → кривая из 4+ real points.
 ### exp6 (KL baseline)
 - n=16, K=64, 11 layer pairs. spearman(KL, bridge) = −0.094 ≈ 0 (null result) —
   но считается в т.ч. по sentinel-парам (0→0, 3→2, ...). Exclude → пересчитать.
+
+### ⚠️ exp6_l18_snr — ДАННЫЕ ПОТЕРЯНЫ (headline paper)
+Paper «Эксперимент 6» = **L18-only SNR** (ρ=+2.94, SNR 12.58, PR 0.950; L18+L12+L13, r∈{4,8,16,32,64}, N≥8, K=256, +sentinel), source `results/exp6_l18_snr.json`. **Файл отсутствует в репо** — git history, results/, kaggle_kernel/ всё проверено → ρ=+2.94 **не верифицируемо** (данные не закоммичены). → **mandatory GPU re-run**, не optional (см. GPU queue item 6). Не путать: exp6_kl_baseline (выше, −0.094) ≠ exp6_l18_snr (paper headline).
 
 ---
 
@@ -189,10 +193,11 @@ Paper читает DELTAS от no_edit. **After exp16 v2.**
 4. **exp12:** re-frame как «map = minimal-sensitivity direction; при равном
    destructive budget degrades less» (Δh 0.24 vs 0.95), не «map preserves the
    model».
-5. **exp14:** `params` (n, K, max_length) в JSON уже пишутся кодом (`0514675`); остаётся trivial CPU re-run, чтобы сохранённый JSON их содержал.
+5. **K/N-stale:** exp14 «K=256»→**K=64** (JSON n=8, K=64, 48/24); exp11a «K=256»→**K=32** (N=4, max_len 48); exp12a/b «N=4, K=32»→**N=8, K=64**. (exp11b/c «K=256» OK; exp10c K=32/64/128/256 OK.) + **exp14 `params`:** код уже пишет `params` (`0514675`), но сохранённый JSON — до fix → trivial CPU re-run.
 6. **exp7/2a:** CKA(4B→0.8B)≈0.001 far below inflated linear-CKA null
    (N≪D) → contrast stands; note в paper.
 7. **exp16/19:** v1 void; paper читает v2 dose curve; exp19 — deltas от no_edit.
+8. **exp6_l18_snr:** `results/exp6_l18_snr.json` отсутствует в репо → paper-таблица (ρ=+2.94) неверифицируема; обновить после GPU re-run (GPU queue item 6). Sentinel-excluded ρ для exp13/15/6 — тоже после recompute (CPU item 7).
 
 ---
 
@@ -204,9 +209,10 @@ Paper читает DELTAS от no_edit. **After exp16 v2.**
 3. **exp16 v2**: one unclamped run (~5 min T4).
 4. **exp19 v2**: 6 scenarios, dose = exp16 v2 knee (~10–15 min; **after 3**).
 5. **exp2**: full 32×24 map, n=8/K=64 (4B+0.8B, ~1h).
-6. Optional: exp13/15 (24-layer / 6 anchors, K=128); exp6 rerun; exp10b n=8;
+6. **exp6_l18_snr re-run** (0.8B, ~2h T4): v2 spec — L18-only SNR+PR, L18+L12+L13, r∈{4,8,16,32,64}, N≥8, K=256, +sentinel. **Mandatory (не optional): `results/exp6_l18_snr.json` отсутствует в репо — headline-таблица paper (ρ=+2.94) неверифицируема** (см. §exp6_l18_snr).
+7. Optional: exp13/15 (24-layer / 6 anchors, K=128); exp10b n=8;
    exp4_top_p (~1h); exp12 ε/budget sweep; exp11c n=8 (~1h).
-   exp11 CPU-verify + exp2a CPU run — no GPU (local, light).
+   CPU (no GPU, local light): exp11 CPU-verify; exp2a CPU run; **exp14 recompute** (params + sentinel-excluded stats); **exp13/15/6 sentinel-excluded recompute** (N=8/K=64 уже в JSON) → обновить paper (paper-only items 1, 8).
 
-**Total ≈ 7–8h обязательных + ~3–4h optional** — fits one weekly 30h window
+**Total ≈ 9–10h обязательных (вкл. exp6_l18_snr ~2h) + ~3–4h optional + CPU** — fits one weekly 30h window
 с запасом (12h kernel limit respected: each item ≤ ~9.2h).

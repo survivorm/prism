@@ -20,8 +20,18 @@
   - Merge into one doc: header → one verdict table (all 34) → per-exp sections → paper-only fixes → GPU queue.
   - §L (09-01) is the newer word; v1 (08-31) stale rows get replaced.
 
+## DONE (09-02, follow-up «продолжай»)
+
+- [x] Re-verified consolidation already committed (c8c2b14/fd4d6f8); file is single coherent doc (217→218 lines, 22 main-table rows).
+- [x] **Discovered `results/exp6_l18_snr.json` MISSING from repo** (git history + results/ + kaggle_kernel/ all checked) — the paper's headline exp6 (L18-only SNR, ρ=+2.94) data was never committed → **unverifiable**, needs GPU re-run. Distinguished from exp6_kl_baseline (separate experiment, −0.094).
+  - Added: main-table row `exp6_l18_snr (paper headline)` + dedicated `### ⚠️ exp6_l18_snr — ДАННЫЕ ПОТЕРЯНЫ` section + paper-only item 8 + GPU queue item 6 (**mandatory**, not optional) + Total updated to ~9–10h.
+- [x] **Paper-only item 5 (K/N-stale)** — corrected stale K/N: exp14 K=256→**K=64** (JSON n=8/K=64), exp11a K=256→**K=32** (N=4), exp12a/b N=4/K=32→**N=8/K=64**; exp11b/c/exp10c K values confirmed OK.
+- [x] **GPU queue split** GPU (items 1–6, exp6_l18_snr now mandatory) from CPU/local-light (exp11 CPU-verify, exp2a run, **exp14 recompute** params+sentinel-stats, **exp13/15/6 sentinel-excluded recompute** → paper items 1,8).
+- [x] «optional» rule honored: exp13/15/6 reruns, exp10b, exp4_top_p, exp12 ε-sweep, exp11c n=8 stay **optional**; only exp6_l18_snr promoted to mandatory (data lost, not just weak).
+
 ## NEXT
 
+- [ ] **Paper re-correction (separate deliverable, user to confirm scope):** re-apply the lost paper-fix batch — exp6 sentinel note + exp13/15/6 sentinel-excluded ρ (needs GPU recompute), exp14 K=64 + params, exp11a K=32/N=4, exp11b corrected fidelity, exp12a/b N=8/K=64 values, exp7 K=8, exp10c note. **Blocked on GPU for exp13/14/17 values + exp6 data re-run.**
 - [ ] `docs/HANDOFF_exp17_powerup.md` §4 stale: says "push full 7-pair, expect ~12h" — math in §L says 14 pair-runs ≈ 40–45h; push should be `--pairs 4_3` + single order (~9.2h). Update §4/§6 Q1 after user decision.
 
 ### GPU-очередь (после сброса weekly 30h quota; ~13–15h total, fits one window)
