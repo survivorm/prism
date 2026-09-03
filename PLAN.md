@@ -29,9 +29,22 @@
 - [x] **GPU queue split** GPU (items 1–6, exp6_l18_snr now mandatory) from CPU/local-light (exp11 CPU-verify, exp2a run, **exp14 recompute** params+sentinel-stats, **exp13/15/6 sentinel-excluded recompute** → paper items 1,8).
 - [x] «optional» rule honored: exp13/15/6 reruns, exp10b, exp4_top_p, exp12 ε-sweep, exp11c n=8 stay **optional**; only exp6_l18_snr promoted to mandatory (data lost, not just weak).
 
+## DONE (09-02, paper re-correction — applied, awaiting commit)
+
+- [x] **Scoping fact (verified 14-01):** `docs/paper.md` (v3.3) contains **only exp 1–12c**. exp13/14/15/16/17/18/19 are NOT in the paper (audit + JSON only) — so «paper-fix» for those = future «write sections», not «fix numbers».
+- [x] **exp12a corrected:** header N=4→N=8, K=32→K=64; main table (uniformity 0.91/0.85/0.86 → 0.92/0.94/0.97; KL_g 7.04±0.37/7.46±0.47/6.42±0.97; KL_d 7.55/7.80/6.69; ratio 1.07/1.05/1.04×) + ε-sweep line from current JSON. Params note (script default N=4/K=64 out of sync).
+- [x] **exp12b/12c params notes added** (tables = JSON N=4/K=32; script now K=64 → next run overwrites). exp12b/12c numbers themselves verified = match JSON, no change.
+- [x] **exp11b v1-metric note added** (saved JSON = old metric `‖U_rJ_r−J_p‖/‖J_p‖` grows with r = artifact; fixed in c904db3 to `‖U_rU_rᵀJ_p−J_p‖/‖J_p‖` monotone-decreasing = 0 at r=K; table 14–38% = v1, re-run flips trend). Speedup column unaffected.
+- [x] **exp6 (in-paper) sentinel note added** (L_bridge=1.00 early rows = sentinel from `prism/bridge.py:31`; ρ=-0.09 = with-sentinel; sentinel-excluded ρ → CPU item).
+- [x] **exp7 CKA null-caveat added** (N≪D: indep 64×128 null ≈0.34; measured 0.0003–0.0007 far below → contrast stands).
+- [x] **exp12 re-frame note added** (map = minimal-sensitivity direction; Δh 0.22–0.63 vs 0.82–2.52; both schemes destroy PPL 10⁶–10⁸; not «map preserves the model»). exp11c table verified = matches JSON (no change).
+- [x] **Audit paper-only section rewritten** (was misdirected at non-in-paper exp13/14/15) + CPU queue line (exp14 recompute, exp6 in-paper sentinel-excluded, exp11b recompute, exp2a run).
+- [x] **exp2a_cka_identity.py** pre-existing uncommitted fix: old `CKA(X,X)` same-tensor (=1.0 by construction, validated nothing) → disjoint sample groups (real consistency check) + `_selfcheck()` construction invariants (identity/scale/translation/perm). Self-check PASSED. n-samples 5→8.
+
 ## NEXT
 
-- [ ] **Paper re-correction (separate deliverable, user to confirm scope):** re-apply the lost paper-fix batch — exp6 sentinel note + exp13/15/6 sentinel-excluded ρ (needs GPU recompute), exp14 K=64 + params, exp11a K=32/N=4, exp11b corrected fidelity, exp12a/b N=8/K=64 values, exp7 K=8, exp10c note. **Blocked on GPU for exp13/14/17 values + exp6 data re-run.**
+- [ ] **Commit the 3 files above** (paper.md + audit + exp2a script).
+- [ ] **Blocked on GPU:** exp13/14/15/16/17/18/19 «paper sections» (write, not fix); exp11b re-run (flip fidelity trend); exp12a N=4/K=32 rerun; exp12b/12c K=64 rerun; exp6_l18_snr data (mandatory, data lost).
 - [ ] `docs/HANDOFF_exp17_powerup.md` §4 stale: says "push full 7-pair, expect ~12h" — math in §L says 14 pair-runs ≈ 40–45h; push should be `--pairs 4_3` + single order (~9.2h). Update §4/§6 Q1 after user decision.
 
 ### GPU-очередь (после сброса weekly 30h quota; ~13–15h total, fits one window)

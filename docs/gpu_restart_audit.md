@@ -182,22 +182,33 @@ Paper читает DELTAS от no_edit. **After exp16 v2.**
 
 ## Paper-only fixes (no GPU, do first)
 
-1. **exp13/15/6:** exclude 1.0-sentinel points из monotonicity / Spearman /
-   bridge-mean (это не cosine losses); переформулировать claims на real points.
-2. **exp13:** promote **overlap_hidden** (0.015→0.998) в main bridge figure —
-   the real, beautiful result; 5-anchor version under-sells.
-3. **exp11a/b/c:** разные K (32/256/256) и разные метрики = different
-   measurements, не contradiction; 11b v1 fidelity void и replaced; 11c:
-   state «defrag output-faithful but bridge-destroying — the bridge IS the
-   high-r structure».
+**Скоуп-факт (проверено 14-01):** paper (docs/paper.md, v3.3) содержит
+только эксперименты **1–12c**. exp13/14/15/16/17/18/19 **не описаны в
+paper** — только в audit + JSON. Значит «paper-fix» для 13/14/15 =
+**дописать секции** (future work), не «исправить числа»; exp13/15
+sentinel-проблема paper **не касается** (paper их не цитирует).
+
+1. **exp6 (in-paper):** exclude 1.0-sentinel rows из Spearman / bridge-mean
+   (таблица exp6 L_bridge=1.00 в ранних строках — sentinel, см. note в paper).
+   → **DONE** (note добавлен 14-01); sentinel-excluded ρ → CPU item 7.
+2. **exp11b:** v1-metric void (`‖U_r J_r−J_p‖/‖J_p‖` растёт с r — баг);
+   fix в `experiments/exp11b_defrag_cost.py` (c904db3: `‖U_r U_rᵀJ_p−J_p‖/‖J_p‖`,
+   monotone, 0 at r=K) но JSON — до fix → **note в paper добавлен**;
+   re-run / CPU recompute после quota.
+3. **exp11c:** state «defrag output-faithful but bridge-destroying — the
+   bridge IS the high-r structure» (defrag_8/16/32 в JSON = flat ~1.0,
+   contrast с 11a/11b — different measurements, не contradiction).
 4. **exp12:** re-frame как «map = minimal-sensitivity direction; при равном
-   destructive budget degrades less» (Δh 0.24 vs 0.95), не «map preserves the
-   model».
-5. **K/N-stale:** exp14 «K=256»→**K=64** (JSON n=8, K=64, 48/24); exp11a «K=256»→**K=32** (N=4, max_len 48); exp12a/b «N=4, K=32»→**N=8, K=64**. (exp11b/c «K=256» OK; exp10c K=32/64/128/256 OK.) + **exp14 `params`:** код уже пишет `params` (`0514675`), но сохранённый JSON — до fix → trivial CPU re-run.
-6. **exp7/2a:** CKA(4B→0.8B)≈0.001 far below inflated linear-CKA null
-   (N≪D) → contrast stands; note в paper.
-7. **exp16/19:** v1 void; paper читает v2 dose curve; exp19 — deltas от no_edit.
-8. **exp6_l18_snr:** `results/exp6_l18_snr.json` отсутствует в репо → paper-таблица (ρ=+2.94) неверифицируема; обновить после GPU re-run (GPU queue item 6). Sentinel-excluded ρ для exp13/15/6 — тоже после recompute (CPU item 7).
+   destructive budget degrades less» (Δh 0.22–0.63 vs 0.82–2.52), не «map
+   preserves the model». → **DONE** (reframe note в paper, 14-01).
+5. **exp7/2a:** CKA(4B→0.8B)≈0.001 far below inflated linear-CKA null
+   (N≪D: indep 64×128 ≈0.34) → contrast stands; **note в paper добавлен
+   (14-01)**. 2a = separate CPU control (queue item 8).
+6. **exp16/19:** v1 void; paper читает v2 dose curve; exp19 — deltas от no_edit.
+   (exp16/19 не в paper — дописать при v2 publication.)
+7. **exp6_l18_snr:** `results/exp6_l18_snr.json` отсутствует в репо →
+   paper-таблица (ρ=+2.94) неверифицируема; обновить после GPU re-run
+   (GPU queue item 6).
 
 ---
 
@@ -212,7 +223,7 @@ Paper читает DELTAS от no_edit. **After exp16 v2.**
 6. **exp6_l18_snr re-run** (0.8B, ~2h T4): v2 spec — L18-only SNR+PR, L18+L12+L13, r∈{4,8,16,32,64}, N≥8, K=256, +sentinel. **Mandatory (не optional): `results/exp6_l18_snr.json` отсутствует в репо — headline-таблица paper (ρ=+2.94) неверифицируема** (см. §exp6_l18_snr).
 7. Optional: exp13/15 (24-layer / 6 anchors, K=128); exp10b n=8;
    exp4_top_p (~1h); exp12 ε/budget sweep; exp11c n=8 (~1h).
-   CPU (no GPU, local light): exp11 CPU-verify; exp2a CPU run; **exp14 recompute** (params + sentinel-excluded stats); **exp13/15/6 sentinel-excluded recompute** (N=8/K=64 уже в JSON) → обновить paper (paper-only items 1, 8).
+   CPU (no GPU, local light): **exp14 recompute** (params + sentinel-excluded stats); **exp6 (in-paper) sentinel-excluded recompute** (N=16/K=64 в JSON) → обновить paper (paper-only item 1); **exp11b recompute** (fixed metric, monotone in r) → обновить paper (paper-only item 2); exp2a CPU run (separate control).
 
 **Total ≈ 9–10h обязательных (вкл. exp6_l18_snr ~2h) + ~3–4h optional + CPU** — fits one weekly 30h window
 с запасом (12h kernel limit respected: each item ≤ ~9.2h).
