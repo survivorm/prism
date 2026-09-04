@@ -1,4 +1,13 @@
-"""Experiment 4: Sensitivity to K (token set size)."""
+"""Experiment 4: Sensitivity to K (token set size) — cross-model (FIXED).
+
+v1 was BROKEN: it used the self-bridge `jacobian_bridge(J, J, E, E)` on a
+single (0.8B) model, so 4B was never loaded and every value was the identity
+case (~0.0) — that measured nothing about K. v2 mirrors exp4_u: load BOTH
+4B (large) + 0.8B (small), build the token set from the 4B top-K final logits,
+and compute the cross-bridge `jacobian_bridge(J_L, J_S, E_L, E_S, probs)`.
+
+Question: does L_bridge(4B->0.8B) stabilize as K grows? (n_samples>=4, K->256.)
+"""
 
 import argparse
 import json
@@ -6,80 +15,115 @@ import os
 
 import torch
 
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
 from prism.calibration import (
-    build_global_token_set,
     extract_embeddings,
     load_calibration_data,
     uniform_layer_mapping,
 )
-from prism.jacobian import compute_jacobian_for_tokens
 from prism.bridge import jacobian_bridge
+from prism.jacobian import compute_jacobian_for_tokens
 
 
 def main(
-    model="Qwen/Qwen3.5-0.8B",
-    n_samples=1,
+    large_model="/data/Qwen/Qwen3.5-4B",
+    small_model="Qwen/Qwen3.5-0.8B",
+    n_samples=4,
     max_length=64,
     min_length=32,
-    K_values=(4, 8, 16, 32),
+    K_values=(4, 8, 16, 32, 64, 128, 256),
     results_dir="results",
 ):
-    torch.set_num_threads(4)
+    print(f"Loading {n_samples} calibration samples (from {large_model})...")
     samples = load_calibration_data(
-        model, max_length=max_length, min_length=min_length, n_samples=n_samples
+        large_model,
+        max_length=max_length,
+        min_length=min_length,
+        n_samples=n_samples,
     )
 
-    model_obj = AutoModelForCausalLM.from_pretrained(
-        model,
+    print(f"Loading {large_model}...")
+    model_L = AutoModelForCausalLM.from_pretrained(
+        large_model,
         torch_dtype=torch.float32,
         attn_implementation="eager",
     )
-    model_obj.eval()
-    n_layers = model_obj.config.num_hidden_layers
-    mapping = uniform_layer_mapping(n_layers, n_layers)
-    E = extract_embeddings(model_obj)
+    model_L.eval()
+
+    print(f"Loading {small_model}...")
+    model_S = AutoModelForCausalLM.from_pretrained(
+        small_model,
+        torch_dtype=torch.float32,
+        attn_implementation="eager",
+    )
+    model_S.eval()
+
+    n_L = model_L.config.num_hidden_layers
+    n_S = model_S.config.num_hidden_layers
+    mapping = uniform_layer_mapping(n_L, n_S)
+
+    step = max(1, len(mapping) // 5)
+    sampled = list(mapping.items())[::step]
+    print(f"Testing {len(sampled)} layer pairs (4B->0.8B)")
+
+    E_L = extract_embeddings(model_L)
+    E_S = extract_embeddings(model_S)
 
     results = {}
-
     for K in K_values:
-        token_set = build_global_token_set(model_obj, samples, K=K)
         layer_losses = {}
-
-        for l_L in list(mapping.keys())[:5]:
-            ids = samples[0]["input_ids"].to(model_obj.device)
-            attn = samples[0]["attention_mask"].to(model_obj.device)
-            J = compute_jacobian_for_tokens(model_obj, l_L, ids, attn, token_set)
+        for l_L, l_S in sampled:
+            ids = samples[0]["input_ids"].to(model_L.device)
+            attn = samples[0]["attention_mask"].to(model_L.device)
 
             with torch.no_grad():
-                logits = model_obj(input_ids=ids).logits[:, -1, :]
-                probs = torch.softmax(logits[0, token_set], dim=-1)
+                logits_L = model_L(
+                    input_ids=ids, attention_mask=attn
+                ).logits[:, -1, :]
+            token_set = sorted(logits_L.topk(K, dim=-1).indices[0].tolist())
+            with torch.no_grad():
+                probs = torch.softmax(logits_L[0, token_set], dim=-1)
 
-            loss = jacobian_bridge(J, J, E, E, probs)
-            layer_losses[f"layer_{l_L}"] = loss
+            J_L = compute_jacobian_for_tokens(
+                model_L, l_L, ids, attn, token_set
+            )
+            J_S = compute_jacobian_for_tokens(
+                model_S, l_S, ids, attn, token_set
+            )
+            loss = jacobian_bridge(J_L, J_S, E_L, E_S, probs)
+            layer_losses[f"{l_L}->{l_S}"] = loss
 
+        avg = sum(layer_losses.values()) / max(len(layer_losses), 1)
         results[f"K={K}"] = layer_losses
-        print(
-            f"K={K}: avg={sum(layer_losses.values()) / max(len(layer_losses), 1):.8f}"
-        )
+        print(f"K={K}: avg={avg:.6f}")
 
     os.makedirs(results_dir, exist_ok=True)
-    results["params"] = {model: model, n_samples: n_samples, max_length: max_length, min_length: min_length, K_values: K_values}
+    results["params"] = {
+        "large_model": large_model,
+        "small_model": small_model,
+        "n_samples": n_samples,
+        "max_length": max_length,
+        "min_length": min_length,
+        "K_values": list(K_values),
+    }
     with open(os.path.join(results_dir, "exp4_k_sensitivity.json"), "w") as f:
         json.dump(results, f, indent=2)
+    print(f"Saved to {results_dir}/exp4_k_sensitivity.json")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Exp 4: K sensitivity")
-    parser.add_argument("--model", default="Qwen/Qwen3.5-0.8B")
-    parser.add_argument("--n-samples", type=int, default=1)
+    parser = argparse.ArgumentParser(description="Exp 4: K sensitivity (cross-model)")
+    parser.add_argument("--large-model", default="/data/Qwen/Qwen3.5-4B")
+    parser.add_argument("--small-model", default="Qwen/Qwen3.5-0.8B")
+    parser.add_argument("--n-samples", type=int, default=4)
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--min-length", type=int, default=32)
     parser.add_argument("--results-dir", default="results")
     args = parser.parse_args()
     main(
-        model=args.model,
+        large_model=args.large_model,
+        small_model=args.small_model,
         n_samples=args.n_samples,
         max_length=args.max_length,
         min_length=args.min_length,

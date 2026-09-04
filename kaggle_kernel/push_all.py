@@ -17,6 +17,67 @@ KAGGLE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(KAGGLE_DIR)
 
 KERNELS = {
+    # --- Mandatory / optional GPU re-runs (audit GPU-queue items 1-6) ---
+    # runner_extra = Python kwargs lines injected into runner_<exp>(...) by
+    # build_kernel (it auto-passes model/device/results). NOT CLI flags.
+    # id/slug are PROVISIONAL for never-pushed kernels: after the first
+    # successful push kaggle derives the canonical slug from the title —
+    # update id/slug to match (re-push 409-conflicts otherwise, see exp17).
+    "exp6_l18_snr": {
+        "dir": "kernel-exp6l18",
+        "slug": "prism-exp6-l18-snr",
+        "id": "voroninmichael/prism-exp6-l18-snr",
+        "title": "Prism: Exp 6 L18 SNR (headline re-run)",
+        "exp_file": "experiments/exp6_l18_snr.py",
+        "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 256\n",
+        "note": "MANDATORY: data LOST (results/exp6_l18_snr.json absent from "
+                "repo; rho=+2.94 unverifiable). L18 SNR/PR vs r, N=8, K=256, ~2h T4.",
+    },
+    "exp2_heatmap": {
+        "dir": "kernel-exp2",
+        "slug": "prism-exp2-heatmap",
+        "id": "voroninmichael/prism-exp2-heatmap",
+        "title": "Prism: Exp 2 heatmap",
+        "exp_file": "experiments/exp2_heatmap.py",
+        "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\n",
+        "note": "optional: full 32x24 heatmap, n=8, K=64 (was thin n=3/K=8).",
+    },
+    "exp4_k_sensitivity": {
+        "dir": "kernel-exp4k",
+        "slug": "prism-exp4-k-sensitivity",
+        "id": "voroninmichael/prism-exp4-k-sensitivity",
+        "title": "Prism: Exp 4 K-sensitivity",
+        "exp_file": "experiments/exp4_k_sensitivity.py",
+        "runner_extra": "kwargs['n_samples'] = 4\n",
+        "note": "fixed: cross-bridge 4B->0.8B (v1 broken self-bridge) + K->256, n=4.",
+    },
+    "exp11c_defrag_bridge": {
+        "dir": "kernel-exp11c",
+        "slug": "prism-exp11c-defrag-bridge",
+        "id": "voroninmichael/prism-exp11c-defrag-bridge",
+        "title": "Prism: Exp 11c defrag bridge",
+        "exp_file": "experiments/exp11c_defrag_bridge.py",
+        "runner_extra": "kwargs['n_samples'] = 8\n",
+        "note": "n=8 (was n=1): bridge degradation vs defrag r.",
+    },
+    "exp10b_gauge_bridge": {
+        "dir": "kernel-exp10b",
+        "slug": "prism-exp10b-gauge-bridge",
+        "id": "voroninmichael/prism-exp10b-gauge-bridge",
+        "title": "Prism: Exp 10b gauge bridge",
+        "exp_file": "experiments/exp10b_gauge_bridge.py",
+        "runner_extra": "kwargs['n_samples'] = 8\n",
+        "note": "n=8 (was n=1): gauge/bridge.",
+    },
+    "exp4_top_p_tokens": {
+        "dir": "kernel-exp4topp",
+        "slug": "prism-exp4-top-p-tokens",
+        "id": "voroninmichael/prism-exp4-top-p-tokens",
+        "title": "Prism: Exp 4 top-p tokens",
+        "exp_file": "experiments/exp4_top_p_tokens.py",
+        "runner_extra": "kwargs['n_samples'] = 4\n",
+        "note": "optional: token-set-bias claim (never ran).",
+    },
     "exp13": {
         "dir": "kernel-exp13",
         "slug": "prism-exp13-domain-esg",
@@ -81,6 +142,13 @@ KERNELS = {
         "exp_file": "experiments/exp17_lora_distill.py",
         "sources": ["voroninmichael/exp16-stage-0-target-jacobian-cache"],
         "datasets": ["voroninmichael/prism-exp16-targets"],
+        # Pending push (audit): pairs 4_3, 1000 steps (~9.2h, fits one 12h
+        # quota); default order (1st + 2nd HVP). 300-step both-orders anchor
+        # JSON already committed.
+        "runner_extra": (
+            "kwargs['pairs'] = '4_3'\n"
+            "kwargs['steps'] = 1000\n"
+        ),
     },
     "exp16_4_3": {
         # B2 mini-kernel: exp17 v23 on a single pair (4,3) + finite-diff
@@ -159,7 +227,10 @@ def build(exp_name: str):
     cmd += ["--sources"] + meta_dict.get("sources", [])  # type: ignore[arg-type]
     cmd += ["--datasets"] + meta_dict.get("datasets", [])  # type: ignore[arg-type]
     if "runner_extra" in meta_dict:
-        cmd += ["--runner-extra", meta_dict["runner_extra"]]  # type: ignore[index]
+        re_ = meta_dict["runner_extra"]
+        if isinstance(re_, (list, tuple)):
+            re_ = "".join(f"{x}\n" for x in re_)
+        cmd += ["--runner-extra", re_]
     subprocess.run(cmd, check=True)
 
 
