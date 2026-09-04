@@ -183,10 +183,11 @@ Paper читает DELTAS от no_edit. **After exp16 v2.**
 ## Paper-only fixes (no GPU, do first)
 
 **Скоуп-факт (проверено 14-01):** paper (docs/paper.md, v3.3) содержит
-только эксперименты **1–12c**. exp13/14/15/16/17/18/19 **не описаны в
-paper** — только в audit + JSON. Значит «paper-fix» для 13/14/15 =
-**дописать секции** (future work), не «исправить числа»; exp13/15
-sentinel-проблема paper **не касается** (paper их не цитирует).
+эксперименты **1–12c (§5–9) + 13/14/15 (§11 «Доменная специфичность,
+глубинная структура, фазовая робастность»)**. exp16/17/18/19 **не в
+paper** — только audit + JSON (дописать при v2-публикации). Значит:
+«paper-fix» для 13/14/15 = **исправление чисел/выводов в §11** (DONE
+14-01, см. items 5/9/10); для 16–19 = написание секций.
 
 1. **exp6 (in-paper):** exclude 1.0-sentinel rows из Spearman / bridge-mean
    (таблица exp6 L_bridge=1.00 в ранних строках — sentinel, см. note в paper).
@@ -206,9 +207,19 @@ sentinel-проблема paper **не касается** (paper их не ци�
    (14-01)**. 2a = separate CPU control (queue item 8).
 6. **exp16/19:** v1 void; paper читает v2 dose curve; exp19 — deltas от no_edit.
    (exp16/19 не в paper — дописать при v2 publication.)
-7. **exp6_l18_snr:** `results/exp6_l18_snr.json` отсутствует в репо →
+8. **exp6_l18_snr:** `results/exp6_l18_snr.json` отсутствует в репо →
    paper-таблица (ρ=+2.94) неверифицируема; обновить после GPU re-run
    (GPU queue item 6).
+9. **exp13/15 (in-paper, §11) sentinel note:** первые 3 якоря exp13 и
+   первые 2 якоря exp15 = 1.0-sentinel (empty mask, `prism/bridge.py:31`).
+   Цитируемые ρ=-0.89 / -0.95 / cross-Spearman 0.971 = **с sentinel**
+   (совпадает с JSON «all points»). Paper уже говорит «saturated (1.000)»
+   → пометить как sentinel; sentinel-excluded пере-расчёт → CPU.
+10. **exp14 (in-paper, §11): DONE (14-01).** К=256→K=64; gauge_share
+    «падает 0.31→0.08» → немонотонна (peak 0.48 L3); PR немонотонна
+    (провал L0→L3); broken table separator (3 dashes/6 cols) fixed.
+    `params` key absent in saved JSON (script 0514675 writes it) →
+    тривиальный CPU re-run добавит.
 
 ---
 
