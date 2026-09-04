@@ -48,12 +48,21 @@
 - [ ] **Blocked on GPU:** exp16/17/18/19 «paper sections» (write — not in paper yet); exp11b re-run (flip fidelity trend); exp12a N=4/K=32 rerun; exp12b/12c K=64 rerun; exp6_l18_snr data (mandatory, data lost).
 - [ ] `docs/HANDOFF_exp17_powerup.md` §4 stale: says "push full 7-pair, expect ~12h" — math in §L says 14 pair-runs ≈ 40–45h; push should be `--pairs 4_3` + single order (~9.2h). Update §4/§6 Q1 after user decision.
 
-### GPU-очередь (после сброса weekly 30h quota; ~13–15h total, fits one window)
-1. exp17 power-up: push `--pairs 4_3` + single order (~9.2h; 12h kernel cap) — built, quota-blocked.
-2. exp4_k_sensitivity: fix + 4B + K→256 + n≥4 (~1–2h).
-3. exp16 v2: one unclamped run (~5 min T4).
-4. exp19 v2: 4 scenarios, dose = exp16 v2 knee (~10 min; depends on 3).
-5. exp2: full 32×24 map n=8/K=64 (~1h).
-6. Optional: exp13/15 24-layer, exp6, exp10b n=8, exp4_top_p (~1h), exp12 ε-sweep.
+### GPU-очередь — ВСЕ kernels wired in pipeline (commit a79466d; push after weekly-quota reset)
 
+**All 16 kernels registered in `kaggle_kernel/push_all.py` + built to local `kernel-*/` (end-to-end build verified via `.venv`). `build_kernel.py` unchanged — the work was the `push_all` registry + 2 experiment scripts. Pushes no-op'd in this env (no Kaggle creds). `id`/`slug` PROVISIONAL for never-pushed kernels — kaggle derives canonical slug from title on first push; update `id`/`slug` after (re-push 409 otherwise, cf exp17).**
+
+| # | kernel | script | status |
+| --- | --- | --- | --- |
+| 1 | exp17 (power-up) | exp17_lora_distill.py | **built** — pending push `pairs 4_3` + 1000 steps (~9.2h) |
+| 2 | exp16 v2 (readout) | exp16_readout_pull.py | **built** (v2 code applied) — push to consume stage0 targets cache |
+| 3 | exp19 v2 (destruction) | exp19_destruction.py | **built** — needs exp16 v2 JSON (knee) first |
+| 4 | exp6_l18_snr (HEADLINE) | **exp6_l18_snr.py (NEW)** | **built** — data LOST, mandatory re-run; script written this session |
+| 5 | exp4_k_sensitivity (FIXED) | exp4_k_sensitivity.py | **built** — was broken self-bridge; now cross-bridge 4B→0.8B + K→256 |
+| 6 | exp2_heatmap | exp2_heatmap.py | **built** (n=8, K=64) |
+| 7 | exp11c_defrag_bridge | exp11c_defrag_bridge.py | **built** (n=8) |
+| 8 | exp10b_gauge_bridge | exp10b_gauge_bridge.py | **built** (n=8) |
+| 9 | exp4_top_p_tokens | exp4_top_p_tokens.py | **built** (n=4) — optional |
+
+**Still NOT in pipeline / paper:** exp11b re-run, exp12a N=4/K=32, exp12b/12c K=64, exp16/17/18/19 paper *sections* (write — not in paper yet). exp6_l18_snr is now in the pipeline (was the gap).
 **Paper-only fixes (no GPU)**: exclude 1.0 sentinels (exp13/15/6); exp11a/11b K-mismatch note + 11c bridge-flattening (defrag = output-faithful but bridge-destroying); exp12 re-frame; exp14 add params; exp2a note (CKA null inflated when N≪D); exp17 topk_report part of v2 suite.
