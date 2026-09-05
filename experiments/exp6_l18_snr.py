@@ -42,15 +42,21 @@ def _snr_sample(jacobians):
     return M.pow(2).sum().item() / max(1e-12, var), mean_sq, var
 
 
-def _gauge_share_top_r(eigenvectors, eigenvalues, r, device=None):
-    """gauge_share over top-r modes: u^T G u / trace(G_top_r), u = 1/sqrt(r)."""
+def _gauge_share_top_r(eigenvectors, eigenvalues, r, K, device=None):
+    """gauge_share over top-r modes: u^T G_top_r u / trace(G_top_r).
+
+    u = 1/sqrt(K) lives in the full K-dim space (eigenvectors are K-dim);
+    the numerator sums the top-r modes only; the denominator is the trace of
+    the top-r block (sum of top-r eigenvalues).
+    """
     dev = device or eigenvectors.device
-    ones = torch.ones(r, device=dev) / torch.sqrt(torch.tensor(float(r), device=dev))
+    u = torch.ones(K, device=dev) / torch.sqrt(torch.tensor(float(K), device=dev))
+    m = min(r, len(eigenvalues))
     uGu = sum(
-        eigenvalues[i].item() * (eigenvectors[i] @ ones).pow(2).item()
-        for i in range(min(r, len(eigenvalues)))
+        eigenvalues[i].item() * (eigenvectors[i] @ u).pow(2).item()
+        for i in range(m)
     )
-    return uGu / max(eigenvalues[:r].sum().item(), 1e-12)
+    return uGu / max(eigenvalues[:m].sum().item(), 1e-12)
 
 
 def main(
@@ -126,7 +132,7 @@ def main(
             by_r[str(r)] = {
                 "SNR": snr,
                 "PR": _participation_ratio(top_r),
-                "gauge_share": _gauge_share_top_r(eig, ev, rr, device=ev.device),
+                "gauge_share": _gauge_share_top_r(eig, ev, rr, K, device=ev.device),
                 "trace_top_r": top_r.sum().item(),
             }
 

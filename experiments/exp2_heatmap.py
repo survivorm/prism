@@ -152,9 +152,12 @@ def main(
     # Save results
     os.makedirs(results_dir, exist_ok=True)
     result_path = os.path.join(results_dir, "exp2_heatmap.json")
-    results["params"] = {large_model: large_model, small_model: small_model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length}
+    all_results = {
+        "params": {large_model: large_model, small_model: small_model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length},
+        "rows": results,
+    }
     with open(result_path, "w") as f:
-        json.dump(results, f, indent=2)
+        json.dump(all_results, f, indent=2)
 
     # Plot: scatter of bridge loss per (small_layer, large_layer)
     fig, ax = plt.subplots(figsize=(10, 5))
