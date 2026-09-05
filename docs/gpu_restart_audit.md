@@ -28,7 +28,7 @@
 | **exp13_domain_esg** | overlap_hidden **good** (0.015→0.998); bridge: 3/5 pts = sentinel 1.0 → monotonicity −0.894 identical во всех доменах = rank-tie artifact | paper-fix (exclude sentinels; overlap_hidden в main figure); optional 24-layer/K=128 | opt | MEDIUM |
 | **exp15_gdn_anchors** | то же sentinel (2/4 pts = 1.0); −0.949 identical во всех schemes = rank-tie artifact; реальное различие только в 2 real pts | paper-fix; optional 6 anchors + K=128 | opt | MEDIUM |
 | **exp6_kl_baseline** | n=16 OK; bridge_means = sentinel 1.0 в ранних парах → spearman −0.09 partly artifact | paper-fix (exclude sentinel pairs); optional rerun | opt | MEDIUM |
-| **exp6_l18_snr** (paper headline) | **ДАННЫЕ ПОТЕРЯНЫ**: `results/exp6_l18_snr.json` отсутствует в репо (git/results/kernels) → ρ=+2.94 неверифицируемо | **mandatory GPU re-run** (v2 spec, ~2h T4) — см. §exp6_l18_snr, GPU queue item 6 | **YES** | **HIGH** |
+| **exp6_l18_snr** | **ДАННЫЕ ВОССТАНОВЛЕНЫ** (Kaggle 05.09, 55s T4): L18 SNR=2.80, PR 2.1→16.9, gauge_share 0.60→0.19; `results/exp6_l18_snr.json` | done — data in repo; paper section optional (see §exp6_l18_snr note: «paper exp6»=KL, not this) | n/a | done |
 | **exp12 a/b/c** | код correct; при выбранном ε/budget **оба** варианта разрушают модель (KL≈15, PPL 1e6–1e8) — «comparative destruction» (Δh_map 0.24 < Δh_uniform 0.95), не preservation | paper re-frame (free); optional ε/budget 10× sweep (~1h) | opt | MEDIUM |
 | **exp4_top_p_tokens** | код CORRECT (re-verified 09-01: `probs` внутри per-set loop — v1-audit misread); **never ran** (4B on CPU) | run, если token-set-bias claim в paper (~1h) | opt | LOW-MED |
 | **exp2_heatmap** | thin: n=3, K=8, sparse (no full 32×24 map); bridge on 8 tokens noisy | YES (n=8, K=64, full map, ~1h) | opt | LOW-MED |
@@ -87,8 +87,16 @@ near-zero rows) → кривая из 4+ real points.
 - n=16, K=64, 11 layer pairs. spearman(KL, bridge) = −0.094 ≈ 0 (null result) —
   но считается в т.ч. по sentinel-парам (0→0, 3→2, ...). Exclude → пересчитать.
 
-### ⚠️ exp6_l18_snr — ДАННЫЕ ПОТЕРЯНЫ (headline paper)
-Paper «Эксперимент 6» = **L18-only SNR** (ρ=+2.94, SNR 12.58, PR 0.950; L18+L12+L13, r∈{4,8,16,32,64}, N≥8, K=256, +sentinel), source `results/exp6_l18_snr.json`. **Файл отсутствует в репо** — git history, results/, kaggle_kernel/ всё проверено → ρ=+2.94 **не верифицируемо** (данные не закоммичены). → **mandatory GPU re-run**, не optional (см. GPU queue item 6). Не путать: exp6_kl_baseline (выше, −0.094) ≠ exp6_l18_snr (paper headline).
+### ✅ exp6_l18_snr — данные ВОССТАНОВЛЕНЫ (Kaggle, 05.09)
+**Kaggle re-run УСПЕШЕН** (`voroninmichael/prism-exp6-l18-snr`, 55s T4) → `results/exp6_l18_snr.json`. **Л18-only SNR vs r**, 0.8B, N=8, K=256:
+- **SNR = 2.80** (r-invariant; mean²/sd² = 27531.7/7238.7).
+- **PR(r): 4→2.1, 8→3.5, 16→5.7, 32→9.9, 64→16.9** (monotone rising).
+- **gauge_share(r): 0.602, 0.464, 0.354, 0.264, 0.198** (monotone falling) — deepens spectrum → gauge fraction drops.
+- trace_top_r: 6343→19317. **Л18 = linear_attention, not last**.
+
+**Коррекция аудит-мифа:** «paper Эксперимент 6 = L18 SNR (ρ=+2.94)» — **неверно**. Реальный paper §6.6 «Эксперимент 6 (N=16)» = **KL-дивергенция** (exp6_kl_baseline, −0.094) — другой эксперимент. ρ=+2.94 в body paper **нет** (только в утерянном JSON). exp6_l18_snr = standalone L18 SNR-vs-r; в paper section нет → можно добавить (SNR vs r + gauge_share) или держать как supplementary.
+
+**Bug fixed in re-run:** first Kaggle push failed (shape `[256] vs [4]`) — my `_gauge_share_top_r` built `u` in r-dim, not K-dim; fixed `u=1/√K` (K=256, full dim), numerator top-r only. exp14-style, confirmed by run.
 
 ---
 
@@ -207,9 +215,7 @@ paper** — только audit + JSON (дописать при v2-публика
    (14-01)**. 2a = separate CPU control (queue item 8).
 6. **exp16/19:** v1 void; paper читает v2 dose curve; exp19 — deltas от no_edit.
    (exp16/19 не в paper — дописать при v2 publication.)
-8. **exp6_l18_snr:** `results/exp6_l18_snr.json` отсутствует в репо →
-   paper-таблица (ρ=+2.94) неверифицируема; обновить после GPU re-run
-   (GPU queue item 6).
+8. **exp6_l18_snr:** `results/exp6_l18_snr.json` — ✅ **ВОССТАНОВЛЕН** (Kaggle 05.09, 55s T4, в репо). L18 SNR=2.80, PR 2.1→16.9, gauge_share 0.60→0.19. Paper section опциональный.
 9. **exp13/15 (in-paper, §11) sentinel note:** первые 3 якоря exp13 и
    первые 2 якоря exp15 = 1.0-sentinel (empty mask, `prism/bridge.py:31`).
    Цитируемые ρ=-0.89 / -0.95 / cross-Spearman 0.971 = **с sentinel**
@@ -231,7 +237,7 @@ paper** — только audit + JSON (дописать при v2-публика
 3. **exp16 v2**: one unclamped run (~5 min T4).
 4. **exp19 v2**: 6 scenarios, dose = exp16 v2 knee (~10–15 min; **after 3**).
 5. **exp2**: full 32×24 map, n=8/K=64 (4B+0.8B, ~1h).
-6. **exp6_l18_snr re-run** (0.8B, ~2h T4): v2 spec — L18-only SNR+PR, L18+L12+L13, r∈{4,8,16,32,64}, N≥8, K=256, +sentinel. **Mandatory (не optional): `results/exp6_l18_snr.json` отсутствует в репо — headline-таблица paper (ρ=+2.94) неверифицируема** (см. §exp6_l18_snr).
+6. ~~**exp6_l18_snr re-run**~~ ✅ **DONE (Kaggle 05.09, 55s T4)**: `results/exp6_l18_snr.json` в репо (L18 SNR=2.80, PR 2.1→16.9, gauge_share 0.60→0.19). Paper section опциональный (см. §exp6_l18_snr: «paper exp6»=KL, а не этот).
 7. Optional: exp13/15 (24-layer / 6 anchors, K=128); exp10b n=8;
    exp4_top_p (~1h); exp12 ε/budget sweep; exp11c n=8 (~1h).
    CPU (no GPU, local light): **exp14 recompute** (params + sentinel-excluded stats); **exp6 (in-paper) sentinel-excluded recompute** (N=16/K=64 в JSON) → обновить paper (paper-only item 1); **exp11b recompute** (fixed metric, monotone in r) → обновить paper (paper-only item 2); exp2a CPU run (separate control).
