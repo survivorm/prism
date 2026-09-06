@@ -45,7 +45,10 @@
 ## NEXT
 
 - [x] **Committed** (e506bc0): paper.md + audit + exp2a script + PLAN.md (4 files, 122+/55-).
-- [ ] **Blocked on GPU:** exp16/17/18/19 «paper sections» (write — not in paper yet); exp11b re-run (flip fidelity trend); exp12a N=4/K=32 rerun; exp12b/12c K=64 rerun; exp6_l18_snr data (mandatory, data lost).
+- [x] **Terminology unified** (committed 68b47ab): bridge = cos (higher=better alignment); gap = 1−cos (lower=better). `jacobian_bridge`→`jacobian_gap` (+deprecated alias); 1−cos reporters (exp1,4_u,6,7,10b,11c,12c,13,15) now report `gap`; cos reporters (exp16–19) keep `bridge`; 6 result JSONs migrated. **Paper direction notes still pending** (§1.6 + per-exp).
+- [ ] **exp2 v3 PUSHED (Kaggle v3, 2026-09-05)** — dense 4-layer grid {0,4,8,...,28} + adaptive valley search (stop on monotonicity break) + turning-point detection + per-(model,layer) J-cache; n=8, K=64, cap=6. Worst-case ~9.6h (under 12h slot).
+- [ ] **exp4_top_p** v3 was CANCELED by user (2 duplicates were running); re-push when a slot frees (K=32, n=4).
+- [ ] **Blocked on GPU:** exp16/17/18/19 «paper sections» (write — not in paper yet); exp11b re-run (flip fidelity trend); exp12a N=4/K=32 rerun; exp12b/12c K=64 rerun.
 - [ ] `docs/HANDOFF_exp17_powerup.md` §4 stale: says "push full 7-pair, expect ~12h" — math in §L says 14 pair-runs ≈ 40–45h; push should be `--pairs 4_3` + single order (~9.2h). Update §4/§6 Q1 after user decision.
 
 ### GPU-очередь — ВСЕ kernels wired in pipeline (commit a79466d; push after weekly-quota reset)
