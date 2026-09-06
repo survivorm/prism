@@ -34,8 +34,6 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 from prism.calibration import extract_embeddings, uniform_layer_mapping
 from prism.bridge import jacobian_gap
 from prism.jacobian import compute_jacobian_for_tokens

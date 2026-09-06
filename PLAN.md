@@ -44,10 +44,12 @@
 
 ## NEXT
 
+- [x] **Paper: 4 new GPU results integrated** (commit 43e7ded): exp4 (N=4 K-sweep, 7 K-values × 6 par, converges K≥32), exp10b (N=8, centered<softmax<raw), exp11c (N=8, defrag destroys monotonicity at all r≤32: spearman 0.81/0.71/0.43), exp6 L18 SNR (new section: SNR=2.80 r-invariant, PR 2.1→16.9, gauge_share top-r 0.60→0.19).
+
 - [x] **Committed** (e506bc0): paper.md + audit + exp2a script + PLAN.md (4 files, 122+/55-).
-- [x] **Terminology unified** (committed 68b47ab): bridge = cos (higher=better alignment); gap = 1−cos (lower=better). `jacobian_bridge`→`jacobian_gap` (+deprecated alias); 1−cos reporters (exp1,4_u,6,7,10b,11c,12c,13,15) now report `gap`; cos reporters (exp16–19) keep `bridge`; 6 result JSONs migrated. **Paper direction notes still pending** (§1.6 + per-exp).
-- [ ] **exp2 v3 PUSHED (Kaggle v3, 2026-09-05)** — dense 4-layer grid {0,4,8,...,28} + adaptive valley search (stop on monotonicity break) + turning-point detection + per-(model,layer) J-cache; n=8, K=64, cap=6. Worst-case ~9.6h (under 12h slot).
-- [ ] **exp4_top_p** v3 was CANCELED by user (2 duplicates were running); re-push when a slot frees (K=32, n=4).
+- [x] **Terminology unified** (committed 68b47ab): bridge = cos (higher=better alignment); gap = 1−cos (lower=better). `jacobian_bridge`→`jacobian_gap` (+deprecated alias); 1−cos reporters (exp1,4_u,6,7,10b,11c,12c,13,15) now report `gap`; cos reporters (exp16–19) keep `bridge`; 6 result JSONs migrated. **Paper done** (§1.6 renamed to gap, §1.7 added with direction table, L_bridge→gap in exps 1–15, future-work 16–18 direction-fixed): commit 43e7ded.
+- [ ] **exp2 v4 PUSHED (Kaggle v4, 2026-09-05)** — v3 hit `NameError: __file__` (notebook has no __file__); removed the `sys.path` hack (notebook injects repo root, same as exp4/11c/10b/6 which import prism.* fine). Now: dense 4-layer grid {0,4,8,...,28} + adaptive valley search (stop on monotonicity break) + turning-point detection + per-(model,layer) J-cache; n=8, K=64, cap=6. Running.
+- [ ] **exp4_top_p** — 2 duplicates were canceled; v3 then v4 to be re-pushed (K=32, n=4) when its slot frees (monitor auto-re-pushes).
 - [ ] **Blocked on GPU:** exp16/17/18/19 «paper sections» (write — not in paper yet); exp11b re-run (flip fidelity trend); exp12a N=4/K=32 rerun; exp12b/12c K=64 rerun.
 - [ ] `docs/HANDOFF_exp17_powerup.md` §4 stale: says "push full 7-pair, expect ~12h" — math in §L says 14 pair-runs ≈ 40–45h; push should be `--pairs 4_3` + single order (~9.2h). Update §4/§6 Q1 after user decision.
 
