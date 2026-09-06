@@ -1,7 +1,7 @@
 """Condition number of Gramian G_S + Tikhonov λ-sweep.
 
 Computes κ(E_S^T @ E_S) per sample/token_set and tests robustness of
-jacobian_bridge under Ridge regularization:
+jacobian_gap under Ridge regularization:
   G_inv(λ) = (G_S + λI)^{-1}
 
 Sweep λ ∈ {1e-8, 1e-6, 1e-4, 1e-2, 1.0}.
@@ -23,7 +23,7 @@ from prism.calibration import (
     uniform_layer_mapping,
 )
 from prism.bridge import (
-    jacobian_bridge,
+    jacobian_gap,
     _project_to_vocab,
     _valid_mask,
     _weighted_cosine_loss,
@@ -38,7 +38,7 @@ def _ridge_inverse_gramian(E: torch.Tensor, lam: float) -> torch.Tensor:
     return torch.linalg.inv(G + lam * I)
 
 
-def jacobian_bridge_ridge(
+def jacobian_gap_ridge(
     J_L: torch.Tensor,
     J_S: torch.Tensor,
     E_L: torch.Tensor,
@@ -113,9 +113,9 @@ def main(
         for l_L, l_S in sampled:
             J = compute_jacobian_for_tokens(model_obj, l_L, ids, attn, token_set)
             if lam == 0.0:
-                loss = jacobian_bridge(J, J, E, E, probs)
+                loss = jacobian_gap(J, J, E, E, probs)
             else:
-                loss = jacobian_bridge_ridge(J, J, E, E, probs, lam)
+                loss = jacobian_gap_ridge(J, J, E, E, probs, lam)
             losses.append(loss)
         avg = sum(losses) / len(losses)
         lam_results[f"lam_{lam}"] = {

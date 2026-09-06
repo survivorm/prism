@@ -23,7 +23,7 @@ from prism.calibration import (
     load_calibration_data,
     uniform_layer_mapping,
 )
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.esg import compute_esg
 from prism.jacobian import compute_jacobian_for_tokens
 
@@ -68,12 +68,12 @@ def _bridge_losses(mL, mS, EL, ES, samples, ts, pairs, n_samples):
             ids = samples[si]["input_ids"].to(mS.device)
             attn = samples[si]["attention_mask"].to(mS.device)
             JS = compute_jacobian_for_tokens(mS, lS, ids, attn, ts)
-            pair_losses.append(jacobian_bridge(JL, JS, EL, ES, probs))
+            pair_losses.append(jacobian_gap(JL, JS, EL, ES, probs))
             del JL, JS
         losses.append(
             {
                 "layer": f"{lL}->{lS}",
-                "loss": sum(pair_losses) / len(pair_losses),
+                 "gap": sum(pair_losses) / len(pair_losses),
                 "per_sample": [float(x) for x in pair_losses],
             }
         )
@@ -172,7 +172,7 @@ def _print_summary(all_res, domain_list, selected, n_layers):
         bk = f"bridge_{d}"
         if bk not in all_res:
             continue
-        avg = sum(r["loss"] for r in all_res[bk]) / len(all_res[bk])
+        avg = sum(r["gap"] for r in all_res[bk]) / len(all_res[bk])
         print(f"{d:<8} {avg:>10.4f}")
     for suffix in ("_token", "_hidden"):
         key = f"overlap{suffix}"
@@ -308,7 +308,7 @@ def main(
         bk = f"bridge_{d}"
         if bk not in all_results:
             continue
-        losses = [r["loss"] for r in all_results[bk]]
+        losses = [r["gap"] for r in all_results[bk]]
         if len(losses) >= 3:
             rho, _ = spearmanr(range(len(losses)), losses)
             mono[d] = float(rho)  # type: ignore[arg-type]

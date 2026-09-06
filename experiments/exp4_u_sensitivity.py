@@ -17,7 +17,7 @@ from prism.calibration import (
     load_calibration_data,
     uniform_layer_mapping,
 )
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.jacobian import compute_jacobian_for_tokens
 
 
@@ -89,10 +89,10 @@ def main(
         for l_L, l_S in sampled:
             J_L = compute_jacobian_for_tokens(model_L, l_L, ids, attn, token_set)
             J_S = compute_jacobian_for_tokens(model_S, l_S, ids, attn, token_set)
-            loss = jacobian_bridge(J_L, J_S, E_L, E_S, probs)
-            layer_losses.append({"layer": f"{l_L}->{l_S}", "loss": loss})
+            loss = jacobian_gap(J_L, J_S, E_L, E_S, probs)
+            layer_losses.append({"layer": f"{l_L}->{l_S}",  "gap": loss})
 
-        avg = sum(r["loss"] for r in layer_losses) / len(layer_losses)
+        avg = sum(r["gap"] for r in layer_losses) / len(layer_losses)
         results[str(u_size)] = {
             "per_layer": layer_losses,
             "avg": avg,

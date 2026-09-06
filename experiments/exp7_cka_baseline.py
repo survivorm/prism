@@ -1,7 +1,7 @@
 """Experiment 7: CKA (Centered Kernel Alignment) baseline between hidden states.
 
 Computes CKA between hidden states of 4B and 0.8B models across multiple samples,
-then compares with Jacobian bridge loss on the same layer pairs.
+then compares with Jacobian gap (1-cos) on the same layer pairs.
 """
 
 import argparse
@@ -17,7 +17,7 @@ from prism.calibration import (
     load_calibration_data,
     uniform_layer_mapping,
 )
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.jacobian import compute_jacobian_for_tokens
 
 
@@ -132,8 +132,8 @@ def main(
         cka_data[f"{l_L}->{l_S}"] = cka
         print(f"  {l_L}->{l_S}: CKA={cka:.6f}")
 
-    # Jacobian bridge on same layers (single sample)
-    print("\nComputing Jacobian bridge...")
+    # Jacobian gap on same layers (single sample)
+    print("\nComputing Jacobian gap...")
     E_L = extract_embeddings(model_L)
     E_S = extract_embeddings(model_S)
 
@@ -147,26 +147,26 @@ def main(
     probs = torch.softmax(logits_L[0, top_k], dim=-1)
     token_set = sorted(top_k)
 
-    bridge_data = {}
+    gap_data = {}
 
     for l_L, l_S in sampled:
         J_L = compute_jacobian_for_tokens(model_L, l_L, ids, attn, token_set)
         J_S = compute_jacobian_for_tokens(model_S, l_S, ids, attn, token_set)
-        loss = jacobian_bridge(J_L, J_S, E_L, E_S, probs)
-        bridge_data[f"{l_L}->{l_S}"] = loss
-        print(f"  {l_L}->{l_S}: bridge={loss:.6f}")
+        loss = jacobian_gap(J_L, J_S, E_L, E_S, probs)
+        gap_data[f"{l_L}->{l_S}"] = loss
+        print(f"  {l_L}->{l_S}  : gap={loss:.6f}")
 
     # Save results + correlation
     os.makedirs(results_dir, exist_ok=True)
     import scipy
 
     cka_vals = list(cka_data.values())
-    bridge_vals = list(bridge_data.values())
-    corr = scipy.stats.spearmanr(cka_vals, bridge_vals).correlation
+    gap_vals = list(gap_data.values())
+    corr = scipy.stats.spearmanr(cka_vals, gap_vals).correlation
 
     output = {
         "cka": cka_data,
-        "bridge": bridge_data,
+        "gap": gap_data,
         "spearman_corr": corr,
         "n_samples": len(samples),
         "params": {
@@ -181,7 +181,7 @@ def main(
     with open(os.path.join(results_dir, "exp7_cka_baseline.json"), "w") as f:
         json.dump(output, f, indent=2)
 
-    print(f"\nSpearman correlation (CKA vs bridge): {corr:.4f}")
+    print(f"\nSpearman correlation (CKA vs gap): {corr:.4f}")
 
 
 if __name__ == "__main__":

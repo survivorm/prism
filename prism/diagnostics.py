@@ -7,7 +7,7 @@ from typing import Any
 import matplotlib
 import torch
 
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.calibration import (
     extract_embeddings,
     uniform_layer_mapping,
@@ -45,7 +45,7 @@ def run_layer_diagnostics(
                 logits_L = model_large(input_ids=ids).logits[:, -1, :]
                 probs = torch.softmax(logits_L[0, token_set], dim=-1)
 
-            loss = jacobian_bridge(J_L, J_S, E_L, E_S, probs)
+            loss = jacobian_gap(J_L, J_S, E_L, E_S, probs)
             losses.append(loss)
 
         avg_loss = sum(losses) / len(losses)

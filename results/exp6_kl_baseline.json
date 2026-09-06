@@ -218,7 +218,7 @@
       0.27776798605918884
     ]
   },
-  "bridge_per_layer": {
+  "gap_per_layer": {
     "0->0": [
       1.0,
       1.0,
@@ -431,7 +431,7 @@
     3.7547626458108425,
     1.828349539078772
   ],
-  "bridge_means": [
+  "gap_means": [
     1.0,
     1.0,
     1.0,
@@ -467,5 +467,5 @@
     "n_samples": 16,
     "K": 64
   },
-  "description": "KL-divergence baseline: for each sampled layer pair in Qwen3.5-4B \u2192 Qwen3.5-0.8B, computes both the Jacobian bridge loss and the KL divergence between projected logit distributions. Performs Spearman correlation analysis: if bridge correlates strongly with KL (|\u03c1| >= 0.5), the bridge captures nothing beyond logit distributions; if correlation is low, the bridge captures additional structural information beyond logits."
+  "description": "KL-divergence baseline: for each sampled layer pair in Qwen3.5-4B → Qwen3.5-0.8B, computes both the Jacobian bridge loss and the KL divergence between projected logit distributions. Performs Spearman correlation analysis: if bridge correlates strongly with KL (|ρ| >= 0.5), the bridge captures nothing beyond logit distributions; if correlation is low, the bridge captures additional structural information beyond logits."
 }

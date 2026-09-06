@@ -15,7 +15,7 @@ from prism.calibration import (
     load_calibration_data,
     uniform_layer_mapping,
 )
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.jacobian import (
     compute_jacobian_for_tokens,
     softmax_jacobian,
@@ -96,15 +96,15 @@ def main(
         J_S = compute_jacobian_for_tokens(model_S, l_S, ids, attn, token_set)
 
         # Raw
-        loss_raw = jacobian_bridge(J_L, J_S, E_L, E_S, p_L)
+        loss_raw = jacobian_gap(J_L, J_S, E_L, E_S, p_L)
 
         # Centered
-        loss_cent = jacobian_bridge(
+        loss_cent = jacobian_gap(
             uniform_centered(J_L), uniform_centered(J_S), E_L, E_S, p_L
         )
 
         # Softmax-weighted
-        loss_soft = jacobian_bridge(
+        loss_soft = jacobian_gap(
             softmax_jacobian(J_L, p_L),
             softmax_jacobian(J_S, p_S),
             E_L,
@@ -113,9 +113,9 @@ def main(
         )
 
         key = f"{l_L}->{l_S}"
-        variants["raw"].append({"layer": key, "loss": loss_raw})
-        variants["centered"].append({"layer": key, "loss": loss_cent})
-        variants["softmax"].append({"layer": key, "loss": loss_soft})
+        variants["raw"].append({"layer": key,  "gap": loss_raw})
+        variants["centered"].append({"layer": key,  "gap": loss_cent})
+        variants["softmax"].append({"layer": key,  "gap": loss_soft})
 
         print(
             f"  {key}: raw={loss_raw:.4f}, cent={loss_cent:.4f}, soft={loss_soft:.4f}"

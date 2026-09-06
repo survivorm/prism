@@ -13,7 +13,7 @@ import torch
 from scipy.stats import spearmanr  # type: ignore[import-untyped]
 from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.calibration import (
     extract_embeddings,
     get_layer_types,
@@ -90,11 +90,11 @@ def _run_scheme(
             J_S = compute_jacobian_for_tokens(m_small, si, ids_s, attn_s, token_set)
             js_small.append(J_S)
             probs = probs_cache[si_idx][token_set].to(m_small.device)
-            loss = jacobian_bridge(J_L, J_S, E_L, E_S, probs)
+            loss = jacobian_gap(J_L, J_S, E_L, E_S, probs)
             losses.append(float(loss))
             del J_L, J_S
 
-        results["bridge"][f"{li}->{si}"] = {
+        results["gap"][f"{li}->{si}"] = {
             "mean": sum(losses) / len(losses),
             "values": losses,
         }
@@ -207,7 +207,7 @@ def main(
     correlations = {}
     for name in ("A", "B", "C", "D"):
         bridge_vals = [
-            all_results[name]["bridge"][f"{li}->{si}"]["mean"]
+            all_results[name]["gap"][f"{li}->{si}"]["mean"]
             for li, si in schemes[name]["pairs"]
         ]
         depths = [si for li, si in schemes[name]["pairs"]]
@@ -218,11 +218,11 @@ def main(
     # Spearman(A,B), Spearman(A,C), Spearman(A,D): correlate bridge losses by position
     for n2 in ("B", "C", "D"):
         vA = [
-            all_results["A"]["bridge"][f"{li}->{si}"]["mean"]
+            all_results["A"]["gap"][f"{li}->{si}"]["mean"]
             for li, si in schemes["A"]["pairs"]
         ]
         vB = [
-            all_results[n2]["bridge"][f"{li}->{si}"]["mean"]
+            all_results[n2]["gap"][f"{li}->{si}"]["mean"]
             for li, si in schemes[n2]["pairs"]
         ]
         min_len = min(len(vA), len(vB))
@@ -235,13 +235,13 @@ def main(
     for li_a, si_a in schemes["A"]["pairs"]:
         for n2 in ("B", "C", "D"):
             val_b_list = [
-                all_results[n2]["bridge"][f"{ll}->{ss}"]["mean"]
+                all_results[n2]["gap"][f"{ll}->{ss}"]["mean"]
                 for ll, ss in schemes[n2]["pairs"]
             ]
             for idx, val_b in enumerate(val_b_list):
                 si_b = schemes[n2]["pairs"][idx][1]
                 if abs(si_a - si_b) <= 2:  # within 2 layers
-                    val_a = all_results["A"]["bridge"][f"{li_a}->{si_a}"]["mean"]
+                    val_a = all_results["A"]["gap"][f"{li_a}->{si_a}"]["mean"]
                     max_abs_diff = max(max_abs_diff, abs(val_a - val_b))
     correlations["max_abs_diff_schemes"] = float(max_abs_diff)
 
@@ -257,7 +257,7 @@ def main(
     print("\n=== Summary ===")
     for name in ("A", "B", "C", "D"):
         bridge_means = [
-            all_results[name]["bridge"][f"{li}->{si}"]["mean"]
+            all_results[name]["gap"][f"{li}->{si}"]["mean"]
             for li, si in schemes[name]["pairs"]
         ]
         print(f"\nScheme {name}:")

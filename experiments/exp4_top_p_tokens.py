@@ -23,7 +23,7 @@ from prism.calibration import (
     load_calibration_data,
     uniform_layer_mapping,
 )
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.jacobian import compute_jacobian_for_tokens
 
 
@@ -146,7 +146,7 @@ def main(
             attn_S = sample["attention_mask"].to(model_S.device)
             J_S = compute_jacobian_for_tokens(model_S, l_S, ids_S, attn_S, token_set)
 
-            loss = jacobian_bridge(J_L, J_S, EL, ES, probs)
+            loss = jacobian_gap(J_L, J_S, EL, ES, probs)
             layer_losses[f"{l_L}->{l_S}"] = loss
             print(f"  {l_L}->{l_S}: loss={loss:.6f}")
 

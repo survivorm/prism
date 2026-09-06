@@ -1,10 +1,10 @@
 """Experiment 4: Sensitivity to K (token set size) — cross-model (FIXED).
 
-v1 was BROKEN: it used the self-bridge `jacobian_bridge(J, J, E, E)` on a
+v1 was BROKEN: it used the self-bridge `jacobian_gap(J, J, E, E)` on a
 single (0.8B) model, so 4B was never loaded and every value was the identity
 case (~0.0) — that measured nothing about K. v2 mirrors exp4_u: load BOTH
 4B (large) + 0.8B (small), build the token set from the 4B top-K final logits,
-and compute the cross-bridge `jacobian_bridge(J_L, J_S, E_L, E_S, probs)`.
+and compute the cross-bridge `jacobian_gap(J_L, J_S, E_L, E_S, probs)`.
 
 Question: does L_bridge(4B->0.8B) stabilize as K grows? (n_samples>=4, K->256.)
 """
@@ -22,7 +22,7 @@ from prism.calibration import (
     load_calibration_data,
     uniform_layer_mapping,
 )
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.jacobian import compute_jacobian_for_tokens
 
 
@@ -91,7 +91,7 @@ def main(
             J_S = compute_jacobian_for_tokens(
                 model_S, l_S, ids, attn, token_set
             )
-            loss = jacobian_bridge(J_L, J_S, E_L, E_S, probs)
+            loss = jacobian_gap(J_L, J_S, E_L, E_S, probs)
             layer_losses[f"{l_L}->{l_S}"] = loss
 
         avg = sum(layer_losses.values()) / max(len(layer_losses), 1)

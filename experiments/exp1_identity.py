@@ -2,7 +2,7 @@
 
 With pinv Gramian correction, J @ E^T @ E @ (E^T @ E)^{-1} = J,
 so identity loss is ~1e-7. The validation is:
-1. L_bridge ≈ 0 for J == J (projection correction works)
+1. gap ≈ 0 for J == J (projection correction works)
 2. Determinism: J computed twice is identical
 """
 
@@ -21,7 +21,7 @@ from prism.calibration import (
     uniform_layer_mapping,
 )
 from prism.jacobian import compute_jacobian_for_tokens
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 
 
 def main(
@@ -70,7 +70,7 @@ def main(
                 logits = model_obj(input_ids=ids).logits[:, -1, :]
                 probs = torch.softmax(logits[0, token_set], dim=-1)
 
-            loss = jacobian_bridge(J, J, E, E, probs)
+            loss = jacobian_gap(J, J, E, E, probs)
             losses.append(loss)
 
         avg = sum(losses) / len(losses)
@@ -113,8 +113,8 @@ def main(
     with open(os.path.join(results_dir, "exp1_identity.json"), "w") as f:
         json.dump(out, f, indent=2)
 
-    print(f"\nMean L_bridge: {out['mean_loss']:.6f}")
-    print(f"Max L_bridge:  {max_loss:.6f}")
+    print(f"\nMean gap: {out['mean_loss']:.6f}")
+    print(f"Max gap:  {max_loss:.6f}")
     print(f"Determinism:   {'PASS' if det_ok else 'FAIL'}")
     return out, det_ok
 

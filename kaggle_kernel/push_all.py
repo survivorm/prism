@@ -25,9 +25,9 @@ KERNELS = {
     # update id/slug to match (re-push 409-conflicts otherwise, see exp17).
     "exp6_l18_snr": {
         "dir": "kernel-exp6l18",
-        "slug": "prism-exp6-l18-snr",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp6-l18-snr",
-        "title": "Prism: Exp 6 L18 SNR (headline re-run)",
+        "title": "Prism: exp6-l18-snr",
         "exp_file": "experiments/exp6_l18_snr.py",
         "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 256\n",
         "note": "MANDATORY: data LOST (results/exp6_l18_snr.json absent from "
@@ -37,71 +37,71 @@ KERNELS = {
         "dir": "kernel-exp2",
         "slug": "prism-exp2-heatmap",
         "id": "voroninmichael/prism-exp2-heatmap",
-        "title": "Prism: Exp 2 heatmap",
+        "title": "Prism: exp2-heatmap",
         "exp_file": "experiments/exp2_heatmap.py",
         "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\n",
         "note": "optional: full 32x24 heatmap, n=8, K=64 (was thin n=3/K=8).",
     },
     "exp4_k_sensitivity": {
         "dir": "kernel-exp4k",
-        "slug": "prism-exp4-k-sensitivity",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp4-k-sensitivity",
-        "title": "Prism: Exp 4 K-sensitivity",
+        "title": "Prism: exp4-k-sensitivity",
         "exp_file": "experiments/exp4_k_sensitivity.py",
         "runner_extra": "kwargs['n_samples'] = 4\n",
         "note": "fixed: cross-bridge 4B->0.8B (v1 broken self-bridge) + K->256, n=4.",
     },
     "exp11c_defrag_bridge": {
         "dir": "kernel-exp11c",
-        "slug": "prism-exp11c-defrag-bridge",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp11c-defrag-bridge",
-        "title": "Prism: Exp 11c defrag bridge",
+        "title": "Prism: exp11c-defrag-bridge",
         "exp_file": "experiments/exp11c_defrag_bridge.py",
         "runner_extra": "kwargs['n_samples'] = 8\n",
         "note": "n=8 (was n=1): bridge degradation vs defrag r.",
     },
     "exp10b_gauge_bridge": {
         "dir": "kernel-exp10b",
-        "slug": "prism-exp10b-gauge-bridge",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp10b-gauge-bridge",
-        "title": "Prism: Exp 10b gauge bridge",
+        "title": "Prism: exp10b-gauge-bridge",
         "exp_file": "experiments/exp10b_gauge_bridge.py",
         "runner_extra": "kwargs['n_samples'] = 8\n",
         "note": "n=8 (was n=1): gauge/bridge.",
     },
     "exp4_top_p_tokens": {
         "dir": "kernel-exp4topp",
-        "slug": "prism-exp4-top-p-tokens",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp4-top-p-tokens",
-        "title": "Prism: Exp 4 top-p tokens",
+        "title": "Prism: exp4-top-p-tokens",
         "exp_file": "experiments/exp4_top_p_tokens.py",
         "runner_extra": "kwargs['n_samples'] = 4\n",
         "note": "optional: token-set-bias claim (never ran).",
     },
     "exp13": {
         "dir": "kernel-exp13",
-        "slug": "prism-exp13-domain-esg",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp13-domain-esg",
         "title": "Prism: Domain-specific ESG",
         "sources": ["voroninmichael/prism-exp13-domain-esg"],
     },
     "exp14": {
         "dir": "kernel-exp14",
-        "slug": "prism-exp14-snr-pr",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp14-snr-pr",
         "title": "Prism: SNR & Participation Ratio",
         "sources": ["voroninmichael/prism-exp14-snr-pr"],
     },
     "exp15": {
         "dir": "kernel-exp15",
-        "slug": "prism-exp15-gdn-anchors",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp15-gdn-anchors",
         "title": "Prism: GDN Anchor Shifts",
         "sources": ["voroninmichael/prism-exp15-gdn-anchors"],
     },
     "exp6": {
         "dir": "kernel-exp6",
-        "slug": "prism-kl-baseline",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-kl-baseline",
         "title": "Prism: KL Baseline",
         "sources": ["voroninmichael/prism-kl-baseline"],
@@ -112,7 +112,7 @@ KERNELS = {
         # 'prism-exp16-stage0-targets' is a stale handle: `kernels pull`->404,
         # not in `kaggle kernels list`, rejected as a kernel source by the
         # server. Only the legacy `kernels output` path still resolves it.
-        "slug": "exp16-stage-0-target-jacobian-cache",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/exp16-stage-0-target-jacobian-cache",
         "title": "Exp16: Stage 0 - Target Jacobian Cache",
         "exp_file": "experiments/exp16_stage0_targets.py",
@@ -121,7 +121,7 @@ KERNELS = {
     },
     "exp16_readout": {
         "dir": "kernel-exp16r",
-        "slug": "prism-readout-pull",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-readout-pull",
         "title": "Prism: Readout Pull",
         "exp_file": "experiments/exp16_readout_pull.py",
@@ -135,7 +135,7 @@ KERNELS = {
         # Live kernel slug: title 'Prism: LoRA Distillation' resolves to
         # prism-lora-distillation (kaggle derives the handle from the title).
         # The old prism-exp17-lora-distill id 409-conflicts (title != id).
-        "slug": "prism-lora-distillation",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-lora-distillation",
         "title": "Prism: LoRA Distillation",
         # Explicit: glob exp17_*.py now also matches exp17_grad_sanity.py.
@@ -157,7 +157,7 @@ KERNELS = {
         "dir": "kernel-exp16_4_3",
         # Actual Kaggle slug is title-derived: prism-exp16-4-3-v23-single-pair-fd-check
         # (registry id must match it or re-push 409-conflicts, like exp17 did).
-        "slug": "prism-exp16-4-3-v23-single-pair-fd-check",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp16-4-3-v23-single-pair-fd-check",
         "title": "Prism: Exp16 4_3 (v23 single pair + FD check)",
         "exp_file": "experiments/exp17_lora_distill.py",
@@ -171,7 +171,7 @@ KERNELS = {
     },
     "exp18": {
         "dir": "kernel-exp18",
-        "slug": "prism-exp18-logit-kd",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp18-logit-kd",
         "title": "Prism: Logit KD Control",
         "exp_file": "experiments/exp18_logit_kd.py",
@@ -180,7 +180,7 @@ KERNELS = {
     },
     "exp19": {
         "dir": "kernel-exp19",
-        "slug": "prism-exp19-destruction",
+        "slug": "exp4-top-p-tokens",
         "id": "voroninmichael/prism-exp19-destruction",
         "title": "Prism: Destruction Detector",
         "sources": [

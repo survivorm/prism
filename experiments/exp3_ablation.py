@@ -24,10 +24,10 @@ from prism.bridge import (
     _valid_mask,
     _weighted_cosine_loss,
 )
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 
 
-def jacobian_bridge_raw(
+def jacobian_gap_raw(
     J_L: torch.Tensor,
     J_S: torch.Tensor,
     E_L: torch.Tensor,
@@ -54,7 +54,7 @@ def random_orthogonal_matrix(rows: int, cols: int, device) -> torch.Tensor:
     return Q
 
 
-def jacobian_bridge_random(
+def jacobian_gap_random(
     J: torch.Tensor,  # [K, D] — original jacobian at layer
     E: torch.Tensor,  # [V, D] — embeddings
     probs_L: torch.Tensor,
@@ -122,9 +122,9 @@ def main(
                 logits = model_obj(input_ids=ids).logits[:, -1, :]
                 probs = torch.softmax(logits[0, token_set], dim=-1)
 
-            l_c = jacobian_bridge(J, J, E, E, probs)
-            l_r = jacobian_bridge_raw(J, J, E, E, probs)
-            l_rand = jacobian_bridge_random(J, E, probs)
+            l_c = jacobian_gap(J, J, E, E, probs)
+            l_r = jacobian_gap_raw(J, J, E, E, probs)
+            l_rand = jacobian_gap_random(J, E, probs)
             losses_c.append(l_c)
             losses_r.append(l_r)
             losses_rand.append(l_rand)

@@ -11,7 +11,7 @@ import os
 import torch
 
 from prism.calibration import extract_embeddings, load_calibration_data
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.jacobian import compute_jacobian_for_tokens
 
 
@@ -62,7 +62,7 @@ def main(
     # Baseline: normal embeddings
     for layer in [0, 12, 23]:
         J = compute_jacobian_for_tokens(m, layer, ids, attn, token_set)
-        loss = jacobian_bridge(J, J, E, E, probs)
+        loss = jacobian_gap(J, J, E, E, probs)
         results[f"baseline_layer_{layer}"] = loss
         print(f"baseline layer {layer}: {loss:.2e}")
 
@@ -73,14 +73,14 @@ def main(
 
     for layer in [0, 12, 23]:
         J = compute_jacobian_for_tokens(m, layer, ids, attn, token_set)
-        loss = jacobian_bridge(J, J, E_perm, E, probs)
+        loss = jacobian_gap(J, J, E_perm, E, probs)
         results[f"perm_layer_{layer}"] = loss
         print(f"permuted layer {layer}: {loss:.2e}")
 
     # Inverse permuted (E permuted as both L and S)
     for layer in [0, 12, 23]:
         J = compute_jacobian_for_tokens(m, layer, ids, attn, token_set)
-        loss = jacobian_bridge(J, J, E_perm, E_perm, probs)
+        loss = jacobian_gap(J, J, E_perm, E_perm, probs)
         results[f"inv_perm_layer_{layer}"] = loss
         print(f"inv_perm layer {layer}: {loss:.2e}")
 

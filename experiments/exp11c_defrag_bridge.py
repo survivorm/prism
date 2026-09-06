@@ -3,7 +3,7 @@
 4B→0.8B, bridge curve vs depth. Compare:
   - raw-J (from exp4),
   - softmax-J (from exp10b),
-  - defrag-r at r=16 (reconstructed J^(p) → jacobian_bridge).
+  - defrag-r at r=16 (reconstructed J^(p) → jacobian_gap).
 
 Metric: Spearman between curves; monotonicity (early > late).
 """
@@ -20,7 +20,7 @@ from prism.calibration import (
     load_calibration_data,
     uniform_layer_mapping,
 )
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.jacobian import (
     compute_jacobian_for_tokens,
     softmax_jacobian,
@@ -109,12 +109,12 @@ def main(
         J_S = compute_jacobian_for_tokens(model_S, l_S, ids, attn, token_set)
 
         # Raw
-        loss_raw = jacobian_bridge(J_L, J_S, E_L, E_S, p_L)
+        loss_raw = jacobian_gap(J_L, J_S, E_L, E_S, p_L)
 
         # Softmax gauge-free
         J_L_p = softmax_jacobian(J_L, p_L)
         J_S_p = softmax_jacobian(J_S, p_S)
-        loss_soft = jacobian_bridge(J_L_p, J_S_p, E_L, E_S, p_L)
+        loss_soft = jacobian_gap(J_L_p, J_S_p, E_L, E_S, p_L)
 
         # Defrag reconstruction
         for r in rs:
@@ -133,14 +133,14 @@ def main(
             J_L_tilde = U_L @ (U_L.T @ J_L_p)  # [K, D]
             J_S_tilde = U_S @ (U_S.T @ J_S_p)  # [K, D]
 
-            loss_dr = jacobian_bridge(J_L_tilde, J_S_tilde, E_L, E_S, p_L)
+            loss_dr = jacobian_gap(J_L_tilde, J_S_tilde, E_L, E_S, p_L)
             results[f"defrag_{r}"]["per_layer"].append(
-                {"layer": f"{l_L}->{l_S}", "loss": loss_dr}
+                {"layer": f"{l_L}->{l_S}",  "gap": loss_dr}
             )
 
-        results["raw"]["per_layer"].append({"layer": f"{l_L}->{l_S}", "loss": loss_raw})
+        results["raw"]["per_layer"].append({"layer": f"{l_L}->{l_S}",  "gap": loss_raw})
         results["softmax"]["per_layer"].append(
-            {"layer": f"{l_L}->{l_S}", "loss": loss_soft}
+            {"layer": f"{l_L}->{l_S}",  "gap": loss_soft}
         )
 
         print(

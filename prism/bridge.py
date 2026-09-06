@@ -9,7 +9,7 @@ _gramian_cache: dict[str, torch.Tensor] = {}
 _GRAMIAN_DIR = os.path.join("results", ".gramians")
 
 
-def jacobian_bridge(
+def jacobian_gap(
     J_L: torch.Tensor,
     J_S: torch.Tensor,
     E_L: torch.Tensor,
@@ -103,3 +103,7 @@ def _weighted_cosine_loss(
     w = probs[mask]
     w = w / (w.sum() + 1e-8)
     return (w * (1.0 - cos_sim)).sum().item()
+
+# Deprecated alias: the "bridge" historically meant the 1-cos LOSS (lower=better).
+# Terminology now: bridge/cos = alignment (higher=better); gap = 1-cos (lower=better).
+jacobian_bridge = jacobian_gap

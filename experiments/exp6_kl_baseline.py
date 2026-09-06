@@ -21,7 +21,7 @@ from prism.calibration import (
     load_calibration_data,
     uniform_layer_mapping,
 )
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.jacobian import compute_jacobian_for_tokens
 
 
@@ -137,7 +137,7 @@ def main(
             with torch.no_grad():
                 probs = torch.softmax(logits_L[0, token_set], dim=-1)
 
-            loss = jacobian_bridge(J_L, J_S, E_L, E_S, probs)
+            loss = jacobian_gap(J_L, J_S, E_L, E_S, probs)
             bridge_pair.append(loss)
 
         kl_all[f"{l_L}->{l_S}"] = kl_pair
@@ -148,18 +148,18 @@ def main(
 
     # Correlation analysis
     kl_means = [sum(v) / len(v) for v in kl_all.values()]
-    bridge_means = [sum(v) / len(v) for v in bridge_all.values()]
+    gap_means = [sum(v) / len(v) for v in gap_all.values()]
 
     import scipy
 
-    corr = scipy.stats.spearmanr(kl_means, bridge_means).correlation
+    corr = scipy.stats.spearmanr(kl_means, gap_means).correlation
 
     os.makedirs(results_dir, exist_ok=True)
     output = {
         "kl_per_layer": kl_all,
-        "bridge_per_layer": bridge_all,
+        "gap_per_layer": bridge_all,
         "kl_means": kl_means,
-        "bridge_means": bridge_means,
+        "gap_means": bridge_means,
         "spearman_corr": corr,
         "n_samples": len(samples),
         "params": {

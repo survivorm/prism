@@ -12,7 +12,7 @@ import os
 import torch
 
 from prism.calibration import extract_embeddings, load_calibration_data
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 from prism.jacobian import (
     compute_jacobian_for_tokens,
     softmax_jacobian,
@@ -135,9 +135,9 @@ def main(
                 J_uniform_p[i] = row_uniform
 
             # Bridge: orig vs map-quantized
-            bridge_orig_map = jacobian_bridge(J_orig_p, J_map_p, E, E, p_tokens)
-            bridge_orig_uniform = jacobian_bridge(J_orig_p, J_uniform_p, E, E, p_tokens)
-            bridge_map_uniform = jacobian_bridge(J_map_p, J_uniform_p, E, E, p_tokens)
+            bridge_orig_map = jacobian_gap(J_orig_p, J_map_p, E, E, p_tokens)
+            bridge_orig_uniform = jacobian_gap(J_orig_p, J_uniform_p, E, E, p_tokens)
+            bridge_map_uniform = jacobian_gap(J_map_p, J_uniform_p, E, E, p_tokens)
 
             bridges_orig_map.append(bridge_orig_map)
             bridges_orig_uniform.append(bridge_orig_uniform)
