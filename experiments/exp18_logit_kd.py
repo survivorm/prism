@@ -11,9 +11,30 @@ import argparse
 import json
 import os
 import re
+import contextlib
 import time
 
 import torch
+# --- XLA / TPU support (no-op on GPU/CPU; active when device == "xla") ---
+try:
+    import torch_xla.core.xla_model as _xm
+    _XLA = True
+except Exception:
+    _xm = None
+    _XLA = False
+
+
+@contextlib.contextmanager
+def _step_cm():
+    """One optimizer step: xm.step() commits the XLA graph on TPU;
+    nullcontext on GPU/CPU (existing behavior unchanged)."""
+    if _XLA and str(_DEVICE).startswith("xla"):
+        with _xm.step():
+            yield
+    else:
+        with contextlib.nullcontext():
+            yield
+
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
@@ -35,6 +56,10 @@ def main(
 
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "xla":
+        assert _XLA, "torch_xla not installed"
+        device = _xm.xla_device()
+        torch.set_num_threads(1)
     if device == "cpu":
         torch.set_num_threads(4)
     print(f"Device: {device}")
@@ -140,55 +165,56 @@ def main(
         optimizer = torch.optim.Adam(trainable, lr=lr)
 
         for step in range(steps):
-            optimizer.zero_grad()
-            total_loss_val = 0.0
-            nan_hit = False
+            with _step_cm():
+                optimizer.zero_grad()
+                total_loss_val = 0.0
+                nan_hit = False
 
-            for si in range(n_use):
-                s = samples[si]
-                tgt = targets[si]
-                ids = s["input_ids"].to(device)
-                attn = s["attention_mask"].to(device)
+                for si in range(n_use):
+                    s = samples[si]
+                    tgt = targets[si]
+                    ids = s["input_ids"].to(device)
+                    attn = s["attention_mask"].to(device)
 
-                # Logit-KD: KL(p_ed ‖ p_L) on token_set subset.
-                # Target pairing: skip bridge-of-wrong-sample; KL leash below
-                # (eval) uses only the small model.
-                if tgt.get("_si") != si:
-                    continue
+                    # Logit-KD: KL(p_ed ‖ p_L) on token_set subset.
+                    # Target pairing: skip bridge-of-wrong-sample; KL leash below
+                    # (eval) uses only the small model.
+                    if tgt.get("_si") != si:
+                        continue
 
-                # W_eff inside the sample loop: fresh graph per backward.
-                # (W_eff shared across samples would die on the 2nd
-                # backward() — no retain_graph on Kaggle 16GB.)
-                W_eff = mS.lm_head.weight + B_lh @ A_lh  # [V, D]
-                lm_b = mS.lm_head.bias if mS.lm_head.bias is not None else 0
-                # KD target: fp32 p_L_full restricted to token_set, renormalized.
-                # (tgt["p"] is the bf16 gauge weight for the Jacobian — rounded,
-                # and its mass over token_set is renormalized to 1, so it is not
-                # the true restricted distribution; p_L_full is the exact one.)
-                p_L_full = tgt["p_L_full"].to(device).float()
-                p_L_sub = p_L_full[
-                    torch.as_tensor(token_set, dtype=torch.long, device=device)
-                ]
-                p_L_sub = p_L_sub / p_L_sub.sum()
-                out = mS.model(input_ids=ids, attention_mask=attn)
-                hidden = out.last_hidden_state[:, -1, :]  # [1, D]
-                logits_ed = hidden @ W_eff.T + lm_b  # [1, V]
-                p_ed_sub = torch.softmax(logits_ed[0, token_set].float(), dim=-1)
-                kd_loss = (
-                    p_ed_sub * torch.log(p_ed_sub.clamp_min(1e-12) / (p_L_sub + 1e-12))
-                ).mean()
-                # NaN guard: one NaN step poisons all subsequent steps of the pair
-                if not torch.isfinite(kd_loss):
-                    print(f"  [pair] sample {si}: NaN KD loss, stopping pair")
-                    nan_hit = True
+                    # W_eff inside the sample loop: fresh graph per backward.
+                    # (W_eff shared across samples would die on the 2nd
+                    # backward() — no retain_graph on Kaggle 16GB.)
+                    W_eff = mS.lm_head.weight + B_lh @ A_lh  # [V, D]
+                    lm_b = mS.lm_head.bias if mS.lm_head.bias is not None else 0
+                    # KD target: fp32 p_L_full restricted to token_set, renormalized.
+                    # (tgt["p"] is the bf16 gauge weight for the Jacobian — rounded,
+                    # and its mass over token_set is renormalized to 1, so it is not
+                    # the true restricted distribution; p_L_full is the exact one.)
+                    p_L_full = tgt["p_L_full"].to(device).float()
+                    p_L_sub = p_L_full[
+                        torch.as_tensor(token_set, dtype=torch.long, device=device)
+                    ]
+                    p_L_sub = p_L_sub / p_L_sub.sum()
+                    out = mS.model(input_ids=ids, attention_mask=attn)
+                    hidden = out.last_hidden_state[:, -1, :]  # [1, D]
+                    logits_ed = hidden @ W_eff.T + lm_b  # [1, V]
+                    p_ed_sub = torch.softmax(logits_ed[0, token_set].float(), dim=-1)
+                    kd_loss = (
+                        p_ed_sub * torch.log(p_ed_sub.clamp_min(1e-12) / (p_L_sub + 1e-12))
+                    ).mean()
+                    # NaN guard: one NaN step poisons all subsequent steps of the pair
+                    if not torch.isfinite(kd_loss):
+                        print(f"  [pair] sample {si}: NaN KD loss, stopping pair")
+                        nan_hit = True
+                        break
+                    kd_loss.backward()
+                    total_loss_val += kd_loss.item()
+
+                if nan_hit:
                     break
-                kd_loss.backward()
-                total_loss_val += kd_loss.item()
 
-            if nan_hit:
-                break
-
-            optimizer.step()
+                optimizer.step()
 
             if (step + 1) % 10 == 0 or step == 0:
                 print(f"    step {step + 1}/{steps}: loss={total_loss_val:.4f}")
