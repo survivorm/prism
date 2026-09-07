@@ -1,0 +1,11 @@
+{
+ "id": "voroninmichael/prism-canary-tpu",
+ "title": "prism-canary-tpu",
+ "code_file": "canary_tpu.py",
+ "language": "python",
+ "kernel_type": "script",
+ "is_private": "true",
+ "enable_gpu": "false",
+ "enable_tpu": "true",
+ "enable_internet": "true"
+}
