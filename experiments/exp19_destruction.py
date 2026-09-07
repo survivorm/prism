@@ -35,9 +35,30 @@ import argparse
 import json
 import os
 import re
+import contextlib
 import time
 
 import torch
+# --- XLA / TPU support (no-op on GPU/CPU; active when device == "xla") ---
+try:
+    import torch_xla.core.xla_model as _xm
+    _XLA = True
+except Exception:
+    _xm = None
+    _XLA = False
+
+
+@contextlib.contextmanager
+def _step_cm():
+    """One optimizer step: xm.step() commits the XLA graph on TPU;
+    nullcontext on GPU/CPU (existing behavior unchanged)."""
+    if _XLA and str(_DEVICE).startswith("xla"):
+        with _xm.step():
+            yield
+    else:
+        with contextlib.nullcontext():
+            yield
+
 
 from prism.calibration import load_calibration_data
 from prism.cache_io import find_targets_dir
@@ -147,6 +168,10 @@ def main(
 
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "xla":
+        assert _XLA, "torch_xla not installed"
+        device = _xm.xla_device()
+        torch.set_num_threads(1)
     if device == "cpu":
         torch.set_num_threads(4)
     print(f"Device: {device}")

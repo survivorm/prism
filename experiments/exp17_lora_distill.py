@@ -30,10 +30,29 @@ import argparse
 import json
 import os
 import re
+import contextlib
 import time
 from collections.abc import Callable
 
 import torch
+# --- XLA / TPU support (no-op on GPU/CPU; active when device == "xla") ---
+try:
+    import torch_xla.core.xla_model as _xm
+    _XLA = True
+except Exception:
+    _xm = None
+    _XLA = False
+
+
+@contextlib.contextmanager
+def _step_cm():
+    if _XLA and str(_DEVICE).startswith("xla"):
+        with _xm.step():
+            yield
+    else:
+        with contextlib.nullcontext():
+            yield
+
 from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
 from prism.calibration import load_calibration_data
@@ -79,6 +98,10 @@ def main(
 
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "xla":
+        assert _XLA, "torch_xla not installed"
+        device = _xm.xla_device()
+        torch.set_num_threads(1)
     if device == "cpu":
         torch.set_num_threads(4)
     print(f"Device: {device}")
@@ -466,192 +489,193 @@ def main(
                 print(f"    [ckpt] saved {name}")
 
             for step in range(steps):
-                step_start = time.time()
-                optimizer.zero_grad()
-                total_bridge = 0.0
-                total_kl = 0.0
-                n_bridge = 0
+                with _step_cm():
+                    step_start = time.time()
+                    optimizer.zero_grad()
+                    total_bridge = 0.0
+                    total_kl = 0.0
+                    n_bridge = 0
 
-                for si in range(n_use):
-                    s = samples[si]
-                    tgt: dict | None = sample_targets[si]
+                    for si in range(n_use):
+                        s = samples[si]
+                        tgt: dict | None = sample_targets[si]
 
-                    # Effective lm_head weight: W + B_lh @ A_lh. Rebuilt PER
-                    # SAMPLE — each sample runs its own backward() (docs #16),
-                    # so a W_eff shared across si would be freed by si=0's
-                    # backward and si=1's backward would hit "second backward"
-                    # (RuntimeError). Fresh graph per backward = no double-free.
-                    W_eff = mS.lm_head.weight + B_lh @ A_lh  # [V, D]
+                        # Effective lm_head weight: W + B_lh @ A_lh. Rebuilt PER
+                        # SAMPLE — each sample runs its own backward() (docs #16),
+                        # so a W_eff shared across si would be freed by si=0's
+                        # backward and si=1's backward would hit "second backward"
+                        # (RuntimeError). Fresh graph per backward = no double-free.
+                        W_eff = mS.lm_head.weight + B_lh @ A_lh  # [V, D]
 
-                    # KL leash — full forward (includes o_proj LoRA via hook).
-                    # v23.1: output_hidden_states=True so the l_S hidden state
-                    # is captured here and REUSED by the one-time fill and the
-                    # refresh (matrix-free rows + dense re-fill) instead of
-                    # each redoing a full forward of the same deterministic
-                    # hidden state (3 full forwards -> 1 per refresh sample).
-                    ids_s = s["input_ids"].to(device)
-                    attn_s = s["attention_mask"].to(device)
-                    # use_cache=False matches the J-path forwards so the
-                    # reused h_s is bit-identical to what refresh / re-fill do.
-                    out = mS.model(
-                        input_ids=ids_s,
-                        attention_mask=attn_s,
-                        output_hidden_states=True,
-                        use_cache=False,
-                    )
-                    hidden = out.last_hidden_state[:, -1, :]  # [1, D]
-                    h_s = (
-                        out.hidden_states[l_S + 1][:, -1:, :]
-                        if A_attn is not None
-                        and out.hidden_states is not None
-                        else None
-                    )  # [1, 1, D] l_S hidden state (graph-connected)
-                    lm_b = mS.lm_head.bias if mS.lm_head.bias is not None else 0
-                    logits_ed = hidden @ W_eff.T + lm_b  # [1, V]
-                    p_ed = torch.softmax(logits_ed.float(), dim=-1)
-                    with torch.no_grad():
-                        p_orig = torch.softmax(orig_logits_cache[si].float(), dim=-1)
-                    kl_loss = (
-                        p_ed * torch.log(p_ed.clamp_min(1e-12) / (p_orig + 1e-12))
-                    ).mean()
+                        # KL leash — full forward (includes o_proj LoRA via hook).
+                        # v23.1: output_hidden_states=True so the l_S hidden state
+                        # is captured here and REUSED by the one-time fill and the
+                        # refresh (matrix-free rows + dense re-fill) instead of
+                        # each redoing a full forward of the same deterministic
+                        # hidden state (3 full forwards -> 1 per refresh sample).
+                        ids_s = s["input_ids"].to(device)
+                        attn_s = s["attention_mask"].to(device)
+                        # use_cache=False matches the J-path forwards so the
+                        # reused h_s is bit-identical to what refresh / re-fill do.
+                        out = mS.model(
+                            input_ids=ids_s,
+                            attention_mask=attn_s,
+                            output_hidden_states=True,
+                            use_cache=False,
+                        )
+                        hidden = out.last_hidden_state[:, -1, :]  # [1, D]
+                        h_s = (
+                            out.hidden_states[l_S + 1][:, -1:, :]
+                            if A_attn is not None
+                            and out.hidden_states is not None
+                            else None
+                        )  # [1, 1, D] l_S hidden state (graph-connected)
+                        lm_b = mS.lm_head.bias if mS.lm_head.bias is not None else 0
+                        logits_ed = hidden @ W_eff.T + lm_b  # [1, V]
+                        p_ed = torch.softmax(logits_ed.float(), dim=-1)
+                        with torch.no_grad():
+                            p_orig = torch.softmax(orig_logits_cache[si].float(), dim=-1)
+                        kl_loss = (
+                            p_ed * torch.log(p_ed.clamp_min(1e-12) / (p_orig + 1e-12))
+                        ).mean()
 
-                    loss = kl_weight * kl_loss
-                    total_kl += kl_loss.item()
+                        loss = kl_weight * kl_loss
+                        total_kl += kl_loss.item()
 
-                    already_bwd = False  # True when the refresh branch
-                    # already did the (KL + bridge) backward inside
-                    # bridge_rows_backward -> skip the per-sample loss.backward().
-                    # Bridge — only for input_ids-matched targets (D1) AND
-                    # only when the student layer is full-attn (has o_proj,
-                    # A_attn set). GDN/kl_only pairs never build the held
-                    # dense J or the 2nd-order refresh (no o_proj to train).
-                    if tgt is not None and A_attn is not None:
-                        J_tgt_p = tgt["J_tgt_p"].to(device)
-                        p_L = tgt["p"].to(device).float()  # v23 A5: cache p is bf16
-                        refresh_step = False
-                        J_S_p: torch.Tensor | None = None
-                        if si not in J_norms:
-                            # one-time fill: dense J (create_graph=False = a
-                            # 4MB [D,D] fp32 matrix, no 2nd-order graph — cheap;
-                            # v22's OOM was the create_graph refresh, not this).
-                            # v23.1: reuses the KL forward's h (no full forward).
-                            J_norms[si] = compute_hidden_jacobian(
-                                mS, l_S, ids_s, attn_s, h=h_s
-                            )
+                        already_bwd = False  # True when the refresh branch
+                        # already did the (KL + bridge) backward inside
+                        # bridge_rows_backward -> skip the per-sample loss.backward().
+                        # Bridge — only for input_ids-matched targets (D1) AND
+                        # only when the student layer is full-attn (has o_proj,
+                        # A_attn set). GDN/kl_only pairs never build the held
+                        # dense J or the 2nd-order refresh (no o_proj to train).
+                        if tgt is not None and A_attn is not None:
+                            J_tgt_p = tgt["J_tgt_p"].to(device)
+                            p_L = tgt["p"].to(device).float()  # v23 A5: cache p is bf16
                             refresh_step = False
-                        elif step % k == 0:
-                            # refresh: A4 chunked bridge backward. bridge_
-                            # rows_backward forwards once (KL is the extra_loss,
-                            # backproped with chunk 0) then backprops each chunk
-                            # of K rows (C=8) of (1-cos).mean() immediately ->
-                            # peak = C+1 2nd-order row-graphs, not K (the v22
-                            # OOM was the full K=256 retained create_graph graph).
-                            # Gradients reach lm_head (live W_eff rows) AND
-                            # o_proj (HVP through h) this step. The returned
-                            # J_S_p is detached (graph consumed) — re-fill the
-                            # held dense J_norm for stale steps (v22 freshness).
-                            # held is already detached from prior stale steps
-                            # (no live graph) — drop the old one, new fill below.
-                            del J_norms[si]
-                            p_refresh = tgt["p_L_full"].to(device).float()
-                            p_refresh = (
-                                p_refresh[token_set] / p_refresh[token_set].sum()
-                            )
-                            try:
-                                rows, br = bridge_rows_backward(
-                                    mS,
-                                    l_S,
-                                    ids_s,
-                                    attn_s,
-                                    token_set,
-                                    p_refresh,
-                                    W_eff[token_set],
-                                    J_tgt_p,
-                                    extra_loss=kl_weight * kl_loss,
-                                    verbose=True,
-                                    h=h_s,
+                            J_S_p: torch.Tensor | None = None
+                            if si not in J_norms:
+                                # one-time fill: dense J (create_graph=False = a
+                                # 4MB [D,D] fp32 matrix, no 2nd-order graph — cheap;
+                                # v22's OOM was the create_graph refresh, not this).
+                                # v23.1: reuses the KL forward's h (no full forward).
+                                J_norms[si] = compute_hidden_jacobian(
+                                    mS, l_S, ids_s, attn_s, h=h_s
                                 )
-                            except (
-                                torch.cuda.OutOfMemoryError,
-                                RuntimeError,
-                            ) as e:
-                                print(
-                                    f"    [FATAL] v23 refresh OOM {pair_key} "
-                                    f"step={step} si={si}: {e}"
+                                refresh_step = False
+                            elif step % k == 0:
+                                # refresh: A4 chunked bridge backward. bridge_
+                                # rows_backward forwards once (KL is the extra_loss,
+                                # backproped with chunk 0) then backprops each chunk
+                                # of K rows (C=8) of (1-cos).mean() immediately ->
+                                # peak = C+1 2nd-order row-graphs, not K (the v22
+                                # OOM was the full K=256 retained create_graph graph).
+                                # Gradients reach lm_head (live W_eff rows) AND
+                                # o_proj (HVP through h) this step. The returned
+                                # J_S_p is detached (graph consumed) — re-fill the
+                                # held dense J_norm for stale steps (v22 freshness).
+                                # held is already detached from prior stale steps
+                                # (no live graph) — drop the old one, new fill below.
+                                del J_norms[si]
+                                p_refresh = tgt["p_L_full"].to(device).float()
+                                p_refresh = (
+                                    p_refresh[token_set] / p_refresh[token_set].sum()
                                 )
-                                os._exit(3)
-                            J_S_p = rows
-                            bridge_loss = torch.tensor(br)
-                            total_bridge += br
-                            n_bridge += 1
-                            # new dense fill (no 2nd-order graph) replaces held;
-                            # v23.1: reuses the KL forward's h (no full re-forward)
-                            J_norms[si] = compute_hidden_jacobian(
-                                mS, l_S, ids_s, attn_s, h=h_s
-                            )
-                            refresh_step = True
-                            already_bwd = True  # skip the loss.backward()
-                            # below; the per-sample optimizer.step() still runs.
-                            if device.startswith("cuda"):
-                                # A2: VRAM telemetry after the (chunked)
-                                # refresh — the peak-relevant moment.
-                                peak = torch.cuda.max_memory_allocated() / 2**30
-                                cur = torch.cuda.memory_allocated() / 2**30
-                                last_peak_vram = max(last_peak_vram, peak)
-                                print(
-                                    f"    [vram] pair={pair_key} step={step} "
-                                    f"si={si} k={k} peak={peak:.1f}G "
-                                    f"cur={cur:.1f}G"
+                                try:
+                                    rows, br = bridge_rows_backward(
+                                        mS,
+                                        l_S,
+                                        ids_s,
+                                        attn_s,
+                                        token_set,
+                                        p_refresh,
+                                        W_eff[token_set],
+                                        J_tgt_p,
+                                        extra_loss=kl_weight * kl_loss,
+                                        verbose=True,
+                                        h=h_s,
+                                    )
+                                except (
+                                    torch.cuda.OutOfMemoryError,
+                                    RuntimeError,
+                                ) as e:
+                                    print(
+                                        f"    [FATAL] v23 refresh OOM {pair_key} "
+                                        f"step={step} si={si}: {e}"
+                                    )
+                                    os._exit(3)
+                                J_S_p = rows
+                                bridge_loss = torch.tensor(br)
+                                total_bridge += br
+                                n_bridge += 1
+                                # new dense fill (no 2nd-order graph) replaces held;
+                                # v23.1: reuses the KL forward's h (no full re-forward)
+                                J_norms[si] = compute_hidden_jacobian(
+                                    mS, l_S, ids_s, attn_s, h=h_s
                                 )
-                        else:
-                            # v23.2b DUAL CADENCE: recompute the 1st-order
-                            # (no-HVP) J_norm EVERY step, reusing the KL
-                            # forward's h (cheap decoder-tail + matmul, no
-                            # 2nd-order graph). So the lm_head bridge runs on a
-                            # FRESH hidden every step (no stale-J staleness),
-                            # while the expensive 2nd-order (HVP, o_proj) stays
-                            # at k below.
-                            refresh_step = False
-                            J_norms[si] = compute_hidden_jacobian(
-                                mS, l_S, ids_s, attn_s, h=h_s
-                            )
-                        if refresh_step and J_S_p is not None:
-                            # J_S_p already detached by bridge_rows_backward
-                            # (graph consumed by the per-chunk backward). Its
-                            # (1-cos) + KL backward ran there; only recompute
-                            # the metric scalar here for logging.
-                            cos_sim = torch.nn.functional.cosine_similarity(
-                                J_S_p.float(), J_tgt_p.float(), dim=1
-                            )
-                            bridge_loss = (1.0 - cos_sim).mean()
-                        elif J_norms.get(si) is not None:
-                            # stale: held dense J_norm @ live W_eff rows ->
-                            # lm_head bridge gradient only (o_proj is refresh-only
-                            # by design; the dense path's h has no create_graph
-                            # graph). Same as v22 stale behavior.
-                            J_S = W_eff[token_set] @ J_norms[si]
-                            J_S_p = softmax_jacobian(J_S, p_L)
-                            cos_sim = torch.nn.functional.cosine_similarity(
-                                J_S_p.float(), J_tgt_p.float(), dim=1
-                            )
-                            bridge_loss = (1.0 - cos_sim).mean()
-                            loss = loss + bridge_loss
-                            total_bridge += bridge_loss.item()
-                            n_bridge += 1
+                                refresh_step = True
+                                already_bwd = True  # skip the loss.backward()
+                                # below; the per-sample optimizer.step() still runs.
+                                if device.startswith("cuda"):
+                                    # A2: VRAM telemetry after the (chunked)
+                                    # refresh — the peak-relevant moment.
+                                    peak = torch.cuda.max_memory_allocated() / 2**30
+                                    cur = torch.cuda.memory_allocated() / 2**30
+                                    last_peak_vram = max(last_peak_vram, peak)
+                                    print(
+                                        f"    [vram] pair={pair_key} step={step} "
+                                        f"si={si} k={k} peak={peak:.1f}G "
+                                        f"cur={cur:.1f}G"
+                                    )
+                            else:
+                                # v23.2b DUAL CADENCE: recompute the 1st-order
+                                # (no-HVP) J_norm EVERY step, reusing the KL
+                                # forward's h (cheap decoder-tail + matmul, no
+                                # 2nd-order graph). So the lm_head bridge runs on a
+                                # FRESH hidden every step (no stale-J staleness),
+                                # while the expensive 2nd-order (HVP, o_proj) stays
+                                # at k below.
+                                refresh_step = False
+                                J_norms[si] = compute_hidden_jacobian(
+                                    mS, l_S, ids_s, attn_s, h=h_s
+                                )
+                            if refresh_step and J_S_p is not None:
+                                # J_S_p already detached by bridge_rows_backward
+                                # (graph consumed by the per-chunk backward). Its
+                                # (1-cos) + KL backward ran there; only recompute
+                                # the metric scalar here for logging.
+                                cos_sim = torch.nn.functional.cosine_similarity(
+                                    J_S_p.float(), J_tgt_p.float(), dim=1
+                                )
+                                bridge_loss = (1.0 - cos_sim).mean()
+                            elif J_norms.get(si) is not None:
+                                # stale: held dense J_norm @ live W_eff rows ->
+                                # lm_head bridge gradient only (o_proj is refresh-only
+                                # by design; the dense path's h has no create_graph
+                                # graph). Same as v22 stale behavior.
+                                J_S = W_eff[token_set] @ J_norms[si]
+                                J_S_p = softmax_jacobian(J_S, p_L)
+                                cos_sim = torch.nn.functional.cosine_similarity(
+                                    J_S_p.float(), J_tgt_p.float(), dim=1
+                                )
+                                bridge_loss = (1.0 - cos_sim).mean()
+                                loss = loss + bridge_loss
+                                total_bridge += bridge_loss.item()
+                                n_bridge += 1
 
-                    if not already_bwd:
-                        loss.backward()
+                        if not already_bwd:
+                            loss.backward()
 
-                    # This backward consumed the grad graph. Any live
-                    # create_graph J for this si is now freed; a stale-step
-                    # backward through it would be a "second backward"
-                    # (RuntimeError). Detach it in place so its value still
-                    # drives the lm_head bridge until the next refresh
-                    # rebuilds a fresh graph (the o_proj HVP is refresh-only).
-                    J_cur = J_norms.get(si)
-                    if J_cur is not None and J_cur.grad_fn is not None:
-                        J_norms[si] = J_cur.detach()
-                optimizer.step()
+                        # This backward consumed the grad graph. Any live
+                        # create_graph J for this si is now freed; a stale-step
+                        # backward through it would be a "second backward"
+                        # (RuntimeError). Detach it in place so its value still
+                        # drives the lm_head bridge until the next refresh
+                        # rebuilds a fresh graph (the o_proj HVP is refresh-only).
+                        J_cur = J_norms.get(si)
+                        if J_cur is not None and J_cur.grad_fn is not None:
+                            J_norms[si] = J_cur.detach()
+                    optimizer.step()
 
                 step_time = time.time() - step_start
                 eta = (steps - step - 1) * step_time
