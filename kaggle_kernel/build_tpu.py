@@ -116,6 +116,11 @@ def build_tpu(exp_file, out_dir, kernel_id, title, runner_extra="", name=None, d
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, py_name), "w") as f:
         f.write(code)
+    # Local compile check: catches 'from __future__ mid-file' / any SyntaxError
+    # before burning a TPU slot (Kaggle would otherwise fail on the first cell).
+    import py_compile
+    py_compile.compile(os.path.join(out_dir, py_name), doraise=True)
+    print(f"compile OK: {py_name}")
     meta = {
         "id": kernel_id,
         "title": title,
