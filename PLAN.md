@@ -54,7 +54,11 @@
   - **Canary v5**: GDN forward OK (~47s, torch-fallback); backward HUNG (transient XLA compile failure, NOT deterministic).
   - **ROOT CAUSE (transformers 5.15.1)**: Qwen3.5 GDN = `torch_chunk_gated_delta_rule` (chunk=64, prefill seq=34 → 1 chunk padded to 64). Backward = intra-chunk triangular loop + `last_recurrent_state` chain → large reverse graph (7 GB input / 6.5 GB output on v5e-8). v5 hang = XLA HLO compile failure — **transient** (iso-canary: same code ran fine).
   - **ISO-CANARY VERDICT (COMPLETE)**: BOTH backward (eval + train) compiled in 62s. **TPU v5e-8 IS viable for all prism causal experiments.** No XLA flags needed.
-  - **NEXT**: push exp18 logit-KD on TPU (cheapest ~5min), then exp19/16/17. All 3 TPU-ready in code (device='xla' + xm.step()).
+  - **`device.startswith` bug** (exp16/17/18): `torch.device` has no `.startswith` — fixed to `str(device).startswith(("cuda","xla"))` (committed).
+  - **exp18-tpu v1** (first push): SyntaxError `from __future__` — build_tpu now strips all `__future__` imports + keeps one at top + py_compile guard (committed).
+  - **exp16r-tpu**: XLA `SIGABRT` — `Cannot infer shape for dot: f32[1024,1024] <dot> f32[65536,65536]` (65536=K²=256²). NOT prism logic (CPU repro: J=[1024,1024], J_S=[256,1024] correct, no K² matmul anywhere) — XLA shape-inference bug in `compute_hidden_jacobian`. **exp16 (3 calls) + exp17 (10 calls) TPU-blocked.**
+  - **exp18 (0 jacobian calls) + exp19 (0) TPU-safe.** exp18-tpu v4 **RUNNING** now (P1 logit-KD verdict imminent, ~5-10min).
+  - **NEXT**: exp19 TPU (after exp18), then exp16/17 on GPU (next week, 30h/wk; exp17=9.2h fits 12h slot) or TPU workaround (precompute J on CPU→upload).
 - [ ] `docs/HANDOFF_exp17_powerup.md` §4 stale: says "push full 7-pair, expect ~12h" — math in §L says 14 pair-runs ≈ 40–45h; push should be `--pairs 4_3` + single order (~9.2h). Update §4/§6 Q1 after user decision.
 
 ### GPU-очередь — ВСЕ kernels wired in pipeline (commit a79466d; push after weekly-quota reset)

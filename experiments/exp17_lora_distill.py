@@ -45,8 +45,8 @@ except Exception:
 
 
 @contextlib.contextmanager
-def _step_cm():
-    if _XLA and str(_DEVICE).startswith("xla"):
+def _step_cm(dev):
+    if _XLA and str(dev).startswith("xla"):
         with _xm.step():
             yield
     else:
@@ -489,7 +489,7 @@ def main(
                 print(f"    [ckpt] saved {name}")
 
             for step in range(steps):
-                with _step_cm():
+                with _step_cm(device):
                     step_start = time.time()
                     optimizer.zero_grad()
                     total_bridge = 0.0

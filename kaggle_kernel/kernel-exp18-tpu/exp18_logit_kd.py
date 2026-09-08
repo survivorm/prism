@@ -1,3 +1,4 @@
+from __future__ import annotations
 # ---------- TPU runtime ----------
 import os
 os.environ["PJRT_DEVICE"] = "TPU"
@@ -1142,7 +1143,6 @@ def find_targets_dir(preferred: str, input_root: str = "/kaggle/input") -> str:
         f"(mounts: {mounts}). Run Stage 0 first — it must publish results/targets/*.pt."
     )
 
-from __future__ import annotations
 
 
 def _uniform_layer_mapping(n_L: int, n_S: int) -> dict[int, int]:
@@ -1225,10 +1225,10 @@ except Exception:
     _XLA = False
 
 @contextlib.contextmanager
-def _step_cm():
+def _step_cm(dev):
     """One optimizer step: xm.step() commits the XLA graph on TPU;
     nullcontext on GPU/CPU (existing behavior unchanged)."""
-    if _XLA and str(_DEVICE).startswith("xla"):
+    if _XLA and str(dev).startswith("xla"):
         with _xm.step():
             yield
     else:
@@ -1319,7 +1319,7 @@ def main_18logitkd(
     n_pairs = len(late_to_early)
     print(f"Pairs ({n_pairs}, late→early): {late_to_early}")
 
-    steps = 100 if device.startswith("cuda") else 40
+    steps = 100 if str(device).startswith(("cuda", "xla")) else 40
     r = 4
     lr = 1e-3
 
@@ -1360,7 +1360,7 @@ def main_18logitkd(
         optimizer = torch.optim.Adam(trainable, lr=lr)
 
         for step in range(steps):
-            with _step_cm():
+            with _step_cm(device):
                 optimizer.zero_grad()
                 total_loss_val = 0.0
                 nan_hit = False

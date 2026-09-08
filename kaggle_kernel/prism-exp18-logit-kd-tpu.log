@@ -1,0 +1,44 @@
+[{"stream_name":"stderr","time":14.698620267,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/experimental/gru.py:113: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":14.698666496,"data":"  * **h_n**: tensor of shape :math:`(D * \\text{num\\_layers}, H_{out})` or\n"}
+,{"stream_name":"stderr","time":20.628067032,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/__init__.py:258: UserWarning: `tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when using PyTorch/XLA. To silence this warning, `pip uninstall -y tensorflow \u0026\u0026 pip install tensorflow-cpu`. If you are in a notebook environment such as Colab or Kaggle, restart your notebook runtime afterwards.\n"}
+,{"stream_name":"stderr","time":20.628102652,"data":"  warnings.warn(\n"}
+,{"stream_name":"stderr","time":22.448200807,"data":"/kaggle/src/script.py:10: DeprecationWarning: Use torch_xla.device instead\n"}
+,{"stream_name":"stderr","time":22.448240977,"data":"  xdev = xm.xla_device()\n"}
+,{"stream_name":"stderr","time":25.20262654,"data":"WARNING: Logging before InitGoogle() is written to STDERR\n"}
+,{"stream_name":"stderr","time":25.20267131,"data":"E0000 00:00:1788860928.695153       7 common_lib.cc:648] Could not set metric server port: INVALID_ARGUMENT: Could not find SliceBuilder port 8471 in any of the 0 ports provided in `tpu_process_addresses`=\"local\"\n"}
+,{"stream_name":"stderr","time":25.20268168,"data":"=== Source Location Trace: ===\n"}
+,{"stream_name":"stderr","time":25.20268856,"data":"learning/45eac/tfrc/runtime/common_lib.cc:238\n"}
+,{"stream_name":"stdout","time":34.304675083,"data":"[TPU] device=xla:0 torch=2.8.0+cpu\n"}
+,{"stream_name":"stderr","time":50.222333602,"data":"/kaggle/src/script.py:1256: DeprecationWarning: Use torch_xla.device instead\n"}
+,{"stream_name":"stderr","time":50.222354402,"data":"  device = _xm.xla_device()\n"}
+,{"stream_name":"stdout","time":50.222390293,"data":"Device: xla:0\n"}
+,{"stream_name":"stdout","time":50.222433402,"data":"Loading small model: Qwen/Qwen3.5-0.8B\n"}
+,{"stream_name":"stderr","time":50.402261748,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":50.402273388,"data":"WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":50.448643545,"data":"[transformers] `torch_dtype` is deprecated! Use `dtype` instead!\n"}
+,{"stream_name":"stderr","time":58.311021877,"data":"[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d\n"}
+,{"stream_name":"stderr","time":58.834095728,"data":"\rLoading weights:   0%|          | 0/320 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/320 [00:00\u003c02:08,  2.48it/s]\rLoading weights: 100%|██████████| 320/320 [00:00\u003c00:00, 777.37it/s]\n"}
+,{"stream_name":"stdout","time":60.721593377,"data":"Loading 4 calibration samples...\n"}
+,{"stream_name":"stdout","time":66.409342856,"data":"Using target cache at /kaggle/input/datasets/voroninmichael/prism-exp16-targets\n"}
+,{"stream_name":"stdout","time":68.100877695,"data":"Pairs (7, late→early): ['31_23', '25_19', '20_15', '15_11', '9_7', '4_3', '0_0']\n"}
+,{"stream_name":"stdout","time":71.421787702,"data":"\n"}
+,{"stream_name":"stdout","time":71.421826813,"data":"  Pair 31_23 (l_S=23, 4 targets)\n"}
+,{"stream_name":"stdout","time":71.424568729,"data":"[FAIL] exp18_logit_kd: module 'torch_xla.core.xla_model' has no attribute 'step'\n"}
+,{"stream_name":"stderr","time":71.428290913,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":71.428385153,"data":"  File \"/kaggle/src/script.py\", line 1596, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":71.428393933,"data":"    main_18logitkd(**kwargs)\n"}
+,{"stream_name":"stderr","time":71.428397503,"data":"  File \"/kaggle/src/script.py\", line 1363, in main_18logitkd\n"}
+,{"stream_name":"stderr","time":71.428400713,"data":"    with _step_cm(device):\n"}
+,{"stream_name":"stderr","time":71.428403463,"data":"         ^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":71.428406443,"data":"  File \"/usr/local/lib/python3.12/contextlib.py\", line 137, in __enter__\n"}
+,{"stream_name":"stderr","time":71.428409223,"data":"    return next(self.gen)\n"}
+,{"stream_name":"stderr","time":71.428412113,"data":"           ^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":71.428414763,"data":"  File \"/kaggle/src/script.py\", line 1232, in _step_cm\n"}
+,{"stream_name":"stderr","time":71.428417883,"data":"    with _xm.step():\n"}
+,{"stream_name":"stderr","time":71.428420493,"data":"         ^^^^^^^^\n"}
+,{"stream_name":"stderr","time":71.428424603,"data":"AttributeError: module 'torch_xla.core.xla_model' has no attribute 'step'\n"}
+,{"stream_name":"stdout","time":71.49279718,"data":"\n"}
+,{"stream_name":"stdout","time":71.4928331,"data":"Results:\n"}
+,{"stream_name":"stderr","time":84.757492849,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":87.8974702,"data":"[NbConvertApp] Writing 531547 bytes to __results__.html\n"}
+]

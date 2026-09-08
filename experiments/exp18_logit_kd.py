@@ -25,10 +25,10 @@ except Exception:
 
 
 @contextlib.contextmanager
-def _step_cm():
+def _step_cm(dev):
     """One optimizer step: xm.step() commits the XLA graph on TPU;
     nullcontext on GPU/CPU (existing behavior unchanged)."""
-    if _XLA and str(_DEVICE).startswith("xla"):
+    if _XLA and str(dev).startswith("xla"):
         with _xm.step():
             yield
     else:
@@ -165,7 +165,7 @@ def main(
         optimizer = torch.optim.Adam(trainable, lr=lr)
 
         for step in range(steps):
-            with _step_cm():
+            with _step_cm(device):
                 optimizer.zero_grad()
                 total_loss_val = 0.0
                 nan_hit = False
