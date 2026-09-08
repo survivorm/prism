@@ -1,44 +1,60 @@
-[{"stream_name":"stderr","time":14.698620267,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/experimental/gru.py:113: SyntaxWarning: invalid escape sequence '\\_'\n"}
-,{"stream_name":"stderr","time":14.698666496,"data":"  * **h_n**: tensor of shape :math:`(D * \\text{num\\_layers}, H_{out})` or\n"}
-,{"stream_name":"stderr","time":20.628067032,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/__init__.py:258: UserWarning: `tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when using PyTorch/XLA. To silence this warning, `pip uninstall -y tensorflow \u0026\u0026 pip install tensorflow-cpu`. If you are in a notebook environment such as Colab or Kaggle, restart your notebook runtime afterwards.\n"}
-,{"stream_name":"stderr","time":20.628102652,"data":"  warnings.warn(\n"}
-,{"stream_name":"stderr","time":22.448200807,"data":"/kaggle/src/script.py:10: DeprecationWarning: Use torch_xla.device instead\n"}
-,{"stream_name":"stderr","time":22.448240977,"data":"  xdev = xm.xla_device()\n"}
-,{"stream_name":"stderr","time":25.20262654,"data":"WARNING: Logging before InitGoogle() is written to STDERR\n"}
-,{"stream_name":"stderr","time":25.20267131,"data":"E0000 00:00:1788860928.695153       7 common_lib.cc:648] Could not set metric server port: INVALID_ARGUMENT: Could not find SliceBuilder port 8471 in any of the 0 ports provided in `tpu_process_addresses`=\"local\"\n"}
-,{"stream_name":"stderr","time":25.20268168,"data":"=== Source Location Trace: ===\n"}
-,{"stream_name":"stderr","time":25.20268856,"data":"learning/45eac/tfrc/runtime/common_lib.cc:238\n"}
-,{"stream_name":"stdout","time":34.304675083,"data":"[TPU] device=xla:0 torch=2.8.0+cpu\n"}
-,{"stream_name":"stderr","time":50.222333602,"data":"/kaggle/src/script.py:1256: DeprecationWarning: Use torch_xla.device instead\n"}
-,{"stream_name":"stderr","time":50.222354402,"data":"  device = _xm.xla_device()\n"}
-,{"stream_name":"stdout","time":50.222390293,"data":"Device: xla:0\n"}
-,{"stream_name":"stdout","time":50.222433402,"data":"Loading small model: Qwen/Qwen3.5-0.8B\n"}
-,{"stream_name":"stderr","time":50.402261748,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
-,{"stream_name":"stderr","time":50.402273388,"data":"WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
-,{"stream_name":"stderr","time":50.448643545,"data":"[transformers] `torch_dtype` is deprecated! Use `dtype` instead!\n"}
-,{"stream_name":"stderr","time":58.311021877,"data":"[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d\n"}
-,{"stream_name":"stderr","time":58.834095728,"data":"\rLoading weights:   0%|          | 0/320 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/320 [00:00\u003c02:08,  2.48it/s]\rLoading weights: 100%|██████████| 320/320 [00:00\u003c00:00, 777.37it/s]\n"}
-,{"stream_name":"stdout","time":60.721593377,"data":"Loading 4 calibration samples...\n"}
-,{"stream_name":"stdout","time":66.409342856,"data":"Using target cache at /kaggle/input/datasets/voroninmichael/prism-exp16-targets\n"}
-,{"stream_name":"stdout","time":68.100877695,"data":"Pairs (7, late→early): ['31_23', '25_19', '20_15', '15_11', '9_7', '4_3', '0_0']\n"}
-,{"stream_name":"stdout","time":71.421787702,"data":"\n"}
-,{"stream_name":"stdout","time":71.421826813,"data":"  Pair 31_23 (l_S=23, 4 targets)\n"}
-,{"stream_name":"stdout","time":71.424568729,"data":"[FAIL] exp18_logit_kd: module 'torch_xla.core.xla_model' has no attribute 'step'\n"}
-,{"stream_name":"stderr","time":71.428290913,"data":"Traceback (most recent call last):\n"}
-,{"stream_name":"stderr","time":71.428385153,"data":"  File \"/kaggle/src/script.py\", line 1596, in \u003cmodule\u003e\n"}
-,{"stream_name":"stderr","time":71.428393933,"data":"    main_18logitkd(**kwargs)\n"}
-,{"stream_name":"stderr","time":71.428397503,"data":"  File \"/kaggle/src/script.py\", line 1363, in main_18logitkd\n"}
-,{"stream_name":"stderr","time":71.428400713,"data":"    with _step_cm(device):\n"}
-,{"stream_name":"stderr","time":71.428403463,"data":"         ^^^^^^^^^^^^^^^^\n"}
-,{"stream_name":"stderr","time":71.428406443,"data":"  File \"/usr/local/lib/python3.12/contextlib.py\", line 137, in __enter__\n"}
-,{"stream_name":"stderr","time":71.428409223,"data":"    return next(self.gen)\n"}
-,{"stream_name":"stderr","time":71.428412113,"data":"           ^^^^^^^^^^^^^^\n"}
-,{"stream_name":"stderr","time":71.428414763,"data":"  File \"/kaggle/src/script.py\", line 1232, in _step_cm\n"}
-,{"stream_name":"stderr","time":71.428417883,"data":"    with _xm.step():\n"}
-,{"stream_name":"stderr","time":71.428420493,"data":"         ^^^^^^^^\n"}
-,{"stream_name":"stderr","time":71.428424603,"data":"AttributeError: module 'torch_xla.core.xla_model' has no attribute 'step'\n"}
-,{"stream_name":"stdout","time":71.49279718,"data":"\n"}
-,{"stream_name":"stdout","time":71.4928331,"data":"Results:\n"}
-,{"stream_name":"stderr","time":84.757492849,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
-,{"stream_name":"stderr","time":87.8974702,"data":"[NbConvertApp] Writing 531547 bytes to __results__.html\n"}
+[{"stream_name":"stderr","time":15.149671057,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/experimental/gru.py:113: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":15.149743437,"data":"  * **h_n**: tensor of shape :math:`(D * \\text{num\\_layers}, H_{out})` or\n"}
+,{"stream_name":"stderr","time":20.616200219,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/__init__.py:258: UserWarning: `tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when using PyTorch/XLA. To silence this warning, `pip uninstall -y tensorflow \u0026\u0026 pip install tensorflow-cpu`. If you are in a notebook environment such as Colab or Kaggle, restart your notebook runtime afterwards.\n"}
+,{"stream_name":"stderr","time":20.616279459,"data":"  warnings.warn(\n"}
+,{"stream_name":"stderr","time":22.403028361,"data":"/kaggle/src/script.py:10: DeprecationWarning: Use torch_xla.device instead\n"}
+,{"stream_name":"stderr","time":22.403056121,"data":"  xdev = xm.xla_device()\n"}
+,{"stream_name":"stderr","time":25.431538858,"data":"WARNING: Logging before InitGoogle() is written to STDERR\n"}
+,{"stream_name":"stderr","time":25.431579829,"data":"E0000 00:00:1788869689.367143       7 common_lib.cc:648] Could not set metric server port: INVALID_ARGUMENT: Could not find SliceBuilder port 8471 in any of the 0 ports provided in `tpu_process_addresses`=\"local\"\n"}
+,{"stream_name":"stderr","time":25.431594369,"data":"=== Source Location Trace: ===\n"}
+,{"stream_name":"stderr","time":25.431598949,"data":"learning/45eac/tfrc/runtime/common_lib.cc:238\n"}
+,{"stream_name":"stdout","time":34.781627773,"data":"[TPU] device=xla:0 torch=2.8.0+cpu\n"}
+,{"stream_name":"stdout","time":50.696396214,"data":"Device: xla:0\n"}
+,{"stream_name":"stdout","time":50.696442625,"data":"Loading small model: Qwen/Qwen3.5-0.8B\n"}
+,{"stream_name":"stderr","time":50.696463714,"data":"/kaggle/src/script.py:1253: DeprecationWarning: Use torch_xla.device instead\n"}
+,{"stream_name":"stderr","time":50.696502005,"data":"  device = _xm.xla_device()\n"}
+,{"stream_name":"stderr","time":50.893294449,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":50.8933149,"data":"WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":50.940275683,"data":"[transformers] `torch_dtype` is deprecated! Use `dtype` instead!\n"}
+,{"stream_name":"stderr","time":59.162464904,"data":"[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d\n"}
+,{"stream_name":"stderr","time":59.690588604,"data":"\rLoading weights:   0%|          | 0/320 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/320 [00:00\u003c02:10,  2.45it/s]\rLoading weights: 100%|██████████| 320/320 [00:00\u003c00:00, 767.63it/s]\n"}
+,{"stream_name":"stdout","time":61.286330417,"data":"Loading 4 calibration samples...\n"}
+,{"stream_name":"stdout","time":66.876440075,"data":"Using target cache at /kaggle/input/datasets/voroninmichael/prism-exp16-targets\n"}
+,{"stream_name":"stdout","time":69.049525601,"data":"Pairs (7, late→early): ['31_23', '25_19', '20_15', '15_11', '9_7', '4_3', '0_0']\n"}
+,{"stream_name":"stdout","time":72.309383981,"data":"\n"}
+,{"stream_name":"stdout","time":72.309438031,"data":"  Pair 31_23 (l_S=23, 4 targets)\n"}
+,{"stream_name":"stderr","time":167.178310024,"data":"/kaggle/src/script.py:1233: DeprecationWarning: Use torch_xla.sync instead\n"}
+,{"stream_name":"stderr","time":167.178388774,"data":"  _xm.mark_step()\n"}
+,{"stream_name":"stdout","time":403.930508619,"data":"    step 1/100: loss=0.0056\n"}
+,{"stream_name":"stdout","time":652.898678304,"data":"    step 10/100: loss=0.0025\n"}
+,{"stream_name":"stdout","time":686.323881164,"data":"    step 20/100: loss=0.0012\n"}
+,{"stream_name":"stdout","time":719.698920062,"data":"    step 30/100: loss=0.0002\n"}
+,{"stream_name":"stdout","time":753.734691532,"data":"    step 40/100: loss=0.0001\n"}
+,{"stream_name":"stdout","time":787.877801799,"data":"    step 50/100: loss=0.0001\n"}
+,{"stream_name":"stdout","time":821.408425403,"data":"    step 60/100: loss=0.0001\n"}
+,{"stream_name":"stdout","time":854.779423476,"data":"    step 70/100: loss=0.0000\n"}
+,{"stream_name":"stdout","time":888.25120206,"data":"    step 80/100: loss=0.0000\n"}
+,{"stream_name":"stdout","time":922.226984609,"data":"    step 90/100: loss=0.0000\n"}
+,{"stream_name":"stdout","time":956.698605173,"data":"    step 100/100: loss=0.0000\n"}
+,{"stream_name":"stdout","time":958.413728806,"data":"[FAIL] exp18_logit_kd: 'LinearAttentionLayer' object has no attribute 'number_of_states'\n"}
+,{"stream_name":"stderr","time":958.415198246,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":958.415352726,"data":"  File \"/kaggle/src/script.py\", line 1593, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":958.415360797,"data":"    main_18logitkd(**kwargs)\n"}
+,{"stream_name":"stderr","time":958.415365117,"data":"  File \"/kaggle/src/script.py\", line 1431, in main_18logitkd\n"}
+,{"stream_name":"stderr","time":958.415368946,"data":"    J_S_ed = compute_jacobian_for_tokens(mS, l_S, ids, attn, token_set)\n"}
+,{"stream_name":"stderr","time":958.415372766,"data":"             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":958.415376357,"data":"  File \"/kaggle/src/script.py\", line 59, in compute_jacobian_for_tokens\n"}
+,{"stream_name":"stderr","time":958.415380026,"data":"    logits = _run_decoder_pass(model, prefix_cache, h, S, layer_idx)\n"}
+,{"stream_name":"stderr","time":958.415383637,"data":"             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":958.415387137,"data":"  File \"/kaggle/src/script.py\", line 209, in _run_decoder_pass\n"}
+,{"stream_name":"stderr","time":958.415390646,"data":"    cache_clone = _deep_clone_cache(prefix_cache)\n"}
+,{"stream_name":"stderr","time":958.415394077,"data":"                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":958.415397506,"data":"  File \"/kaggle/src/script.py\", line 139, in _deep_clone_cache\n"}
+,{"stream_name":"stderr","time":958.415401146,"data":"    nl.number_of_states = layer.number_of_states\n"}
+,{"stream_name":"stderr","time":958.415404637,"data":"                          ^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":958.415408086,"data":"AttributeError: 'LinearAttentionLayer' object has no attribute 'number_of_states'\n"}
+,{"stream_name":"stdout","time":958.456968678,"data":"\n"}
+,{"stream_name":"stdout","time":958.457006588,"data":"Results:\n"}
+,{"stream_name":"stderr","time":972.826682507,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":976.118168501,"data":"[NbConvertApp] Writing 531297 bytes to __results__.html\n"}
 ]

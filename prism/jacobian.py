@@ -121,21 +121,23 @@ def _deep_clone_cache(cache):
                     setattr(nl, k, _copy.deepcopy(v))
             new_cache.layers.append(nl)
         else:
+            # GDN (LinearAttentionLayer). Clone every state field dynamically
+            # rather than hardcoding transformers-5.15.1 attribute names
+            # (number_of_states, conv_states, ...): other transformers versions
+            # on other backends (e.g. the Kaggle TPU torch 2.8 image) name some
+            # differently, and a hardcoded name crashes with AttributeError.
+            # Tensors (or dicts of tensors) are clone+detached; scalars and
+            # flag-dicts are deep-copied. This is the generic form of the old
+            # field-by-field copy and behaves identically on 5.15.1.
             nl = LinearAttentionLayer()
-            nl.number_of_states = layer.number_of_states
-            nl.conv_states = {k: _cl(v) for k, v in layer.conv_states.items()}
-            nl.recurrent_states = {k: _cl(v) for k, v in layer.recurrent_states.items()}
-            nl.is_conv_states_initialized = dict(layer.is_conv_states_initialized)
-            nl.is_recurrent_states_initialized = dict(
-                layer.is_recurrent_states_initialized
-            )
-            nl.has_previous_state = dict(layer.has_previous_state)
-            nl.conv_kernel_size = dict(layer.conv_kernel_size)
-            nl.device = layer.device
-            nl.dtype = layer.dtype
-            nl.record_past = layer.record_past
             for k, v in vars(layer).items():
-                if k not in vars(nl):
+                if isinstance(v, torch.Tensor):
+                    setattr(nl, k, _cl(v))
+                elif isinstance(v, dict) and v and all(
+                    isinstance(x, torch.Tensor) for x in v.values()
+                ):
+                    setattr(nl, k, {kk: _cl(xv) for kk, xv in v.items()})
+                else:
                     setattr(nl, k, _copy.deepcopy(v))
             new_cache.layers.append(nl)
     return new_cache
