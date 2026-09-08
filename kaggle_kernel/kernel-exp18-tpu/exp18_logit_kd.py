@@ -1226,14 +1226,11 @@ except Exception:
 
 @contextlib.contextmanager
 def _step_cm(dev):
-    """One optimizer step: xm.step() commits the XLA graph on TPU;
-    nullcontext on GPU/CPU (existing behavior unchanged)."""
+    """PJRT training step: mark_step() after the block commits the XLA graph
+    on TPU; no-op on GPU/CPU. PJRT uses mark_step(), not old XRT-only xm.step()."""
+    yield
     if _XLA and str(dev).startswith("xla"):
-        with _xm.step():
-            yield
-    else:
-        with contextlib.nullcontext():
-            yield
+        _xm.mark_step()
 
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]

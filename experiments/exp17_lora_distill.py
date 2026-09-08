@@ -46,12 +46,9 @@ except Exception:
 
 @contextlib.contextmanager
 def _step_cm(dev):
+    yield
     if _XLA and str(dev).startswith("xla"):
-        with _xm.step():
-            yield
-    else:
-        with contextlib.nullcontext():
-            yield
+        _xm.mark_step()
 
 from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
