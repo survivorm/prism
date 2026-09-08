@@ -48,11 +48,11 @@ resolve_model = lambda hf_id: hf_id  # noqa: E731  # stub for local type checkin
 
 
 def _gd_steps(device: str) -> int:
-    return 100 if device.startswith("cuda") else 40
+    return 100 if str(device).startswith(("cuda", "xla")) else 40
 
 
 def _eval_every(device: str) -> int:
-    return 10 if device.startswith("cuda") else 10
+    return 10 if str(device).startswith(("cuda", "xla")) else 10
 
 
 def main(
@@ -68,7 +68,7 @@ def main(
     samples_from_targets: bool = False,
 ):
     torch.manual_seed(42)
-    if device.startswith("cuda"):
+    if str(device).startswith(("cuda", "xla")):
         gc.collect()
         torch.cuda.empty_cache()
     start = time.time()
@@ -134,7 +134,7 @@ def main(
         # target pair's ids (pairing trivially exact; offline smoke's
         # only purpose is mechanics, not science).
         t0 = list(cache_by_pair.values())[-1][0]
-        n_samples = min(2 if not device.startswith("cuda") else 4,
+        n_samples = min(2 if not str(device).startswith(("cuda", "xla")) else 4,
                         len(list(cache_by_pair.values())[-1]))
         samples = [
             {
@@ -145,7 +145,7 @@ def main(
         ]
         print(f"  (offline: {n_samples} samples from target cache input_ids)")
     else:
-        n_samples = 2 if not device.startswith("cuda") else 4
+        n_samples = 2 if not str(device).startswith(("cuda", "xla")) else 4
         print(f"Loading {n_samples} calibration samples...")
         samples = load_calibration_data(
             small_model,
@@ -352,7 +352,7 @@ def main(
 
     del optimizer
     gc.collect()
-    if device.startswith("cuda"):
+    if str(device).startswith(("cuda", "xla")):
         torch.cuda.empty_cache()
 
     # -- α* (the knee): largest step t with Δbridge ≥ knee_tol -------------

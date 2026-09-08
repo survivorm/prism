@@ -124,7 +124,7 @@ def main(
     n_pairs = len(late_to_early)
     print(f"Pairs ({n_pairs}, late→early): {late_to_early}")
 
-    steps = 100 if device.startswith("cuda") else 40
+    steps = 100 if str(device).startswith(("cuda", "xla")) else 40
     r = 4
     lr = 1e-3
 

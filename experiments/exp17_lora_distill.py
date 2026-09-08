@@ -158,7 +158,7 @@ def main(
     # C1: v23 = max 300 steps per pair (early-stop may end sooner). Local
     # CPU stays at 40 (smoke) unless --steps is given.
     if steps <= 0:
-        steps = 500 if device.startswith("cuda") else 40
+        steps = 500 if str(device).startswith(("cuda", "xla")) else 40
     r = 4
     lr = 3e-3
     kl_weight = 0.1
@@ -616,7 +616,7 @@ def main(
                                 refresh_step = True
                                 already_bwd = True  # skip the loss.backward()
                                 # below; the per-sample optimizer.step() still runs.
-                                if device.startswith("cuda"):
+                                if str(device).startswith(("cuda", "xla")):
                                     # A2: VRAM telemetry after the (chunked)
                                     # refresh — the peak-relevant moment.
                                     peak = torch.cuda.max_memory_allocated() / 2**30
