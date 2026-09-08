@@ -38,7 +38,15 @@ PRISM_DEPS = [
     "prism.layer_selection",
 ]
 
-HEADER = '''# ---------- TPU runtime ----------
+def _strip_future(s: str) -> str:
+    """Remove 'from __future__' lines (a single one is placed at file top)."""
+    return "\n".join(l for l in s.split("\n") if not l.strip().startswith("from __future__"))
+
+
+# A script is ONE module: 'from __future__' must be the very first statement,
+# so we emit exactly one here and strip the rest from the inlined sources.
+HEADER = '''from __future__ import annotations
+# ---------- TPU runtime ----------
 import os
 os.environ["PJRT_DEVICE"] = "TPU"
 os.environ.setdefault("HF_HOME", "/kaggle/working/.hf_cache")
@@ -63,9 +71,9 @@ def build_tpu(exp_file, out_dir, kernel_id, title, runner_extra="", name=None, d
 
     parts = [HEADER]
     for mod in PRISM_DEPS:
-        parts.append(strip_docstring(get_source(mod)))
+        parts.append(_strip_future(strip_docstring(get_source(mod))))
     parts.append("\n# ---------- " + exp_name + " ----------\n")
-    exp_inl = strip_docstring(exp_src)
+    exp_inl = _strip_future(strip_docstring(exp_src))
     exp_inl = strip_prism_imports(exp_inl)
     exp_inl = strip_main_block(exp_inl)
     exp_inl = rename_main(exp_inl, main_name)
