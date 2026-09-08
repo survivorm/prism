@@ -56,9 +56,9 @@
   - **ISO-CANARY VERDICT (COMPLETE)**: BOTH backward (eval + train) compiled in 62s. **TPU v5e-8 IS viable for all prism causal experiments.** No XLA flags needed.
   - **`device.startswith` bug** (exp16/17/18): `torch.device` has no `.startswith` — fixed to `str(device).startswith(("cuda","xla"))` (committed).
   - **exp18-tpu v1** (first push): SyntaxError `from __future__` — build_tpu now strips all `__future__` imports + keeps one at top + py_compile guard (committed).
-  - **exp16r-tpu**: XLA `SIGABRT` — `Cannot infer shape for dot: f32[1024,1024] <dot> f32[65536,65536]` (65536=K²=256²). NOT prism logic (CPU repro: J=[1024,1024], J_S=[256,1024] correct, no K² matmul anywhere) — XLA shape-inference bug in `compute_hidden_jacobian`. **exp16 (3 calls) + exp17 (10 calls) TPU-blocked.**
-  - **exp18 (0 jacobian calls) + exp19 (0) TPU-safe.** exp18-tpu v4 **RUNNING** now (P1 logit-KD verdict imminent, ~5-10min).
-  - **NEXT**: exp19 TPU (after exp18), then exp16/17 on GPU (next week, 30h/wk; exp17=9.2h fits 12h slot) or TPU workaround (precompute J on CPU→upload).
+  - **exp16r-tpu**: XLA `SIGABRT` — `Cannot infer shape for dot: f32[1024,1024] <dot> f32[65536,65536]` (65536=K²=256²). NOT prism logic (CPU repro: J=[1024,1024], J_S=[256,1024] correct, no K² matmul anywhere) — XLA shape-inference bug in the 3-pass `compute_hidden_jacobian`. **exp16 (3 calls) + exp17 (10 calls) TPU-blocked.**
+  - **exp18 + exp19 TPU-safe** (use per-token `compute_jacobian_for_tokens` + `softmax_jacobian`, NOT the 3-pass). exp18 v5 got TPU (958s) but crashed on `jacobian.py:125` reading `layer.number_of_states` (transformers 5.15.1 attr; TPU image = torch 2.8.0 + different transformers) = MY bug. FIXED: dynamic per-attr GDN-clone, version-agnostic (committed). **exp18-tpu v6 in TPU queue** (~1.7h, slot contended). **exp19-tpu PRE-STAGED** (commit efa3920, compile OK, targets dataset prism-exp16-targets; dead `_step_cm` uncalled → no xm.step bug) — push right after exp18 frees the single TPU slot.
+  - **NEXT**: exp19 TPU (after exp18), then exp16/17 on GPU (next week, 30h/wk; exp17=9.2h fits 12h slot) or TPU workaround (precompute J_norm on CPU → upload as dataset, avoids the 3-pass dot lowering).
 - [ ] `docs/HANDOFF_exp17_powerup.md` §4 stale: says "push full 7-pair, expect ~12h" — math in §L says 14 pair-runs ≈ 40–45h; push should be `--pairs 4_3` + single order (~9.2h). Update §4/§6 Q1 after user decision.
 
 ### GPU-очередь — ВСЕ kernels wired in pipeline (commit a79466d; push after weekly-quota reset)
