@@ -1,4 +1,13 @@
 from __future__ import annotations
+import subprocess, sys
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps'] + ['transformers==5.15.1', 'safetensors==0.8.0'])
+import transformers as _tf
+_v = _tf.__version__
+print(f'  [pip] transformers={_v}')
+if _v != '5.15.1':
+    print(f'[FAIL] transformers pinned to 5.15.1 but got {_v}; aborting before model load')
+    sys.exit(0)
+
 # ---------- TPU runtime ----------
 import os
 os.environ["PJRT_DEVICE"] = "TPU"
@@ -1226,16 +1235,7 @@ except Exception:
     _xm = None
     _XLA = False
 
-@contextlib.contextmanager
-def _step_cm():
-    """One optimizer step: xm.step() commits the XLA graph on TPU;
-    nullcontext on GPU/CPU (existing behavior unchanged)."""
-    if _XLA and str(_DEVICE).startswith("xla"):
-        with _xm.step():
-            yield
-    else:
-        with contextlib.nullcontext():
-            yield
+# (exp19 is closed-form: no optimizer step, no xm.step() needed on TPU.)
 
 from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
@@ -1331,6 +1331,8 @@ def main_19destruction(
     min_length: int = 32,
     targets_dir: str = "results/targets",
     results_dir: str = "results",
+    dose: float | None = None,
+    base_bridge: float | None = None,
 ):
     torch.manual_seed(42)
     start = time.time()
@@ -1347,7 +1349,15 @@ def main_19destruction(
     os.makedirs(results_dir, exist_ok=True)
 
     # -- Dose from the exp16 v2 dose curve (FATAL if absent) ----------------
-    knee_dose, exp16_base_bridge = _find_exp16_knee(results_dir)
+    # If dose/base_bridge are passed explicitly (e.g. read from a prior exp16
+    # run on another accelerator where the file did not persist), use them
+    # directly instead of requiring the local JSON. Values remain measured
+    # from exp16 either way (paper-clean).
+    if dose is not None and base_bridge is not None:
+        knee_dose, exp16_base_bridge = dose, base_bridge
+        print(f"Dose from params: ‖ΔW‖={knee_dose:.4f}, baseline bridge={exp16_base_bridge:.4f}")
+    else:
+        knee_dose, exp16_base_bridge = _find_exp16_knee(results_dir)
 
     # -- Load small model -------------------------------------------------
     model_path = small_model
@@ -1497,6 +1507,27 @@ def main_19destruction(
     scenarios = {"no_edit": {"bridge": base_bridge, "KL_ed_orig": base_kl,
                              "delta_norm": 0.0}}
 
+    def save_partial() -> None:
+        # TPU flaky-compile / 2h-kill safety: persist every completed scenario
+        # so a hang or kill later never loses earlier scenarios (exp18 lesson).
+        part = {
+            "status": "partial",
+            "completed": sorted(scenarios.keys()),
+            "dose_norm": knee_dose,
+            "exp16_baseline_bridge": exp16_base_bridge,
+            "baseline_bridge": base_bridge,
+            "baseline_KL": base_kl,
+            "scenarios": scenarios,
+            "target_pair": target_pair,
+            "last_layer": last_layer,
+            "K": len(token_set),
+            "device": str(device),
+        }
+        with open(os.path.join(results_dir, "exp19_destruction.json"), "w") as f:
+            json.dump(part, f, indent=2)
+
+    save_partial()  # baseline committed before any scenario
+
     names = [
         ("a_random", lambda: torch.randn_like(W_orig)),
         ("b_target_1x", lambda: ΔJ),
@@ -1518,6 +1549,7 @@ def main_19destruction(
                            "delta_norm": float(ΔW.norm())}
         print(f"  bridge={b:.4f} (Δ={b - base_bridge:+.4f}), "
               f"KL={k:.6f} (Δ={k - base_kl:+.2e}), ‖ΔW‖={ΔW.norm():.4f}")
+        save_partial()
 
     print("\n--- Scenario (c_target_10x) ---")
     ΔW10 = build_ΔW(ΔJ, 10 * knee_dose)
@@ -1530,6 +1562,7 @@ def main_19destruction(
                                  "delta_norm": float(ΔW10.norm())}
     print(f"  bridge={b:.4f} (Δ={b - base_bridge:+.4f}), "
           f"KL={k:.6f} (Δ={k - base_kl:+.2e}), ‖ΔW‖={ΔW10.norm():.4f}")
+    save_partial()
 
     lm_head.weight.data.copy_(W_orig)
 
@@ -1560,6 +1593,8 @@ def main_19destruction(
             "baseline bridge must match exp16's step-0 curve point ±0.05 "
             "or the run aborts (detector calibration check)."
         ),
+        "status": "complete",
+        "completed": sorted(scenarios.keys()),
         "dose_norm": knee_dose,
         "exp16_baseline_bridge": exp16_base_bridge,
         "baseline_bridge": base_bridge,

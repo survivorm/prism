@@ -119,7 +119,7 @@ def build_tpu(exp_file, out_dir, kernel_id, title, runner_extra="", name=None, d
         f"if 'results_dir' in params: kwargs['results_dir'] = RES\n"
         f"if 'targets_dir' in params: kwargs['targets_dir'] = os.path.join(RES, 'targets')\n"
         f"if 'small_model' in kwargs and 'model' in kwargs: del kwargs['model']\n"
-        + (runner_extra or "")
+        + ("\n".join(runner_extra.splitlines()) + "\n" if runner_extra.strip() else "")
         + f"t0 = time.time()\n"
         f"try:\n"
         f"    {main_name}(**kwargs)\n"

@@ -1,0 +1,14 @@
+{
+  "id": "voroninmichael/prism-exp16-readout-pull-tpu",
+  "title": "Prism: exp16-readout-pull-tpu",
+  "code_file": "exp16_readout_pull.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "false",
+  "enable_tpu": "true",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "voroninmichael/prism-exp16-targets"
+  ]
+}

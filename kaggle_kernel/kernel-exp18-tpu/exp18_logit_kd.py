@@ -1,4 +1,13 @@
 from __future__ import annotations
+import subprocess, sys
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps'] + ['transformers==5.15.1', 'safetensors==0.8.0'])
+import transformers as _tf
+_v = _tf.__version__
+print(f'  [pip] transformers={_v}')
+if _v != '5.15.1':
+    print(f'[FAIL] transformers pinned to 5.15.1 but got {_v}; aborting before model load')
+    sys.exit(0)
+
 # ---------- TPU runtime ----------
 import os
 os.environ["PJRT_DEVICE"] = "TPU"
