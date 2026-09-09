@@ -63,13 +63,33 @@ print(f"[TPU] device={xdev} torch={torch.__version__}")
 '''
 
 
-def build_tpu(exp_file, out_dir, kernel_id, title, runner_extra="", name=None, datasets=None):
+def build_tpu(exp_file, out_dir, kernel_id, title, runner_extra="", name=None, datasets=None, pip_extra=""):
     with open(exp_file) as f:
         exp_src = f.read()
     exp_name = name or os.path.basename(exp_file).replace(".py", "")
     main_name = f"main_{exp_name.replace('exp', '').replace('_', '')}"
 
-    parts = [HEADER]
+    # Optional pip override, inserted AFTER the mandatory first line
+    # ('from __future__ import annotations') but BEFORE any other import,
+    # so prism's inlined sources import transformers==5.15.1 for this run.
+    # --no-deps keeps the image's torch/torch_xla untouched. A version assert
+    # makes a bad install fail fast on the [OK]/[FAIL] banner instead of
+    # burning a long TPU queue wait on a mid-run ImportError.
+    header = HEADER
+    if pip_extra:
+        first, rest = HEADER.split("\n", 1)
+        pip_block = (
+            "import subprocess, sys\n"
+            f"subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', {repr(pip_extra)}])\n"
+            "import transformers as _tf\n"
+            "_v = _tf.__version__\n"
+            "print(f'  [pip] transformers={_v}')\n"
+            "if _v != '5.15.1':\n"
+            "    print(f'[FAIL] transformers pinned to 5.15.1 but got {_v}; aborting before model load')\n"
+            "    sys.exit(0)\n"
+        )
+        header = first + "\n" + pip_block + "\n" + rest
+    parts = [header]
     for mod in PRISM_DEPS:
         parts.append(_strip_future(strip_docstring(get_source(mod))))
     parts.append("\n# ---------- " + exp_name + " ----------\n")
@@ -149,5 +169,6 @@ if __name__ == "__main__":
     p.add_argument("--title", default="Prism TPU")
     p.add_argument("--runner-extra", default="")
     p.add_argument("--datasets", default=[], nargs="*", help="dataset_sources (e.g. prism-exp16-targets)")
+    p.add_argument("--pip", default="", help="pip pkg to install before run, e.g. transformers==5.15.1")
     a = p.parse_args()
-    build_tpu(a.exp, a.out, a.id, a.title, a.runner_extra, a.name or None, a.datasets or None)
+    build_tpu(a.exp, a.out, a.id, a.title, a.runner_extra, a.name or None, a.datasets or None, a.pip)
