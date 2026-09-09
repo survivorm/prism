@@ -64,6 +64,12 @@ print(f"[TPU] device={xdev} torch={torch.__version__}")
 
 
 def build_tpu(exp_file, out_dir, kernel_id, title, runner_extra="", name=None, datasets=None, pip_extra=""):
+    # Validate pip requirements up front so a malformed string (e.g. two
+    # requirements in one arg) fails at build time, not on a burned TPU slot.
+    if pip_extra:
+        from packaging.requirements import Requirement
+        for r in pip_extra.split():
+            Requirement(r)  # raises RequirementParseError on e.g. 'a==1 b==2'
     with open(exp_file) as f:
         exp_src = f.read()
     exp_name = name or os.path.basename(exp_file).replace(".py", "")
@@ -78,9 +84,10 @@ def build_tpu(exp_file, out_dir, kernel_id, title, runner_extra="", name=None, d
     header = HEADER
     if pip_extra:
         first, rest = HEADER.split("\n", 1)
+        _reqs = repr([r for r in pip_extra.split() if r])  # list of reqs, one arg each
         pip_block = (
             "import subprocess, sys\n"
-            f"subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', {repr(pip_extra)}])\n"
+            f"subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps'] + {_reqs})\n"
             "import transformers as _tf\n"
             "_v = _tf.__version__\n"
             "print(f'  [pip] transformers={_v}')\n"
