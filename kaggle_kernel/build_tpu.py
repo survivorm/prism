@@ -169,6 +169,7 @@ if __name__ == "__main__":
     p.add_argument("--title", default="Prism TPU")
     p.add_argument("--runner-extra", default="")
     p.add_argument("--datasets", default=[], nargs="*", help="dataset_sources (e.g. prism-exp16-targets)")
-    p.add_argument("--pip", default="", help="pip pkg to install before run, e.g. transformers==5.15.1")
+    p.add_argument("--pip", default="transformers==5.15.1 safetensors==0.8.0",
+                   help="pip pkgs to install before run (default pins transformers==5.15.1 + safetensors==0.8.0 to match dev env / kill API drift)")
     a = p.parse_args()
     build_tpu(a.exp, a.out, a.id, a.title, a.runner_extra, a.name or None, a.datasets or None, a.pip)
