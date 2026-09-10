@@ -102,3 +102,7 @@
   real bridge_rows_backward (2nd-order HVP, create_graph=True). ~10-20min.
 - Decides: 2nd-order compiles on v5e-8 → exp17 TPU-viable; else → dead-end, exp17 stays GPU.
 - Monitor: _auto_chain/poll_canary.sh (polls to terminal, pulls log, greps 2nd-order verdict).
+## exp19 v4 (7-pair, dose 1/10/100) + exp17 canary verdict (2026-09-10)
+- **exp17 2nd-order canary: CANCELLED** (hung ~2h in XLA HLO compile on the 2nd-order HVP). Verdict: **2nd-order is a TPU dead-end → exp17 (and exp16) stay GPU.** No TPU 2nd-order expansion.
+- **exp19 v4 pushed (v4, id prism-exp19-destruction-tpu): 7 pairs, dose 1/10/100, per-pair x per-scenario per-pair checkpoint.** All 7 pairs have targets. QUEUED (TPU pool long); runs when a slot frees; per-scenario checkpointing protects partial results. 1st-order (proven) → no XLA risk beyond the 2h wall-clock (7 pairs x 6 scenarios fit, per-pair partial save guards a kill).
+- NEXT: when exp19 v4 → COMPLETE, pull `results/exp19_destruction.json` (7 pairs × dose {1,10,100} × 6 scenarios × per-layer bridge + gauge/diff norms + per-layer gauge-share), fix the truncated-JSON save if it recurs, integrate into docs/paper.md §13 + future-work (replace the 1-pair placeholder).
