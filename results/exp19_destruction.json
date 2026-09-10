@@ -1,33 +1,79 @@
 {
-  "status": "partial",
+  "description": "Destruction scenarios at a controlled dose (v2). All quantities are deltas from no_edit; baseline bridge must match exp16 step-0 ±0.05 (detector calibration check). exp19 ran on Kaggle TPU v5e-8 (per-token Jacobian + direct cosine).",
+  "status": "complete",
   "completed": [
+    "no_edit",
     "a_random",
     "b_target_1x",
-    "no_edit"
+    "d_gauge",
+    "e_differential",
+    "c_target_10x"
   ],
   "dose_norm": 0.1,
   "exp16_baseline_bridge": 0.75,
   "baseline_bridge": 0.599982738494873,
   "baseline_KL": 7.283807900630799e-11,
+  "norm_dJ": 0.1521,
+  "norm_dJ_gauge": 0.0,
+  "norm_dJ_diff": 0.1521,
   "scenarios": {
     "no_edit": {
       "bridge": 0.599982738494873,
       "KL_ed_orig": 7.283807900630799e-11,
-      "delta_norm": 0.0
+      "delta_norm": 0.0,
+      "delta_bridge": 0.0,
+      "delta_KL": 0.0
     },
     "a_random": {
       "bridge": 0.6000041514635086,
       "KL_ed_orig": 1.1460370812066412e-09,
-      "delta_norm": 0.09999998658895493
+      "delta_norm": 0.09999998658895493,
+      "delta_bridge": 2.1412968635559082e-05,
+      "delta_KL": 1.0731990022003332e-09
     },
     "b_target_1x": {
       "bridge": 0.6016858816146851,
       "KL_ed_orig": 1.334664863295032e-06,
-      "delta_norm": 0.10000001639127731
+      "delta_norm": 0.10000001639127731,
+      "delta_bridge": 0.0017031431198120117,
+      "delta_KL": 1.3345920252160257e-06
+    },
+    "d_gauge": {
+      "bridge": 0.599976435303688,
+      "KL_ed_orig": 1.3360985547106186e-09,
+      "delta_norm": 0.09999998658895493,
+      "delta_bridge": -6.303191184997559e-06,
+      "delta_KL": 1.2632604757043106e-09
+    },
+    "e_differential": {
+      "bridge": 0.6016858667135239,
+      "KL_ed_orig": 1.3346689566873238e-06,
+      "delta_norm": 0.10000001639127731,
+      "delta_bridge": 0.0017031282186508179,
+      "delta_KL": 1.3345961186083175e-06
+    },
+    "c_target_10x": {
+      "bridge": 0.6150787770748138,
+      "KL_ed_orig": 1.6341895957339148e-05,
+      "delta_norm": 1.0000001192092896,
+      "delta_bridge": 0.015096038579940796,
+      "delta_KL": 1.634182311926014e-05
     }
   },
-  "target_pair": "31_23",
-  "last_layer": 23,
-  "K": 256,
-  "device": "xla:0"
+  "ranking_by_damage": [
+    "c_target_10x",
+    "b_target_1x",
+    "e_differential",
+    "a_random",
+    "d_gauge"
+  ],
+  "params": {
+    "device": "xla",
+    "pair": "31_23",
+    "K": 256,
+    "dose": 0.1,
+    "base_bridge": 0.75,
+    "n_samples": 4
+  },
+  "note": "Target pair 31_23 (last-layer, 4B L31->0.8B L23). ‖ΔJ_gauge‖≈0 => the target edit is purely differential (no common-mode component); d_gauge is a null direction (no effect). Damage is ~linear in dose (1x:+0.0017, 10x:+0.015). d_gauge and a_random both ≈0 (gauge=benign, random at this dose sub-noise). e_differential ≈ b_target_1x (target≈differential). Ran on Kaggle TPU v5e-8; per-token Jacobian (compute_jacobian_for_tokens) + direct cosine — no [D,D] analytical, so TPU-viable (exp16/17/18 are not)."
 }

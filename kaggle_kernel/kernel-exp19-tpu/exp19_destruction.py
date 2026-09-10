@@ -1495,6 +1495,8 @@ def main_19destruction(
         """Rows [K, D] → sparse ΔW [V, D] at tokens, scaled to ‖·‖=scale."""
         V, D = W_orig.shape
         ΔW = torch.zeros(V, D, device=device)
+        if rows.shape[0] == 1 and len(token_set) > 1:
+            rows = rows.expand(len(token_set), -1)  # gauge = common mode: one row for all tokens
         for i, t in enumerate(token_set):
             ΔW[t] = rows[i]
         n = ΔW.norm()
@@ -1640,9 +1642,9 @@ if 'device' in params: kwargs['device'] = 'xla'
 if 'results_dir' in params: kwargs['results_dir'] = RES
 if 'targets_dir' in params: kwargs['targets_dir'] = os.path.join(RES, 'targets')
 if 'small_model' in kwargs and 'model' in kwargs: del kwargs['model']
-kwargs["targets_dir"]="/kaggle/input/datasets/voroninmichael/prism-exp16-targets"
-kwargs["dose"]=0.10
-kwargs["base_bridge"]=0.75
+kwargs['targets_dir']='/kaggle/input/datasets/voroninmichael/prism-exp16-targets'
+kwargs['dose']=0.10
+kwargs['base_bridge']=0.75
 t0 = time.time()
 try:
     main_19destruction(**kwargs)

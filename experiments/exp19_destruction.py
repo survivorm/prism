@@ -432,11 +432,11 @@ def main(
         "n_layers_S": n_S,
         "last_layer": last_layer,
         "K": len(token_set),
-        "device": device,
+        "device": str(device),
         "elapsed_seconds": time.time() - start,
         "params": {
             "small_model": small_model,
-            "device": device,
+            "device": str(device),
             "max_length": max_length,
             "min_length": min_length,
             "targets_dir": targets_dir,

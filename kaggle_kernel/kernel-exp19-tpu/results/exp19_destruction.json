@@ -1,8 +1,12 @@
 {
-  "status": "partial",
+  "description": "Destruction scenarios at a controlled dose (v2). Dose \u2016\u0394W\u2016 = the knee of the exp16 v2 dose curve (FATAL if absent \u2014 no silent default). Scenarios, all at equal dose except the 10\u00d7 overshoot: random \u0394W; pull direction \u0394J (per-token rows); 10\u00d7 overshoot; gauge component of \u0394J; differential component of \u0394J. Plus THE no-edit baseline. Target pair = last-layer pair (asserted; v1's silent fallback to 0_0 was a null target that voided v1). input_ids pairing (v1 had none). All quantities are reported as deltas from no_edit; the baseline bridge must match exp16's step-0 curve point \u00b10.05 or the run aborts (detector calibration check).",
+  "status": "complete",
   "completed": [
     "a_random",
     "b_target_1x",
+    "c_target_10x",
+    "d_gauge",
+    "e_differential",
     "no_edit"
   ],
   "dose_norm": 0.1,
@@ -13,21 +17,60 @@
     "no_edit": {
       "bridge": 0.599982738494873,
       "KL_ed_orig": 7.283807900630799e-11,
-      "delta_norm": 0.0
+      "delta_norm": 0.0,
+      "delta_bridge": 0.0,
+      "delta_KL": 0.0
     },
     "a_random": {
       "bridge": 0.6000041514635086,
       "KL_ed_orig": 1.1460370812066412e-09,
-      "delta_norm": 0.09999998658895493
+      "delta_norm": 0.09999998658895493,
+      "delta_bridge": 2.1412968635559082e-05,
+      "delta_KL": 1.0731990022003332e-09
     },
     "b_target_1x": {
       "bridge": 0.6016858816146851,
       "KL_ed_orig": 1.334664863295032e-06,
-      "delta_norm": 0.10000001639127731
+      "delta_norm": 0.10000001639127731,
+      "delta_bridge": 0.0017031431198120117,
+      "delta_KL": 1.3345920252160257e-06
+    },
+    "d_gauge": {
+      "bridge": 0.599976435303688,
+      "KL_ed_orig": 1.3360985547106186e-09,
+      "delta_norm": 0.09999998658895493,
+      "delta_bridge": -6.303191184997559e-06,
+      "delta_KL": 1.2632604757043106e-09
+    },
+    "e_differential": {
+      "bridge": 0.6016858667135239,
+      "KL_ed_orig": 1.3346689566873238e-06,
+      "delta_norm": 0.10000001639127731,
+      "delta_bridge": 0.0017031282186508179,
+      "delta_KL": 1.3345961186083175e-06
+    },
+    "c_target_10x": {
+      "bridge": 0.6150787770748138,
+      "KL_ed_orig": 1.6341895957339148e-05,
+      "delta_norm": 1.0000001192092896,
+      "delta_bridge": 0.015096038579940796,
+      "delta_KL": 1.634182311926014e-05
     }
   },
+  "ranking_by_damage": [
+    "d_gauge",
+    "a_random",
+    "e_differential",
+    "b_target_1x",
+    "c_target_10x"
+  ],
   "target_pair": "31_23",
+  "pairing": {
+    "mode": "input_ids",
+    "verified": 4,
+    "total": 4
+  },
+  "n_layers_S": 24,
   "last_layer": 23,
   "K": 256,
-  "device": "xla:0"
-}
+  "device": 
