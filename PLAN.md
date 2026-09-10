@@ -86,3 +86,19 @@
 - exp18-tpu v6/v7: same phantom (per-token path, deeper). v10: pairs 1-2 OK, pair 3 hung (recompile).
 - **Conclusion: TPU v5e-8 cannot compute the `[D,D]` Jacobian → exp16/17/18 (and exp19, same J) are TPU-blocked.** GPU after the 30h/wk reset (~2026-09-14). exp19 is the *least* blocked (per-token, no [D,D] J_norm) → last candidate on the remaining TPU slot, uncertain (exp18 per-token also hit it).
 - **I was wrong to call exp16 "safe (no GDN bwd)" — never CPU-repro'd the analytic path's actual XLA mm shapes. Lesson (re-confirmed): CPU-repro the exact op chain before a hardware verdict.**
+
+## exp19 TPU COMPLETE (2026-09-10) — gauge=null, target≈differential
+- All 6 scenarios ran on TPU v5e-8 (~44min, per-token Jacobian + cosine, no [D,D]):
+  no_edit(baseline bridge=0.6000), a_random(Δ=+0.00002), b_target_1x(+0.0017), d_gauge(-0.000006≈0),
+  e_differential(+0.0017), c_target_10x(+0.0151). ‖ΔJ_gauge‖≈0 → target edit is purely differential;
+  gauge is a null direction (no effect). Damage ~linear in dose (1x→0.0017, 10x→0.015).
+- Bug: final json.dump crashed on device (torch.device not serializable) AFTER all data computed + partial saved;
+  but json.dump clobbered the partial file → reconstructed the complete JSON from the log into results/exp19_destruction.json;
+  source fixed (device→str(device)) at lines 435/439.
+- Paper value: exp19 is the cleanest "gauge=benign / directional=causal" causal experiment. → needs a paper section.
+
+## exp17 2nd-order TPU canary (2026-09-10, QUEUED)
+- Pushed (version 1) after exp19 COMPLETE. 1 pair 15_11 (small L11, fixed start → no recompile fanout), 100 steps,
+  real bridge_rows_backward (2nd-order HVP, create_graph=True). ~10-20min.
+- Decides: 2nd-order compiles on v5e-8 → exp17 TPU-viable; else → dead-end, exp17 stays GPU.
+- Monitor: _auto_chain/poll_canary.sh (polls to terminal, pulls log, greps 2nd-order verdict).
