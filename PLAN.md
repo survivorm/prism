@@ -79,3 +79,10 @@
 
 **Still NOT in pipeline / paper:** exp11b re-run, exp12a N=4/K=32, exp12b/12c K=64, exp16/17/18/19 paper *sections* (write — not in paper yet). exp6_l18_snr is now in the pipeline (was the gap).
 **Paper-only fixes (no GPU)**: exclude 1.0 sentinels (exp13/15/6); exp11a/11b K-mismatch note + 11c bridge-flattening (defrag = output-faithful but bridge-destroying); exp12 re-frame; exp14 add params; exp2a note (CKA null inflated when N≪D); exp17 topk_report part of v2 suite.
+
+## TPU verdict correction (2026-09-09) — IMPORTANT
+**"exp16/19 TPU-safe" was WRONG.** All 4 causal exps share the `[D,D]=f32[1024,1024]` Jacobian (J_norm or per-token J) that XLA corrupts into a phantom `f32[65536,65536]` dot → SIGABRT.
+- exp16-tpu v1: ERROR 98s, `Cannot infer shape for dot: f32[1024,1024]<dot>f32[65536,65536]` (analytic last-layer J_norm mm). **CPU repro: the op is [1024,1024]; [65536,65536] never formed by any prism op => XLA-side shape-inference bug, not prism logic.**
+- exp18-tpu v6/v7: same phantom (per-token path, deeper). v10: pairs 1-2 OK, pair 3 hung (recompile).
+- **Conclusion: TPU v5e-8 cannot compute the `[D,D]` Jacobian → exp16/17/18 (and exp19, same J) are TPU-blocked.** GPU after the 30h/wk reset (~2026-09-14). exp19 is the *least* blocked (per-token, no [D,D] J_norm) → last candidate on the remaining TPU slot, uncertain (exp18 per-token also hit it).
+- **I was wrong to call exp16 "safe (no GDN bwd)" — never CPU-repro'd the analytic path's actual XLA mm shapes. Lesson (re-confirmed): CPU-repro the exact op chain before a hardware verdict.**

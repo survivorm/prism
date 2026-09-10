@@ -1,0 +1,79 @@
+[{"stream_name":"stdout","time":3.509177498,"data":"Collecting transformers==5.15.1\n"}
+,{"stream_name":"stdout","time":3.559509936,"data":"  Downloading transformers-5.15.1-py3-none-any.whl.metadata (32 kB)\n"}
+,{"stream_name":"stdout","time":3.786736996,"data":"Collecting safetensors==0.8.0\n"}
+,{"stream_name":"stdout","time":3.800533475,"data":"  Downloading safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.2 kB)\n"}
+,{"stream_name":"stdout","time":3.841179483,"data":"Downloading transformers-5.15.1-py3-none-any.whl (11.7 MB)\n"}
+,{"stream_name":"stdout","time":4.008948745,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 83.3 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":4.023317835,"data":"Downloading safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (516 kB)\n"}
+,{"stream_name":"stdout","time":4.073992942,"data":"Installing collected packages: transformers, safetensors\n"}
+,{"stream_name":"stdout","time":4.074134532,"data":"  Attempting uninstall: transformers\n"}
+,{"stream_name":"stdout","time":4.084294802,"data":"    Found existing installation: transformers 5.12.1\n"}
+,{"stream_name":"stdout","time":4.826747688,"data":"    Uninstalling transformers-5.12.1:\n"}
+,{"stream_name":"stdout","time":9.128594329,"data":"      Successfully uninstalled transformers-5.12.1\n"}
+,{"stream_name":"stdout","time":15.874321727,"data":"  Attempting uninstall: safetensors\n"}
+,{"stream_name":"stdout","time":15.885958536,"data":"    Found existing installation: safetensors 0.7.0\n"}
+,{"stream_name":"stdout","time":15.892214536000001,"data":"    Uninstalling safetensors-0.7.0:\n"}
+,{"stream_name":"stdout","time":15.921506905,"data":"      Successfully uninstalled safetensors-0.7.0\n"}
+,{"stream_name":"stdout","time":15.984058191999999,"data":"Successfully installed safetensors-0.8.0 transformers-5.15.1\n"}
+,{"stream_name":"stderr","time":15.984345082,"data":"WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n"}
+,{"stream_name":"stderr","time":16.135674085,"data":"\n"}
+,{"stream_name":"stderr","time":16.135700565,"data":"[notice] A new release of pip is available: 25.0.1 -\u003e 26.2.1\n"}
+,{"stream_name":"stderr","time":16.135706685,"data":"[notice] To update, run: pip install --upgrade pip\n"}
+,{"stream_name":"stdout","time":22.401988175,"data":"  [pip] transformers=5.15.1\n"}
+,{"stream_name":"stderr","time":33.644453916,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/experimental/gru.py:113: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":33.644484766,"data":"  * **h_n**: tensor of shape :math:`(D * \\text{num\\_layers}, H_{out})` or\n"}
+,{"stream_name":"stderr","time":38.95489359,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/__init__.py:258: UserWarning: `tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when using PyTorch/XLA. To silence this warning, `pip uninstall -y tensorflow \u0026\u0026 pip install tensorflow-cpu`. If you are in a notebook environment such as Colab or Kaggle, restart your notebook runtime afterwards.\n"}
+,{"stream_name":"stderr","time":38.95491757,"data":"  warnings.warn(\n"}
+,{"stream_name":"stderr","time":40.716475789,"data":"/kaggle/src/script.py:19: DeprecationWarning: Use torch_xla.device instead\n"}
+,{"stream_name":"stderr","time":40.716509549,"data":"  xdev = xm.xla_device()\n"}
+,{"stream_name":"stderr","time":43.742017379,"data":"WARNING: Logging before InitGoogle() is written to STDERR\n"}
+,{"stream_name":"stderr","time":43.742070989,"data":"E0000 00:00:1789013909.547885       7 common_lib.cc:648] Could not set metric server port: INVALID_ARGUMENT: Could not find SliceBuilder port 8471 in any of the 0 ports provided in `tpu_process_addresses`=\"local\"\n"}
+,{"stream_name":"stderr","time":43.742079529,"data":"=== Source Location Trace: ===\n"}
+,{"stream_name":"stderr","time":43.742084469,"data":"learning/45eac/tfrc/runtime/common_lib.cc:238\n"}
+,{"stream_name":"stdout","time":52.694923285,"data":"[TPU] device=xla:0 torch=2.8.0+cpu\n"}
+,{"stream_name":"stdout","time":61.147480373,"data":"Device: xla:0\n"}
+,{"stream_name":"stdout","time":61.147530493,"data":"Dose from params: ‖ΔW‖=0.1000, baseline bridge=0.7500\n"}
+,{"stream_name":"stdout","time":61.147535763,"data":"Loading small model: Qwen/Qwen3.5-0.8B\n"}
+,{"stream_name":"stderr","time":61.147495593,"data":"/kaggle/src/script.py:1344: DeprecationWarning: Use torch_xla.device instead\n"}
+,{"stream_name":"stderr","time":61.147547303,"data":"  device = _xm.xla_device()\n"}
+,{"stream_name":"stderr","time":61.336254954,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":61.336291174,"data":"WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":61.386483527,"data":"[transformers] `torch_dtype` is deprecated! Use `dtype` instead!\n"}
+,{"stream_name":"stderr","time":70.507766429,"data":"\rLoading weights:   0%|          | 0/320 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/320 [00:00\u003c02:18,  2.31it/s]\rLoading weights: 100%|██████████| 320/320 [00:00\u003c00:00, 720.52it/s]\n"}
+,{"stream_name":"stdout","time":72.221570637,"data":"Small model: 24 layers, last=23\n"}
+,{"stream_name":"stdout","time":72.221603777,"data":"Loading 4 calibration samples...\n"}
+,{"stream_name":"stdout","time":79.598535717,"data":"Using target cache at /kaggle/input/prism-exp16-targets\n"}
+,{"stream_name":"stdout","time":81.465168054,"data":"Using pair 31_23, K=256\n"}
+,{"stream_name":"stdout","time":81.465266764,"data":"Pairing verified: 4/4 samples\n"}
+,{"stream_name":"stdout","time":84.522576289,"data":"\n"}
+,{"stream_name":"stdout","time":84.522613519,"data":"--- Scenario: no_edit (baseline) ---\n"}
+,{"stream_name":"stdout","time":255.997894452,"data":"  bridge=0.6000, KL=0.000000\n"}
+,{"stream_name":"stdout","time":255.997952442,"data":"  matches exp16 step-0 bridge (0.7500) — calibrated\n"}
+,{"stream_name":"stdout","time":369.212486818,"data":"‖ΔJ‖=0.1521, ‖ΔJ_gauge‖=0.0000, ‖ΔJ_diff‖=0.1521\n"}
+,{"stream_name":"stdout","time":369.212531509,"data":"\n"}
+,{"stream_name":"stdout","time":369.212539009,"data":"Dose ‖ΔW‖ = 0.1000 (knee of the exp16 v2 dose curve)\n"}
+,{"stream_name":"stdout","time":369.214800609,"data":"\n"}
+,{"stream_name":"stdout","time":369.214811718,"data":"--- Scenario (a_random) ---\n"}
+,{"stream_name":"stdout","time":863.257222275,"data":"  bridge=0.6000 (Δ=+0.0000), KL=0.000000 (Δ=+1.07e-09), ‖ΔW‖=0.1000\n"}
+,{"stream_name":"stdout","time":863.257650605,"data":"\n"}
+,{"stream_name":"stdout","time":863.257664385,"data":"--- Scenario (b_target_1x) ---\n"}
+,{"stream_name":"stdout","time":1338.612824489,"data":"  bridge=0.6017 (Δ=+0.0017), KL=0.000001 (Δ=+1.33e-06), ‖ΔW‖=0.1000\n"}
+,{"stream_name":"stdout","time":1338.613642789,"data":"\n"}
+,{"stream_name":"stdout","time":1338.613655618,"data":"--- Scenario (d_gauge) ---\n"}
+,{"stream_name":"stdout","time":1338.614256529,"data":"[FAIL] exp19_destruction: index 1 is out of bounds for dimension 0 with size 1\n"}
+,{"stream_name":"stderr","time":1338.614710249,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":1338.616162629,"data":"  File \"/kaggle/src/script.py\", line 1648, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":1338.616176849,"data":"    main_19destruction(**kwargs)\n"}
+,{"stream_name":"stderr","time":1338.616180158,"data":"  File \"/kaggle/src/script.py\", line 1542, in main_19destruction\n"}
+,{"stream_name":"stderr","time":1338.616182689,"data":"    ΔW = build_ΔW(mk(), knee_dose)\n"}
+,{"stream_name":"stderr","time":1338.616184998,"data":"         ^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":1338.616187109,"data":"  File \"/kaggle/src/script.py\", line 1499, in build_ΔW\n"}
+,{"stream_name":"stderr","time":1338.616189418,"data":"    ΔW[t] = rows[i]\n"}
+,{"stream_name":"stderr","time":1338.616191658,"data":"            ~~~~^^^\n"}
+,{"stream_name":"stderr","time":1338.616193829,"data":"IndexError: index 1 is out of bounds for dimension 0 with size 1\n"}
+,{"stream_name":"stdout","time":1338.703044934,"data":"\n"}
+,{"stream_name":"stdout","time":1338.703091254,"data":"Results:\n"}
+,{"stream_name":"stdout","time":1338.707196644,"data":"  exp19_destruction.json 747 bytes\n"}
+,{"stream_name":"stderr","time":1353.7401237670001,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":1356.852323494,"data":"[NbConvertApp] Writing 542969 bytes to __results__.html\n"}
+]

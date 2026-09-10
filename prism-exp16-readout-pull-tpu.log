@@ -1,0 +1,144 @@
+[{"stream_name":"stdout","time":3.5556836819999997,"data":"Collecting transformers==5.15.1\n"}
+,{"stream_name":"stdout","time":3.6440522890000002,"data":"  Downloading transformers-5.15.1-py3-none-any.whl.metadata (32 kB)\n"}
+,{"stream_name":"stdout","time":5.042798719,"data":"Collecting safetensors==0.8.0\n"}
+,{"stream_name":"stdout","time":5.062537651,"data":"  Downloading safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.2 kB)\n"}
+,{"stream_name":"stdout","time":5.259243976,"data":"Downloading transformers-5.15.1-py3-none-any.whl (11.7 MB)\n"}
+,{"stream_name":"stdout","time":6.116051874,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 14.1 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":6.135738596,"data":"Downloading safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (516 kB)\n"}
+,{"stream_name":"stdout","time":6.419453418,"data":"Installing collected packages: transformers, safetensors\n"}
+,{"stream_name":"stdout","time":6.419576548,"data":"  Attempting uninstall: transformers\n"}
+,{"stream_name":"stdout","time":6.430304069,"data":"    Found existing installation: transformers 5.12.1\n"}
+,{"stream_name":"stdout","time":7.118713563,"data":"    Uninstalling transformers-5.12.1:\n"}
+,{"stream_name":"stdout","time":11.144095891,"data":"      Successfully uninstalled transformers-5.12.1\n"}
+,{"stream_name":"stdout","time":18.607761141,"data":"  Attempting uninstall: safetensors\n"}
+,{"stream_name":"stdout","time":18.619612922,"data":"    Found existing installation: safetensors 0.7.0\n"}
+,{"stream_name":"stdout","time":18.625942322,"data":"    Uninstalling safetensors-0.7.0:\n"}
+,{"stream_name":"stdout","time":18.655254694,"data":"      Successfully uninstalled safetensors-0.7.0\n"}
+,{"stream_name":"stdout","time":18.732469391,"data":"Successfully installed safetensors-0.8.0 transformers-5.15.1\n"}
+,{"stream_name":"stderr","time":18.7327197,"data":"WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n"}
+,{"stream_name":"stderr","time":19.051749116,"data":"\n"}
+,{"stream_name":"stderr","time":19.051768776,"data":"[notice] A new release of pip is available: 25.0.1 -\u003e 26.2.1\n"}
+,{"stream_name":"stderr","time":19.051774876,"data":"[notice] To update, run: pip install --upgrade pip\n"}
+,{"stream_name":"stdout","time":25.214282932,"data":"  [pip] transformers=5.15.1\n"}
+,{"stream_name":"stderr","time":36.943571318,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/experimental/gru.py:113: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":36.943597018,"data":"  * **h_n**: tensor of shape :math:`(D * \\text{num\\_layers}, H_{out})` or\n"}
+,{"stream_name":"stderr","time":42.250342158,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/__init__.py:258: UserWarning: `tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when using PyTorch/XLA. To silence this warning, `pip uninstall -y tensorflow \u0026\u0026 pip install tensorflow-cpu`. If you are in a notebook environment such as Colab or Kaggle, restart your notebook runtime afterwards.\n"}
+,{"stream_name":"stderr","time":42.250372988,"data":"  warnings.warn(\n"}
+,{"stream_name":"stderr","time":44.04951442,"data":"/kaggle/src/script.py:19: DeprecationWarning: Use torch_xla.device instead\n"}
+,{"stream_name":"stderr","time":44.04954441,"data":"  xdev = xm.xla_device()\n"}
+,{"stream_name":"stderr","time":46.956905609,"data":"WARNING: Logging before InitGoogle() is written to STDERR\n"}
+,{"stream_name":"stderr","time":46.956936549,"data":"E0000 00:00:1788984293.346051       7 common_lib.cc:648] Could not set metric server port: INVALID_ARGUMENT: Could not find SliceBuilder port 8471 in any of the 0 ports provided in `tpu_process_addresses`=\"local\"\n"}
+,{"stream_name":"stderr","time":46.956942429,"data":"=== Source Location Trace: ===\n"}
+,{"stream_name":"stderr","time":46.956946679,"data":"learning/45eac/tfrc/runtime/common_lib.cc:238\n"}
+,{"stream_name":"stdout","time":56.583772979,"data":"[TPU] device=xla:0 torch=2.8.0+cpu\n"}
+,{"stream_name":"stdout","time":65.717570622,"data":"Device: xla\n"}
+,{"stream_name":"stdout","time":65.717604192,"data":"Loading small model: Qwen/Qwen3.5-0.8B\n"}
+,{"stream_name":"stderr","time":65.915647128,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":65.915679319,"data":"WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":65.963465223,"data":"[transformers] `torch_dtype` is deprecated! Use `dtype` instead!\n"}
+,{"stream_name":"stderr","time":83.171354065,"data":"\rLoading weights:   0%|          | 0/320 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/320 [00:00\u003c02:18,  2.31it/s]\rLoading weights: 100%|██████████| 320/320 [00:00\u003c00:00, 719.62it/s]\n"}
+,{"stream_name":"stdout","time":85.05148548,"data":"Small model: 24 layers, last=23\n"}
+,{"stream_name":"stdout","time":85.088362946,"data":"Using target cache at /kaggle/input/datasets/voroninmichael/prism-exp16-targets\n"}
+,{"stream_name":"stdout","time":88.398758169,"data":"Loading 4 calibration samples...\n"}
+,{"stream_name":"stdout","time":94.015252585,"data":"Using pair 31_23, 4 cached samples, K=256\n"}
+,{"stream_name":"stdout","time":94.015408945,"data":"Pairing verified: 4/4 samples\n"}
+,{"stream_name":"stdout","time":97.179200434,"data":"Cached original logits for KL leash\n"}
+,{"stream_name":"stderr","time":97.944481942,"data":"F0909 20:05:44.289181       7 debug_macros.h:21] Non-OK-status: status.status()\n"}
+,{"stream_name":"stderr","time":97.944515572,"data":"Status: INVALID_ARGUMENT: Cannot infer shape for dot operation: f32[1024,1024] \u003cdot\u003e f32[65536,65536]. Contracting dimension sizes are not compatible.\n"}
+,{"stream_name":"stderr","time":97.944522012,"data":"*** Begin stack trace ***\n"}
+,{"stream_name":"stderr","time":97.944526282,"data":"\ttsl::CurrentStackTrace[abi:cxx11]()\n"}
+,{"stream_name":"stderr","time":97.944530512,"data":"\txla::Shape const* ConsumeValue\u003cxla::Shape const*\u003e(absl::lts_20230802::StatusOr\u003cxla::Shape const*\u003e\u0026\u0026)\n"}
+,{"stream_name":"stderr","time":97.944534952,"data":"\ttorch_xla::ShapeHelper::ShapeOfXlaOp(xla::XlaOp)\n"}
+,{"stream_name":"stderr","time":97.944539162,"data":"\ttorch_xla::InferOutputShape(absl::lts_20230802::Span\u003cxla::Shape const\u003e, std::function\u003cxla::XlaOp (absl::lts_20230802::Span\u003cxla::XlaOp const\u003e)\u003e const\u0026)\n"}
+,{"stream_name":"stderr","time":97.944543652,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944547672,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944551682,"data":"\ttorch_xla::XlaNode::GetOpShape(std::function\u003cxla::Shape ()\u003e const\u0026) const\n"}
+,{"stream_name":"stderr","time":97.944556042,"data":"\ttorch_xla::XlaNode::XlaNode(torch::lazy::OpKind, c10::ArrayRef\u003ctorch::lazy::Value\u003e, std::function\u003cxla::Shape ()\u003e const\u0026, unsigned long, torch::lazy::hash_t)\n"}
+,{"stream_name":"stderr","time":97.944572402,"data":"\ttorch_xla::Generic::Generic(torch::lazy::OpKind, c10::ArrayRef\u003ctorch::lazy::Value\u003e, std::function\u003cxla::Shape ()\u003e const\u0026, std::function\u003cabsl::lts_20230802::InlinedVector\u003cxla::XlaOp, 1ul, std::allocator\u003cxla::XlaOp\u003e \u003e (torch_xla::XlaNode const\u0026, torch_xla::LoweringContext*)\u003e, unsigned long, torch::lazy::hash_t)\n"}
+,{"stream_name":"stderr","time":97.944578762,"data":"\tstd::shared_ptr\u003ctorch::lazy::Node\u003e torch_xla::MakeNode\u003ctorch_xla::Generic, torch::lazy::OpKind, c10::ArrayRef\u003ctorch::lazy::Value\u003e\u0026, std::function\u003cxla::Shape ()\u003e const\u0026, std::function\u003cabsl::lts_20230802::InlinedVector\u003cxla::XlaOp, 1ul, std::allocator\u003cxla::XlaOp\u003e \u003e (torch_xla::XlaNode const\u0026, torch_xla::LoweringContext*)\u003e, unsigned long\u0026, torch::lazy::hash_t\u0026\u003e(torch::lazy::OpKind\u0026\u0026, c10::ArrayRef\u003ctorch::lazy::Value\u003e\u0026, std::function\u003cxla::Shape ()\u003e const\u0026, std::function\u003cabsl::lts_20230802::InlinedVector\u003cxla::XlaOp, 1ul, std::allocator\u003cxla::XlaOp\u003e \u003e (torch_xla::XlaNode const\u0026, torch_xla::LoweringContext*)\u003e\u0026\u0026, unsigned long\u0026, torch::lazy::hash_t\u0026)\n"}
+,{"stream_name":"stderr","time":97.944584922,"data":"\ttorch_xla::Dot(torch::lazy::Value const\u0026, torch::lazy::Value const\u0026)\n"}
+,{"stream_name":"stderr","time":97.944588902,"data":"\ttorch_xla::tensor_methods::mm(c10::intrusive_ptr\u003ctorch_xla::XLATensor, c10::detail::intrusive_target_default_null_type\u003ctorch_xla::XLATensor\u003e \u003e const\u0026, c10::intrusive_ptr\u003ctorch_xla::XLATensor, c10::detail::intrusive_target_default_null_type\u003ctorch_xla::XLATensor\u003e \u003e const\u0026)\n"}
+,{"stream_name":"stderr","time":97.944592382,"data":"\ttorch_xla::XLANativeFunctions::mm(at::Tensor const\u0026, at::Tensor const\u0026)\n"}
+,{"stream_name":"stderr","time":97.944595182,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944597792,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944600572,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944603152,"data":"\tat::_ops::mm::redispatch(c10::DispatchKeySet, at::Tensor const\u0026, at::Tensor const\u0026)\n"}
+,{"stream_name":"stderr","time":97.944605932,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944608492,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944611232,"data":"\tat::_ops::mm::call(at::Tensor const\u0026, at::Tensor const\u0026)\n"}
+,{"stream_name":"stderr","time":97.944613972,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944616552,"data":"\tat::native::matmul(at::Tensor const\u0026, at::Tensor const\u0026)\n"}
+,{"stream_name":"stderr","time":97.944619292,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944621882,"data":"\tat::_ops::matmul::call(at::Tensor const\u0026, at::Tensor const\u0026)\n"}
+,{"stream_name":"stderr","time":97.944624632,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944627182,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944629772,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944632312,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944634902,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944637452,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944640482,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944643092,"data":"\t_PyEval_EvalFrameDefault\n"}
+,{"stream_name":"stderr","time":97.944645742,"data":"\tPyEval_EvalCode\n"}
+,{"stream_name":"stderr","time":97.944651782,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944654432,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944657002,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944659602,"data":"\t_PyRun_SimpleFileObject\n"}
+,{"stream_name":"stderr","time":97.944662232,"data":"\t_PyRun_AnyFileObject\n"}
+,{"stream_name":"stderr","time":97.944664942,"data":"\tPy_RunMain\n"}
+,{"stream_name":"stderr","time":97.944667572,"data":"\tPy_BytesMain\n"}
+,{"stream_name":"stderr","time":97.944670182,"data":"\t\n"}
+,{"stream_name":"stderr","time":97.944672752,"data":"\t__libc_start_main\n"}
+,{"stream_name":"stderr","time":97.944675412,"data":"\t_start\n"}
+,{"stream_name":"stderr","time":97.944678152,"data":"*** End stack trace ***\n"}
+,{"stream_name":"stderr","time":97.944680832,"data":"\n"}
+,{"stream_name":"stderr","time":98.505218345,"data":"*** Check failure stack trace: ***\n"}
+,{"stream_name":"stderr","time":98.505250785,"data":"    @     0x7f96e439941f  absl::lts_20230802::log_internal::LogMessageFatal::~LogMessageFatal()\n"}
+,{"stream_name":"stderr","time":98.505257455,"data":"    @     0x7f96dd44dcfd  ConsumeValue\u003c\u003e()\n"}
+,{"stream_name":"stderr","time":98.505262935,"data":"    @     0x7f96dd44dbc4  torch_xla::ShapeHelper::ShapeOfXlaOp()\n"}
+,{"stream_name":"stderr","time":98.505267845,"data":"    @     0x7f96dd3f1621  torch_xla::InferOutputShape()\n"}
+,{"stream_name":"stderr","time":98.505272605,"data":"    @     0x7f96dd402af8  torch_xla::Dot()::{lambda()#3}::operator()()\n"}
+,{"stream_name":"stderr","time":98.505277515,"data":"    @     0x7f96dd402b74  std::_Function_handler\u003c\u003e::_M_invoke()\n"}
+,{"stream_name":"stderr","time":98.505282405,"data":"    @     0x7f96dd4440a9  torch_xla::XlaNode::GetOpShape()\n"}
+,{"stream_name":"stderr","time":98.505287175,"data":"    @     0x7f96dd444b83  torch_xla::XlaNode::XlaNode()\n"}
+,{"stream_name":"stderr","time":98.505291815,"data":"    @     0x7f96dd3e822c  torch_xla::Generic::Generic()\n"}
+,{"stream_name":"stderr","time":98.505296555,"data":"    @     0x7f96dd3f02b7  torch_xla::MakeNode\u003c\u003e()\n"}
+,{"stream_name":"stderr","time":98.505301235,"data":"    @     0x7f96dd406f9d  torch_xla::Dot()\n"}
+,{"stream_name":"stderr","time":98.505305795,"data":"    @     0x7f96dd1a9fc3  torch_xla::tensor_methods::mm()\n"}
+,{"stream_name":"stderr","time":98.505310585,"data":"    @     0x7f96dd0f808f  torch_xla::XLANativeFunctions::mm()\n"}
+,{"stream_name":"stderr","time":98.505315605,"data":"    @     0x7f96dd363a7a  c10::impl::make_boxed_from_unboxed_functor\u003c\u003e::call()\n"}
+,{"stream_name":"stderr","time":98.505320975,"data":"    @     0x7f96eae055ac  (anonymous namespace)::functionalizeFallback()\n"}
+,{"stream_name":"stderr","time":98.505326135,"data":"    @     0x7f96ebabc21e  c10::impl::BoxedKernelWrapper\u003c\u003e::call()\n"}
+,{"stream_name":"stderr","time":98.505344895,"data":"https://symbolize.stripped_domain/r/?trace=7f97a4a6995c,7f97a4a14def,7f96e43990be,7f96e439941e,7f96dd44dcfc,7f96dd44dbc3,7f96dd3f1620,7f96dd402af7,7f96dd402b73,7f96dd4440a8,7f96dd444b82,7f96dd3e822b,7f96dd3f02b6,7f96dd406f9c,7f96dd1a9fc2,7f96dd0f808e,7f96dd363a79,7f96eae055ab,7f96ebabc21d\u0026map= \n"}
+,{"stream_name":"stderr","time":98.505351415,"data":"*** SIGABRT received by PID 7 (TID 7) on cpu 87 from PID 7; stack trace: ***\n"}
+,{"stream_name":"stderr","time":98.521396063,"data":"PC: @     0x7f97a4a6995c  (unknown)  (unknown)\n"}
+,{"stream_name":"stderr","time":98.521410533,"data":"    @     0x7f92cadb47e5       1904  (unknown)\n"}
+,{"stream_name":"stderr","time":98.521424943,"data":"    @     0x7f97a4a14df0  (unknown)  (unknown)\n"}
+,{"stream_name":"stderr","time":98.526617042,"data":"    @     0x7f96e43990bf         32  absl::lts_20230802::log_internal::LogMessage::Die()\n"}
+,{"stream_name":"stderr","time":98.531804952,"data":"    @     0x7f96e439941f         16  absl::lts_20230802::log_internal::LogMessageFatal::~LogMessageFatal()\n"}
+,{"stream_name":"stderr","time":98.537044791,"data":"    @     0x7f96dd44dcfd        112  ConsumeValue\u003c\u003e()\n"}
+,{"stream_name":"stderr","time":98.542285981,"data":"    @     0x7f96dd44dbc4         64  torch_xla::ShapeHelper::ShapeOfXlaOp()\n"}
+,{"stream_name":"stderr","time":98.54751012,"data":"    @     0x7f96dd3f1621       1616  torch_xla::InferOutputShape()\n"}
+,{"stream_name":"stderr","time":98.552543279,"data":"    @     0x7f96dd402af8        736  torch_xla::Dot()::{lambda()#3}::operator()()\n"}
+,{"stream_name":"stderr","time":98.557596279,"data":"    @     0x7f96dd402b74         32  std::_Function_handler\u003c\u003e::_M_invoke()\n"}
+,{"stream_name":"stderr","time":98.562565558,"data":"    @     0x7f96dd4440a9        496  torch_xla::XlaNode::GetOpShape()\n"}
+,{"stream_name":"stderr","time":98.567642547,"data":"    @     0x7f96dd444b83        416  torch_xla::XlaNode::XlaNode()\n"}
+,{"stream_name":"stderr","time":98.572687767,"data":"    @     0x7f96dd3e822c         64  torch_xla::Generic::Generic()\n"}
+,{"stream_name":"stderr","time":98.577717646,"data":"    @     0x7f96dd3f02b7        208  torch_xla::MakeNode\u003c\u003e()\n"}
+,{"stream_name":"stderr","time":98.582725416,"data":"    @     0x7f96dd406f9d        272  torch_xla::Dot()\n"}
+,{"stream_name":"stderr","time":98.587748665,"data":"    @     0x7f96dd1a9fc3        192  torch_xla::tensor_methods::mm()\n"}
+,{"stream_name":"stderr","time":98.592719824,"data":"    @     0x7f96dd0f808f        208  torch_xla::XLANativeFunctions::mm()\n"}
+,{"stream_name":"stderr","time":98.597744264,"data":"    @     0x7f96dd363a7a         64  c10::impl::make_boxed_from_unboxed_functor\u003c\u003e::call()\n"}
+,{"stream_name":"stderr","time":98.602182013,"data":"    @     0x7f96eae055ac        672  (anonymous namespace)::functionalizeFallback()\n"}
+,{"stream_name":"stderr","time":98.606438423,"data":"    @     0x7f96ebabc21e  (unknown)  c10::impl::BoxedKernelWrapper\u003c\u003e::call()\n"}
+,{"stream_name":"stderr","time":98.610984282,"data":"    @     0x7f96eae05d80  (unknown)  (unknown)\n"}
+,{"stream_name":"stderr","time":98.610992242,"data":"https://symbolize.stripped_domain/r/?trace=7f97a4a6995c,7f92cadb47e4,7f97a4a14def,7f96e43990be,7f96e439941e,7f96dd44dcfc,7f96dd44dbc3,7f96dd3f1620,7f96dd402af7,7f96dd402b73,7f96dd4440a8,7f96dd444b82,7f96dd3e822b,7f96dd3f02b6,7f96dd406f9c,7f96dd1a9fc2,7f96dd0f808e,7f96dd363a79,7f96eae055ab,7f96ebabc21d,7f96eae05d7f\u0026map= \n"}
+,{"stream_name":"stderr","time":98.611002262,"data":"E0909 20:05:45.000365       7 coredump_hook.cc:301] RAW: Remote crash data gathering hook invoked.\n"}
+,{"stream_name":"stderr","time":98.611006162,"data":"E0909 20:05:45.000386       7 client.cc:270] RAW: Coroner client retries enabled, will retry for up to 30 sec.\n"}
+,{"stream_name":"stderr","time":98.611009772,"data":"E0909 20:05:45.000389       7 coredump_hook.cc:396] RAW: Sending fingerprint to remote end.\n"}
+,{"stream_name":"stderr","time":98.611088672,"data":"E0909 20:05:45.000426       7 coredump_hook.cc:405] RAW: Cannot send fingerprint to Coroner: [NOT_FOUND] stat failed on crash reporting socket /var/google/services/logmanagerd/remote_coredump.socket (Is the listener running?): No such file or directory\n"}
+,{"stream_name":"stderr","time":98.611106132,"data":"E0909 20:05:45.000432       7 coredump_hook.cc:457] RAW: Dumping core locally.\n"}
+,{"stream_name":"stderr","time":110.250105412,"data":"E0909 20:05:56.639323       7 process_state.cc:808] RAW: Raising signal 6 with default behavior\n"}
+,{"stream_name":"stderr","time":118.073588918,"data":"Aborted (core dumped)\n"}
+,{"stream_name":"stderr","time":121.603040043,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":124.855195611,"data":"[NbConvertApp] Writing 533792 bytes to __results__.html\n"}
+]

@@ -1,0 +1,33 @@
+{
+  "status": "partial",
+  "completed": [
+    "a_random",
+    "b_target_1x",
+    "no_edit"
+  ],
+  "dose_norm": 0.1,
+  "exp16_baseline_bridge": 0.75,
+  "baseline_bridge": 0.599982738494873,
+  "baseline_KL": 7.283807900630799e-11,
+  "scenarios": {
+    "no_edit": {
+      "bridge": 0.599982738494873,
+      "KL_ed_orig": 7.283807900630799e-11,
+      "delta_norm": 0.0
+    },
+    "a_random": {
+      "bridge": 0.6000041514635086,
+      "KL_ed_orig": 1.1460370812066412e-09,
+      "delta_norm": 0.09999998658895493
+    },
+    "b_target_1x": {
+      "bridge": 0.6016858816146851,
+      "KL_ed_orig": 1.334664863295032e-06,
+      "delta_norm": 0.10000001639127731
+    }
+  },
+  "target_pair": "31_23",
+  "last_layer": 23,
+  "K": 256,
+  "device": "xla:0"
+}

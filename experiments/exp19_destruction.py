@@ -315,6 +315,8 @@ def main(
         """Rows [K, D] → sparse ΔW [V, D] at tokens, scaled to ‖·‖=scale."""
         V, D = W_orig.shape
         ΔW = torch.zeros(V, D, device=device)
+        if rows.shape[0] == 1 and len(token_set) > 1:
+            rows = rows.expand(len(token_set), -1)  # gauge = common mode: one row for all tokens
         for i, t in enumerate(token_set):
             ΔW[t] = rows[i]
         n = ΔW.norm()
