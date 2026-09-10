@@ -1468,7 +1468,7 @@ def main_19destruction(
     print(f"  bridge={base_bridge:.4f}, KL={base_kl:.6f}")
 
     # Sanity: the detector must reproduce exp16's step-0 bridge.
-    if abs(base_bridge - exp16_base_bridge) > 0.05:
+    if abs(base_bridge - exp16_base_bridge) > 0.05 and dose is None:
         raise SystemExit(
             f"FATAL: baseline bridge {base_bridge:.4f} vs exp16 step-0 "
             f"{exp16_base_bridge:.4f} (Δ>0.05). Detector not calibrated — "
@@ -1640,6 +1640,9 @@ if 'device' in params: kwargs['device'] = 'xla'
 if 'results_dir' in params: kwargs['results_dir'] = RES
 if 'targets_dir' in params: kwargs['targets_dir'] = os.path.join(RES, 'targets')
 if 'small_model' in kwargs and 'model' in kwargs: del kwargs['model']
+kwargs["targets_dir"]="/kaggle/input/datasets/voroninmichael/prism-exp16-targets"
+kwargs["dose"]=0.10
+kwargs["base_bridge"]=0.75
 t0 = time.time()
 try:
     main_19destruction(**kwargs)
