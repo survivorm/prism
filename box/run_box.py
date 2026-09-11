@@ -1,230 +1,316 @@
-#!/usr/bin/env python3
-"""The box: KTL's vLLM-TPU serve (their code, their datasets) + mini-swe-agent
-(their loop, their model client) + thin glue that makes a long-lived Kaggle TPU
-session a self-debugging lab.
+"""run_box.py — persistent autonomous prism-experiment agent on Kaggle TPU.
 
-Deliberate reuse, not reinvention:
-  - vLLM serve, keepalive (480min loop + heartbeats), model loading from Kaggle
-    datasets (rahim3/qwen3-8-27b-bf16 weights, rahim3/qwen38-tpu-env-v5e8 XLA
-    cache): ARahim3/kaggle-tpu-lab kernel/serve_qwen38.py, fetched via git
-    (kernel has internet).
-  - agent loop / tool protocol / limits / trajectory JSON:
-    SWE-agent/mini-swe-agent (pip install mini-swe-agent).
-  - model client: minisweagent LitellmModel -> OpenAI-compatible
-    http://127.0.0.1:8000/v1 (the local vLLM server). No cloud.
+Thin glue over EXISTING tools (no reinvention):
+  * KTL (kaggle-tpu-lab) serve_qwen38.py  -> Qwen3.8-27B vLLM-TPU head (OpenAI endpoint)
+  * mini-swe-agent (SWE-agent)            -> agent loop (DefaultAgent + LocalEnvironment)
+  * py-spy                                -> TPU/XLA hang diagnostics
+  * prism git repo (cloned here)          -> the experiments the agent edits & runs
 
-Glue THIS file adds (the only net-new code):
-  1. Auto-compact at 85% of the model's max context (max read from vLLM
-     /models; threshold ~ tokens, estimated chars/4). On cross: the model
-     compresses history into a STATE block, history resets to [system, STATE].
-     Trajectory JSON stays complete — it is the durable record.
-  2. Context pack — the goal preamble points the agent at
-     box/context-pack.md: index of prior-run logs (repo-relative paths) +
-     hypotheses for what may be wrong. The agent reads it first, like a
-     researcher getting the lab notebook on arrival.
-  3. Two-way channel — periodic git-pull of cmd/*.txt folded in as a
-     NEW-INSTRUCTION turn (mid-run correction); one-way = print (Kaggle
-     live-log in the browser) + trajectory JSON.
-  4. pyspy — pip-installed in the box preamble; the agent uses it through the
-     mini-swe bash tool (`py-spy dump --pid N`) to read the stack of a hung
-     XLA process. No custom tool registration needed.
-  5. Keepalive — after the agent exits, main waits out the vLLM keepalive so
-     the session (XLA cache + results) stays alive.
+The box is a Kaggle TPU session (9h hard cap; keepalive below defeats the 2h
+idle-kill). vLLM serves on the TPU; this script runs in the Kaggle system python
+and drives the agent against vLLM over HTTP.
 
-Self-check (no TPU/vLLM): python3 run_box.py --selfcheck drives compact()
-against a stub model.
+MODES:
+  selfcheck  (default; NO vLLM/TPU needed) — pure test of the 85% auto-compact
+              + mini-swe import. Run this first, locally, to prove the harness.
+  serve      — clone KTL, boot vLLM-TPU head, health-check, then run the agent.
+  run        — assume vLLM already up at VLLM_URL; just run the agent.
+
+  python run_box.py selfcheck
+  python run_box.py serve  [--task "..."]
+  python run_box.py run    --task "..."
+
+Env:
+  VLLM_URL     (default http://127.0.0.1:8000/v1)
+  VLLM_MODEL   (default Qwen3.8-27B)
+  VLLM_API_KEY (default not-needed)
+  TP           (default 8; set 4 for chip-partition coexistence with prism)
+  KTL_REPO     (default https://github.com/ARahim3/kaggle-tpu-lab)
+  GOAL_PROMPT  (default: run+debug the TPU-blocked prism experiments)
 """
-from __future__ import annotations
-import json
-import os
-import subprocess
-import sys
-import threading
-import time
-import urllib.request
+import os, sys, time, subprocess, argparse, urllib.request, json
 
-REPO = os.environ.get("BOX_REPO", "/kaggle/working/box")
-KTL = f"{REPO}/kaggle-tpu-lab"
-VLLM_URL = "http://127.0.0.1:8000/v1"
-MODEL_NAME = "qwen3.8-27b"
-KEEPALIVE_MIN = int(os.environ.get("BOX_KEEPALIVE_MIN", "480"))
-COMPACTION_RATIO = float(os.environ.get("BOX_COMPACT_RATIO", "0.85"))
-CONTEXT_PACK = f"{REPO}/context-pack.md"
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(HERE)
 
-DECISION_RULES = """
-Decision rules (pre-encoded from prior sessions — follow, do not re-derive):
-- Read box/context-pack.md FIRST: prior-run log index + hypotheses. Verify against the logs before forming new theories.
-- Run experiments as long jobs via the background tool (or `nohup ... &`) and poll; for a job that stops producing output for >2 min, use the pyspy tool on its pid — an XLA HLO compile hang is a readable stack, not a dead log.
-- Before blaming hardware/XLA, reproduce the failing op on CPU at tiny shape (the phantom-shape bugs so far were XLA-side, not prism logic).
-- If [D,D] matmul or 2nd-order HVP is blocked on XLA: use the per-token [K,D] Jacobian path or the analytical last-layer form; verify numerical equivalence on CPU before trusting it on TPU.
-- XLA_FLAGS must be set in the environment before the process starts torch_xla — they cannot be changed mid-process; flag experiments = separate processes.
-- Consider other compute resources in the box (vLLM is a model server, not a compute pool) — but TPU chips are already partitioned: vLLM takes its share, experiments take the rest; do not double-book.
-- Metric definitions are FROZEN: gap = prob-weighted (1-cos), lower=better; bridge = cos, higher=better. Change computation paths, never definitions.
-- After each successful scenario: save the results/ JSON + update PLAN.md (tried / failed / next).
-"""
+try:
+    from minisweagent.agents.default import DefaultAgent as _DA
+    _HAS_MSWE = True
+except Exception:
+    _DA = object
+    _HAS_MSWE = False
 
 
-# --------------------------------------------------------------------------- 1: KTL serve
-def start_serve():
-    """Fetch kaggle-tpu-lab, run its serve_qwen38.py (their code, their
-    datasets mounted at /kaggle/input). Returns the Popen; it keeps vLLM alive
-    for its own keepalive and heartbeats to the kernel log."""
-    if not os.path.isdir(KTL):
-        subprocess.run(["git", "clone", "--depth", "1",
-                        "https://github.com/ARahim3/kaggle-tpu-lab", KTL], check=True)
-    p = subprocess.Popen([sys.executable, f"{KTL}/kernel/serve_qwen38.py"],
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    def tail():
-        for line in p.stdout:
-            print(f"[vllm] {line}", end="", flush=True)
-    threading.Thread(target=tail, daemon=True).start()
-    return p
+# ----------------------------------------------------------------------------
+# 85% auto-compaction — pure core (testable without any model/TPU)
+# ----------------------------------------------------------------------------
+def _msg_tokens(m):
+    return sum(len(str(m.get(k, ""))) // 4 + 1 for k in ("role", "content", "name"))
 
 
-def wait_healthy(timeout_s=3600):
-    t0 = time.time()
-    while time.time() - t0 < timeout_s:
-        try:
-            with urllib.request.urlopen(f"{VLLM_URL}/models", timeout=5) as r:
-                if r.status == 200:
-                    return json.load(r)
-        except Exception:
-            time.sleep(20)
-    raise SystemExit("vLLM never became healthy")
+def _msg_text(m):
+    c = m.get("content", "")
+    if isinstance(c, list):
+        c = " ".join(str(x) for x in c)
+    return str(c)
 
 
-def max_context(models_payload):
-    for m in models_payload.get("data", []):
-        if m.get("max_model_len"):
-            return int(m["max_model_len"])
-    return 262144  # KTL default
+def compact(messages, max_tokens, threshold=0.85, recent=8, summarize=None):
+    """Compact `messages` when prompt_tokens exceeds threshold*max_tokens.
+    summarize(text) -> str (default: structural marker, no model call).
+    Preserves messages[0] (system). Returns (new_messages, compacted:bool)."""
+    total = sum(_msg_tokens(m) for m in messages)
+    if total < threshold * max_tokens:
+        return messages, False
+    system = messages[:1]
+    recent_n = min(recent, max(0, len(messages) - 1))
+    head, recent = (messages[1:-recent_n], messages[-recent_n:]) if recent_n else (messages[1:], [])
+    if summarize is None:
+        summarize = lambda _t: "[context compacted: earlier turns summarized/omitted]"
+    summary = summarize(_msg_text(m) for m in head)
+    new = system + [{"role": "assistant", "content": f"[summary] {summary}",
+                     "extra": {"compaction": True}}] + recent
+    return new, True
 
 
-# --------------------------------------------------------------------------- 2: compact at 85%
-def compact(agent, client=None):
-    """Auto-compact when estimated history crosses COMPACTION_RATIO of the
-    model's max context. The model compresses history into a STATE block;
-    messages reset to [system, STATE]. `client` = the raw (unwrapped) model
-    query, to avoid recursing through the glue wrapper. Returns True if
-    it compacted."""
-    est_tokens = sum(len(m.get("content") or "") for m in agent.messages) // 4
-    if est_tokens < agent._compact_threshold:
-        return False
-    print(f"[compact] ~{est_tokens} tok >= {agent._compact_threshold} (85% of "
-          f"{agent._compact_threshold // COMPACTION_RATIO}) — auto-compacting", flush=True)
-    hist = [{"role": m.get("role"), "content": (m.get("content") or "")[:3000]}
-            for m in agent.messages]
-    out = (client or agent.model).query([{"role": "user", "content":
-        "Compress this debugging session into a STATE block. Sections: "
-        "## Tried (one line each: action -> outcome), ## Proven (verified facts, "
-        "numbers kept), ## Open (hypotheses, next experiments in priority order), "
-        "## State (files changed, running jobs with pids, current target). "
-        "Concrete: names, values, commands, log paths. No commentary.\n\n"
-        + json.dumps(hist, ensure_ascii=False)}])
-    text = out.get("content")
-    if isinstance(text, list):
-        text = "".join(p.get("text", "") for p in text if isinstance(p, dict))
-    text = text or str(out)
-    keep = [m for m in agent.messages if m.get("role") == "system"]
-    agent.messages = keep + [{"role": "user",
-        "content": f"STATE (session so far, compacted):\n{text}\n\nContinue the task."}]
-    print("[compact] done — history reset to system + STATE", flush=True)
-    return True
+class BoxAgent(_DA):
+    """mini-swe DefaultAgent + 85% auto-compact + git command channel."""
+    def __init__(self, model, env, max_tokens, **cfg):
+        if not _HAS_MSWE:
+            raise RuntimeError("mini-swe-agent not installed (pip install mini-swe-agent==2.4.6)")
+        super().__init__(model, env, **cfg)
+        self.box_max_tokens = int(max_tokens)
 
+    def _maybe_compact(self):
+        last = self.messages[-1]
+        pt = (last.get("extra") or {}).get("usage", {}).get("prompt_tokens")
+        if pt and pt > self.box_max_tokens * 0.85:
+            def summarize(gen):
+                try:
+                    out = self.model.query([
+                        {"role": "system",
+                         "content": "Summarize an ML-experiment agent's work-so-far into a tight "
+                                     "self-contained recap it can continue from. Keep file paths, "
+                                     "commands, decisions, errors, open questions. <=1200 chars."},
+                        {"role": "user", "content": "\n".join(gen)},
+                    ])
+                    return _msg_text(out)
+                except Exception:
+                    return None
+            new, did = compact(self.messages, self.box_max_tokens,
+                               summarize=(lambda g: summarize(g)))
+            if did:
+                self.messages = new
+                print(f"[box] compacted: {pt} -> {sum(_msg_tokens(m) for m in new)}", flush=True)
 
-# --------------------------------------------------------------------------- 3: correction channel
-def maybe_correct(agent):
-    """Two-way: git-pull and fold new operator corrections into the conversation."""
-    try:
-        subprocess.run(["git", "pull", "--ff-only"], cwd=REPO,
-                       capture_output=True, timeout=60)
-        lines = []
-        cmd = f"{REPO}/cmd"
+    def _pull_commands(self):
+        cmd = os.path.join(REPO, "box", "cmd")
+        out = []
         if os.path.isdir(cmd):
-            for fn in sorted(os.listdir(cmd)):
-                if fn.endswith(".txt"):
-                    lines += [l for l in open(os.path.join(cmd, fn)).read().splitlines() if l.strip()]
-        if lines and agent.messages:
-            agent.messages.append({"role": "user",
-                                   "content": "NEW INSTRUCTION from operator:\n" + "\n".join(lines)})
-            print("[correct]", lines, flush=True)
-    except Exception as e:
-        print(f"[correct] skip: {e}", flush=True)
+            for f in sorted(os.listdir(cmd)):
+                if f.endswith(".txt"):
+                    out.append(f"NEW-INSTRUCTION (operator): {open(os.path.join(cmd, f)).read().strip()}")
+        return out
+
+    def run(self, task="", **kw):
+        self.extra_template_vars |= {"task": task, **kw}
+        self.messages = []
+        self.add_messages(
+            self.model.format_message(role="system",
+                                      content=self._render_template(self.config.system_template)),
+            self.model.format_message(role="user",
+                                      content=self._render_template(self.config.instance_template)),
+        )
+        while True:
+            try:
+                self.step()
+                self._maybe_compact()
+            except Exception:
+                self.handle_uncaught_exception(sys.exc_info()[1])
+                break
+            if self.messages[-1].get("role") == "exit":
+                break
+            for note in self._pull_commands():
+                self.add_messages({"role": "user", "content": note, "extra": {"command": True}})
+        return self.messages[-1].get("extra", {})
 
 
-# --------------------------------------------------------------------------- main
-def run_box(goal):
-    serve = start_serve()
-    models = wait_healthy()
-    thr = int(max_context(models) * COMPACTION_RATIO)
-    print(f"[box] vLLM healthy (max_model_len={max_context(models)}, compact at {thr}) — starting agent", flush=True)
+# ----------------------------------------------------------------------------
+# selfcheck — prove compaction + harness locally, no vLLM/TPU
+# ----------------------------------------------------------------------------
+def selfcheck():
+    print("== selfcheck: 85% auto-compact (pure, no model) ==")
+    msgs = [{"role": "system", "content": "sys"}]
+    for i in range(60):
+        msgs.append({"role": "user", "content": f"turn {i} " + "x" * 2000})
+        msgs.append({"role": "assistant", "content": f"ok {i} " + "y" * 2000})
+    max_t = 3000
+    before = sum(_msg_tokens(m) for m in msgs)
+    calls = []
+    def mock_sum(gen):
+        calls.append(1)
+        return "SUMMARY: did turns 0..N; current focus: X; open: Y"
+    new, did = compact(msgs, max_t, summarize=mock_sum)
+    assert did, "should have compacted (total over threshold)"
+    assert len(calls) == 1, "summarizer called exactly once"
+    assert new[0]["role"] == "system", "system preserved"
+    assert any(m.get("extra", {}).get("compaction") for m in new), "summary marker present"
+    assert new[-1]["content"].startswith("ok 59"), "recent tail preserved"
+    assert sum(_msg_tokens(m) for m in new) < before * 0.9
+    small = compact([{"role": "system", "content": "sys"},
+                     {"role": "user", "content": "hi"}], max_t, summarize=mock_sum)
+    assert small[1] is False, "small context should NOT compact"
+    print(f"   before={before}  after={sum(_msg_tokens(m) for m in new)}  (compacted x{len(calls)})")
+    print("== selfcheck: mini-swe import ==")
+    if _HAS_MSWE:
+        import minisweagent
+        print(f"   mini-swe {getattr(minisweagent, '__version__', '?')} OK; BoxAgent(DefaultAgent) ready")
+        print("   (real agent needs a vLLM endpoint; serve/run mode wires it)")
+    else:
+        print("   mini-swe NOT installed here; pure compaction still validated above")
+    print("== selfcheck: PASS ==")
 
-    from minisweagent.agents import get_agent
-    from minisweagent.environments import get_environment
-    from minisweagent.models import get_model
 
-    model = get_model("litellm", model=f"openai/{MODEL_NAME}",
-                      model_kwargs={"api_base": VLLM_URL, "api_key": "kaggle-local"})
-    env = get_environment("local")
-    agent = get_agent("default", model=model, environment=env,
-                      mode="yolo", step_limit=0)
-    agent.config.output_path = f"{REPO}/traj.json"
-    agent._compact_threshold = thr
-
-    # Wrap the model call: after each turn, auto-compact (85%) + check for
-    # operator corrections. Mini-swe has no per-step hook; wrapping query is
-    # the least-invasive hook point (their loop, our glue).
-    inner_query = model.query
-
-    def query_with_glue(messages, **kw):
-        r = inner_query(messages, **kw)
+# ----------------------------------------------------------------------------
+# vLLM head (KTL) + health
+# ----------------------------------------------------------------------------
+def wait_health(url, timeout=1500):
+    t0 = time.time()
+    while time.time() - t0 < timeout:
         try:
-            compact(agent, inner_query)
-            maybe_correct(agent)
-        except Exception as e:
-            print(f"[glue] {e}", flush=True)
-        return r
+            with urllib.request.urlopen(url + "/health", timeout=10) as r:
+                if r.status == 200:
+                    print(f"[box] vLLM healthy after {int(time.time()-t0)}s", flush=True)
+                    return True
+        except Exception:
+            pass
+        time.sleep(10)
+    return False
 
-    model.query = query_with_glue
 
-    preamble = (goal
-                + f"\n\nFirst action: `read` {CONTEXT_PACK} and follow its log index."
-                + "\nWork maximally efficiently; debug via pyspy; results + PLAN.md after each success.")
-    try:
-        agent.run(task=preamble)
-        print("[box] agent finished — keeping the session alive for the rest of keepalive", flush=True)
-    finally:
-        t0 = time.time()
-        while serve.poll() is None and time.time() - t0 < KEEPALIVE_MIN * 60:
-            time.sleep(120)
-    return 0
+def boot_vllm(kaggle_dir="/kaggle/working/ktl", tp=8):
+    url = os.environ.get("VLLM_URL", "http://127.0.0.1:8000/v1")
+    if wait_health(url.replace("/v1", ""), 10):
+        return url
+    ktl = os.path.join(REPO, "ktl")
+    if not os.path.isdir(os.path.join(ktl, "kernel")):
+        print(f"[box] cloning KTL {os.environ.get('KTL_REPO','https://github.com/ARahim3/kaggle-tpu-lab')}", flush=True)
+        subprocess.run(["git", "clone", "--depth", "1",
+                        os.environ.get("KTL_REPO", "https://github.com/ARahim3/kaggle-tpu-lab"), ktl], check=True)
+    cfg = {"tpu": {"tp": tp}, "text_only": True}
+    if os.environ.get("VLLM_WEIGHTS"):
+        cfg["weights"] = {"source": os.environ["VLLM_WEIGHTS"]}
+    script = os.path.join(kaggle_dir, "ktl_cfg.py")
+    os.makedirs(kaggle_dir, exist_ok=True)
+    with open(script, "w") as f:
+        f.write("# injected config\nCFG = " + repr(cfg) + "\n")
+    serve = os.path.join(ktl, "kernel", "serve_qwen38.py")
+    env = dict(os.environ, TP=str(tp), TEXT_ONLY="1", NPROC=str(tp))
+    print(f"[box] boot vLLM-TPU (TP={tp}) ...", flush=True)
+    p = subprocess.Popen([sys.executable, serve, "--config", script], env=env)
+    if not wait_health(url.replace("/v1", "")):
+        p.terminate()
+        raise SystemExit("[box] vLLM did not become healthy in time")
+    return url
+
+
+# ----------------------------------------------------------------------------
+# agent wiring (mini-swe -> vLLM)
+# ----------------------------------------------------------------------------
+def _mini_templates():
+    """Load mini-swe's own system/instance templates (they define the bash-tool format)."""
+    import yaml, importlib.resources
+    p = importlib.resources.files("minisweagent").joinpath("config/mini.yaml")
+    cfg = yaml.safe_load(p.read_text())
+    return cfg["agent"]["system_template"], cfg["agent"]["instance_template"]
+
+
+def box_task(goal):
+    cp = os.path.join(HERE, "context-pack.md")
+    body = open(cp).read() if os.path.isfile(cp) else "(no context-pack.md)"
+    return "Goal: " + goal + "\n\n=== context-pack.md ===\n" + body
+
+
+def build_agent(vllm_url, vllm_model, max_tokens, cwd=REPO):
+    from minisweagent.models import get_model
+    from minisweagent.environments import get_environment
+    api_key = os.environ.get("VLLM_API_KEY", "not-needed")
+    model = get_model(None, {
+        "model_name": "openai/" + vllm_model,
+        "model_class": "litellm",
+        "model_kwargs": {"api_base": vllm_url, "api_key": api_key, "max_tokens": max_tokens},
+    })
+    env = get_environment({"environment_class": "local", "cwd": cwd})
+    system, instance = _mini_templates()
+    system += (
+        "\n\nYou are an autonomous ML-experiment engineer on a Kaggle TPU box working in the "
+        "prism repo (torch_xla). On a process hang run `py-spy dump --pid <PID>` to read the "
+        "stuck thread (XLA HLO compile shows torch_xla::XRT::Run / XlaOp::Build); fix root "
+        "causes, do not just retry. Before blaming hardware, reproduce on CPU.\n\n"
+        "## Context pack (prior runs + hypotheses)\n"
+    )
+    cp = os.path.join(HERE, "context-pack.md")
+    if os.path.isfile(cp):
+        system += open(cp).read()
+    goal = os.environ.get("GOAL_PROMPT", (
+        "Run and get the TPU-blocked prism causal experiments (exp16_readout_pull, "
+        "exp17_lora_distill, exp18_logit_kd) to produce a complete, correct result JSON. "
+        "They are blocked by XLA phantom-dot / HLO hangs. Debug each, apply a real fix "
+        "(XLA flags, batched/analytical Jacobian, or CPU-precompute+dataset), and verify "
+        "against the CPU reference. Start by reading box/context-pack.md."
+    ))
+    return BoxAgent(model, env, max_tokens=max_tokens,
+                    system_template=system, instance_template=instance,
+                    output_path=os.path.join(HERE, "agent_trace.json"),
+                    cost_limit=1e9, max_consecutive_format_errors=0)
+
+
+# ----------------------------------------------------------------------------
+# keepalive (defeats the 2h idle-kill; 9h process-lifetime guard)
+# ----------------------------------------------------------------------------
+def keepalive(max_hours=9):
+    from threading import Thread
+    stop = {"v": False}
+    def loop():
+        t0 = time.time(); i = 0
+        while not stop["v"] and time.time() - t0 < max_hours * 3600:
+            i += 1
+            print(f"[box-keepalive] t={int(time.time()-t0)}s alive={i}", flush=True)
+            time.sleep(5)
+    th = Thread(target=loop, daemon=True)
+    th.start()
+    return stop
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("mode", choices=["selfcheck", "serve", "run"], nargs="?", default="selfcheck")
+    ap.add_argument("--task", default=None)
+    ap.add_argument("--tp", type=int, default=int(os.environ.get("TP", "8")))
+    ap.add_argument("--max-tokens", type=int, default=int(os.environ.get("VLLM_MAX_TOKENS", "32768")))
+    a = ap.parse_args()
+
+    if a.mode == "selfcheck":
+        selfcheck()
+        return
+
+    if not _HAS_MSWE:
+        raise SystemExit("serve/run needs mini-swe-agent: pip install mini-swe-agent==2.4.6")
+
+    vllm_url = os.environ.get("VLLM_URL", "http://127.0.0.1:8000/v1")
+    vllm_model = os.environ.get("VLLM_MODEL", "Qwen3.8-27B")
+    stop = keepalive()
+    if a.mode == "serve":
+        vllm_url = boot_vllm(tp=a.tp)
+    agent = build_agent(vllm_url, vllm_model, a.max_tokens)
+    task = a.task or os.environ.get("GOAL_PROMPT") or (
+        "Read box/context-pack.md, then run+debug the TPU-blocked prism causal "
+        "experiments (exp16/17/18) until each produces a correct result JSON. "
+        "Use py-spy on any hang.")
+    out = agent.run(task)
+    stop["v"] = True
+    print(f"[box] agent exited: {json.dumps(out, default=str)[:500]}", flush=True)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "--selfcheck":
-        # No TPU/vLLM: prove compact() fires at threshold and resets history.
-        import types
-
-        class CModel:
-            def get_template_vars(self):
-                return {}
-
-            def query(self, messages, **kw):
-                return {"content": "## Proven: stub fact\n## Next: stub step"}
-
-        agent = types.SimpleNamespace(
-            messages=[{"role": "system", "content": "You are an agent"},
-                      {"role": "user", "content": "x" * 2000},
-                      {"role": "assistant", "content": "y" * 2000}],
-            model=CModel(),
-        )
-        agent._compact_threshold = 600  # (2000+2000)/4 = 1000 est tokens > 600 => fires
-        assert compact(agent) is True
-        assert len(agent.messages) == 2
-        assert "STATE (session so far, compacted)" in agent.messages[1]["content"]
-        assert compact(agent) is False  # below threshold now
-        print("SELF-CHECK OK — auto-compact fires at 85% threshold, resets to [system, STATE], stays quiet below.")
-    else:
-        goal = sys.argv[1] if len(sys.argv) > 1 else \
-            "Produce results/exp16_readout_pull.json on this TPU (see context pack for the XLA blockers and workarounds)."
-        sys.exit(run_box(goal))
+    main()
