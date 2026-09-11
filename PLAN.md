@@ -105,7 +105,7 @@
 ## exp19 v4 (7-pair, dose 1/10/100) + exp17 canary verdict (2026-09-10)
 - **exp17 2nd-order canary: CANCELLED** (hung ~2h in XLA HLO compile on the 2nd-order HVP). Verdict: **2nd-order is a TPU dead-end → exp17 (and exp16) stay GPU.** No TPU 2nd-order expansion.
 - **exp19 v4 pushed (v4, id prism-exp19-destruction-tpu): 7 pairs, dose 1/10/100, per-pair x per-scenario per-pair checkpoint.** All 7 pairs have targets. QUEUED (TPU pool long); runs when a slot frees; per-scenario checkpointing protects partial results. 1st-order (proven) → no XLA risk beyond the 2h wall-clock (7 pairs x 6 scenarios fit, per-pair partial save guards a kill).
-- NEXT: when exp19 v4 → COMPLETE, pull `results/exp19_destruction.json` (7 pairs × dose {1,10,100} × 6 scenarios × per-layer bridge + gauge/diff norms + per-layer gauge-share), fix the truncated-JSON save if it recurs, integrate into docs/paper.md §13 + future-work (replace the 1-pair placeholder).
+- **DONE**: results pulled, **JSON-save bug fixed** (was `json.dump(..., device=xla)` → TypeError, file truncated; now `device=str(device)`), full 7-pair JSON recovered from the kernel log + completed scenarios from partials, integrated into docs/paper.md §11.13 (full per-layer bridge table + dose-response: dose-linear 0.17×/0.5×/0.9×, gauge=0.0000/0.0238/0.2382 at L23, gauge null-op, target=differential exactly, cross-layer gauge/diff ratio stable 1.6–1.9).
 
 ## kaggle-tpu-lab sandbox (2026-09-11, user reframe «интереса ради») — TPU-blocked exps via long-lived session
 
@@ -136,4 +136,4 @@
 ## Box: autonomous TPU experimenter (2026-09-11, READY — push pending user go)
 
 `box/run_box.py` = pattern (A): KTL notebook (serve_qwen38.py verbatim: vLLM 27B bf16 from `rahim3/qwen3-8-27b-bf16` dataset, TP=4, env cache `rahim3/qwen38-tpu-env-v5e8`, keepalive 480 min) + **mini-swe-agent** (SWE-agent/mini-swe-agent: DefaultAgent + LiteLLMModel → local vLLM OpenAI endpoint) + **auto-compact at 85% of max context** (threshold from `/v1/models`) + `py-spy` tool + git-pull mailbox for two-way prompt correction + `box/context-pack.md` (log index + ranked XLA hypotheses) in the system prompt. Prism code in the box, experiments on chips 4-7 (`PJRT_DEVICE=4,5,6,7`), 1st-order only.
-Self-check passes. Push = `kaggle kernels push box/` after generating kernel.ipynb (notebook kernel, enable_tpu=true). In-box first tasks: exp2 v3 (pure forward, turning points = first clean TPU scientific result); py-spy the exp17 canary hang shape if it reproduces.
+In-box agent = mini-swe-agent DefaultAgent (BoxAgent subclass: 85% auto-compact, pyspy, git cmd-channel, 9h keepalive) → local vLLM 27B. **First task = vLLM/torch_xla coexistence probe** (run a 0.8B torch_xla forward, report HBM split vs vLLM); then TPU-blocked exp16/17/18 fixes. Self-check PASS locally (compact 60714→4072 at 85%). Coexistence gate = the probe; if OOM → prism falls back to CPU in-session, TP=4 chip-partition is the upgrade path.
