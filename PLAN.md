@@ -132,3 +132,8 @@
 3. TPU partitioning API: can torch_xla be pinned to a chip subset (PJRT devices 4-7 of v5e-8) while vLLM takes 0-3?
 
 **Gate / next step:** build a 2-client coexist canary — kaggle-tpu-lab vLLM serve (chips 0-3) + a 10-line torch_xla forward on chips 4-7 — to answer Q1/Q3. If it coexists → wire exp18 (7-pair, 4-6 threads) as the first sandbox run. If 1-session enforced → fall back to pattern B (env reuse, single prism client, no vLLM), still 9h. **No GPU spend; uses TPU quota only.**
+
+## Box: autonomous TPU experimenter (2026-09-11, READY — push pending user go)
+
+`box/run_box.py` = pattern (A): KTL notebook (serve_qwen38.py verbatim: vLLM 27B bf16 from `rahim3/qwen3-8-27b-bf16` dataset, TP=4, env cache `rahim3/qwen38-tpu-env-v5e8`, keepalive 480 min) + **mini-swe-agent** (SWE-agent/mini-swe-agent: DefaultAgent + LiteLLMModel → local vLLM OpenAI endpoint) + **auto-compact at 85% of max context** (threshold from `/v1/models`) + `py-spy` tool + git-pull mailbox for two-way prompt correction + `box/context-pack.md` (log index + ranked XLA hypotheses) in the system prompt. Prism code in the box, experiments on chips 4-7 (`PJRT_DEVICE=4,5,6,7`), 1st-order only.
+Self-check passes. Push = `kaggle kernels push box/` after generating kernel.ipynb (notebook kernel, enable_tpu=true). In-box first tasks: exp2 v3 (pure forward, turning points = first clean TPU scientific result); py-spy the exp17 canary hang shape if it reproduces.
