@@ -106,3 +106,29 @@
 - **exp17 2nd-order canary: CANCELLED** (hung ~2h in XLA HLO compile on the 2nd-order HVP). Verdict: **2nd-order is a TPU dead-end → exp17 (and exp16) stay GPU.** No TPU 2nd-order expansion.
 - **exp19 v4 pushed (v4, id prism-exp19-destruction-tpu): 7 pairs, dose 1/10/100, per-pair x per-scenario per-pair checkpoint.** All 7 pairs have targets. QUEUED (TPU pool long); runs when a slot frees; per-scenario checkpointing protects partial results. 1st-order (proven) → no XLA risk beyond the 2h wall-clock (7 pairs x 6 scenarios fit, per-pair partial save guards a kill).
 - NEXT: when exp19 v4 → COMPLETE, pull `results/exp19_destruction.json` (7 pairs × dose {1,10,100} × 6 scenarios × per-layer bridge + gauge/diff norms + per-layer gauge-share), fix the truncated-JSON save if it recurs, integrate into docs/paper.md §13 + future-work (replace the 1-pair placeholder).
+
+## kaggle-tpu-lab sandbox (2026-09-11, user reframe «интереса ради») — TPU-blocked exps via long-lived session
+
+**Idea (user):** instead of competing for the TPU slot with 2h-capped kernels, run `ARahim3/kaggle-tpu-lab` — a **long-lived TPU session** (keepalive `keepalive_min:480`, Kaggle TPU hard-caps at 9h, beats the 2h per-kernel wall-clock that blocks exp16/17/18) — and inside the **same container** run our prism causal experiments as **4-6 concurrent threads** (one experiment = N parallel threads, NOT 4-6 agent instances).
+
+**Why it unblocks what 2h-blocks:**
+- Kaggle free-tier TPU = **v5e-8 = 8×32GB = 256GB HBM total**. Qwen3.8-27B (vLLM-TPU, TP=8, bf16 ~55-80GB) occupies only a fraction; ~150-200GB remains. **TPU is partitionable** (chip sub-units) → vLLM (JAX/Pallas) and prism (torch_xla) are two NON-MONOPOLISTIC clients coexisting (user: «vllm может и будет занимать TPU не монопольно → одновременно инференс и эксперимент»).
+- 9h session ≫ 2h kernel → exp16 (~5-10min workload), exp17 (~9.2h but needs 2nd-order = dead-end, see below), exp18 (~1h 7-pair) all fit.
+
+**Known TPU blockers that SURVIVE the sandbox (unchanged by it):**
+- **exp16**: XLA phantom `[D,D]` dot SIGABRT — the 9h session doesn't fix a shape-inference bug. Needs the phantom-dot workaround (chunked/analytic split) OR a different image flag first.
+- **exp17**: 2nd-order HVP = confirmed XLA HLO compile hang (canary cancelled). Sandbox doesn't fix 2nd-order. Stays GPU.
+- **exp18**: 7 distinct l_S = 7 XLA recompiles ~4h total > 2h kernel, BUT **< 9h session** → sandbox is exactly what lets exp18 run. Highest-value target for the sandbox.
+- **exp19 v4**: already running as kernel; if the 2h kill recurs, sandbox gives it 9h to finish.
+
+**Implementation patterns (pick one):**
+- **(A) concurrent coexist**: kaggle-tpu-lab `serve` runs vLLM (JAX) on part of the v5e-8; a second client (prism via torch_xla) on the remaining chips (TPU partition). Both alive simultaneously. Cleanest, needs TPU partitioning setup (vLLM on e.g. chips 0-3, prism on 4-7) — feasibility unverified.
+- **(B) reuse-env, no vLLM**: skip the 27B server entirely; push a custom kernel that reuses kaggle-tpu-lab's prebuilt env (XLA compile cache from `rahim3/qwen38-tpu-env-v5e8` dataset, uv venv, internet on) but runs only prism. Avoids HBM waste + vLLM restart cost. The «agent harness» drives prism via a non-TPU model (the vLLM 27B is only needed if the agent itself runs on-TPU — it doesn't have to).
+- **Thread fan-out (in either pattern):** one prism experiment = 4-6 Python threads/processes, each taking a different pair/scenario/shard of the token set, all in one session. Cuts wall-clock 4-6×.
+
+**Open questions before launch (verify, don't assume):**
+1. Does Kaggle free-tier allow 2 concurrent TPU clients on ONE v5e-8 (vLLM + torch_xla)? Or is 1-batch-session still enforced at the client level (observed: 'Maximum batch TPU session count of 1')? If the 1-session limit is per-PROCESS not per-hardware, partitioning may be blocked.
+2. Does the 9h keepalive actually hold on our account (kaggle-tpu-lab's `keepalive_min:480` is a claim; canary showed the 2h is a KAGGLE enforcement — need to test if a non-kernel long-lived session also gets 2h-killed or gets the 9h).
+3. TPU partitioning API: can torch_xla be pinned to a chip subset (PJRT devices 4-7 of v5e-8) while vLLM takes 0-3?
+
+**Gate / next step:** build a 2-client coexist canary — kaggle-tpu-lab vLLM serve (chips 0-3) + a 10-line torch_xla forward on chips 4-7 — to answer Q1/Q3. If it coexists → wire exp18 (7-pair, 4-6 threads) as the first sandbox run. If 1-session enforced → fall back to pattern B (env reuse, single prism client, no vLLM), still 9h. **No GPU spend; uses TPU quota only.**
