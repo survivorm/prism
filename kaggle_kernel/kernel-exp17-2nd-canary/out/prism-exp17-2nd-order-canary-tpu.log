@@ -1,0 +1,49 @@
+[{"stream_name":"stdout","time":4.085047451,"data":"Collecting transformers==5.15.1\n"}
+,{"stream_name":"stdout","time":4.156141543,"data":"  Downloading transformers-5.15.1-py3-none-any.whl.metadata (32 kB)\n"}
+,{"stream_name":"stdout","time":4.835757548,"data":"Collecting safetensors==0.8.0\n"}
+,{"stream_name":"stdout","time":4.850502938,"data":"  Downloading safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.2 kB)\n"}
+,{"stream_name":"stdout","time":5.5596104440000005,"data":"Downloading transformers-5.15.1-py3-none-any.whl (11.7 MB)\n"}
+,{"stream_name":"stdout","time":6.203888559,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 18.6 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":6.225039009,"data":"Downloading safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (516 kB)\n"}
+,{"stream_name":"stdout","time":6.525228786,"data":"Installing collected packages: transformers, safetensors\n"}
+,{"stream_name":"stdout","time":6.525298686,"data":"  Attempting uninstall: transformers\n"}
+,{"stream_name":"stdout","time":6.5363318360000005,"data":"    Found existing installation: transformers 5.12.1\n"}
+,{"stream_name":"stdout","time":7.414991615,"data":"    Uninstalling transformers-5.12.1:\n"}
+,{"stream_name":"stdout","time":11.178445689,"data":"      Successfully uninstalled transformers-5.12.1\n"}
+,{"stream_name":"stdout","time":18.031743992,"data":"  Attempting uninstall: safetensors\n"}
+,{"stream_name":"stdout","time":18.043639243,"data":"    Found existing installation: safetensors 0.7.0\n"}
+,{"stream_name":"stdout","time":18.049061152,"data":"    Uninstalling safetensors-0.7.0:\n"}
+,{"stream_name":"stdout","time":18.078609773,"data":"      Successfully uninstalled safetensors-0.7.0\n"}
+,{"stream_name":"stdout","time":18.710763867,"data":"Successfully installed safetensors-0.8.0 transformers-5.15.1\n"}
+,{"stream_name":"stderr","time":18.711007898,"data":"WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n"}
+,{"stream_name":"stderr","time":19.056328055,"data":"\n"}
+,{"stream_name":"stderr","time":19.056355525,"data":"[notice] A new release of pip is available: 25.0.1 -\u003e 26.2.1\n"}
+,{"stream_name":"stderr","time":19.056360595,"data":"[notice] To update, run: pip install --upgrade pip\n"}
+,{"stream_name":"stdout","time":24.992313428,"data":"  [pip] transformers=5.15.1\n"}
+,{"stream_name":"stderr","time":36.546216575,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/experimental/gru.py:113: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":36.546250275,"data":"  * **h_n**: tensor of shape :math:`(D * \\text{num\\_layers}, H_{out})` or\n"}
+,{"stream_name":"stderr","time":41.832964553,"data":"/usr/local/lib/python3.12/site-packages/torch_xla/__init__.py:258: UserWarning: `tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when using PyTorch/XLA. To silence this warning, `pip uninstall -y tensorflow \u0026\u0026 pip install tensorflow-cpu`. If you are in a notebook environment such as Colab or Kaggle, restart your notebook runtime afterwards.\n"}
+,{"stream_name":"stderr","time":41.832995333,"data":"  warnings.warn(\n"}
+,{"stream_name":"stderr","time":43.565113622,"data":"/kaggle/src/script.py:19: DeprecationWarning: Use torch_xla.device instead\n"}
+,{"stream_name":"stderr","time":43.565138462,"data":"  xdev = xm.xla_device()\n"}
+,{"stream_name":"stderr","time":46.484924137,"data":"WARNING: Logging before InitGoogle() is written to STDERR\n"}
+,{"stream_name":"stderr","time":46.484960197,"data":"E0000 00:00:1789047394.218514       7 common_lib.cc:648] Could not set metric server port: INVALID_ARGUMENT: Could not find SliceBuilder port 8471 in any of the 0 ports provided in `tpu_process_addresses`=\"local\"\n"}
+,{"stream_name":"stderr","time":46.484967797,"data":"=== Source Location Trace: === \n"}
+,{"stream_name":"stderr","time":46.484972127,"data":"learning/45eac/tfrc/runtime/common_lib.cc:238\n"}
+,{"stream_name":"stdout","time":55.61677818,"data":"[TPU] device=xla:0 torch=2.8.0+cpu\n"}
+,{"stream_name":"stdout","time":64.425629517,"data":"Device: xla:0\n"}
+,{"stream_name":"stdout","time":64.425679027,"data":"Loading 4 calibration samples...\n"}
+,{"stream_name":"stderr","time":64.425630267,"data":"/kaggle/src/script.py:1278: DeprecationWarning: Use torch_xla.device instead\n"}
+,{"stream_name":"stderr","time":64.425693087,"data":"  device = _xm.xla_device()\n"}
+,{"stream_name":"stderr","time":64.644046562,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":64.644088382,"data":"WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stdout","time":70.4094046,"data":"Using target cache at /kaggle/input/datasets/voroninmichael/prism-exp16-targets\n"}
+,{"stream_name":"stdout","time":72.065322497,"data":"\n"}
+,{"stream_name":"stdout","time":72.065352297,"data":"============================================================\n"}
+,{"stream_name":"stdout","time":72.065356467,"data":"Order: late_to_early (1 pairs)\n"}
+,{"stream_name":"stdout","time":72.065359957,"data":"============================================================\n"}
+,{"stream_name":"stderr","time":72.147050459,"data":"[transformers] `torch_dtype` is deprecated! Use `dtype` instead!\n"}
+,{"stream_name":"stderr","time":91.109261973,"data":"\rLoading weights:   0%|          | 0/320 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/320 [00:00\u003c02:21,  2.25it/s]\rLoading weights: 100%|██████████| 320/320 [00:00\u003c00:00, 702.20it/s]\n"}
+,{"stream_name":"stdout","time":95.796376667,"data":"\n"}
+,{"stream_name":"stdout","time":95.796423147,"data":"  Pair 15_11 (l_S=11, 4 targets, matched 4/4 by input_ids)\n"}
+]
