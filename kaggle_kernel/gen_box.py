@@ -130,6 +130,7 @@ if __name__ == "__main__":
     meta = {
         "id": "voroninmichael/prism-" + a.name,
         "title": "Prism: " + a.name,
+        "code_file": a.name + ".py",   # script kernels need the source-file name
         "code_only": False,
         "kernel_type": "script",
         "language": "python",
