@@ -197,7 +197,12 @@ def boot_vllm(kaggle_dir="/kaggle/working/ktl", tp=8):
         print(f"[box] cloning KTL {os.environ.get('KTL_REPO','https://github.com/ARahim3/kaggle-tpu-lab')}", flush=True)
         subprocess.run(["git", "clone", "--depth", "1",
                         os.environ.get("KTL_REPO", "https://github.com/ARahim3/kaggle-tpu-lab"), ktl], check=True)
-    cfg = {"tpu": {"tp": tp}, "text_only": True}
+    # Merged over KTL's DEFAULTS: keepalive 540 (~9h, matches the box keepalive);
+    # text_only True skips the vision tower (~8 min fewer TPU graphs); ntfy_topic
+    # stays empty (in-box is local, no public tunnel needed); tool_call_parser
+    # stays qwen3_coder (agent tool-calling); mtp_tokens stays 3 (KTL's patch fixes
+    # the GDN-state corruption). weights_dataset already set above in the source.
+    cfg = {"keepalive_min": 540, "text_only": True, "tpu": {"tp": tp}}
     if os.environ.get("VLLM_WEIGHTS"):
         cfg["weights"] = {"source": os.environ["VLLM_WEIGHTS"]}
     script = os.path.join(kaggle_dir, "ktl_cfg.py")
@@ -253,11 +258,14 @@ def build_agent(vllm_url, vllm_model, max_tokens, cwd=REPO):
     if os.path.isfile(cp):
         system += open(cp).read()
     goal = os.environ.get("GOAL_PROMPT", (
-        "Run and get the TPU-blocked prism causal experiments (exp16_readout_pull, "
-        "exp17_lora_distill, exp18_logit_kd) to produce a complete, correct result JSON. "
-        "They are blocked by XLA phantom-dot / HLO hangs. Debug each, apply a real fix "
-        "(XLA flags, batched/analytical Jacobian, or CPU-precompute+dataset), and verify "
-        "against the CPU reference. Start by reading box/context-pack.md."
+        "FIRST (coexistence probe): vLLM Qwen3.8-27B now serves the TPU. Run a tiny "
+        "torch_xla probe (load Qwen3.5-0.8B, one forward) to see if prism's torch_xla "
+        "coexists with vLLM without OOM. Report which HBM split you observed. THEN: get "
+        "the TPU-blocked prism causal experiments (exp16_readout_pull, exp17_lora_distill, "
+        "exp18_logit_kd) to produce a complete, correct result JSON. They are blocked by "
+        "XLA phantom-dot / HLO hangs. Debug each, apply a real fix (XLA flags, batched/"
+        "analytical Jacobian, or CPU-precompute+dataset), and verify against the CPU "
+        "reference. Start by reading box/context-pack.md."
     ))
     return BoxAgent(model, env, max_tokens=max_tokens,
                     system_template=system, instance_template=instance,
