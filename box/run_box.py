@@ -258,14 +258,23 @@ def build_agent(vllm_url, vllm_model, max_tokens, cwd=REPO):
     if os.path.isfile(cp):
         system += open(cp).read()
     goal = os.environ.get("GOAL_PROMPT", (
-        "FIRST (coexistence probe): vLLM Qwen3.8-27B now serves the TPU. Run a tiny "
-        "torch_xla probe (load Qwen3.5-0.8B, one forward) to see if prism's torch_xla "
-        "coexists with vLLM without OOM. Report which HBM split you observed. THEN: get "
-        "the TPU-blocked prism causal experiments (exp16_readout_pull, exp17_lora_distill, "
-        "exp18_logit_kd) to produce a complete, correct result JSON. They are blocked by "
-        "XLA phantom-dot / HLO hangs. Debug each, apply a real fix (XLA flags, batched/"
-        "analytical Jacobian, or CPU-precompute+dataset), and verify against the CPU "
-        "reference. Start by reading box/context-pack.md."
+        "PRISM causal status: exp16 (readout, DONE — lm_head edit moved the analytical "
+        "bridge 0.600->0.754, confirming the bridge as a causal lever) and exp18 "
+        "(logit-KD, DONE but DEGENERATE — the 0.8B self-targets gave KD loss ~0) are "
+        "complete. The ONE remaining prize is exp17_lora_distill: the only experiment "
+        "using 2nd-order HVP (create_graph=True in prism/jacobian.py bridge_rows_backward "
+        "through o_proj). A dedicated canary HUNG 120 min on XLA HLO compile before the "
+        "2h idle-kill. YOUR JOB: get exp17's 2nd-order HVP to COMPILE and RUN on TPU v5e-8 "
+        "in this 9h session (long enough to outlive the compile), and produce a correct "
+        "exp17 result JSON. "
+        "FIRST (coexistence probe): vLLM Qwen3.8-27B serves the TPU; run a tiny torch_xla "
+        "probe (load Qwen3.5-0.8B, one forward) and report the observed HBM split "
+        "(TP=8 uses all 8 chips). "
+        "THEN: run the exp17 2nd-order canary (1 pair 15_11, ~100 steps) with py-spy on "
+        "any hang to capture the stack of the stuck compile thread; apply a real fix "
+        "(XLA flag --xla_optimize_hlo=false or --xla_use_stablehlo=True, or batched-HVP, "
+        "or CPU-precompute-J_norm+dataset), and verify against the CPU reference. "
+        "Read box/context-pack.md for the full diagnostic history."
     ))
     return BoxAgent(model, env, max_tokens=max_tokens,
                     system_template=system, instance_template=instance,
@@ -312,9 +321,9 @@ def main():
         vllm_url = boot_vllm(tp=a.tp)
     agent = build_agent(vllm_url, vllm_model, a.max_tokens)
     task = a.task or os.environ.get("GOAL_PROMPT") or (
-        "Read box/context-pack.md, then run+debug the TPU-blocked prism causal "
-        "experiments (exp16/17/18) until each produces a correct result JSON. "
-        "Use py-spy on any hang.")
+        "exp16/18 are done. The prize is exp17 (2nd-order HVP): get it to compile and "
+        "run on TPU v5e-8 in this 9h session and produce a correct result JSON. "
+        "Run the 1-pair canary first with py-spy on any hang. Read box/context-pack.md.")
     out = agent.run(task)
     stop["v"] = True
     print(f"[box] agent exited: {json.dumps(out, default=str)[:500]}", flush=True)
