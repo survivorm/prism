@@ -293,6 +293,14 @@ def _last_layer_jacobian(h: torch.Tensor, norm: torch.nn.Module) -> torch.Tensor
       J = r * (diag(1+w) - xhat x^T / D),  r = rsqrt(mean(h^2)+eps), xhat = r*h
     LayerNorm: J = (I - 1/D - xhat xhat^T / D) / std, rows scaled by w.
     """
+    # h may arrive as [1, S, D] (full-sequence hidden_states) or [1, D]/[D].
+    # The last-layer READOUT Jacobian is the FINAL-position map (it feeds the
+    # final-token logits), so collapse a [1, S, D] to its last position first.
+    # BUG this fixes: [1, S, D].reshape(1,-1) -> [1, S*D] -> [S*D, S*D] identity
+    # (e.g. [65536, 65536] = 16 GB) -> OOM on GPU / XLA compile-abort on TPU
+    # (previously misattributed to an "XLA phantom dot" shape bug).
+    if h.dim() == 3:
+        h = h[:, -1, :]
     x = h.reshape(1, -1).float()  # [1, D], the norm INPUT (row vector)
     D = x.shape[-1]
     eps = float(getattr(norm, "eps", None) or 1e-5)
