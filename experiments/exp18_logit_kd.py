@@ -293,6 +293,25 @@ def main(
         per_layer_results.append(layer_result)
         print(f"    bridge={layer_result['bridge_mean']:.4f}, KL={kl_avg:.4f}")
 
+        # ponytail: per-pair checkpoint — Kaggle free-tier 2h kernel kill
+        # (exp18 v10 died at pair 3/7) otherwise loses the run, since the real
+        # result is saved only at the very end. Writing the running result
+        # after each pair means a kill still preserves every completed pair.
+        with open(
+            os.path.join(results_dir, "exp18_logit_kd_partial.json"), "w"
+        ) as _f:
+            json.dump(
+                {
+                    "exp": "exp18_logit_kd",
+                    "status": "partial",
+                    "pairs": late_to_early,
+                    "steps": steps,
+                    "completed": len(per_layer_results),
+                    "per_layer": per_layer_results,
+                },
+                _f, indent=2, default=str,
+            )
+
         # Update orig logits for next layer
         with torch.no_grad():
             for si, s in enumerate(samples[:n_samples]):
@@ -363,19 +382,24 @@ def main(
         "r": r,
         "steps": steps,
         "comparison_with_exp17": comparison,
-        "device": device,
+        "device": str(device),
+        "status": "complete",
         "elapsed_seconds": time.time() - start,
     }
     path = os.path.join(results_dir, "exp18_logit_kd.json")
+    # Remove the per-pair checkpoint file — the full result supersedes it.
+    _partial = os.path.join(results_dir, "exp18_logit_kd_partial.json")
+    if os.path.exists(_partial):
+        os.remove(_partial)
     result["params"] = {
         "small_model": small_model,
-        "device": device,
+        "device": str(device),
         "max_length": max_length,
         "min_length": min_length,
         "targets_dir": targets_dir,
     }
     with open(path, "w") as f:
-        json.dump(result, f, indent=2)
+        json.dump(result, f, indent=2, default=str)
 
     print(f"\nSaved to {path}")
     print(f"Total time: {time.time() - start:.0f}s")
