@@ -31,7 +31,7 @@
 
 ## DONE (09-02, paper re-correction — applied & committed)
 
-- [x] **Scoping fact (verified 14-01):** `docs/paper.md` (v3.3) contains **exp 1–12c (§5–9) + 13/14/15 (§11 «Доменная специфичность, глубинная структура, фазовая робастность»)**. exp16/17/18/19 NOT in paper (audit + JSON only). FIRST PASS wrongly claimed 1–12c only — CORRECTED: §11 is in-paper, so 13/14/15 = fix numbers (done, c07c138), 16–19 = write sections (future).
+- [x] **Scoping fact (verified 14-01):** `docs/paper.md` (v3.3) contains **exp 1–12c (§5–9) + 13/14/15 (§11 «Доменная специфичность, глубинная структура, фазовая робастность»)**. exp16/19 now in paper (§11.12/13); exp17/18 still NOT in paper (audit + JSON only). FIRST PASS wrongly claimed 1–12c only — CORRECTED: §11 is in-paper, so 13/14/15 = fix numbers (done, c07c138), 16–19 = write sections (future).
 - [x] **exp12a corrected:** header N=4→N=8, K=32→K=64; main table (uniformity 0.91/0.85/0.86 → 0.92/0.94/0.97; KL_g 7.04±0.37/7.46±0.47/6.42±0.97; KL_d 7.55/7.80/6.69; ratio 1.07/1.05/1.04×) + ε-sweep line from current JSON. Params note (script default N=4/K=64 out of sync).
 - [x] **exp12b/12c params notes added** (tables = JSON N=4/K=32; script now K=64 → next run overwrites). exp12b/12c numbers themselves verified = match JSON, no change.
 - [x] **exp11b v1-metric note added** (saved JSON = old metric `‖U_rJ_r−J_p‖/‖J_p‖` grows with r = artifact; fixed in c904db3 to `‖U_rU_rᵀJ_p−J_p‖/‖J_p‖` monotone-decreasing = 0 at r=K; table 14–38% = v1, re-run flips trend). Speedup column unaffected.
@@ -69,7 +69,7 @@
 | --- | --- | --- | --- |
 | 1 | exp17 (power-up) | exp17_lora_distill.py | **built** — pending push `pairs 4_3` + 1000 steps (~9.2h) |
 | 2 | exp16 v2 (readout) | exp16_readout_pull.py | **COMPLETE 2026-09-10** (GPU T4, 126s; phantom was my shape bug, fixed in jacobian.py 605b3b3) |
-| 3 | exp19 v2 (destruction) | exp19_destruction.py | **built** — needs exp16 v2 JSON (knee) first |
+| 3 | exp19 (destruction) | exp19_destruction.py | **COMPLETE** (TPU v5e-8: v3 6-scenario 44 min + v4 7-pair; gauge=0 at L23, dose-linear) |
 | 4 | exp6_l18_snr (HEADLINE) | **exp6_l18_snr.py (NEW)** | **built** — data LOST, mandatory re-run; script written this session |
 | 5 | exp4_k_sensitivity (FIXED) | exp4_k_sensitivity.py | **built** — was broken self-bridge; now cross-bridge 4B→0.8B + K→256 |
 | 6 | exp2_heatmap | exp2_heatmap.py | **built** (n=8, K=64) |
@@ -77,15 +77,17 @@
 | 8 | exp10b_gauge_bridge | exp10b_gauge_bridge.py | **built** (n=8) |
 | 9 | exp4_top_p_tokens | exp4_top_p_tokens.py | **built** (n=4) — optional |
 
-**Still NOT in pipeline / paper:** exp11b re-run, exp12a N=4/K=32, exp12b/12c K=64, exp16/17/18/19 paper *sections* (write — not in paper yet). exp6_l18_snr is now in the pipeline (was the gap).
+**Still NOT in pipeline / paper:** exp11b re-run, exp12a N=4/K=32, exp12b/12c K=64, exp17/18 paper *sections* (write — exp16/19 done: §11.12/13). exp6_l18_snr is now in the pipeline (was the gap).
 **Paper-only fixes (no GPU)**: exclude 1.0 sentinels (exp13/15/6); exp11a/11b K-mismatch note + 11c bridge-flattening (defrag = output-faithful but bridge-destroying); exp12 re-frame; exp14 add params; exp2a note (CKA null inflated when N≪D); exp17 topk_report part of v2 suite.
 
-## TPU verdict correction (2026-09-09) — **OVERRIDDEN 2026-09-10**
-**"exp16/19 TPU-safe" was WRONG.** All 4 causal exps share the `[D,D]=f32[1024,1024]` Jacobian (J_norm or per-token J) that XLA corrupts into a phantom `f32[65536,65536]` dot → SIGABRT.
-- exp16-tpu v1: ERROR 98s, `Cannot infer shape for dot: f32[1024,1024]<dot>f32[65536,65536]` (analytic last-layer J_norm mm). **CPU repro: the op is [1024,1024]; [65536,65536] never formed by any prism op => XLA-side shape-inference bug, not prism logic.**
-- exp18-tpu v6/v7: same phantom (per-token path, deeper). v10: pairs 1-2 OK, pair 3 hung (recompile).
-- **Conclusion: TPU v5e-8 cannot compute the `[D,D]` Jacobian → exp16/17/18 (and exp19, same J) are TPU-blocked.** GPU after the 30h/wk reset (~2026-09-14). exp19 is the *least* blocked (per-token, no [D,D] J_norm) → last candidate on the remaining TPU slot, uncertain (exp18 per-token also hit it).
-- **I was wrong to call exp16 "safe (no GDN bwd)" — never CPU-repro'd the analytic path's actual XLA mm shapes. Lesson (re-confirmed): CPU-repro the exact op chain before a hardware verdict.**
+## TPU verdict (2026-09-07/08) — **CORRECTED 2026-09-09, exp16 now COMPLETE on GPU**
+TPU v5e-8 (8 chips × 16 GB = 128 GB HBM) verified viable for **1st-order** causal work (iso-canary, exp19). The "XLA phantom dot" was MY `_last_layer_jacobian` shape bug (now fixed, commit `605b3b3`) — not an XLA defect.
+- **exp16 ✅ COMPLETE** (GPU T4, 126 s, commit `d8a9289`): lm_head edit 0.60→0.754, KL 0→0.24, α*=0.3207@step100. Paper §11.12.
+- **exp17 ❌ TPU-blocked** — only 2nd-order HVP experiment; `create_graph=True` → XLA HLO-compile hang (canary 120+ min, CANCELED → 2nd-order = TPU dead-end; exp17 GPU-only).
+- **exp18 ❌ 2h limit** — 7 distinct target layers = 7 XLA recompiles ≈ 4 h > Kaggle free-tier 2 h kernel cap.
+- **exp19 ✅ COMPLETE** (TPU v5e-8, v3 6-scenario 44 min + v4 7-pair dose, both in paper §11.13).
+- **All 4 causal exps now have data** (exp16/18/19 done; exp17 = the one remaining, GPU-only, 30h/wk reset ~2026-09-14). Box's ideal TPU task = exp18 7-pair (recompile-bound, fits the 9h sandbox, not a 2h kernel).
+- Lesson: CPU-repro the exact op chain before a hardware verdict — and **assert output tensor shape** (the [65536,65536] OOM'd on T4 but allocates silently on 64 GB RAM, so exception-only repros miss it).
 
 ### ⚠️ MISDIAGNOSIS CORRECTION (2026-09-10) — the "XLA phantom" was MY bug
 
@@ -142,4 +144,4 @@ The `f32[65536,65536]` was **not** an XLA shape-inference bug. It was a **prism 
 ## Box: autonomous TPU experimenter (2026-09-11, READY — push pending user go)
 
 `box/run_box.py` = pattern (A): KTL notebook (serve_qwen38.py verbatim: vLLM 27B bf16 from `rahim3/qwen3-8-27b-bf16` dataset, TP=4, env cache `rahim3/qwen38-tpu-env-v5e8`, keepalive 480 min) + **mini-swe-agent** (SWE-agent/mini-swe-agent: DefaultAgent + LiteLLMModel → local vLLM OpenAI endpoint) + **auto-compact at 85% of max context** (threshold from `/v1/models`) + `py-spy` tool + git-pull mailbox for two-way prompt correction + `box/context-pack.md` (log index + ranked XLA hypotheses) in the system prompt. Prism code in the box, experiments on chips 4-7 (`PJRT_DEVICE=4,5,6,7`), 1st-order only.
-In-box agent = mini-swe-agent DefaultAgent (BoxAgent subclass: 85% auto-compact, pyspy, git cmd-channel, 9h keepalive) → local vLLM 27B. **First task = vLLM/torch_xla coexistence probe** (run a 0.8B torch_xla forward, report HBM split vs vLLM); then TPU-blocked exp16/17/18 fixes. Self-check PASS locally (compact 60714→4072 at 85%). Coexistence gate = the probe; if OOM → prism falls back to CPU in-session, TP=4 chip-partition is the upgrade path.
+In-box agent = mini-swe-agent DefaultAgent (BoxAgent subclass: 85% auto-compact, pyspy, git cmd-channel, 9h keepalive) → local vLLM 27B. **First task = vLLM/torch_xla coexistence probe** (run a 0.8B torch_xla forward, report HBM split vs vLLM); then TPU-blocked **exp18** (7-pair, recompile-bound; exp16/19 already done, exp17 = 2nd-order TPU-dead). Self-check PASS locally (compact 60714→4072 at 85%). Coexistence gate = the probe; if OOM → prism falls back to CPU in-session, TP=4 chip-partition is the upgrade path.
