@@ -1,0 +1,18 @@
+[{"stream_name":"stdout","time":1.005324348,"data":"=== PRISM AUTONOMER BOX: start ===\n"}
+,{"stream_name":"stdout","time":1.005572968,"data":"[box-keepalive] t=0s alive=1\n"}
+,{"stream_name":"stdout","time":1.007129098,"data":"[box] materialized 13 prism files into /kaggle/working/prism\n"}
+,{"stream_name":"stderr","time":3.993859479,"data":"ERROR: Could not find a version that satisfies the requirement miniswe-agent==2.4.6 (from versions: none)\n"}
+,{"stream_name":"stderr","time":5.542625256,"data":"\n"}
+,{"stream_name":"stderr","time":5.542667156,"data":"[notice] A new release of pip is available: 25.0.1 -\u003e 26.2.1\n"}
+,{"stream_name":"stderr","time":5.542673936,"data":"[notice] To update, run: pip install --upgrade pip\n"}
+,{"stream_name":"stderr","time":5.543093076,"data":"ERROR: No matching distribution found for miniswe-agent==2.4.6\n"}
+,{"stream_name":"stdout","time":5.592407152,"data":"[box] installed miniswe-agent + py-spy\n"}
+,{"stream_name":"stderr","time":5.641236009,"data":"Cloning into '/kaggle/working/prism/ktl'...\n"}
+,{"stream_name":"stdout","time":6.005827605,"data":"[box-keepalive] t=5s alive=2\n"}
+,{"stream_name":"stdout","time":6.811563498,"data":"[box] KTL ready at /kaggle/working/prism/ktl\n"}
+,{"stream_name":"stderr","time":6.869097635,"data":"serve/run needs mini-swe-agent: pip install mini-swe-agent==2.4.6\n"}
+,{"stream_name":"stdout","time":6.8751556560000004,"data":"=== BOX done in 6s (agent exit rc=1) ===\n"}
+,{"stream_name":"stdout","time":6.875168876,"data":"OK\n"}
+,{"stream_name":"stderr","time":11.283129478,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":13.716964188,"data":"[NbConvertApp] Writing 479865 bytes to __results__.html\n"}
+]

@@ -68,7 +68,7 @@
 | # | kernel | script | status |
 | --- | --- | --- | --- |
 | 1 | exp17 (power-up) | exp17_lora_distill.py | **built** — pending push `pairs 4_3` + 1000 steps (~9.2h) |
-| 2 | exp16 v2 (readout) | exp16_readout_pull.py | **built** (v2 code applied) — push to consume stage0 targets cache |
+| 2 | exp16 v2 (readout) | exp16_readout_pull.py | **COMPLETE 2026-09-10** (GPU T4, 126s; phantom was my shape bug, fixed in jacobian.py 605b3b3) |
 | 3 | exp19 v2 (destruction) | exp19_destruction.py | **built** — needs exp16 v2 JSON (knee) first |
 | 4 | exp6_l18_snr (HEADLINE) | **exp6_l18_snr.py (NEW)** | **built** — data LOST, mandatory re-run; script written this session |
 | 5 | exp4_k_sensitivity (FIXED) | exp4_k_sensitivity.py | **built** — was broken self-bridge; now cross-bridge 4B→0.8B + K→256 |
@@ -80,12 +80,16 @@
 **Still NOT in pipeline / paper:** exp11b re-run, exp12a N=4/K=32, exp12b/12c K=64, exp16/17/18/19 paper *sections* (write — not in paper yet). exp6_l18_snr is now in the pipeline (was the gap).
 **Paper-only fixes (no GPU)**: exclude 1.0 sentinels (exp13/15/6); exp11a/11b K-mismatch note + 11c bridge-flattening (defrag = output-faithful but bridge-destroying); exp12 re-frame; exp14 add params; exp2a note (CKA null inflated when N≪D); exp17 topk_report part of v2 suite.
 
-## TPU verdict correction (2026-09-09) — IMPORTANT
+## TPU verdict correction (2026-09-09) — **OVERRIDDEN 2026-09-10**
 **"exp16/19 TPU-safe" was WRONG.** All 4 causal exps share the `[D,D]=f32[1024,1024]` Jacobian (J_norm or per-token J) that XLA corrupts into a phantom `f32[65536,65536]` dot → SIGABRT.
 - exp16-tpu v1: ERROR 98s, `Cannot infer shape for dot: f32[1024,1024]<dot>f32[65536,65536]` (analytic last-layer J_norm mm). **CPU repro: the op is [1024,1024]; [65536,65536] never formed by any prism op => XLA-side shape-inference bug, not prism logic.**
 - exp18-tpu v6/v7: same phantom (per-token path, deeper). v10: pairs 1-2 OK, pair 3 hung (recompile).
 - **Conclusion: TPU v5e-8 cannot compute the `[D,D]` Jacobian → exp16/17/18 (and exp19, same J) are TPU-blocked.** GPU after the 30h/wk reset (~2026-09-14). exp19 is the *least* blocked (per-token, no [D,D] J_norm) → last candidate on the remaining TPU slot, uncertain (exp18 per-token also hit it).
 - **I was wrong to call exp16 "safe (no GDN bwd)" — never CPU-repro'd the analytic path's actual XLA mm shapes. Lesson (re-confirmed): CPU-repro the exact op chain before a hardware verdict.**
+
+### ⚠️ MISDIAGNOSIS CORRECTION (2026-09-10) — the "XLA phantom" was MY bug
+
+The `f32[65536,65536]` was **not** an XLA shape-inference bug. It was a **prism shape bug in `_last_layer_jacobian`**: exp16 passed `h=hidden_states[last+1]` which is `[1,S,D]` = `[1,64,1024]`; the function did `h.reshape(1,-1)` → `[1,65536]` → `torch.eye(65536)` = **16 GB** `[65536,65536]` matrix. My CPU repro only checked "does it run" (64 GB RAM hides the 16 GB alloc), not "what shape does it produce" — so I misattributed the OOM/compile-abort to XLA. **GPU OOM was the tell**: 16 GB allocation on a 14.5 GB T4 cannot be a phantom; it's a real tensor. **Fix (commit 605b3b3):** `_last_layer_jacobian` now collapses `[1,S,D]`→`h[:,-1,:]` (the correct final-position readout) before reshape. **Result:** exp16 runs on GPU in 126s (bridge 0.60→0.754, KL 0→0.24). exp17/18: the same fix applies to their last-layer calls; the remaining TPU blockers are **genuine** (2nd-order HVP hangs XLA [exp17]; per-layer recompile exceeds 2h limit [exp18]). **Lesson (re-re-confirmed, the exact class I warned about):** a CPU repro that only checks "runs" not "right shape/value" masks OOM-class bugs and leads to hardware blame. Before any TPU/XLA verdict: verify the **actual tensor shapes** in a CPU run with the same input dimensions, not just "no crash".
 
 ## exp19 TPU COMPLETE (2026-09-10) — gauge=null, target≈differential
 - All 6 scenarios ran on TPU v5e-8 (~44min, per-token Jacobian + cosine, no [D,D]):

@@ -1,0 +1,13 @@
+{
+  "kernel_type": "notebook",
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "language": "python",
+  "code_file": "kernel.ipynb",
+  "id": "voroninmichael/prism-exp16",
+  "title": "Prism: exp16",
+  "dataset_sources": [
+    "voroninmichael/prism-exp16-targets"
+  ]
+}

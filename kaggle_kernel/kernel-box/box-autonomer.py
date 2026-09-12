@@ -35,9 +35,30 @@ def materialize():
 
 # ---- 2. install agent deps ----
 def install():
+    # PyPI dist name is `mini-swe-agent` (import module is `minisweagent`).
+    # (The earlier `miniswe-agent` typo returns "versions: none".)
     subprocess.run([sys.executable, "-m", "pip", "install", "-q",
-                    "miniswe-agent==2.4.6", "py-spy"], check=False)
-    print("[box] installed miniswe-agent + py-spy", flush=True)
+                    "mini-swe-agent", "py-spy"], check=False)
+    r = subprocess.run([sys.executable, "-c",
+                        "import minisweagent; print(minisweagent.__version__)"],
+                       capture_output=True, text=True)
+    if r.returncode == 0:
+        print("[box] mini-swe-agent " + r.stdout.strip() + " (pip)", flush=True)
+        return
+    # git fallback (git+internet proven working in-box: KTL cloned fine)
+    print("[box] pip mini-swe failed (%s) -> git fallback" %
+          (r.stderr.strip().splitlines()[-1] if r.stderr else "?"), flush=True)
+    mswe = os.path.join(PRISM, "_mswe")
+    subprocess.run(["git", "clone", "--depth", "1",
+                    os.environ.get("MSWE_REPO", "https://github.com/SWE-agent/mini-swe-agent"),
+                    mswe], check=False)
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", mswe], check=False)
+    r2 = subprocess.run([sys.executable, "-c",
+                         "import minisweagent; print(minisweagent.__version__)"],
+                        capture_output=True, text=True)
+    print("[box] mini-swe via git: " +
+          (r2.stdout.strip() if r2.returncode == 0 else "STILL FAILING: " + r2.stderr.strip()),
+          flush=True)
 
 # ---- 3. clone KTL (vLLM head) ----
 def clone_ktl():
