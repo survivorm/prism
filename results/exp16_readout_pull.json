@@ -1,0 +1,101 @@
+{
+  "description": "Readout-only pull as a DOSE-RESPONSE curve (v2). One unclamped Adam run on lm_head: loss = (1-cos(J_S_p, J_tgt_p)) per input_ids-paired sample + 0.1\u00b7KL(p_ed\u2016p_orig). Every 10 steps: dose \u2016\u0394W\u2016_F (\u03b1 = \u2016\u0394W\u2016/\u2016W\u2016), bridge (fresh J_norm via h-reuse), true KL over the full vocab. Baseline at \u0394W=0 included. \u03b1* = largest step where the per-window bridge gain \u2265 knee_tol (None if no knee). v1 (alpha sweep as trust-region caps) was VOID: caps \u22650.1 never bind, \u03b1 was not a dose, and its '\u03b1*=0.01' was a first-slope artifact. v2 fixes the dose definition. Target pair is the last-layer pair (asserted).",
+  "curve": [
+    {
+      "step": 0,
+      "dose": 0.0,
+      "bridge": 0.5999650210142136,
+      "KL": 0.0
+    },
+    {
+      "step": 10,
+      "dose": 61.788822174072266,
+      "bridge": 0.6173263341188431,
+      "KL": 0.4807724580168724
+    },
+    {
+      "step": 20,
+      "dose": 77.35614013671875,
+      "bridge": 0.6459521502256393,
+      "KL": 0.5970440953969955
+    },
+    {
+      "step": 30,
+      "dose": 85.07959747314453,
+      "bridge": 0.6673316359519958,
+      "KL": 0.4200369566679001
+    },
+    {
+      "step": 40,
+      "dose": 91.64373779296875,
+      "bridge": 0.6842541694641113,
+      "KL": 0.36268265545368195
+    },
+    {
+      "step": 50,
+      "dose": 96.25628662109375,
+      "bridge": 0.6997909247875214,
+      "KL": 0.317696925252676
+    },
+    {
+      "step": 60,
+      "dose": 98.57120513916016,
+      "bridge": 0.7136756479740143,
+      "KL": 0.28357192501425743
+    },
+    {
+      "step": 70,
+      "dose": 99.66508483886719,
+      "bridge": 0.725549042224884,
+      "KL": 0.27394628524780273
+    },
+    {
+      "step": 80,
+      "dose": 100.1895980834961,
+      "bridge": 0.7359022796154022,
+      "KL": 0.2608245834708214
+    },
+    {
+      "step": 90,
+      "dose": 100.50057983398438,
+      "bridge": 0.7455191761255264,
+      "KL": 0.24942157417535782
+    },
+    {
+      "step": 100,
+      "dose": 100.7166976928711,
+      "bridge": 0.7543313801288605,
+      "KL": 0.24031160399317741
+    }
+  ],
+  "baseline": {
+    "bridge": 0.5999650210142136,
+    "KL": 0.0
+  },
+  "alpha_star": 0.3206640583705919,
+  "knee_step": 100,
+  "knee_tol": 0.001,
+  "lr": 0.001,
+  "kl_weight": 0.1,
+  "steps": 100,
+  "eval_every": 10,
+  "W_norm": 314.087890625,
+  "target_pair": "31_23",
+  "pairing": {
+    "mode": "input_ids",
+    "verified": 4,
+    "total": 4
+  },
+  "n_layers_S": 24,
+  "last_layer": 23,
+  "K": 256,
+  "device": "cuda:1",
+  "elapsed_seconds": 126.0661895275116,
+  "params": {
+    "small_model": "Qwen/Qwen3.5-0.8B",
+    "device": "cuda:1",
+    "max_length": 64,
+    "min_length": 32,
+    "targets_dir": "/kaggle/input/prism-exp16-targets"
+  }
+}
