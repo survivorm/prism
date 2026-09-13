@@ -1,0 +1,16 @@
+{
+ "id": "voroninmichael/prism-box_autonomer",
+ "title": "Prism: box_autonomer",
+ "code_file": "box_autonomer.py",
+ "code_only": false,
+ "kernel_type": "script",
+ "language": "python",
+ "enable_gpu": "false",
+ "enable_tpu": "true",
+ "enable_internet": "true",
+ "is_private": "false",
+ "dataset_sources": [
+  "rahim3/qwen3-8-27b-bf16",
+  "rahim3/qwen38-tpu-env-v5e8"
+ ]
+}

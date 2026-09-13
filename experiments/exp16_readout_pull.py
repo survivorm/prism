@@ -48,11 +48,11 @@ resolve_model = lambda hf_id: hf_id  # noqa: E731  # stub for local type checkin
 
 
 def _gd_steps(device: str) -> int:
-    return 100 if str(device).startswith(("cuda", "xla")) else 40
+    return 1000 if str(device).startswith(("cuda", "xla")) else 40
 
 
 def _eval_every(device: str) -> int:
-    return 10 if str(device).startswith(("cuda", "xla")) else 10
+    return 1 if str(device).startswith(("cuda", "xla")) else 10
 
 
 def main(
@@ -65,6 +65,8 @@ def main(
     lr: float = 1e-3,
     kl_weight: float = 0.1,
     knee_tol: float = 0.001,
+    steps: int | None = None,
+    eval_every: int | None = None,
     samples_from_targets: bool = False,
 ):
     torch.manual_seed(42)
@@ -78,6 +80,11 @@ def main(
     if device == "cpu":
         torch.set_num_threads(4)
     print(f"Device: {device}")
+
+    if steps is None:
+        steps = _gd_steps(device)
+    if eval_every is None:
+        eval_every = _eval_every(device)
 
     os.makedirs(results_dir, exist_ok=True)
 
@@ -276,8 +283,6 @@ def main(
     # The old trust-region buffer block is GONE on purpose: no cap, so
     # ‖ΔW‖ is a real, unbounded dose. (No allocator churn either: the
     # in-place sub() buffer existed only to apply the clamp.)
-    steps = _gd_steps(device)
-    every = _eval_every(device)
     optimizer = torch.optim.Adam([lm_head.weight], lr=lr)
 
     curve: list[dict] = [
@@ -338,7 +343,7 @@ def main(
                 f"({(time.time() - t0) / ((step + 1) // 5 + 1):.1f}s/eval-5)"
             )
 
-        if (step + 1) % every == 0 or step + 1 == steps:
+        if (step + 1) % eval_every == 0 or step + 1 == steps:
             dose = (lm_head.weight.data - W_orig).norm().item()
             b = battery()
             curve.append(
@@ -357,10 +362,8 @@ def main(
 
     # -- α* (the knee): largest step t with Δbridge ≥ knee_tol -------------
     # Δbridge(t) = bridge(t) − bridge(t − eval_every) on the same curve —
-    # a genuine dose-derivative, unlike v1's cross-α differences (which
-    # compared trajectories of different lengths). If every step improves
-    # past tol, no knee exists: report None (honest null), not the first
-    # slope.
+    # a genuine dose-derivative. If every step improves past tol, no knee
+    # exists: report None (honest null), not the first slope.
     alpha_star: float | None = None
     knee_step: int | None = None
     for i in range(1, len(curve)):
@@ -373,6 +376,40 @@ def main(
               f"per eval window to the end)")
     else:
         print(f"\nα* (knee) = {alpha_star:.4f} at step {knee_step}")
+
+    # -- Save lm_head weights at knee + final for inference inspection -------
+    W_final = lm_head.weight.data.clone().cpu()
+    pt_paths: list[str] = []
+
+    # Final weight always saved
+    pt_final = os.path.join(results_dir, "exp16_lm_head_final.pt")
+    torch.save({
+        "W": W_final,
+        "W_orig": W_orig.cpu(),
+        "delta_W": (W_final - W_orig.cpu()),
+        "step": steps,
+        "bridge": curve[-1]["bridge"],
+        "dose": curve[-1]["dose"],
+    }, pt_final)
+    pt_paths.append(pt_final)
+    print(f"Saved {pt_final} (‖ΔW‖={W_final.norm().item():.4f}, bridge={curve[-1]['bridge']:.4f})")
+
+    # Knee weight (if knee detected)
+    if knee_step is not None and knee_step < steps:
+        # Re-derive the weight at the knee by running Adam to that step is
+        # expensive. Instead: the curve stores dose at each eval point, and
+        # we saved the final. For knee, we'd need to have saved it during
+        # the loop. Save a marker with the knee dose for re-construction.
+        # (The user can re-run with steps=knee_step to get the exact weight.)
+        pt_knee = os.path.join(results_dir, "exp16_lm_head_knee_info.pt")
+        torch.save({
+            "knee_step": knee_step,
+            "knee_dose": alpha_star * W_norm,
+            "knee_bridge": curve[min(knee_step // max(eval_every, 1), len(curve) - 1)]["bridge"],
+            "note": "Run exp16 with --steps <knee_step> to save the exact weight",
+        }, pt_knee)
+        pt_paths.append(pt_knee)
+        print(f"Saved {pt_knee} (knee at step {knee_step}, dose ‖ΔW‖={alpha_star * W_norm:.4f})")
 
     # -- Save results ------------------------------------------------------
     result = {
@@ -436,6 +473,10 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--kl-weight", type=float, default=0.1)
     parser.add_argument("--knee-tol", type=float, default=0.001)
+    parser.add_argument("--steps", type=int, default=None,
+                        help="total training steps (default: 1000 on GPU/TPU, 40 on CPU)")
+    parser.add_argument("--eval-every", type=int, default=None,
+                        help="eval frequency in steps (default: 1 on GPU/TPU, 10 on CPU)")
     parser.add_argument("--samples-from-targets", action="store_true",
                         help="offline: use cached input_ids as calibration samples")
     args = parser.parse_args()
