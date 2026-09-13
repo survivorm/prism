@@ -262,6 +262,9 @@ def box_task(goal):
 
 
 def build_agent(vllm_url, vllm_model, max_tokens, cwd=REPO):
+    import os as _os
+    # local 27B has no price entry in litellm's map -> cost calc raises; ignore it
+    _os.environ.setdefault("MSWEA_COST_TRACKING", "ignore_errors")
     from minisweagent.models import get_model
     from minisweagent.environments import get_environment
     api_key = os.environ.get("VLLM_API_KEY", "not-needed")
