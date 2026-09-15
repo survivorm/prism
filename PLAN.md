@@ -7,6 +7,37 @@
 - **NEXT (GPU, quota reset ~09-14):** exp17 (2nd-order HVP; box v5 ran but XLA HVP hang unfixed → GPU-only). exp18 CANCELLED (degenerate).
 - Details in section «exp19 v6 dose-sweep + exp16 LORA behavioral» below.
 
+## Exp 0.1: Coherence Length (docs/Exp0(1-3).md, user 2026-09-14 «начинай планировать 0.1»)
+
+**Цель:** измерить когерентность поля Якобианов J(x) по x — гладкое ли поле, чтобы доменные грамианы G^d = (1/N)ΣJ·Jᵀ несли смысл. Kill-switch для ESG/Exp 0.2. Если поле фрактальное — стоп, ESG не интерпретируем.
+
+**DONE / DOING / NEXT:**
+- [x] Чтение замысла (docs/Exp0(1-3).md) + аудита существующих механизмов
+- [x] План ниже (этот блок)
+- [ ] **RED:** `experiments/exp01_coherence.py` — каркас: загрузка 0.8B + 4B, домены, J-каш, скрытые состояния; тест на маленьком срезе (1 домен, 1 слой, пара пар) — C(δ) считает без ошибок
+- [ ] **GREEN:** полный прогон: 4 домена × слои {6,12,18,22} × типы пар (a) внутри-сэмпла соседние позиции, (b) внутри-домен разные сэмплы, (c) междомен. Выход: `results/exp01_coherence.json` + PNG (кривые C(δ) по слоям/доменам)
+- [ ] **Анализ/вердикт:** ℓ = δ при C(δ)=0.5; сравнение σ_d (внутридомен) с ℓ; таблица интерпретации из плана (гладкое / умеренное / фрактальное → стоп)
+- [ ] Paper-секция в docs/paper.md (новый раздел, после §11)
+
+**Дизайн-решения (зафиксированы):**
+- Метрика: C(δ) = E[⟨J(x),J(x')⟩_F / (‖J(x)‖‖J(x')‖)] по парам с ‖h(x)−h(x')‖≈δ; ℓ = δ при C=0.5. L(x,x') = ‖J−J'‖_F/‖h−h'‖_2 — попутно, в JSON.
+- J: gauge-free `softmax_jacobian(J, p)` (prism/jacobian.py:270, та же конвенция exp11a/16). K=64. Токен-сет: top-K финальных logits 0.8B на каждом сэмпле (self-bridge, без транспорта 4B). План пишет «P(p_L) из 4B» — упрощение: общий токен-сет 0.8B, 4B не грузится → дешевле и self-consistent. Отклонение от плана: 4B-проекция отброшена (YAGNI; gauge-free уже убивает common-mode).
+- h: скрытые состояния слоя l из output_hidden_states (один forward на сэмпл, все 4 слоя), последняя позиция.
+- Пары: (a) позиции t,t+1 внутри сэмпла (δ ~ маленький); (b) пары сэмплов одного домена; (c) пары разных доменов. δ-биннинг: лог-масштаб, ≥5 пар на бин, иначе бин выкинуть.
+- Данные: `load_calibration_data` (prism/calibration.py:69), домены wiki/math/code/chat, n_samples=16/домен (32 пары = тип (b); (c) перекрёсток).
+- Slo-бюджет: J-каш по (сэмпл, слой) = 4 слоя × 64 сэмпла = 256 вызовов compute_jacobian_for_tokens (K=64 → 64 backward). GPU ~30-60 мин. TPU: пер-токен path доказан (exp19), но 4 distinct слоя = 4 рекомпиляции — GPU предпочтительнее после квоты; TPU фолбэк.
+- Скрипт: `experiments/exp01_coherence.py`, main(small_model, device, results_dir, layers, K, n_samples, domains). .pt-сейвов нет (метрический эксперимент). Self-check assert на синтетическом гладком поле (C(δ) монотонно падает) — один runnable check.
+
+**Границы (не менять):**
+- Не трогать prism/jacobian.py, prism/bridge.py, calibration.py — только новый файл experiments/exp01_coherence.py + результаты.
+- Не пушить kernel до CPU self-check (правило 2026-09-08: CPU repro с assert на shape/значениях до железа).
+- Не смешивать с exp19 v6 (TPU слот занят; GPU квота ~09-14).
+
+**Вердикт-гейты (из плана):**
+- C(σ_d) > 0.5 → гладкое, ESG осмыслен → Exp 0.2
+- C(σ_d) ≈ 0.3 → умеренное, shrinkage ε≥0.1
+- C(σ_d) < 0.1 → фрактальное, **стоп** ESG
+
 ## DONE (historical audit)
 
 - [x] `docs/gpu_restart_audit.md` (commit 8a4638a) — полный аудит по каждому эксперименту: замысел / код / результаты / вердикт + итоговая таблица.
