@@ -2,9 +2,8 @@
 
 ## ACTIVE (2026-09-14) — live state
 
-- **DONE:** exp16 v4 (GPU, 1000 steps, bridge 0.603→0.921) + LORA behavioral check (top-p retention: anti-correlation confirmed, point-Jacobian insufficient → Goodhart). Paper section added. box v5 (TPU) COMPLETE.
-- **DOING:** exp19 v6 dose-sweep (TPU v7, QUEUED — slot free after box v5). Doses 0.1/1/10/100/500/1000 × target/anti/gauge/random, ΔW.pt per scenario.
-- **NEXT (GPU, quota reset ~09-14):** exp17 (2nd-order HVP; box v5 ran but XLA HVP hang unfixed → GPU-only). exp18 CANCELLED (degenerate).
+- **ACTIVE (2026-09-15):** exp01 Coherence (GPU kernel v1 RUNNING — см. блок Exp 0.1 ниже; RED done, GREEN on Kaggle).
+- **DONE:** exp16 v4 (GPU, 1000 steps, bridge 0.603→0.921) + LORA behavioral check (top-p retention: anti-correlation confirmed, point-Jacobian insufficient → Goodhart). Paper section added. box v5 (TPU) COMPLETE. exp19 v6 (TPU v7) — status: ERROR (2026-09-15, проверить log — возможно partial + fix).
 - Details in section «exp19 v6 dose-sweep + exp16 LORA behavioral» below.
 
 ## Exp 0.1: Coherence Length (docs/Exp0(1-3).md, user 2026-09-14 «начинай планировать 0.1»)
@@ -14,8 +13,8 @@
 **DONE / DOING / NEXT:**
 - [x] Чтение замысла (docs/Exp0(1-3).md) + аудита существующих механизмов
 - [x] План ниже (этот блок)
-- [ ] **RED:** `experiments/exp01_coherence.py` — каркас: загрузка 0.8B + 4B, домены, J-каш, скрытые состояния; тест на маленьком срезе (1 домен, 1 слой, пара пар) — C(δ) считает без ошибок
-- [ ] **GREEN:** полный прогон: 4 домена × слои {6,12,18,22} × типы пар (a) внутри-сэмпла соседние позиции, (b) внутри-домен разные сэмплы, (c) междомен. Выход: `results/exp01_coherence.json` + PNG (кривые C(δ) по слоям/доменам)
+- [x] **RED:** `experiments/exp01_coherence.py` — каркас: загрузка 0.8B + 4B, домены, J-каш, скрытые состояния; тест на маленьком срезе (1 домен, 1 слой, пара пар) — C(δ) считает без ошибок. (DONE 09-15: selfcheck PASSED (синтетическое гладкое поле: C монотонно, ell найден) + CPU smoke (wiki, L6, n=2, K=16) end-to-end OK. Отклонение от плана: 4B не грузится — self-bridge 0.8B, token set global top-K 0.8B (зафиксировано в плане).)
+- [x] **GREEN:** полный прогон: 4 домена × слои {6,12,18,22} × типы пар (a) внутри-сэмпла (full vs trunc-8), (b) внутри-домен, (c) междомен. Выход: `results/exp01_coherence.json` + PNG. **PUSHED 09-15 (kernel v1 RUNNING, GPU квота reset)**. n=8/домен (C(8,2)=28 пар — «32 пары» из плана), max_length=64, 256 J-кашей. Монитор: `_auto_chain/poll_exp01.sh`.
 - [ ] **Анализ/вердикт:** ℓ = δ при C(δ)=0.5; сравнение σ_d (внутридомен) с ℓ; таблица интерпретации из плана (гладкое / умеренное / фрактальное → стоп)
 - [ ] Paper-секция в docs/paper.md (новый раздел, после §11)
 

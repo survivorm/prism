@@ -178,6 +178,15 @@ KERNELS = {
         "sources": ["voroninmichael/exp16-stage-0-target-jacobian-cache"],
         "datasets": ["voroninmichael/prism-exp16-targets"],
     },
+    "exp01": {
+        "dir": "kernel-exp01",
+        "slug": "exp4-top-p-tokens",
+        "id": "voroninmichael/prism-exp01-coherence",
+        "title": "Prism: exp01-coherence",
+        "exp_file": "experiments/exp01_coherence.py",
+        "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\n",
+        "note": "Exp 0.1 coherence length: C(delta) curves, 4 domains x 4 layers {6,12,18,22}, n=8/K=64. Kill-switch for ESG/Exp 0.2. GPU after quota reset (~09-14).",
+    },
     "exp19": {
         "dir": "kernel-exp19",
         "slug": "exp4-top-p-tokens",
