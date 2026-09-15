@@ -1,6 +1,13 @@
 # GPU-аудит: какие эксперименты требуют re-run (запрошено пользователем, 2026-08-31)
 
-## DONE
+## ACTIVE (2026-09-14) — live state
+
+- **DONE:** exp16 v4 (GPU, 1000 steps, bridge 0.603→0.921) + LORA behavioral check (top-p retention: anti-correlation confirmed, point-Jacobian insufficient → Goodhart). Paper section added. box v5 (TPU) COMPLETE.
+- **DOING:** exp19 v6 dose-sweep (TPU v7, QUEUED — slot free after box v5). Doses 0.1/1/10/100/500/1000 × target/anti/gauge/random, ΔW.pt per scenario.
+- **NEXT (GPU, quota reset ~09-14):** exp17 (2nd-order HVP; box v5 ran but XLA HVP hang unfixed → GPU-only). exp18 CANCELLED (degenerate).
+- Details in section «exp19 v6 dose-sweep + exp16 LORA behavioral» below.
+
+## DONE (historical audit)
 
 - [x] `docs/gpu_restart_audit.md` (commit 8a4638a) — полный аудит по каждому эксперименту: замысел / код / результаты / вердикт + итоговая таблица.
 - [x] §L full audit — all 34 scripts re-read (exp2a/4_top_p/5_layer/8/9/10c/11c/12/17-helpers).
@@ -149,11 +156,27 @@ In-box agent = mini-swe-agent DefaultAgent (BoxAgent subclass: 85% auto-compact,
 **box v3 (exp17 2nd-order) — COMPLETE 2026-09-13 19:15** (TPU v5e-8, slot now free). box v4 pushed 19:24 with the 401 fix (read api_key + model from KTL's generated vllm.log READY banner; v3's hardcoded `not-needed` was rejected by vLLM's per-boot random key).
 **exp18 v11 CANCELLED** (degenerate 0.8B self-targets anyway; re-push only if wanted).
 
-## exp19 v6 dose-sweep + exp16 v3 dose-1000 (2026-09-13, user direction)
+## exp19 v6 dose-sweep + exp16 LORA behavioral (2026-09-13/14, user direction)
 
-- **exp19 v6** (TPU v5e-8, **RUNNING** — got the slot): scale-estimation sweep, pair 31_23, 1st-order (closed-form ΔW, no optimizer). Doses ‖ΔW‖_F ∈ {0.1, 1, 10, 100, 500, 1000} × 5 directions (target/anti/gauge/differential/random) = 30 + baseline; per-scenario checkpoint; saves ΔW.pt + edited W.pt per scenario. One XLA graph (ΔW touches lm_head only) → well under 2h.
-- **exp16 v4** (GPU T4, **RUNNING** — v3 pushed then [FAIL]ed: runner_extra passed `n_samples`/`K` but exp16 `main()` takes neither (N=4/K=256 baked into targets .pt); v4 fixed to targets_dir+steps=1000+lr+eval_every only): 1000 steps, eval EVERY step, saves lm_head ΔW.pt at knee + final. **Standalone dose sweep** — NOT dependent on exp19. v4 pushed 2026-09-13.
-- **exp17/18 paper sections**: still missing from docs/paper.md (data exists: exp18 v10 partial in results/, exp17 not run).
-- Monitor: `kaggle kernels status voroninmichael/prism-exp19-destruction-tpu` (log banner [OK]/[FAIL] is the true verdict, status=COMPLETE ≠ success).
+**exp16 v4 (GPU T4) — COMPLETE:** 1000 steps, lr=1e-3, eval_every=1, K=256, N=4, pair 31_23. Bridge 0.603→0.921 (‖ΔW‖_F 15.4→128.8, no knee, no collapse). Saves `exp16_lm_head_final.pt` + `exp16_lm_head_knee_info.pt`.
 
-**box v3→v4 (exp17) $(date '+%H:%M %m-%d')**: v3 booted fully (vLLM 27B 133tok/s, miniswe up, coexistence OK) but the agent 401'd — the box sent api_key="not-needed" while KTL generates a unique "sk-..." per boot and vLLM enforces it. **v4 fix**: boot_vllm now reads the real API KEY + MODEL from /kaggle/working/vllm.log (KTL's READY banner) and passes it to build_agent via VLLM_API_KEY; model default → qwen3.8-27b. Verified against v3's actual log (extracts the exact 401 key). v4 PUSHED (TPU slot free). Wait: ~22 min vLLM boot, then the agent attacks exp17 (2nd-order HVP) with py-spy. The 22-min boot will burn ~2h of the 9h session; the agent has the rest.
+**LORA behavioral check (local, top-p retention) — COMPLETE:**
+- Applied exp16 v4 ΔW to 0.8B lm_head, compared base vs +LORA vs 4B teacher on held-out queries.
+- **Anti-correlation confirmed**: bridge rises 0.60→0.92 but top-p retention falls 0.837→0.416 (C4) / 0.841→0.016 (clean Qs).
+- **Point-Jacobian metric insufficient**: single-point fit → Goodhart, no behavioral improvement.
+- Primary metric = top-p retention (p=0.9, robust mass), NOT fragile top-10. Tests: `tests/test_lora_effect.py`, `tests/test_lora_dose.py`.
+- .pt: `/data/prism_ckpt/exp16_lm_head_final.pt`, `exp16_lm_head_knee_info.pt`, `exp19_dW_*.pt` (30 files).
+- Paper: new section «Эксперимент 16 (v4, повед. проверка)» in docs/paper.md.
+
+**exp19 v6 (TPU v5e-8, v7) — QUEUED:** 6 doses (0.1/1/10/100/500/1000) × 4 directions (target/anti/gauge/random) = 24 + baseline, pair 31_23, 1st-order (ΔW on lm_head only), early-stop at bridge<0.05, ΔW.pt per scenario. Correct TPU script kernel (was v5 in old dir; rebuilt with build_tpu.py, v7 pushed 2026-09-14).
+
+**exp17 (2nd-order HVP) + exp18 (logit-KD):**
+- exp18 CANCELLED (degenerate: 0.8B self-targets → KD=0 by construction).
+- exp17: box v5 COMPLETE (MSWEA_COST_TRACKING=ignore_errors fixed 401/litellm cost crash); agent ran but 2nd-order HVP XLA hang still unresolved → GPU after quota reset (~09-14) or next box iteration.
+
+**Monitor:**
+- exp19: `kaggle kernels status voroninmichael/prism-exp19-destruction-tpu` (v7; banner [OK]/[FAIL] in log = true verdict)
+- box: `kaggle kernels status voroninmichael/prism-box-autonomer`
+- GPU quota (30h/wk): resets ~2026-09-14; exp17 runs there when available.
+
+**Paper status:** exp16 behavioral check integrated. exp17/exp18 sections still missing (exp18 cancelled; exp17 data not yet produced).
