@@ -151,8 +151,8 @@ In-box agent = mini-swe-agent DefaultAgent (BoxAgent subclass: 85% auto-compact,
 
 ## exp19 v6 dose-sweep + exp16 v3 dose-1000 (2026-09-13, user direction)
 
-- **exp19 v6** (TPU, pushed 17:50, QUEUED as of 19:40): scale-estimation sweep, pair 31_23, 1st-order (closed-form ΔW, no optimizer — no XLA hang class). Doses ‖ΔW‖_F ∈ {0.1, 1, 10, 100, 500, 1000} × 5 directions (target ΔJ / anti-target / gauge / differential / random) = 30 + baseline; per-scenario checkpoint; **saves ΔW.pt + edited W.pt per scenario** (user wants to load them for inference). One XLA graph (ΔW touches lm_head only, no per-target-layer recompile) → well under 2h.
-- **exp16 v3** (GPU, build ready /tmp/exp16gpu3, NOT yet pushed — wait for the 30h/week quota reset ~2026-09-14): 1000 steps, eval EVERY step (knee detection needs resolution), saves lm_head ΔW.pt at knee + final. Dose chosen from exp19 results (near the knee) — pending exp19 v6.
+- **exp19 v6** (TPU v5e-8, **RUNNING** — got the slot): scale-estimation sweep, pair 31_23, 1st-order (closed-form ΔW, no optimizer). Doses ‖ΔW‖_F ∈ {0.1, 1, 10, 100, 500, 1000} × 5 directions (target/anti/gauge/differential/random) = 30 + baseline; per-scenario checkpoint; saves ΔW.pt + edited W.pt per scenario. One XLA graph (ΔW touches lm_head only) → well under 2h.
+- **exp16 v4** (GPU T4, **RUNNING** — v3 pushed then [FAIL]ed: runner_extra passed `n_samples`/`K` but exp16 `main()` takes neither (N=4/K=256 baked into targets .pt); v4 fixed to targets_dir+steps=1000+lr+eval_every only): 1000 steps, eval EVERY step, saves lm_head ΔW.pt at knee + final. **Standalone dose sweep** — NOT dependent on exp19. v4 pushed 2026-09-13.
 - **exp17/18 paper sections**: still missing from docs/paper.md (data exists: exp18 v10 partial in results/, exp17 not run).
 - Monitor: `kaggle kernels status voroninmichael/prism-exp19-destruction-tpu` (log banner [OK]/[FAIL] is the true verdict, status=COMPLETE ≠ success).
 

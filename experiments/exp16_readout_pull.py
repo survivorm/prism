@@ -378,21 +378,18 @@ def main(
         print(f"\nα* (knee) = {alpha_star:.4f} at step {knee_step}")
 
     # -- Save lm_head weights at knee + final for inference inspection -------
-    W_final = lm_head.weight.data.clone().cpu()
-    pt_paths: list[str] = []
-
-    # Final weight always saved
+    # Save only ΔW in fp16 (311MB, downloadable) — NOT W/W_orig (3GB each).
+    # ΔW applied to the 0.8B's own lm_head = the "edited" model for inference.
+    delta_W = (lm_head.weight.data - W_orig).cpu().half()
     pt_final = os.path.join(results_dir, "exp16_lm_head_final.pt")
     torch.save({
-        "W": W_final,
-        "W_orig": W_orig.cpu(),
-        "delta_W": (W_final - W_orig.cpu()),
+        "delta_W": delta_W,
         "step": steps,
         "bridge": curve[-1]["bridge"],
-        "dose": curve[-1]["dose"],
+        "dose": float(delta_W.float().norm()),
     }, pt_final)
     pt_paths.append(pt_final)
-    print(f"Saved {pt_final} (‖ΔW‖={W_final.norm().item():.4f}, bridge={curve[-1]['bridge']:.4f})")
+    print(f"Saved {pt_final} (‖ΔW‖={delta_W.float().norm().item():.4f}, bridge={curve[-1]['bridge']:.4f})")
 
     # Knee weight (if knee detected)
     if knee_step is not None and knee_step < steps:
@@ -433,7 +430,7 @@ def main(
         "lr": lr,
         "kl_weight": kl_weight,
         "steps": steps,
-        "eval_every": every,
+        "eval_every": eval_every,
         "W_norm": W_norm,
         "target_pair": target_pair,
         "pairing": {
