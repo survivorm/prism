@@ -15,8 +15,10 @@ Design (fixed in PLAN.md):
   samples (4B projection dropped: gauge-free already kills common mode).
 - h: last-position hidden states at layers {6,12,18,22}, one forward per
   sample gives all four (output_hidden_states).
-- pair types: (a) same sample, full vs truncated-by-8 (small delta);
+- pair types: (a) same sample, adjacent positions (S-1,S) & (S-2,S-1);
   (b) two samples, same domain (delta ~ sigma_d); (c) cross-domain (large).
+- gate: C(sigma_d) on the pooled (a)+(b) within-domain curve (v1 used (b)
+  only; sigma_d < min delta(b) -> n/a).
 - delta bins: log scale, >=5 pairs/bin else drop the bin.
 
 Judgement gates: C(sigma_d) > 0.5 smooth / ~0.3 moderate / < 0.1 fractal-stop.
@@ -110,16 +112,10 @@ def _curve_from_pairs(
     }
 
 
-def _curve_block(js: list[torch.Tensor], hs: list[torch.Tensor]) -> dict:
-    """C(delta) curve over ALL C(n,2) pairs of the (J, h) records."""
-    cos_deltas, ls = _pair_stats(js, hs)
-    return _curve_from_pairs(cos_deltas, ls, len(js))
-
-
 def _load_all(
     model_name: str, domains: list[str], n_samples: int, max_length: int
 ) -> dict[str, list[dict]]:
-    """Per domain: full + truncated samples (share the first n)."""
+    """Per domain: n_samples full sequences, exactly max_length tokens."""
     per: dict[str, list[dict]] = {}
     for dom in domains:
         full = load_calibration_data(
@@ -137,14 +133,7 @@ def _load_all(
                 n_samples=n_samples,
                 domain=dom,
             )
-        trunc = [
-            {
-                "input_ids": s["input_ids"][:, :-TRUNC_TOKENS],
-                "attention_mask": s["attention_mask"][:, :-TRUNC_TOKENS],
-            }
-            for s in full
-        ]
-        per[dom] = full + trunc
+        per[dom] = full
     return per
 
 
@@ -159,7 +148,9 @@ def _one_forward(
             input_ids=ids, attention_mask=attn, output_hidden_states=True
         )
     p = torch.softmax(out.logits[0, -1, :], dim=-1)
-    hs = [out.hidden_states[l + 1][0, -1, :].float().cpu() for l in layers]
+    hs: dict[int, list[torch.Tensor]] = {}
+    for l in layers:
+        hs[l] = [out.hidden_states[l + 1][0, i, :].float().cpu() for i in (-1, -2, -3)]
     return p, hs
 
 
@@ -203,68 +194,69 @@ def main(
     token_set = sorted([t for t, _ in sorted(counts.items(), key=lambda x: -x[1])[:K]])
     print(f"Token set |U| = {len(token_set)}")
 
-    # J-cache: per (domain, sample, full/trunc, layer) -> gauge-free J [K, D].
-    # One _one_forward per (sample, variant) gives all layers' h; J cache is
-    # per-layer. 8 samples x 2 variants x 4 domains x 4 layers = 256 J-calls.
+    # J-cache: per (domain, sample, layer, pos) -> gauge-free J [K, D].
+    # pos 0=S, 1=S-1, 2=S-2. J at S-k = compute_jacobian_for_tokens on
+    # ids[:, :-k] (causality: exact). 8 x 4 layers x 3 = 384 J-calls.
     J: dict[tuple, torch.Tensor] = {}
     H: dict[tuple, torch.Tensor] = {}
     done = 0
-    total = sum(len(v) for v in per_domain.values()) * len(layers)
+    total = sum(len(v) for v in per_domain.values()) * len(layers) * 3
     for dom in domains:
         for si, s in enumerate(per_domain[dom]):
-            variant = "full" if si < n_samples else "trunc"
             p, hs = _one_forward(m, s, layers)
             pk = p[token_set]
             pk = pk / pk.sum()
-            for li, l in enumerate(layers):
-                Jp = softmax_jacobian(
-                    compute_jacobian_for_tokens(
-                        m, l, s["input_ids"].to(m.device),
-                        s["attention_mask"].to(m.device), token_set,
-                    ).float(),
-                    pk.to(m.device),
-                ).float().cpu()
-                key = (dom, si, l)
-                J[key] = Jp
-                H[key] = hs[li]
-                done += 1
-            print(f"  {dom} s{si} ({variant}): J done for {len(layers)} layers "
-                  f"({done}/{total})")
+            for l in layers:
+                for pos in (0, 1, 2):
+                    ids_k = s["input_ids"][:, :-pos] if pos else s["input_ids"]
+                    mask_k = s["attention_mask"][:, :-pos] if pos else s["attention_mask"]
+                    Jp = softmax_jacobian(
+                        compute_jacobian_for_tokens(
+                            m, l, ids_k.to(m.device), mask_k.to(m.device), token_set,
+                        ).float(),
+                        pk.to(m.device),
+                    ).float().cpu()
+                    J[(dom, si, l, pos)] = Jp
+                    H[(dom, si, l, pos)] = hs[l][pos]
+                    done += 1
+            print(f"  {dom} s{si}: 3pos x {len(layers)}L J done ({done}/{total})")
 
     # Per-layer: 3 pair-type curves + sigma_d + gate.
     per_layer: dict[str, dict] = {}
     for l in layers:
         res: dict = {}
-        # (a) intra-sample: full vs truncated, same sample (small delta).
-        # Each sample contributes exactly ONE pair (full_i, trunc_i).
-        ja: list[torch.Tensor] = []
-        ha: list[torch.Tensor] = []
+        # (a) intra-sample adjacent positions: (S-1,S) and (S-2,S-1).
         a_cd: list[tuple[float, float]] = []
         a_ls: list[float] = []
         for dom in domains:
             for si in range(n_samples):
-                Jf, Jt = J[(dom, si, l)], J[(dom, n_samples + si, l)]
-                Hf, Ht = H[(dom, si, l)], H[(dom, n_samples + si, l)]
-                d = (Hf - Ht).norm().item()
-                a_cd.append((d, _cos(Jf, Jt)))
-                a_ls.append((Jf - Jt).norm().item() / max(d, 1e-12))
+                for p1, p2 in ((1, 0), (2, 1)):
+                    J1, J2 = J[(dom, si, l, p1)], J[(dom, si, l, p2)]
+                    H1, H2 = H[(dom, si, l, p1)], H[(dom, si, l, p2)]
+                    d = (H1 - H2).norm().item()
+                    a_cd.append((d, _cos(J1, J2)))
+                    a_ls.append((J1 - J2).norm().item() / max(d, 1e-12))
         res["intra_sample"] = _curve_from_pairs(a_cd, a_ls, 2 * n_samples * len(domains))
         res["intra_sample"]["C_raw"] = [c for _, c in a_cd]
         res["intra_sample"]["delta_raw"] = [d for d, _ in a_cd]
         # (b) intra-domain: C(n,2) sample pairs within one domain.
         intra = []
+        b_cd_pool: list[tuple[float, float]] = []
         for dom in domains:
-            jb = [J[(dom, si, l)] for si in range(n_samples)]
-            hb = [H[(dom, si, l)] for si in range(n_samples)]
-            intra.append({"domain": dom, **_curve_block(jb, hb)})
+            jb = [J[(dom, si, l, 0)] for si in range(n_samples)]
+            hb = [H[(dom, si, l, 0)] for si in range(n_samples)]
+            cd_dom, ls_dom = _pair_stats(jb, hb)
+            b_cd_pool.extend(cd_dom)
+            intra.append(
+                {"domain": dom, **_curve_from_pairs(cd_dom, ls_dom, len(jb))}
+            )
         res["intra_domain"] = intra
-        # sigma_d: mean within-domain per-sample h std (pooled over domains).
+        # sigma_d per spec: norm of per-dim std (unbiased=False) of full
+        # samples' last-position h, mean over domains.
         stds = []
         for dom in domains:
-            hs_d = torch.stack([H[(dom, si, l)] for si in range(n_samples)])
-            stds.append(
-                (hs_d - hs_d.mean(0)).norm(dim=1).mean().item()
-            )
+            hs_d = torch.stack([H[(dom, si, l, 0)] for si in range(n_samples)])
+            stds.append(hs_d.std(dim=0, unbiased=False).norm().item())
         res["sigma_d"] = float(np.mean(stds))
         # (c) cross-domain: all between-domain sample pairs.
         cd_cd: list[tuple[float, float]] = []
@@ -274,26 +266,28 @@ def main(
             for d2 in domains[di + 1:]:
                 for si in range(n_samples):
                     for sj in range(n_samples):
-                        J1, J2 = J[(d1, si, l)], J[(d2, sj, l)]
-                        H1, H2 = H[(d1, si, l)], H[(d2, sj, l)]
+                        J1, J2 = J[(d1, si, l, 0)], J[(d2, sj, l, 0)]
+                        H1, H2 = H[(d1, si, l, 0)], H[(d2, sj, l, 0)]
                         d = (H1 - H2).norm().item()
                         cd_cd.append((d, _cos(J1, J2)))
                         cd_ls.append((J1 - J2).norm().item() / max(d, 1e-12))
                         n_cross += 1
         res["cross_domain"] = _curve_from_pairs(cd_cd, cd_ls, n_cross)
-        # Gate: intra-domain C at sigma_d (interpolated per domain).
-        c_at_sd: dict[str, float | None] = {}
-        for blk in intra:
-            centers, means = blk["delta_centers"], blk["C"]
-            if len(centers) >= 2 and min(centers) <= res["sigma_d"] <= max(centers):
-                c_at_sd[blk["domain"]] = float(
-                    np.interp(res["sigma_d"], centers, means)
-                )
-            else:
-                c_at_sd[blk["domain"]] = None
-        vals = [v for v in c_at_sd.values() if v is not None]
-        res["C_at_sigma_d"] = max(vals) if vals else None
-        res["C_at_sigma_d_by_domain"] = c_at_sd
+        # Gate: C(sigma_d) from the POOLED within-domain curve: adjacent
+        # position pairs (a) + sample pairs (b) across all domains.
+        # (b) alone starts at delta > sigma_d, so the gate needs (a)'s
+        # small-delta range to interpolate at sigma_d.
+        g_cd = a_cd + b_cd_pool
+        g_centers, g_means = coh_curve(g_cd)
+        if len(g_centers) >= 2 and min(g_centers) <= res["sigma_d"] <= max(g_centers):
+            res["C_at_sigma_d"] = float(
+                np.interp(res["sigma_d"], g_centers, g_means)
+            )
+        else:
+            res["C_at_sigma_d"] = None
+        res["gate_curve"] = {
+            "delta_centers": g_centers, "C": g_means, "n_pairs": len(g_cd)
+        }
         per_layer[str(l)] = res
         print(
             f"  L{l}: sigma_d={res['sigma_d']:.3f} "
