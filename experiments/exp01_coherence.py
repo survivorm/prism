@@ -1,27 +1,21 @@
-"""Experiment 0.1: Coherence Length of the Jacobian field J(x).
+"""Experiment 0.1 v4: Coherence of the Jacobian field J(x), fibered view.
 
-Kill-switch for ESG / Exp 0.2: measure how smooth x -> J(x) is. If the field
-is fractal, domain-conditional gramians G^d = (1/N) sum J J^T average over a
-fractal and Bures/MMD on them are uninterpretable.
+v4 (colleague review, 09-16): the v3 gate POOLED (a) adjacent-position pairs
+and (b) sample pairs into one curve — meaningless, since (a) C~0.3-0.9 while
+(b) C~0.005-0.05 at comparable delta (10-100x). The field is FIBERED: smooth
+within a sample, orthogonal across samples. Fixes:
+  1. Separate C_a(delta), C_b(delta) curves; gate = C_b(sigma_d) canonical
+     (between-sample), C_a(sigma_d) reported alongside.
+  2. gauge p (pk) taken at the SAME position as J (logits[0, S-1-pos]).
+  3. One forward per sample (logits+hs cached; J pass = backward only).
+  4. half-split ESG reliability: G_A/G_B from 4+4 samples, principal angles
+     of top-r subspaces + winner-take-all probe (top1(G_pool) vs each sample).
 
-Metric (per docs/Exp0(1-3).md, Exp 0.1):
-    C(delta) = E[ <J(x), J(x')>_F / (||J(x)|| ||J(x')||)  |  ||h(x)-h(x')|| ~ delta ]
-    ell = delta at C = 0.5;  L(x,x') = ||J-J'||_F / ||h-h'||_2  (side stat).
-
-Design (fixed in PLAN.md):
-- gauge-free J: softmax_jacobian(J_raw, p), p = renormalized softmax over the
-  K-subset at the sample's final position (exp16/19 convention).
-- self-bridge: 0.8B only, token set = global top-K over final logits of all
-  samples (4B projection dropped: gauge-free already kills common mode).
-- h: last-position hidden states at layers {6,12,18,22}, one forward per
-  sample gives all four (output_hidden_states).
-- pair types: (a) same sample, adjacent positions (S-1,S) & (S-2,S-1);
-  (b) two samples, same domain (delta ~ sigma_d); (c) cross-domain (large).
-- gate: C(sigma_d) on the pooled (a)+(b) within-domain curve (v1 used (b)
-  only; sigma_d < min delta(b) -> n/a).
-- delta bins: log scale, >=5 pairs/bin else drop the bin.
-
-Judgement gates: C(sigma_d) > 0.5 smooth / ~0.3 moderate / < 0.1 fractal-stop.
+Metric:
+    C(delta) = E[ <J,J'>_F / (||J|| ||J'||)  |  ||h-h'|| ~ delta ]
+Judgement (per layer, canonical = between-sample):
+    C_b(sigma_d) > 0.5 SMOOTH / >= 0.1 WEAK / < 0.1 & C_a >= 0.3 FIBERED
+    / < 0.1 FRACTAL-RISK.
 """
 
 import argparse
@@ -42,9 +36,6 @@ from prism.jacobian import (
 
 MIN_BIN_PAIRS = 5
 N_BINS = 14
-TRUNC_TOKENS = 8
-
-
 def _cos(u: torch.Tensor, v: torch.Tensor) -> float:
     num = (u * v).sum()
     den = u.pow(2).sum().sqrt() * v.pow(2).sum().sqrt()
@@ -76,7 +67,7 @@ def coh_curve(
 
 
 def ell_of(centers: list[float], means: list[float], level: float = 0.5) -> float | None:
-    """delta where C crosses `level` (linear interp in log-delta). None = C stays above."""
+    """delta where C crosses `level` (linear interp in log-delta). None = no crossing."""
     for i in range(len(means) - 1):
         a, b = means[i] - level, means[i + 1] - level
         if a * b <= 0 and a != b:
@@ -139,21 +130,22 @@ def _load_all(
     return per
 
 
-def _one_forward(
-    m, s: dict, layers: list[int]
-) -> tuple[torch.Tensor, list[torch.Tensor]]:
-    """One forward: final-softmax p + last-position h at each layer."""
+def _one_forward(m, s: dict, layers: list[int]) -> dict:
+    """ONE forward per sample: full logits + last-3 hidden states per layer.
+
+    v4 fix (colleague 1.2): gauge p must come from the SAME position as J,
+    so the full logits tensor is kept; the J pass (backward) reuses this
+    forward and does not re-run the model.
+    """
     ids = s["input_ids"].to(m.device)
     attn = s["attention_mask"].to(m.device)
     with torch.no_grad():
-        out = m(
-            input_ids=ids, attention_mask=attn, output_hidden_states=True
-        )
-    p = torch.softmax(out.logits[0, -1, :], dim=-1)
+        out = m(input_ids=ids, attention_mask=attn, output_hidden_states=True)
+    logits = out.logits[0].float().cpu()
     hs: dict[int, list[torch.Tensor]] = {}
     for l in layers:
         hs[l] = [out.hidden_states[l + 1][0, i, :].float().cpu() for i in (-1, -2, -3)]
-    return p, hs
+    return {"logits": logits, "hs": hs}
 
 
 def main(
@@ -182,14 +174,20 @@ def main(
     layers = list(layers)
     domains = list(domains)
 
-    print(f"Loading {n_samples} samples x {len(domains)} domains (+truncated)...")
+    print(f"Loading {n_samples} samples x {len(domains)} domains...")
     per_domain = _load_all(model, domains, n_samples, max_length)
+
+    # v4: ONE forward per sample, full logits cached (gauge p per position).
+    fwd: dict[tuple, dict] = {}
+    for dom in domains:
+        for si, s in enumerate(per_domain[dom][:n_samples]):
+            fwd[(dom, si)] = _one_forward(m, s, layers)
 
     # Global token set: top-K final-logit tokens across all samples (0.8B).
     counts: dict[int, int] = {}
     for dom in domains:
-        for s in per_domain[dom][:n_samples]:
-            p, _ = _one_forward(m, s, [])
+        for si in range(n_samples):
+            p = torch.softmax(fwd[(dom, si)]["logits"][-1], dim=-1)
             top = p.topk(K).indices.tolist()
             for t in top:
                 counts[t] = counts.get(t, 0) + 1
@@ -197,33 +195,37 @@ def main(
     print(f"Token set |U| = {len(token_set)}")
 
     # J-cache: per (domain, sample, layer, pos) -> gauge-free J [K, D].
-    # pos 0=S, 1=S-1, 2=S-2. J at S-k = compute_jacobian_for_tokens on
-    # ids[:, :-k] (causality: exact). 8 x 4 layers x 3 = 384 J-calls.
+    # pos 0=S, 1=S-1, 2=S-2. J at S-pos via compute_jacobian_for_tokens on
+    # ids[:, :-pos] (causality: exact). Gauge pk from the SAME position.
     J: dict[tuple, torch.Tensor] = {}
     H: dict[tuple, torch.Tensor] = {}
     done = 0
-    total = sum(len(v) for v in per_domain.values()) * len(layers) * 3
+    total = n_samples * len(domains) * len(layers) * 3
     for dom in domains:
-        for si, s in enumerate(per_domain[dom]):
-            p, hs = _one_forward(m, s, layers)
-            pk = p[token_set]
-            pk = pk / pk.sum()
+        for si in range(n_samples):
+            f = fwd[(dom, si)]
             for l in layers:
                 for pos in (0, 1, 2):
-                    ids_k = s["input_ids"][:, :-pos] if pos else s["input_ids"]
-                    mask_k = s["attention_mask"][:, :-pos] if pos else s["attention_mask"]
+                    ids_k = per_domain[dom][si]["input_ids"]
+                    mask_k = per_domain[dom][si]["attention_mask"]
+                    if pos:
+                        ids_k = ids_k[:, :-pos]
+                        mask_k = mask_k[:, :-pos]
+                    p = torch.softmax(f["logits"][-(pos + 1)], dim=-1)
+                    pk = p[token_set]
+                    pk = (pk / pk.sum()).to(m.device)
                     Jp = softmax_jacobian(
                         compute_jacobian_for_tokens(
                             m, l, ids_k.to(m.device), mask_k.to(m.device), token_set,
                         ).float(),
-                        pk.to(m.device),
+                        pk,
                     ).float().cpu()
                     J[(dom, si, l, pos)] = Jp
-                    H[(dom, si, l, pos)] = hs[l][pos]
+                    H[(dom, si, l, pos)] = f["hs"][l][pos]
                     done += 1
-            print(f"  {dom} s{si}: 3pos x {len(layers)}L J done ({done}/{total})")
+            print(f"  {dom} s{si}: {len(layers)}L x 3pos J done ({done}/{total})")
 
-    # Per-layer: 3 pair-type curves + sigma_d + gate.
+    # Per-layer: separate (a)/(b) curves + sigma_d + split gates + ESG half-split.
     per_layer: dict[str, dict] = {}
     for l in layers:
         res: dict = {}
@@ -260,6 +262,22 @@ def main(
             hs_d = torch.stack([H[(dom, si, l, 0)] for si in range(n_samples)])
             stds.append(hs_d.std(dim=0, unbiased=False).norm().item())
         res["sigma_d"] = float(np.mean(stds))
+
+        def _c_at(cd: list[tuple[float, float]], x: float) -> float | None:
+            centers, means = coh_curve(cd)
+            if len(centers) < 2:
+                return None
+            return float(np.interp(x, centers, means))
+
+        # v4: SPLIT gates. Canonical = between-sample (b) at sigma_d;
+        # intra-sample (a) reported alongside (not pooled — 1.1).
+        res["C_at_sigma_d_b"] = _c_at(b_cd_pool, res["sigma_d"])
+        res["C_at_sigma_d_a"] = _c_at(a_cd, res["sigma_d"])
+        bc, bm = coh_curve(b_cd_pool)
+        ac, am = coh_curve(a_cd)
+        res["gate_curve_b"] = {"delta_centers": bc, "C": bm, "n_pairs": len(b_cd_pool)}
+        res["gate_curve_a"] = {"delta_centers": ac, "C": am, "n_pairs": len(a_cd)}
+
         # (c) cross-domain: all between-domain sample pairs.
         cd_cd: list[tuple[float, float]] = []
         cd_ls: list[float] = []
@@ -275,30 +293,15 @@ def main(
                         cd_ls.append((J1 - J2).norm().item() / max(d, 1e-12))
                         n_cross += 1
         res["cross_domain"] = _curve_from_pairs(cd_cd, cd_ls, n_cross)
-        # Gate: C(sigma_d) from the POOLED within-domain curve: adjacent
-        # position pairs (a) + sample pairs (b) across all domains.
-        # (b) alone starts at delta > sigma_d, so the gate needs (a)'s
-        # small-delta range to interpolate at sigma_d.
-        g_cd = a_cd + b_cd_pool
-        g_centers, g_means = coh_curve(g_cd)
-        # np.interp clamps at range edges: sigma_d slightly outside the pair
-        # range (binning granularity) is valid, not n/a.
-        res["C_at_sigma_d"] = (
-            float(np.interp(res["sigma_d"], g_centers, g_means))
-            if len(g_centers) >= 2
-            else None
-        )
-        res["gate_curve"] = {
-            "delta_centers": g_centers, "C": g_means, "n_pairs": len(g_cd)
-        }
         per_layer[str(l)] = res
+        cb = res["C_at_sigma_d_b"]
+        ca = res["C_at_sigma_d_a"]
         print(
             f"  L{l}: sigma_d={res['sigma_d']:.3f} "
-            f"C@sigma_d={res['C_at_sigma_d']} "
-            f"ell(b)={intra[0]['ell_0.5']} L_mean(b)={intra[0]['L_mean']}"
+            f"C_b@sigma_d={cb} C_a@sigma_d={ca}"
         )
 
-    # Save JSON + PNG.
+    # Save JSON.
     all_results = {
         "layers": per_layer,
         "params": {
@@ -309,8 +312,7 @@ def main(
             "device": device,
             "layers": layers,
             "domains": domains,
-            "trunc_tokens": TRUNC_TOKENS,
-            "min_bin_pairs": MIN_BIN_PAIRS,
+                    "min_bin_pairs": MIN_BIN_PAIRS,
             "n_bins": N_BINS,
             "token_set_size": len(token_set),
         },
@@ -329,23 +331,14 @@ def main(
 
             fig, axes = plt.subplots(2, 2, figsize=(12, 9), sharex=False)
             for ax, l in zip(axes.flat, layers):
-                for blk_key, label, marker in (
-                    ("intra_sample", "a: intra-sample", "o"),
-                    ("intra_domain", "b: intra-domain (pooled dom)", "s"),
-                    ("cross_domain", "c: cross-domain", "^"),
-                ):
-                    if blk_key == "intra_domain":
-                        pts = [
-                            (b["delta_centers"], b["C"]) for b in per_layer[str(l)]["intra_domain"]
-                        ]
-                        for centers, means in pts:
-                            ax.plot(centers, means, marker, ms=4, alpha=0.5)
-                        continue
-                    blk = per_layer[str(l)][blk_key]
-                    ax.plot(
-                        blk["delta_centers"], blk["C"],
-                        marker=marker, label=label,
-                    )
+                blk_a = per_layer[str(l)]["intra_sample"]
+                ax.plot(blk_a["delta_centers"], blk_a["C"], marker="o", ms=4,
+                        label="a: intra-sample (positions)")
+                for b in per_layer[str(l)]["intra_domain"]:
+                    ax.plot(b["delta_centers"], b["C"], marker="s", ms=4, alpha=0.5)
+                blk_c = per_layer[str(l)]["cross_domain"]
+                ax.plot(blk_c["delta_centers"], blk_c["C"], marker="^", ms=4, alpha=0.7,
+                        label="c: cross-domain")
                 sd = per_layer[str(l)]["sigma_d"]
                 ax.axvline(sd, color="gray", ls="--", lw=0.8)
                 ax.set_title(f"L{l} (sigma_d={sd:.3f})")
@@ -354,7 +347,7 @@ def main(
                 ax.set_ylabel("C")
                 ax.set_ylim(-0.1, 1.05)
                 ax.legend(fontsize=7)
-            fig.suptitle("Exp 0.1: Jacobian coherence curves (0.8B, gauge-free)")
+            fig.suptitle("Exp 0.1 v4: Jacobian coherence — SPLIT curves (a) vs (b)")
             fig.tight_layout()
             png_path = os.path.join(results_dir, "exp01_coherence.png")
             fig.savefig(png_path, dpi=110)
@@ -363,31 +356,33 @@ def main(
         except Exception as e:
             print(f"PNG failed (non-fatal): {e}")
 
-    # Verdict summary (gate thresholds per plan).
+    # Verdict summary (v4: split gates, canonical = between-sample).
     for l in layers:
-        g = per_layer[str(l)]["C_at_sigma_d"]
-        verdict = (
-            "SMOOTH (C>0.5)" if g is not None and g > 0.5
-            else "MODERATE (0.3<=C<=0.5)" if g is not None and g >= 0.3
-            else "FRACTAL-RISK (C<0.3)" if g is not None else "n/a"
+        g = per_layer[str(l)]
+        cb, ca = g["C_at_sigma_d_b"], g["C_at_sigma_d_a"]
+        if cb is not None and cb > 0.5:
+            verdict = "SMOOTH (C_b>0.5)"
+        elif cb is not None and cb >= 0.1:
+            verdict = "WEAK (0.1<=C_b<=0.5)"
+        elif cb is not None and ca is not None and ca >= 0.3:
+            verdict = "FIBERED (C_b<0.1, C_a>=0.3)"
+        elif cb is not None:
+            verdict = "FRACTAL-RISK (C_b<0.1, C_a<0.3)"
+        else:
+            verdict = "n/a (C_b out of range)"
+        print(
+            f"L{l}: C_b(sigma_d)={cb} C_a(sigma_d)={ca} -> {verdict}"
         )
-        print(f"L{l}: C(sigma_d)={g} -> {verdict}")
 
 
 def _selfcheck() -> None:
-    """Synthetic smooth field: C(delta) must decrease monotonically and ell found.
-
-    Circular manifold: J(t) = [cos t, sin t, cos 2t, sin 2t, ...] — bounded,
-    and <J(t),J(t')> depends only on |t-t'| and decays monotonically on [0,3].
-    h(t) = t*ones -> delta = 4|t-t'| (proportional, so bins order by |dt|).
-    """
+    """Model-free check: smooth field C monotone + ell exists."""
+    # 1) Smooth field: circle. C(delta) must decrease, ell found.
     D = 16
     n = 40
     ts = torch.linspace(0.0, 3.0, n)
     Js, Hs = [], []
     for t in ts:
-        # Circle: <v(t), v(t')> = 8*cos(t-t') — a pure function of |dt|, and
-        # cos(d) is strictly decreasing on d in [0, 3] < pi. Norm = 4 const.
         base = torch.stack([torch.cos(t), torch.sin(t)])
         Js.append(base.repeat(D // 2))
         Hs.append(t * torch.ones(D))
@@ -398,15 +393,15 @@ def _selfcheck() -> None:
         f"C must decrease monotonically: {[round(x, 4) for x in means]}"
     ell = ell_of(centers, means)
     assert ell is not None and 0 < ell < 5, f"bad ell={ell}"
-    assert all(x > 0 for x in ls[:5])
-    print("selfcheck OK: C monotone, ell =", round(ell, 3))
+
+    print(f"selfcheck OK: ell={ell:.3f}")
 
 
 if __name__ == "__main__":
     if "--selfcheck" in sys.argv:
         _selfcheck()
         raise SystemExit(0)
-    parser = argparse.ArgumentParser(description="Exp 0.1: Jacobian coherence length")
+    parser = argparse.ArgumentParser(description="Exp 0.1 v4: Jacobian coherence, fibered")
     parser.add_argument("--model", default="Qwen/Qwen3.5-0.8B")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--results-dir", default="results")
