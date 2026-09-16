@@ -1,4 +1,14 @@
-"""Experiment 0.1 v5: Coherence of the Jacobian field J(x), split curves.
+"""Experiment 0.1 v6: coherence + gauge-share / position-sensitivity diagnostics.
+
+v6 (colleague review 3, 09-16): same pipeline as v5, diagnostics added:
+  1. L_mean/L_p90 per convention (v5 shared pos-pk L for all three - bug).
+  2. gauge_share = ||P(p)J||_F^2 / ||J||_F^2 per (sample, layer, pos).
+  3. cos(p_t, p_{t+1}) on token-set-normalized distributions, per pair.
+  4. verdict vs 1/sqrt(D) noise floor: ORTHOGONAL / WEAK / COHERENT.
+  5. L18 flag in summary: C_b > 1.5*C_a.
+  6. PK reproducibility: per-layer pk_hash + pk_top_token_ids (full PK in
+     the in-memory cache; JSON gets hash + top-8 only).
+JSON: exp01_coherence_v6.json (v5's exp01_coherence.json left intact).
 
 v4 (colleague review, 09-16): the v3 gate POOLED (a) adjacent-position pairs
 and (b) sample pairs into one curve — meaningless, since (a) C~0.3-0.9 while
@@ -32,6 +42,7 @@ FIBERED / <0.1 FRACTAL-RISK.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -246,39 +257,69 @@ def main(
     for l in layers:
         res: dict = {}
         # (a) intra-sample adjacent positions: (S-1,S) and (S-2,S-1).
+        # v6: L per convention — a_ls (pos-pk), a_ls_same, a_ls_nog (no shared L).
         a_cd: list[tuple[float, float]] = []
+        a_cd_same: list[tuple[float, float]] = []
+        a_cd_nog: list[tuple[float, float]] = []
         a_ls: list[float] = []
+        a_ls_same: list[float] = []
+        a_ls_nog: list[float] = []
         for dom in domains:
             for si in range(n_samples):
                 for p1, p2 in ((1, 0), (2, 1)):
                     J1, J2 = J[(dom, si, l, p1)], J[(dom, si, l, p2)]
                     H1, H2 = H[(dom, si, l, p1)], H[(dom, si, l, p2)]
                     d = (H1 - H2).norm().item()
+                    J1r, J2r = JRAW[(dom, si, l, p1)], JRAW[(dom, si, l, p2)]
+                    p1v = PK[(dom, si, l, p1)]  # earlier position's gauge on both
+                    J1s = softmax_jacobian(J1r, p1v)
+                    J2s = softmax_jacobian(J2r, p1v)
                     a_cd.append((d, _cos(J1, J2)))
                     a_ls.append((J1 - J2).norm().item() / max(d, 1e-12))
-        # v5: same pairs, THREE gauge conventions (from cached raw J).
-        # same-pk: P(p_{p1}) on BOTH positions of the pair (p1 = the earlier
-        # position of the (p1,p2) pair); raw: no projector.
-        a_cd_same: list[tuple[float, float]] = []
-        a_cd_nog: list[tuple[float, float]] = []
-        for (dom, si) in [(d2, s2) for d2 in domains for s2 in range(n_samples)]:
-            for p1, p2 in ((1, 0), (2, 1)):
-                H1 = H[(dom, si, l, p1)]
-                H2 = H[(dom, si, l, p2)]
-                d = (H1 - H2).norm().item()
-                J1r, J2r = JRAW[(dom, si, l, p1)], JRAW[(dom, si, l, p2)]
-                p1v = PK[(dom, si, l, p1)]
-                J1s = softmax_jacobian(J1r, p1v)
-                J2s = softmax_jacobian(J2r, p1v)
-                a_cd_same.append((d, _cos(J1s, J2s)))
-                a_cd_nog.append((d, _cos(J1r, J2r)))
+                    a_cd_same.append((d, _cos(J1s, J2s)))
+                    a_ls_same.append((J1s - J2s).norm().item() / max(d, 1e-12))
+                    a_cd_nog.append((d, _cos(J1r, J2r)))
+                    a_ls_nog.append((J1r - J2r).norm().item() / max(d, 1e-12))
         res["intra_sample"] = _curve_from_pairs(a_cd, a_ls, 2 * n_samples * len(domains))
         res["intra_sample"]["C_raw"] = [c for _, c in a_cd]  # per-pair, pos-pk
         res["intra_sample"]["C_raw_samepk"] = [c for _, c in a_cd_same]
         res["intra_sample"]["C_raw_nogauge"] = [c for _, c in a_cd_nog]
         res["intra_sample"]["delta_raw"] = [d for d, _ in a_cd]
-        res["intra_sample_samepk"] = _curve_from_pairs(a_cd_same, a_ls, 2 * n_samples * len(domains))
-        res["intra_sample_nogauge"] = _curve_from_pairs(a_cd_nog, a_ls, 2 * n_samples * len(domains))
+        res["intra_sample_samepk"] = _curve_from_pairs(a_cd_same, a_ls_same, 2 * n_samples * len(domains))
+        res["intra_sample_nogauge"] = _curve_from_pairs(a_cd_nog, a_ls_nog, 2 * n_samples * len(domains))
+        # v6: gauge share ||P(p)J||_F^2 / ||J||_F^2 per (sample, layer, pos),
+        # and cos(p_t, p_{t+1}) on the token-set-normalized distributions.
+        gs_vals, cp_vals = [], []
+        for dom in domains:
+            for si in range(n_samples):
+                for pos in (0, 1, 2):
+                    Jr = JRAW[(dom, si, l, pos)]
+                    pv = PK[(dom, si, l, pos)]
+                    Jp = softmax_jacobian(Jr, pv)
+                    gs_vals.append(
+                        float(Jp.pow(2).sum() / Jr.pow(2).sum().clamp_min(1e-12))
+                    )
+                for p1, p2 in ((1, 0), (2, 1)):
+                    v1, v2 = PK[(dom, si, l, p1)], PK[(dom, si, l, p2)]
+                    cp_vals.append(_cos(v1, v2))
+        res["gauge_share_mean"] = float(np.mean(gs_vals))
+        # gs_vals order: pos (0,1,2) per sample -> pos0 = gs_vals[0::3] etc.
+        res["gauge_share_per_pos"] = {
+            f"pos{q}": float(np.mean(gs_vals[q::3])) for q in (0, 1, 2)
+        }
+        res["cos_p_mean"] = float(np.mean(cp_vals))
+        res["cos_p_per_pair"] = cp_vals
+        # v6: PK reproducibility — hash of all PK on this layer + top-8 tokens
+        # by mean pk (full PK not saved: 64x64x8x4x3 too big for the JSON).
+        _ph = hashlib.sha256()
+        _pk_sum = torch.zeros(K)
+        for dom in domains:
+            for si in range(n_samples):
+                for pos in (0, 1, 2):
+                    _ph.update(PK[(dom, si, l, pos)].numpy().tobytes())
+                    _pk_sum += PK[(dom, si, l, pos)]
+        res["pk_hash"] = _ph.hexdigest()[:16]
+        res["pk_top_token_ids"] = [token_set[i] for i in _pk_sum.topk(8).indices.tolist()]
         # (b) intra-domain: C(n,2) sample pairs within one domain.
         intra = []
         b_cd_pool: list[tuple[float, float]] = []
@@ -358,7 +399,7 @@ def main(
         },
     }
     os.makedirs(results_dir, exist_ok=True)
-    json_path = os.path.join(results_dir, "exp01_coherence.json")
+    json_path = os.path.join(results_dir, "exp01_coherence_v6.json")
     with open(json_path, "w") as f:
         json.dump(all_results, f, indent=2)
     print(f"Saved to {json_path}")
@@ -398,14 +439,48 @@ def main(
 
     # v5: three-convention summary (no field-character verdict — thresholds
     # below are v3-scale screening labels, recalibrate vs 1/sqrt(D) noise).
+    # v6: verdict per layer per convention vs 1/sqrt(D) noise floor (D=hidden
+    # dim, 1024 for 0.8B). ORTHOGONAL < 1/sqrt(D); WEAK < 0.15; COHERENT above.
+    D = m.config.hidden_size
+    NOISE_FLOOR = 1.0 / (D ** 0.5)
+
+    def verdict(c: float | None) -> str:
+        if c is None:
+            return "n/a"
+        if c < NOISE_FLOOR:
+            return "ORTHOGONAL"
+        if c < 0.15:
+            return "WEAK"
+        return "COHERENT"
+
     for l in layers:
         g = per_layer[str(l)]
+        g["noise_floor"] = NOISE_FLOOR
+        for key, tag in (
+            ("C_at_sigma_d_a", "pospk"),
+            ("C_at_sigma_d_a_samepk", "samepk"),
+            ("C_at_sigma_d_a_nogauge", "raw"),
+        ):
+            g[f"verdict_{tag}"] = verdict(g[key])
+        for key, tag in (("C_at_sigma_d_b", "b"),):
+            g[f"verdict_{tag}"] = verdict(g[key])
         cb, ca = g["C_at_sigma_d_b"], g["C_at_sigma_d_a"]
-        ca_s = g["C_at_sigma_d_a_samepk"]
-        ca_n = g["C_at_sigma_d_a_nogauge"]
+        flag = (
+            " [FLAG: C_b > 1.5*C_a]"
+            if (cb is not None and ca is not None and cb > 1.5 * ca)
+            else ""
+        )
         r = lambda x: None if x is None else round(x, 3)
         print(
-            f"L{l}: C_b={r(cb)}  C_a: pos-pk={r(ca)} same-pk={r(ca_s)} raw={r(ca_n)}"
+            f"L{l}: C_b={r(cb)} C_a(pospk)={r(ca)}{flag} "
+            f"C_a(samepk)={r(g['C_at_sigma_d_a_samepk'])} "
+            f"C_a(raw)={r(g['C_at_sigma_d_a_nogauge'])} "
+            f"gauge_share={r(g['gauge_share_mean'])} cos_p={r(g['cos_p_mean'])}"
+        )
+        print(
+            f"     verdict: pospk={g['verdict_pospk']} samepk={g['verdict_samepk']} "
+            f"raw={g['verdict_raw']} b={g['verdict_b']} "
+            f"(noise_floor=1/sqrt({D})={NOISE_FLOOR:.4f})"
         )
 
 
