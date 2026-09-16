@@ -232,10 +232,10 @@ def main(
                     pk = (pk / pk.sum()).to(m.device)
                     Jr = compute_jacobian_for_tokens(
                         m, l, ids_k.to(m.device), mask_k.to(m.device), token_set,
-                    ).float().cpu()
-                    Jp = softmax_jacobian(Jr, pk.to(m.device)).float().cpu()
-                    J[(dom, si, l, pos)] = Jp
-                    JRAW[(dom, si, l, pos)] = Jr
+                    ).float()
+                    Jp = softmax_jacobian(Jr, pk).float()
+                    J[(dom, si, l, pos)] = Jp.cpu()
+                    JRAW[(dom, si, l, pos)] = Jr.cpu()
                     PK[(dom, si, l, pos)] = pk.cpu()
                     H[(dom, si, l, pos)] = f["hs"][l][pos]
                     done += 1
