@@ -1,21 +1,34 @@
-"""Experiment 0.1 v4: Coherence of the Jacobian field J(x), fibered view.
+"""Experiment 0.1 v5: Coherence of the Jacobian field J(x), split curves.
 
 v4 (colleague review, 09-16): the v3 gate POOLED (a) adjacent-position pairs
 and (b) sample pairs into one curve — meaningless, since (a) C~0.3-0.9 while
-(b) C~0.005-0.05 at comparable delta (10-100x). The field is FIBERED: smooth
-within a sample, orthogonal across samples. Fixes:
+(b) C~0.005-0.05 at comparable delta (10-100x). Fixes:
   1. Separate C_a(delta), C_b(delta) curves; gate = C_b(sigma_d) canonical
      (between-sample), C_a(sigma_d) reported alongside.
   2. gauge p (pk) taken at the SAME position as J (logits[0, S-1-pos]).
   3. One forward per sample (logits+hs cached; J pass = backward only).
-  4. half-split ESG reliability: G_A/G_B from 4+4 samples, principal angles
-     of top-r subspaces + winner-take-all probe (top1(G_pool) vs each sample).
+  4. half-split ESG reliability: separate script exp01_esg_halfsplit.py.
+
+v5 (colleague review 2, 09-16): v3's high C_a (0.33-0.92) was an artifact of
+the shared final-position projector; v4's per-position gauges are the
+convention-correct numbers, but to distinguish (A) field-not-smooth vs
+(B) gauge-kills-signal vs (C) small-sample noise we report THREE gauge
+conventions per pair, from the cached raw J:
+  - pos-pk:   J^(p_t) vs J^(p_{t+1})  (one projector per position — canonical)
+  - same-pk:  P(p_t) J_t vs P(p_t) J_{t+1}  (one projector on both)
+  - raw:      J_t vs J_{t+1}  (no gauge)
+Per-pair cos lists are saved for distribution/histogram analysis
+(L18 anomaly: C_b > C_a).
+
+NO FIELD-CHARACTER VERDICT is asserted in this script; the tiers below are
+screening labels, to be recalibrated against the 1/sqrt(D) noise floor.
 
 Metric:
     C(delta) = E[ <J,J'>_F / (||J|| ||J'||)  |  ||h-h'|| ~ delta ]
-Judgement (per layer, canonical = between-sample):
-    C_b(sigma_d) > 0.5 SMOOTH / >= 0.1 WEAK / < 0.1 & C_a >= 0.3 FIBERED
-    / < 0.1 FRACTAL-RISK.
+Screening labels ONLY (thresholds calibrated to v3's projector-artifact
+scale — NOT a field-character verdict; recalibrate vs 1/sqrt(D) noise floor
+~0.03 before interpreting): C_b>0.5 SMOOTH / >=0.1 WEAK / <0.1 & C_a>=0.3
+FIBERED / <0.1 FRACTAL-RISK.
 """
 
 import argparse
@@ -194,10 +207,13 @@ def main(
     token_set = sorted([t for t, _ in sorted(counts.items(), key=lambda x: -x[1])[:K]])
     print(f"Token set |U| = {len(token_set)}")
 
-    # J-cache: per (domain, sample, layer, pos) -> gauge-free J [K, D].
-    # pos 0=S, 1=S-1, 2=S-2. J at S-pos via compute_jacobian_for_tokens on
-    # ids[:, :-pos] (causality: exact). Gauge pk from the SAME position.
+    # J-cache: per (domain, sample, layer, pos) -> gauge-free J [K, D] AND
+    # raw J (for the three-convention analysis, v5). pos 0=S, 1=S-1, 2=S-2.
+    # J at S-pos via compute_jacobian_for_tokens on ids[:, :-pos] (causality:
+    # exact). Gauge pk from the SAME position.
     J: dict[tuple, torch.Tensor] = {}
+    JRAW: dict[tuple, torch.Tensor] = {}
+    PK: dict[tuple, torch.Tensor] = {}
     H: dict[tuple, torch.Tensor] = {}
     done = 0
     total = n_samples * len(domains) * len(layers) * 3
@@ -214,13 +230,13 @@ def main(
                     p = torch.softmax(f["logits"][-(pos + 1)], dim=-1)
                     pk = p[token_set]
                     pk = (pk / pk.sum()).to(m.device)
-                    Jp = softmax_jacobian(
-                        compute_jacobian_for_tokens(
-                            m, l, ids_k.to(m.device), mask_k.to(m.device), token_set,
-                        ).float(),
-                        pk,
+                    Jr = compute_jacobian_for_tokens(
+                        m, l, ids_k.to(m.device), mask_k.to(m.device), token_set,
                     ).float().cpu()
+                    Jp = softmax_jacobian(Jr, pk.to(m.device)).float().cpu()
                     J[(dom, si, l, pos)] = Jp
+                    JRAW[(dom, si, l, pos)] = Jr
+                    PK[(dom, si, l, pos)] = pk.cpu()
                     H[(dom, si, l, pos)] = f["hs"][l][pos]
                     done += 1
             print(f"  {dom} s{si}: {len(layers)}L x 3pos J done ({done}/{total})")
@@ -240,9 +256,29 @@ def main(
                     d = (H1 - H2).norm().item()
                     a_cd.append((d, _cos(J1, J2)))
                     a_ls.append((J1 - J2).norm().item() / max(d, 1e-12))
+        # v5: same pairs, THREE gauge conventions (from cached raw J).
+        # same-pk: P(p_{p1}) on BOTH positions of the pair (p1 = the earlier
+        # position of the (p1,p2) pair); raw: no projector.
+        a_cd_same: list[tuple[float, float]] = []
+        a_cd_nog: list[tuple[float, float]] = []
+        for (dom, si) in [(d2, s2) for d2 in domains for s2 in range(n_samples)]:
+            for p1, p2 in ((1, 0), (2, 1)):
+                H1 = H[(dom, si, l, p1)]
+                H2 = H[(dom, si, l, p2)]
+                d = (H1 - H2).norm().item()
+                J1r, J2r = JRAW[(dom, si, l, p1)], JRAW[(dom, si, l, p2)]
+                p1v = PK[(dom, si, l, p1)]
+                J1s = softmax_jacobian(J1r, p1v)
+                J2s = softmax_jacobian(J2r, p1v)
+                a_cd_same.append((d, _cos(J1s, J2s)))
+                a_cd_nog.append((d, _cos(J1r, J2r)))
         res["intra_sample"] = _curve_from_pairs(a_cd, a_ls, 2 * n_samples * len(domains))
-        res["intra_sample"]["C_raw"] = [c for _, c in a_cd]
+        res["intra_sample"]["C_raw"] = [c for _, c in a_cd]  # per-pair, pos-pk
+        res["intra_sample"]["C_raw_samepk"] = [c for _, c in a_cd_same]
+        res["intra_sample"]["C_raw_nogauge"] = [c for _, c in a_cd_nog]
         res["intra_sample"]["delta_raw"] = [d for d, _ in a_cd]
+        res["intra_sample_samepk"] = _curve_from_pairs(a_cd_same, a_ls, 2 * n_samples * len(domains))
+        res["intra_sample_nogauge"] = _curve_from_pairs(a_cd_nog, a_ls, 2 * n_samples * len(domains))
         # (b) intra-domain: C(n,2) sample pairs within one domain.
         intra = []
         b_cd_pool: list[tuple[float, float]] = []
@@ -255,6 +291,7 @@ def main(
                 {"domain": dom, **_curve_from_pairs(cd_dom, ls_dom, len(jb))}
             )
         res["intra_domain"] = intra
+        res["intra_domain_C_raw"] = [c for _, c in b_cd_pool]  # per-pair, for histogram
         # sigma_d per spec: norm of per-dim std (unbiased=False) of full
         # samples' last-position h, mean over domains.
         stds = []
@@ -269,10 +306,13 @@ def main(
                 return None
             return float(np.interp(x, centers, means))
 
-        # v4: SPLIT gates. Canonical = between-sample (b) at sigma_d;
-        # intra-sample (a) reported alongside (not pooled — 1.1).
+        # v5: SPLIT gates, THREE gauge conventions. Canonical = between-sample
+        # (b) at sigma_d; intra-sample (a) in all three conventions reported
+        # alongside (not pooled — 1.1).
         res["C_at_sigma_d_b"] = _c_at(b_cd_pool, res["sigma_d"])
         res["C_at_sigma_d_a"] = _c_at(a_cd, res["sigma_d"])
+        res["C_at_sigma_d_a_samepk"] = _c_at(a_cd_same, res["sigma_d"])
+        res["C_at_sigma_d_a_nogauge"] = _c_at(a_cd_nog, res["sigma_d"])
         bc, bm = coh_curve(b_cd_pool)
         ac, am = coh_curve(a_cd)
         res["gate_curve_b"] = {"delta_centers": bc, "C": bm, "n_pairs": len(b_cd_pool)}
@@ -356,22 +396,16 @@ def main(
         except Exception as e:
             print(f"PNG failed (non-fatal): {e}")
 
-    # Verdict summary (v4: split gates, canonical = between-sample).
+    # v5: three-convention summary (no field-character verdict — thresholds
+    # below are v3-scale screening labels, recalibrate vs 1/sqrt(D) noise).
     for l in layers:
         g = per_layer[str(l)]
         cb, ca = g["C_at_sigma_d_b"], g["C_at_sigma_d_a"]
-        if cb is not None and cb > 0.5:
-            verdict = "SMOOTH (C_b>0.5)"
-        elif cb is not None and cb >= 0.1:
-            verdict = "WEAK (0.1<=C_b<=0.5)"
-        elif cb is not None and ca is not None and ca >= 0.3:
-            verdict = "FIBERED (C_b<0.1, C_a>=0.3)"
-        elif cb is not None:
-            verdict = "FRACTAL-RISK (C_b<0.1, C_a<0.3)"
-        else:
-            verdict = "n/a (C_b out of range)"
+        ca_s = g["C_at_sigma_d_a_samepk"]
+        ca_n = g["C_at_sigma_d_a_nogauge"]
+        r = lambda x: None if x is None else round(x, 3)
         print(
-            f"L{l}: C_b(sigma_d)={cb} C_a(sigma_d)={ca} -> {verdict}"
+            f"L{l}: C_b={r(cb)}  C_a: pos-pk={r(ca)} same-pk={r(ca_s)} raw={r(ca_n)}"
         )
 
 
