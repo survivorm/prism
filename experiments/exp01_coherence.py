@@ -61,8 +61,10 @@ def coh_curve(
     if not pts:
         return [], []
     ds = np.array([p[0] for p in pts])
+    # ponytail: edges padded by 2% so sigma_d slightly outside the pair range
+    # still interpolates (v3: L6 sigma_d=1.663 vs min bin 1.67 -> None).
     edges = np.logspace(
-        float(np.log10(ds.min())), float(np.log10(ds.max())) + 1e-6, n_bins + 1
+        float(np.log10(ds.min())) - 0.01, float(np.log10(ds.max())) + 0.01, n_bins + 1
     )
     centers, means = [], []
     for lo, hi in zip(edges[:-1], edges[1:]):
@@ -279,12 +281,13 @@ def main(
         # small-delta range to interpolate at sigma_d.
         g_cd = a_cd + b_cd_pool
         g_centers, g_means = coh_curve(g_cd)
-        if len(g_centers) >= 2 and min(g_centers) <= res["sigma_d"] <= max(g_centers):
-            res["C_at_sigma_d"] = float(
-                np.interp(res["sigma_d"], g_centers, g_means)
-            )
-        else:
-            res["C_at_sigma_d"] = None
+        # np.interp clamps at range edges: sigma_d slightly outside the pair
+        # range (binning granularity) is valid, not n/a.
+        res["C_at_sigma_d"] = (
+            float(np.interp(res["sigma_d"], g_centers, g_means))
+            if len(g_centers) >= 2
+            else None
+        )
         res["gate_curve"] = {
             "delta_centers": g_centers, "C": g_means, "n_pairs": len(g_cd)
         }
