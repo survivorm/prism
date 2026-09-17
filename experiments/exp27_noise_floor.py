@@ -88,6 +88,8 @@ def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dic
                         continue
                     break
             data = (data + out)[:n]
+        else:
+            data = data[:n]
         print(f"  pool {dom}: {len(data)} @ {L}")
         per[dom] = data
     return per

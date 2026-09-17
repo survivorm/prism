@@ -42,7 +42,8 @@
   - v2 (09-16) FAIL: math=0 — GSM8K вопросы ~40 токенов, никогда ≥256. Фикс: overdraw + конкатенация коротких до L (left-align сохраняется, префикс = начало конкат-текста).
   - v3 FAIL (decode-баг: tok.decode на [1,T] → list). v4 FAIL (math=0: overdraw на unauth streaming rate-limit → big=0, конкат пуст).
   - v5: overdraw 2-pass → всё равно math=0 (2 stream-прохода GSM8K, первый выбивает rate-limit).
-  - v6 PUSHED (RUNNING): ОДИН stream-проход per domain (min_length=1, n*32) → filter ≥L → concat shorts. Pool verified в изоляции: wiki 34, math 2 @256. + p<S guard + pair(64,65) + post-fix. Монитор: `_auto_chain/poll_exp27.sh`.
+  - v6 COMPLETE: ВСЕ 4 домена заполняются (wiki 126, math 8 ✓concat, code 26, chat 256) — concat math работает! Единственный баг: wiki=126 не обрезан до 8 (нет `[:n]` когда data≥n). 
+  - v7 PUSHED (RUNNING): `[:n]` truncation. Pool verified: все домены ≥n, math через concat. + p<S guard + pair(64,65) + post-fix. Монитор: `_auto_chain/poll_exp27.sh`.
   - Локально: HF rate-limit даёт stale-lock hangs при параллельных from_pretrained — чистить locks, не запускать параллельно.
 - **POST (локально):** `experiments/exp27_post.py` — verdicts vs F (ORTHOGONAL/WEAK/COHERENT = F/3F),
   half-split 16/16 + 100 бутстрепа, PNG (2 heatmaps + r_eff bars + half-split dist), docs/exp27_findings.md
