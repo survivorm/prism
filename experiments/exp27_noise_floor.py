@@ -169,23 +169,6 @@ def main(
     Ss = sorted({S for S, _, _ in cfgs})
     print(f"J configs: {len(cfgs)} per sample/layer; positions {positions_all}; S {Ss}")
 
-    # One forward per (sample, S): logits + hs at all positions.
-    # (only needed for the J-loop; on resume H comes from the checkpoint)
-    fwd: dict[tuple, dict] = {}
-    if do_j:
-        for dom in domains:
-            for si in range(n_samples):
-                s = pool[dom][si]
-                for S in Ss:
-                    fwd[(dom, si, S)] = _forward_prefix(m, s, S, layers, positions_all)
-        print(f"Forward cache: {len(fwd)} forwards")
-
-    # J-cache at U_128 per (dom, si, S, pos), plus per-sample ranks.
-    JR: dict[tuple, torch.Tensor] = {}
-    P128: dict[tuple, torch.Tensor] = {}
-    RANKS: dict[tuple, tuple[float, float, float]] = {}
-    H: dict[tuple, torch.Tensor] = {}
-
     # --- checkpoint: resume J-cache from a prior run (same pool/cfgs/U128) ---
     pool_fp = hashlib.sha256(
         b"".join(pool[d][0]["input_ids"].flatten().numpy().tobytes()
@@ -204,6 +187,24 @@ def main(
                 print(f"J-cache RESUMED from {ckpt} — skipping J-loop")
         except Exception as e:
             print(f"J-cache ckpt load failed: {e}; recomputing")
+
+    # One forward per (sample, S): logits + hs at all positions.
+    # (only needed for the J-loop; on resume H comes from the checkpoint)
+    fwd: dict[tuple, dict] = {}
+    if do_j:
+        for dom in domains:
+            for si in range(n_samples):
+                s = pool[dom][si]
+                for S in Ss:
+                    fwd[(dom, si, S)] = _forward_prefix(m, s, S, layers, positions_all)
+        print(f"Forward cache: {len(fwd)} forwards")
+
+    # J-cache at U_128 per (dom, si, S, pos), plus per-sample ranks.
+    JR: dict[tuple, torch.Tensor] = {}
+    P128: dict[tuple, torch.Tensor] = {}
+    RANKS: dict[tuple, tuple[float, float, float]] = {}
+    H: dict[tuple, torch.Tensor] = {}
+
     total = n * len(layers) * len(cfgs)
     done = 0
     for dom in domains:
@@ -227,13 +228,57 @@ def main(
     if do_j:
         torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
                     "cfgs": cfgs, "U128": U128, "pool_fp": pool_fp,
-                    "layers": layers}, ckpt)
+                    "layers": layers, "D": D, "n_samples": n_samples,
+                    "domains": domains}, ckpt)
         print(f"J-cache checkpoint saved: {ckpt}")
     del fwd
     torch.cuda.empty_cache() if device.startswith("cuda") else None
     print(f"J cache: {done} raw J [128, {D}] on CPU")
 
+    per_layer = _metrics(JR, P128, RANKS, H, D, layers, domains,
+                          n_samples, cfgs)
+    # ---- save --------------------------------------------------------------
+    import subprocess
+
+    def _git_hash():
+        try:
+            return subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                text=True,
+            ).strip()
+        except Exception:
+            return "unknown"
+
+    U_bytes = torch.tensor(U128).numpy().tobytes()
+    manifest = {
+        "git_hash": _git_hash(),
+        "model": model,
+        "model_state_sha256_8": hashlib.sha256(
+            torch.flatten(m.state_dict()[list(m.state_dict().keys())[0]]).numpy().tobytes()
+        ).hexdigest()[:16],
+        "U128_sha256_8": hashlib.sha256(U_bytes).hexdigest()[:16],
+        "device": device,
+    }
+    result = {
+        "params": {
+            "model": model, "layers": layers, "n_samples": n_samples,
+            "domains": domains, "Ss": Ss, "Ks": list(Ks),
+            "D": D, "token_set": "nested U128 (freq of final logits at S=256)",
+        },
+        "manifest": manifest,
+        "layers": per_layer,
+    }
+    os.makedirs(results_dir, exist_ok=True)
+    out_path = os.path.join(results_dir, "exp27_noise_floor.json")
+    with open(out_path, "w") as f:
+        json.dump(result, f, indent=1)
+    print(f"[OK] exp27 saved to {out_path}")
+    print(json.dumps(manifest, indent=1))
+
+def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
     # ---- per-layer metrics -------------------------------------------------
+    n = n_samples * len(domains)
+    Ss = sorted({S for S, _, _ in cfgs})
     Ks = (32, 64, 128)
     pos_pairs_S64 = ((0, 1), (1, 2), (2, 4), (4, 8), (8, 16))
     pos_pairs_Sother = ((0, 1), (1, 2))
@@ -353,44 +398,7 @@ def main(
         # truncation test 6.2: C_a(S=128, pos 64->65) vs C_a(S=64, pos 0->1).
         Lres["trunc_test"] = Lres["configs"].get("S128_K64_pair64_65", {})
         per_layer[str(l)] = Lres
-
-    # ---- save --------------------------------------------------------------
-    import subprocess
-
-    def _git_hash():
-        try:
-            return subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                text=True,
-            ).strip()
-        except Exception:
-            return "unknown"
-
-    U_bytes = torch.tensor(U128).numpy().tobytes()
-    manifest = {
-        "git_hash": _git_hash(),
-        "model": model,
-        "model_state_sha256_8": hashlib.sha256(
-            torch.flatten(m.state_dict()[list(m.state_dict().keys())[0]]).numpy().tobytes()
-        ).hexdigest()[:16],
-        "U128_sha256_8": hashlib.sha256(U_bytes).hexdigest()[:16],
-        "device": device,
-    }
-    result = {
-        "params": {
-            "model": model, "layers": layers, "n_samples": n_samples,
-            "domains": domains, "Ss": Ss, "Ks": list(Ks),
-            "D": D, "token_set": "nested U128 (freq of final logits at S=256)",
-        },
-        "manifest": manifest,
-        "layers": per_layer,
-    }
-    os.makedirs(results_dir, exist_ok=True)
-    out_path = os.path.join(results_dir, "exp27_noise_floor.json")
-    with open(out_path, "w") as f:
-        json.dump(result, f, indent=1)
-    print(f"[OK] exp27 saved to {out_path}")
-    print(json.dumps(manifest, indent=1))
+    return per_layer
 
 def _selfcheck() -> None:
     """Model-free checks: ranks of known matrices, F formula, cos, config set."""
@@ -430,9 +438,27 @@ def main_cli():
     ap.add_argument("--domains", default="wiki,math,code,chat")
     ap.add_argument("--make-png", action="store_true")
     ap.add_argument("--selfcheck", action="store_true")
+    ap.add_argument("--resume", default=None,
+                    help="path to exp27_jcache.pt: metrics only, no model")
     args = ap.parse_args()
     if args.selfcheck:
         _selfcheck()
+        return
+    if args.resume:
+        ck = torch.load(args.resume, map_location="cpu")
+        per_layer = _metrics(ck["JR"], ck["P128"], ck["RANKS"], ck["H"],
+                             ck["D"], ck["layers"], ck["domains"],
+                             ck["n_samples"], ck["cfgs"])
+        out_path = os.path.join(args.results_dir, "exp27_noise_floor.json")
+        result = {"params": {"mode": "resume", "D": ck["D"],
+                             "layers": ck["layers"], "n_samples": ck["n_samples"],
+                             "domains": ck["domains"]},
+                  "manifest": {"mode": "resume", "ckpt": args.resume},
+                  "layers": per_layer}
+        os.makedirs(args.results_dir, exist_ok=True)
+        with open(out_path, "w") as f:
+            json.dump(result, f, indent=1)
+        print(f"[OK] resume metrics saved to {out_path}")
         return
     main(
         model=args.model,

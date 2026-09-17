@@ -187,6 +187,15 @@ KERNELS = {
         "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\n",
         "note": "Exp 0.1 coherence length: C(delta) curves, 4 domains x 4 layers {6,12,18,22}, n=8/K=64. Kill-switch for ESG/Exp 0.2. GPU after quota reset (~09-14).",
     },
+    "exp27": {
+        "dir": "kernel-exp27",
+        "slug": "exp4-top-p-tokens",
+        "id": "voroninmichael/prism-exp27-noise-floor",
+        "title": "Prism: exp27-noise-floor",
+        "exp_file": "experiments/exp27_noise_floor.py",
+        "runner_extra": "",
+        "note": "Exp 27: noise-floor calibration (r_eff -> F) + S/K/position sweeps, layers {6,12,18,19,22,23} (19,23 full-attention), 256-token pool, nested U128. ~5.4k J, ~2.5-3h T4.",
+    },
     "exp19": {
         "dir": "kernel-exp19",
         "slug": "exp4-top-p-tokens",
