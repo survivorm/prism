@@ -44,6 +44,12 @@
   - v5: overdraw 2-pass → всё равно math=0 (2 stream-прохода GSM8K, первый выбивает rate-limit).
   - v6 COMPLETE: ВСЕ 4 домена заполняются (wiki 126, math 8 ✓concat, code 26, chat 256) — concat math работает! Единственный баг: wiki=126 не обрезан до 8 (нет `[:n]` когда data≥n). 
   - v7 PUSHED (RUNNING): `[:n]` truncation. Pool verified: все домены ≥n, math через concat. + p<S guard + pair(64,65) + post-fix. Монитор: `_auto_chain/poll_exp27.sh`.
+  - v7 FAIL: KeyError ('wiki',0,128,65) — trunc test 6.2 pair (64,65) требует J pos=65,
+    _j_configs имел только (128,128,64). FIX: +(128,128,65) (16 cfg), assert 17→16.
+  - CHECKPOINT exp27_jcache.pt: после J-loop хранит JR/P128/RANKS/H + cfgs/U128/pool_fp/layers;
+    рестарт с тем же pool → J-loop+forwards пропускаются, метрики на CPU (запрос: не
+    переделывать всё по 100 раз).
+  - v8 PUSHED (RUNNING): pos=65 fix + checkpoint. Дальше fail метрик чиним локально с ckpt, без GPU.
   - Локально: HF rate-limit даёт stale-lock hangs при параллельных from_pretrained — чистить locks, не запускать параллельно.
 - **POST (локально):** `experiments/exp27_post.py` — verdicts vs F (ORTHOGONAL/WEAK/COHERENT = F/3F),
   half-split 16/16 + 100 бутстрепа, PNG (2 heatmaps + r_eff bars + half-split dist), docs/exp27_findings.md
