@@ -16,8 +16,32 @@
 - **v4 RESULTS (09-16, kernel v4 COMPLETE, commit ebc6bc2):** split-гейты (per-position gauge, 1 forward/сэмпл): L6 C_b=0.033 C_a=0.077, L12 C_b=0.070 C_a=0.099, L18 C_b=0.109 C_a=0.059, L22 C_b=0.120 C_a=0.224. Вердикты: L6/L12 FRACTAL-RISK (оба <0.1), L18/L22 WEAK. **Важно:** C_a упал с 0.33–0.92 (v3) до 0.06–0.22 — v3-градиент «глубже = плавнее» был артефактом final-position gauge + pooling; при per-position gauge внутри-сэмпловая когерентность на σ_d не выше межсэмпловой. Поле слабокогерентное на доменном масштабе во всех слоях. ESG half-split вынесен в отдельный скрипт `experiments/exp01_esg_halfsplit.py` (24 слоя, K=256, wta 1.0→0.89), результат `results/exp01_esg_halfsplit.json`.
 - **v4 RETHINK (коллегa, 09-16):** пул-гейт (a)+(b) не имеет физического смысла ((a)≈0.3–0.9, (b)≈0.005–0.05 при сопоставимых δ → 10–100×). Правильный объект — **расслоение (bundle):** гладкий лист внутри сэмпла, листы почти ортогональны. Фиксы: (1) раздельные кривые C_a(σ_d) и C_b(σ_d), канонический гейт = C_b (межсэмпловая); (2) pk (gauge) на той же позиции, что и J (logits[0, S-pos]); (3) один forward на сэмпл (кэш logits+hs, J pass — только backward); (4) **half-split reliability ESG** (4+4 сэмпла, главные углы top-16 подпространств G_A/G_B) — тест осмысленности доменных G^d; (5) вердикты: SMOOTH / WEAK / FIBERED / FRACTAL-STOP.
 - **v5 (09-16, коллега-2, commit ac94053):** три gauge-конвенции (pos-pk/same-pk/raw) из кэша J_raw, per-pair cos. v5 kernel: device-mismatch (Jr.cpu() раньше softmax_jacobian) → fix, v6 push.
+- **v6 RESULTS (09-16, kernel v7 COMPLETE 764s, JSON exp01_coherence_v6):**
+  | | L6 | L12 | L18 | L22 |
+  |C_b| 0.033 | 0.070 | 0.109 | 0.120 |
+  |C_a pos-pk| 0.077 | 0.099 | 0.059 [FLAG C_b>1.5C_a] | 0.224 |
+  |C_a same-pk| 0.258 | 0.343 | 0.709 | 0.852 |
+  |C_a raw| 0.331 | 0.471 | 0.795 | 0.924 |
+  gauge_share=0.001 ВСЕ СЛОЯ/ПОЗ (P1 ПЕРЕВЕРНУТА: gauge-режим доминирует; «raw smooth»=артефакт gauge-моды — raw J ≈ константа diag(W)-подобная). cos_p=0.213 ПЛОСКИЙ по глубине (P2: не падает). Вердикты: b=WEAK везде; raw/samepk=COHERENT; pospk WEAK→COHERENT (L22). Noise floor 1/sqrt(D)=0.0312.
+  **Остались незакрытыми дыры → Exp 27:** (1) floor 1/sqrt(D) завышен в 3-8x vs r_eff; (2) S=64 truncation — L18-аномалия может быть артефактом; (3) позиции только {0,1,2}; (4) K=64 не проверен; (5) слои 6/12/18/22 — GDN (linear_attention), full-attention слои не проверены — selection bias.
 - **v6 (09-16, ТЗ colleague review 3, diagnostics):** gauge_share=||P(p)J||^2/||J||^2 per (sample,layer,pos); cos(p_t,p_{t+1}) per pair; L_mean/L_p90 per convention (v5 shared pos-pk L — баг); verdict vs 1/sqrt(D) noise floor (ORTHOGONAL/WEAK/COHERENT); L18 flag C_b>1.5*C_a; pk_hash+pk_top_token_ids (полные PK — в кэше, в JSON — hash+top8); JSON exp01_coherence_v6.json. Selfcheck OK. **Pre-registered:** P1 gauge_share>0.7 (raw smooth = gauge-мода); P2 cos_p падает с глубиной (L18 anomaly); P3 L_samepk/L_pospk>1.5 на L18-L22. Kill: P1 ложна → raw smooth функционально; P2 ложна (cos_p~1) → баг проектора, реран v5.
-- [ ] **GREEN v6:** CPU smoke → push kernel v6 (заменит запущенный device-fix-бэилд) → анализ P1/P2/P3.
+## Exp 27 (09-16): Noise-floor calibration + robustness sweep (docs/Exp27.md)
+- **RED:** `experiments/exp27_noise_floor.py` self-contained (kernel inline: no cross-exp import).
+  Слои {6,12,18,19,22,23} (19,23 = full-attention — закрывает GDN selection bias; 23 = контроль J≈W).
+  32 сэмпла (4×8, min 256 токенов). S-варианты = left-префиксы {32,64,128,256} ОДНОГО пула.
+  Token set вложенный: K_max=128 (частота финальных логитов S=256), K∈{32,64,128}=top-K.
+  J-конфигурации per (sample,layer): S=64: K∈{32,64,128}×pos∈{0,1,2,4,8,16} (18);
+  S∈{32,128,256}: K=64×pos∈{0,1,2} (9); S=128 extra pos=64 (truncation test 6.2: vs S=64 pos=0).
+  ~28 J × 32 × 6 ≈ 5.4k calls ≈ 2-2.5ч T4 (бюджет ТЗ 2-3ч; 12h-лимит ОК).
+  One forward per (sample, S): logits + hs at pos {0,1,2,4,8,16,64}.
+  r_eff (entropic/stable/PR) per (layer,cfg,sample) в ядре (J в памяти), медиана в JSON.
+  F = 1/sqrt(r_eff*(K+D-r_eff)) per (layer,cfg,pos). C_a: 3 конвенции + (d,0) для position-sweep.
+  C_b per домен pos=0. Per-sample C_a списки baseline (S=64,K=64) → half-split bootstrap локально (post, без GPU).
+- **GREEN:** push kernel exp27 (новый registry entry) → ~2.5ч.
+- **POST (локально):** `experiments/exp27_post.py` — verdicts vs F (ORTHOGONAL/WEAK/COHERENT = F/3F),
+  half-split 16/16 + 100 бутстрепа, PNG (2 heatmaps + r_eff bars + half-split dist), docs/exp27_findings.md
+  с pre-registered таблицами 7.1-7.5 + truncation test (6.2) + K-зависимость (6.3) + L18 vs L19 (6.4).
+- [x] **GREEN v6:** CPU smoke OK → kernel v7 COMPLETE 764s → P1/P2/P3 проверены (таблица выше).
 - [x] **RED:** `experiments/exp01_coherence.py` — каркас: загрузка 0.8B + 4B, домены, J-каш, скрытые состояния; тест на маленьком срезе (1 домен, 1 слой, пара пар) — C(δ) считает без ошибок. (DONE 09-15: selfcheck PASSED (синтетическое гладкое поле: C монотонно, ell найден) + CPU smoke (wiki, L6, n=2, K=16) end-to-end OK. Отклонение от плана: 4B не грузится — self-bridge 0.8B, token set global top-K 0.8B (зафиксировано в плане).)
 - [x] **GREEN:** полный прогон: 4 домена × слои {6,12,18,22} × типы пар (a) соседние позиции (a), (b) внутри-домен, (c) междомен. Выход: `results/exp01_coherence.json` + PNG. **v1 COMPLETE 09-15 (~10 min, budget 3.83/15.00 GPU-h): C~0.005-0.051 на delta 2.5-11.6, gate n/a (кривая не покрывала sigma_d; тип (a) = trunc-8 = сдвиг 8 токенов — не «малый», C~0).** **v3 PUSHED 09-15 (RUNNING)** (v2 push потерялся — shell &: (a)=соседние позиции (S-1,S)&(S-2,S-1) — точно по плану, 384 J-каши; гейт C(σ_d) на pooled (a)+(b) кривой (σ_d=1.7-7.2 < min delta (b)=2.5 — без (a) n/a); σ_d=norm(std по размерам) по спеке; фикс бага hs-порядка. Монитор: `_auto_chain/poll_exp01.sh`. **v3 COMPLETE 09-16 (644s, budget 0.18 GPU-h):** gate C(σ_d) на pooled (a)+(b), clamped: L6=0.33 MODERATE, L12=0.45 MODERATE, L18=0.64 SMOOTH, L22=0.87 SMOOTH. **НЕ FRACTAL** — STOP (<0.1) не сработал ни на одном слое; поле J глубже — плавнее. Ключевой сигнал: (b) between-samples C≈0.005–0.05 (J разных семплов домена почти ортогональны), (a) intra-sample C≈0.3–0.9 → для gramians нужен sample-local подход (как exp16/19); пул семплов сигнал убивает. None-баг (σ_d за краем binning-диапазона) исправлен: clamp + 2% padding. v1-впечатление «фракталь» — артефакт: кривая (b) начиналась при delta≫σ_d.
 - [x] **Анализ/вердикт:** gate C(σ_d) по слоям вычислен (таблица в GREEN выше); ℓ(δ при C=0.5) формально n/a для (b)-кривых (C не пересекает 0.5 в их диапазоне) — по сути ℓ < min delta (b); интерпретация: гладкое/умеренное, стоп не нужен → можно Exp 0.2.
