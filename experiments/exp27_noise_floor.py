@@ -26,6 +26,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 
 import numpy as np
 import torch
@@ -61,10 +62,16 @@ def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dic
         data = load_calibration_data(
             model_name, max_length=L, min_length=L, n_samples=n, domain=dom,
         )
-        if len(data) < n:  # stream rate-limited / short batch: overdraw, concat shorts
-            big = load_calibration_data(
-                model_name, max_length=L, min_length=1, n_samples=n * 16, domain=dom,
-            )
+        if len(data) < n:  # stream rate-limited / short batch: overdraw w/ retries, concat shorts
+            big: list[dict] = []
+            for att in range(5):
+                big = load_calibration_data(
+                    model_name, max_length=L, min_length=1, n_samples=n * 32, domain=dom,
+                )
+                if len(big) >= n * 4:
+                    break
+                print(f"  pool {dom}: overdraw {len(big)} < {n*4}, retry {att+1}...")
+                time.sleep(10 * (att + 1))
             data = [s for s in big if s["input_ids"].shape[1] >= L]
             if len(data) < n:  # texts intrinsically short (gsm8k): concatenate
                 from transformers import AutoTokenizer
@@ -73,13 +80,13 @@ def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dic
                 buf = ""
                 out = []
                 for t in texts:
-                    buf += " " + tok.decode(t, skip_special_tokens=True).strip()
+                    buf += " " + tok.decode(t[0], skip_special_tokens=True).strip()
                     words = buf.split(" ")
-                    while len(out) < n and len(words) >= 48:
-                        ids = tok(" ".join(words[:160]), max_length=L, truncation=True, return_tensors="pt")
+                    while len(out) < n and len(words) >= 64:
+                        ids = tok(" ".join(words[:320]), max_length=L, truncation=True, return_tensors="pt")
                         if ids["input_ids"].shape[1] >= L:
                             out.append(ids)
-                            words = words[96:]  # consume ~96 words so next sample is fresh
+                            words = words[200:]  # consume 200 words so next sample is mostly fresh
                             continue
                         break
                 data = (data + out)[:n]

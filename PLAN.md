@@ -40,7 +40,9 @@
 - **GREEN:** push kernel exp27 (новый registry entry) → ~2.5ч.
   - v1 (09-16) FAIL: pool math 0<8 — min_length=256 stream отдал короткие (C4 rate-limit).
   - v2 (09-16) FAIL: math=0 — GSM8K вопросы ~40 токенов, никогда ≥256. Фикс: overdraw + конкатенация коротких до L (left-align сохраняется, префикс = начало конкат-текста).
-  - v3 PUSHED (RUNNING): pool-fix + p<S guard + pair(64,65) для trunc-test + post per_layer/pos-pk-fix. Монитор: `_auto_chain/poll_exp27.sh`.
+  - v3 FAIL (decode-баг: tok.decode на [1,T] → list). v4 FAIL (math=0: overdraw на unauth streaming rate-limit → big=0, конкат пуст).
+  - v5 PUSHED (RUNNING): overdraw с 5 retries (rate-limit backoff) + concat fix + p<S guard + pair(64,65) + post-fix. Монитор: `_auto_chain/poll_exp27.sh`.
+  - Локально: HF rate-limit даёт stale-lock hangs при параллельных from_pretrained — чистить locks, не запускать параллельно.
 - **POST (локально):** `experiments/exp27_post.py` — verdicts vs F (ORTHOGONAL/WEAK/COHERENT = F/3F),
   half-split 16/16 + 100 бутстрепа, PNG (2 heatmaps + r_eff bars + half-split dist), docs/exp27_findings.md
   с pre-registered таблицами 7.1-7.5 + truncation test (6.2) + K-зависимость (6.3) + L18 vs L19 (6.4).
