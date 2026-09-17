@@ -56,40 +56,38 @@ def _ranks(J: torch.Tensor) -> tuple[float, float, float]:
     return r_ent, r_stable, r_pr
 
 def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dict:
-    """Per domain: n texts of exactly L tokens (min_length filter redraws shorts)."""
+    """Per domain: n texts of exactly L tokens. ONE stream pass (min_length=1):
+    long texts kept, shorts concatenated (left-aligned prefix property holds).
+    Retries on rate-limited (near-empty) streams."""
+    from transformers import AutoTokenizer
+
+    tok = AutoTokenizer.from_pretrained(model_name)
     per: dict[str, list[dict]] = {}
     for dom in domains:
-        data = load_calibration_data(
-            model_name, max_length=L, min_length=L, n_samples=n, domain=dom,
-        )
-        if len(data) < n:  # stream rate-limited / short batch: overdraw w/ retries, concat shorts
-            big: list[dict] = []
-            for att in range(5):
-                big = load_calibration_data(
-                    model_name, max_length=L, min_length=1, n_samples=n * 32, domain=dom,
-                )
-                if len(big) >= n * 4:
+        big: list[dict] = []
+        for att in range(5):
+            big = load_calibration_data(
+                model_name, max_length=L, min_length=1, n_samples=n * 32, domain=dom,
+            )
+            if len(big) >= n * 4:
+                break
+            print(f"  pool {dom}: stream gave {len(big)} < {n * 4}, retry {att + 1}...")
+            time.sleep(10 * (att + 1))
+        data = [s for s in big if s["input_ids"].shape[1] >= L]
+        if len(data) < n:  # intrinsically short (gsm8k): concatenate
+            buf = ""
+            out = []
+            for t in big:
+                buf += " " + tok.decode(t["input_ids"][0], skip_special_tokens=True).strip()
+                words = buf.split(" ")
+                while len(out) < n and len(words) >= 64:
+                    ids = tok(" ".join(words[:320]), max_length=L, truncation=True, return_tensors="pt")
+                    if ids["input_ids"].shape[1] >= L:
+                        out.append(ids)
+                        words = words[200:]  # consume so next sample is mostly fresh
+                        continue
                     break
-                print(f"  pool {dom}: overdraw {len(big)} < {n*4}, retry {att+1}...")
-                time.sleep(10 * (att + 1))
-            data = [s for s in big if s["input_ids"].shape[1] >= L]
-            if len(data) < n:  # texts intrinsically short (gsm8k): concatenate
-                from transformers import AutoTokenizer
-                tok = AutoTokenizer.from_pretrained(model_name)
-                texts = [s["input_ids"] for s in big]
-                buf = ""
-                out = []
-                for t in texts:
-                    buf += " " + tok.decode(t[0], skip_special_tokens=True).strip()
-                    words = buf.split(" ")
-                    while len(out) < n and len(words) >= 64:
-                        ids = tok(" ".join(words[:320]), max_length=L, truncation=True, return_tensors="pt")
-                        if ids["input_ids"].shape[1] >= L:
-                            out.append(ids)
-                            words = words[200:]  # consume 200 words so next sample is mostly fresh
-                            continue
-                        break
-                data = (data + out)[:n]
+            data = (data + out)[:n]
         print(f"  pool {dom}: {len(data)} @ {L}")
         per[dom] = data
     return per
