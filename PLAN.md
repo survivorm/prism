@@ -38,6 +38,9 @@
   F = 1/sqrt(r_eff*(K+D-r_eff)) per (layer,cfg,pos). C_a: 3 конвенции + (d,0) для position-sweep.
   C_b per домен pos=0. Per-sample C_a списки baseline (S=64,K=64) → half-split bootstrap локально (post, без GPU).
 - **GREEN:** push kernel exp27 (новый registry entry) → ~2.5ч.
+  - v1 (09-16) FAIL: pool math 0<8 — min_length=256 stream отдал короткие (C4 rate-limit).
+  - v2 (09-16) FAIL: math=0 — GSM8K вопросы ~40 токенов, никогда ≥256. Фикс: overdraw + конкатенация коротких до L (left-align сохраняется, префикс = начало конкат-текста).
+  - v3 PUSHED (RUNNING): pool-fix + p<S guard + pair(64,65) для trunc-test + post per_layer/pos-pk-fix. Монитор: `_auto_chain/poll_exp27.sh`.
 - **POST (локально):** `experiments/exp27_post.py` — verdicts vs F (ORTHOGONAL/WEAK/COHERENT = F/3F),
   half-split 16/16 + 100 бутстрепа, PNG (2 heatmaps + r_eff bars + half-split dist), docs/exp27_findings.md
   с pre-registered таблицами 7.1-7.5 + truncation test (6.2) + K-зависимость (6.3) + L18 vs L19 (6.4).
