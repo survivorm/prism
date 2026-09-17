@@ -50,6 +50,12 @@
     рестарт с тем же pool → J-loop+forwards пропускаются, метрики на CPU (запрос: не
     переделывать всё по 100 раз).
   - v8 PUSHED (RUNNING): pos=65 fix + checkpoint. Дальше fail метрик чиним локально с ckpt, без GPU.
+  - v8 FAIL 264s: UnboundLocalError do_j (fwd-guard до блока ckpt, где do_j определён).
+  - v9 PUSHED (RUNNING): ckpt-блок перед fwd-guard; метрики -> _metrics() (return per_layer);
+    CLI --resume ckpt.pt = только метрики на CPU без модели (test: fake ckpt OK);
+    ckpt содержит D/n_samples/domains. Любой будущий fail метрик/JSON чинится локально.
+  - ЧЕКПОИНТ-ЦЕПОЧКА: v9 J-loop ~45min -> ckpt в /kaggle/working -> метрики ~2-5min на CPU.
+    Если fail ПОСЛЕ ckpt: скачать exp27_jcache.pt из output, починить, --resume локально.
   - Локально: HF rate-limit даёт stale-lock hangs при параллельных from_pretrained — чистить locks, не запускать параллельно.
 - **POST (локально):** `experiments/exp27_post.py` — verdicts vs F (ORTHOGONAL/WEAK/COHERENT = F/3F),
   half-split 16/16 + 100 бутстрепа, PNG (2 heatmaps + r_eff bars + half-split dist), docs/exp27_findings.md
