@@ -115,7 +115,7 @@ def _j_configs() -> list[tuple[int, int, int]]:
     cfgs = [(64, 128, p) for p in (0, 1, 2, 4, 8, 16)]
     for S in (32, 128, 256):
         cfgs += [(S, 128, p) for p in (0, 1, 2)]
-    cfgs += [(128, 128, 64)]  # truncation test 6.2
+    cfgs += [(128, 128, 64), (128, 128, 65)]  # truncation test 6.2 (both positions)
     return cfgs
 
 def main(
@@ -170,19 +170,40 @@ def main(
     print(f"J configs: {len(cfgs)} per sample/layer; positions {positions_all}; S {Ss}")
 
     # One forward per (sample, S): logits + hs at all positions.
+    # (only needed for the J-loop; on resume H comes from the checkpoint)
     fwd: dict[tuple, dict] = {}
-    for dom in domains:
-        for si in range(n_samples):
-            s = pool[dom][si]
-            for S in Ss:
-                fwd[(dom, si, S)] = _forward_prefix(m, s, S, layers, positions_all)
-    print(f"Forward cache: {len(fwd)} forwards")
+    if do_j:
+        for dom in domains:
+            for si in range(n_samples):
+                s = pool[dom][si]
+                for S in Ss:
+                    fwd[(dom, si, S)] = _forward_prefix(m, s, S, layers, positions_all)
+        print(f"Forward cache: {len(fwd)} forwards")
 
     # J-cache at U_128 per (dom, si, S, pos), plus per-sample ranks.
     JR: dict[tuple, torch.Tensor] = {}
     P128: dict[tuple, torch.Tensor] = {}
     RANKS: dict[tuple, tuple[float, float, float]] = {}
     H: dict[tuple, torch.Tensor] = {}
+
+    # --- checkpoint: resume J-cache from a prior run (same pool/cfgs/U128) ---
+    pool_fp = hashlib.sha256(
+        b"".join(pool[d][0]["input_ids"].flatten().numpy().tobytes()
+                 for d in domains)).hexdigest()[:12]
+    ckpt = os.path.join(results_dir, "exp27_jcache.pt")
+    do_j = True
+    if os.path.exists(ckpt):
+        try:
+            ck = torch.load(ckpt, map_location="cpu")
+            ok = (ck["cfgs"] == cfgs and ck["U128"] == U128
+                  and ck["pool_fp"] == pool_fp and ck["layers"] == layers)
+            print(f"J-cache ckpt: match={ok} (n={len(ck.get('JR', {}))})")
+            if ok:
+                JR, P128, RANKS, H = ck["JR"], ck["P128"], ck["RANKS"], ck["H"]
+                do_j = False
+                print(f"J-cache RESUMED from {ckpt} — skipping J-loop")
+        except Exception as e:
+            print(f"J-cache ckpt load failed: {e}; recomputing")
     total = n * len(layers) * len(cfgs)
     done = 0
     for dom in domains:
@@ -203,6 +224,11 @@ def main(
                     H[(dom, si, S, p)] = f["hs"][l][p]
                     done += 1
                 print(f"  {dom} s{si} L{l}: {len(cfgs)} J done ({done}/{total})")
+    if do_j:
+        torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
+                    "cfgs": cfgs, "U128": U128, "pool_fp": pool_fp,
+                    "layers": layers}, ckpt)
+        print(f"J-cache checkpoint saved: {ckpt}")
     del fwd
     torch.cuda.empty_cache() if device.startswith("cuda") else None
     print(f"J cache: {done} raw J [128, {D}] on CPU")
@@ -389,7 +415,7 @@ def _selfcheck() -> None:
     # config set.
     cfgs = _j_configs()
     assert (64, 128, 16) in cfgs and (256, 128, 0) in cfgs and (128, 128, 64) in cfgs
-    assert len(cfgs) == 6 + 9 + 1, f"cfg count {len(cfgs)}"
+    assert len(cfgs) == 6 + 9 + 2, f"cfg count {len(cfgs)}"
     print("selfcheck OK (ranks, F, cos, configs)")
 
 def main_cli():
