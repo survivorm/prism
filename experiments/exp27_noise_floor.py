@@ -219,10 +219,10 @@ def main(
                     Jr = compute_jacobian_for_tokens(
                         m, l, ids_k.to(m.device), mask_k.to(m.device), U128,
                     ).float()
-                    JR[(dom, si, S, p)] = Jr.cpu()
-                    P128[(dom, si, S, p)] = p128.cpu()
-                    RANKS[(dom, si, S, p)] = _ranks(Jr)
-                    H[(dom, si, S, p)] = f["hs"][l][p]
+                    JR[(dom, si, l, S, p)] = Jr.cpu()
+                    P128[(dom, si, l, S, p)] = p128.cpu()
+                    RANKS[(dom, si, l, S, p)] = _ranks(Jr)
+                    H[(dom, si, l, S, p)] = f["hs"][l][p]
                     done += 1
                 print(f"  {dom} s{si} L{l}: {len(cfgs)} J done ({done}/{total})")
     if do_j:
@@ -254,7 +254,8 @@ def main(
         "git_hash": _git_hash(),
         "model": model,
         "model_state_sha256_8": hashlib.sha256(
-            torch.flatten(m.state_dict()[list(m.state_dict().keys())[0]]).numpy().tobytes()
+            torch.flatten(m.state_dict()[list(m.state_dict().keys())[0]])
+            .cpu().numpy().tobytes()
         ).hexdigest()[:16],
         "U128_sha256_8": hashlib.sha256(U_bytes).hexdigest()[:16],
         "device": device,
@@ -292,7 +293,7 @@ def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
         for S in Ss:
             stds = []
             for dom in domains:
-                hs_d = torch.stack([H[(dom, si, S, 0)] for si in range(n_samples)])
+                hs_d = torch.stack([H[(dom, si, l, S, 0)] for si in range(n_samples)])
                 stds.append(hs_d.std(dim=0, unbiased=False).norm().item())
             sig_d[S] = float(np.mean(stds))
         Lres["sigma_d"] = {str(S): sig_d[S] for S in Ss}
@@ -304,11 +305,11 @@ def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
                 for dom in domains:
                     js, hs = [], []
                     for si in range(n_samples):
-                        Jk = JR[(dom, si, S, 0)][:K]
-                        pkv = P128[(dom, si, S, 0)][:K]
+                        Jk = JR[(dom, si, l, S, 0)][:K]
+                        pkv = P128[(dom, si, l, S, 0)][:K]
                         pkv = pkv / pkv.sum()
                         js.append(softmax_jacobian(Jk, pkv).cpu())
-                        hs.append(H[(dom, si, S, 0)])
+                        hs.append(H[(dom, si, l, S, 0)])
                     for i in range(n_samples):
                         for j2 in range(i + 1, n_samples):
                             d = (hs[i] - hs[j2]).norm().item()
@@ -327,10 +328,10 @@ def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
                     rk_ent, rk_st, rk_pr, gs = [], [], [], []
                     for dom in domains:
                         for si in range(n_samples):
-                            Jk = JR[(dom, si, S, p)][:K]
+                            Jk = JR[(dom, si, l, S, p)][:K]
                             rk = _ranks(Jk)
                             rk_ent.append(rk[0]); rk_st.append(rk[1]); rk_pr.append(rk[2])
-                            pkv = P128[(dom, si, S, p)][:K]
+                            pkv = P128[(dom, si, l, S, p)][:K]
                             pkv = pkv / pkv.sum()
                             Jp = softmax_jacobian(Jk, pkv)
                             gs.append(float(Jp.pow(2).sum() / Jk.pow(2).sum().clamp_min(1e-12)))
@@ -359,11 +360,11 @@ def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
                     cpos, csame_l, csame_r, craw, lpos, lsame, lraw = [], [], [], [], [], [], []
                     for dom in domains:
                         for si in range(n_samples):
-                            J1, J2 = JR[(dom, si, S, p1)][:K], JR[(dom, si, S, p2)][:K]
-                            H1, H2 = H[(dom, si, S, p1)], H[(dom, si, S, p2)]
+                            J1, J2 = JR[(dom, si, l, S, p1)][:K], JR[(dom, si, l, S, p2)][:K]
+                            H1, H2 = H[(dom, si, l, S, p1)], H[(dom, si, l, S, p2)]
                             d = (H1 - H2).norm().item()
-                            pk1 = (P128[(dom, si, S, p1)][:K] / P128[(dom, si, S, p1)][:K].sum())
-                            pk2 = (P128[(dom, si, S, p2)][:K] / P128[(dom, si, S, p2)][:K].sum())
+                            pk1 = (P128[(dom, si, l, S, p1)][:K] / P128[(dom, si, l, S, p1)][:K].sum())
+                            pk2 = (P128[(dom, si, l, S, p2)][:K] / P128[(dom, si, l, S, p2)][:K].sum())
                             J1p = softmax_jacobian(J1, pk1)
                             J2p = softmax_jacobian(J2, pk2)
                             J1s_l = softmax_jacobian(J1, pk1)
@@ -379,7 +380,7 @@ def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
                             lraw.append((J1 - J2).norm().item() / max(d, 1e-12))
                             if S == 64 and K == 64:
                                 base_samples.append((dom, cpos[-1], csame_l[-1], craw[-1]))
-                                base_cos_p.append(_cos(P128[(dom, si, S, p1)], P128[(dom, si, S, p2)]))
+                                base_cos_p.append(_cos(P128[(dom, si, l, S, p1)], P128[(dom, si, l, S, p2)]))
                     key = f"S{S}_K{K}_pair{p1}_{p2}"
                     Lres["configs"].setdefault(key, {})
                     Lres["configs"][key].update({

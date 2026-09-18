@@ -36,3 +36,5 @@ results/.gramians
 # Misc
 .DS_Store
 *.orig
+_auto_chain/exp27_v9/
+results/*.json
