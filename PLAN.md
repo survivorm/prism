@@ -51,9 +51,11 @@
     переделывать всё по 100 раз).
   - v8 PUSHED (RUNNING): pos=65 fix + checkpoint. Дальше fail метрик чиним локально с ckpt, без GPU.
   - v8 FAIL 264s: UnboundLocalError do_j (fwd-guard до блока ckpt, где do_j определён).
-  - v9 PUSHED (RUNNING): ckpt-блок перед fwd-guard; метрики -> _metrics() (return per_layer);
-    CLI --resume ckpt.pt = только метрики на CPU без модели (test: fake ckpt OK);
-    ckpt содержит D/n_samples/domains. Любой будущий fail метрик/JSON чинится локально.
+  - v9 FAIL (8214s): J-loop done, ckpt 288MB написан, затем `.numpy()` на cuda tensor (fingerprint).
+    **BUG v9: layer пропал из ключа J-кэша** `JR[(dom,si,S,p)]` — все 6 слоёв = L23. 2.3ч GPU впустую.
+    Mетрики из v9-ckpt считаны локально `--resume` (results/exp27_noise_floor.json — НЕВАЛИД, layer-заменены).
+  - v10 PUSHED (RUNNING): per-layer ключи `JR/H/P128/RANKS[(dom,si,l,S,p)]`; fingerprint `.cpu().numpy()`;
+    local test per-layer diff OK. Fwd ~130s, J-loop ~2.2h T4. Ckpt снова -> output -> local --resume.
   - ЧЕКПОИНТ-ЦЕПОЧКА: v9 J-loop ~45min -> ckpt в /kaggle/working -> метрики ~2-5min на CPU.
     Если fail ПОСЛЕ ckpt: скачать exp27_jcache.pt из output, починить, --resume локально.
   - Локально: HF rate-limit даёт stale-lock hangs при параллельных from_pretrained — чистить locks, не запускать параллельно.
