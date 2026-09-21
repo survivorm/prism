@@ -64,11 +64,13 @@
     3. S=128 dip: немонотонно во ВСЕХ слоях (L6 .090/.067/.062/.085; L23 .248/.258/.165/.263) — не пул-артефакт, реальный эффект.
   - **v11 (ревар, 09-18): переиспользование ckpt v10 (U128=64f0c5eb заморожен):**
     - FIX A: math-пул — полный сдвиг 320 + dedup (100% перекрытия, 8 уникальных).
-    - FIX B: trunc test заменён point (128,128,32) — pos32@S128 (index 95, context 96 токенов)
-      для S=128 dip-диагностики; pair (64,65) удалён. 6.2 = невалиден (causal identity).
-    - FIX C: S=128 middle-chunk 64:192 (вместо prefix) для dip-сэмплов (wiki/code/chat).
-    - REUSE: wiki/code/chat J из v10-ckpt (детерминированные сэмплы + тот же U128) = 2448 из 2720 J.
-      J-loop: 272 J math + 48 pos32 + 128 forwards (math + 3 S128-middle) ~ 35-40 min T4.
+    - FIX B: trunc test 6.2 (pair 64,65) удалён — causal identity (невалиден). Dip-диагностика:
+      pair (32,33)@S128 (context 96/97, mid-sequence) vs pos0@S128 (ctx 127) vs pos0@S64 (ctx 63).
+    - FIX C: отменён (middle chunk) — pos32 pair достаточен, YAGNI.
+    - cfgs v11: S64(6)+S32(3)+S128{0,1,2,32,33}(5)+S256(3) = 17.
+    - REUSE v10-ckpt: wiki/code/chat S∈{32,64,256} + S128{0,1,2} = 15 из 17 (дет. сэмпл + U128).
+      New J: math 17×8×6=816 + wiki/code/chat S128{32,33} 2×24×6=288 = 1104 J (~45 min T4).
+      Forwards: math all S (32) + wiki/code/chat S128 (24) = 56.
     - JSON: exp27_noise_floor_v11.json. findings.md обновить после.
 
   - ЧЕКПОИНТ-ЦЕПОЧКА: v9 J-loop ~45min -> ckpt в /kaggle/working -> метрики ~2-5min на CPU.
