@@ -263,7 +263,7 @@ def main(
     result = {
         "params": {
             "model": model, "layers": layers, "n_samples": n_samples,
-            "domains": domains, "Ss": Ss, "Ks": list(Ks),
+            "domains": domains, "Ss": Ss, "Ks": [32, 64, 128],
             "D": D, "token_set": "nested U128 (freq of final logits at S=256)",
         },
         "manifest": manifest,

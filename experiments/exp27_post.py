@@ -22,12 +22,12 @@ def _tier(c, F):
     return "COHERENT"
 
 def _cfg(res, l, key):
-    return res["per_layer"][l]["configs"].get(key, {})
+    return res["layers"][l]["configs"].get(key, {})
 
 def half_split(res, l, n_boot=100, seed=42):
     """16/16 random split of the 32 baseline samples, 100 bootstraps on
     |C_a^A - C_a^B| (pos-pk). Returns mean CI + percentile spread."""
-    rows = res["per_layer"][l]["halfsplit_baseline"]["per_sample"]
+    rows = res["layers"][l]["halfsplit_baseline"]["per_sample"]
     rng = np.random.default_rng(seed)
     idx = np.arange(len(rows))
     diffs = []
