@@ -56,6 +56,21 @@
     Mетрики из v9-ckpt считаны локально `--resume` (results/exp27_noise_floor.json — НЕВАЛИД, layer-заменены).
   - v10 PUSHED (RUNNING): per-layer ключи `JR/H/P128/RANKS[(dom,si,l,S,p)]`; fingerprint `.cpu().numpy()`;
     local test per-layer diff OK. Fwd ~130s, J-loop ~2.2h T4. Ckpt снова -> output -> local --resume.
+  - v10 COMPLETE (09-18): per-layer valid (L6 C_a=0.067 != L23=0.258), JSON -> results/exp27_noise_floor.json, post -> docs/exp27_findings.md.
+    **РЕВЬЮ (3 бага, подтверждены по данным/коду):**
+    1. trunc test 6.2 = TOZHDESTVO (ratio 1.00000): pos64@S128 и pos63@S64 видят одни токены 0..63 (causal) — тест невалиден, retire.
+    2. math-пул: окно 320 слов, сдвиг 200 -> 120-слов overlap + trunc-256 -> 8 сэмплов = 10 уникальных с дублями.
+       C_b math ~ self-совпадение. C_b без math: L6 -0.13, L18 -0.04, L22 +0.03 (vs reported +0.15..+0.28).
+    3. S=128 dip: немонотонно во ВСЕХ слоях (L6 .090/.067/.062/.085; L23 .248/.258/.165/.263) — не пул-артефакт, реальный эффект.
+  - **v11 (ревар, 09-18): переиспользование ckpt v10 (U128=64f0c5eb заморожен):**
+    - FIX A: math-пул — полный сдвиг 320 + dedup (100% перекрытия, 8 уникальных).
+    - FIX B: trunc test заменён point (128,128,32) — pos32@S128 (index 95, context 96 токенов)
+      для S=128 dip-диагностики; pair (64,65) удалён. 6.2 = невалиден (causal identity).
+    - FIX C: S=128 middle-chunk 64:192 (вместо prefix) для dip-сэмплов (wiki/code/chat).
+    - REUSE: wiki/code/chat J из v10-ckpt (детерминированные сэмплы + тот же U128) = 2448 из 2720 J.
+      J-loop: 272 J math + 48 pos32 + 128 forwards (math + 3 S128-middle) ~ 35-40 min T4.
+    - JSON: exp27_noise_floor_v11.json. findings.md обновить после.
+
   - ЧЕКПОИНТ-ЦЕПОЧКА: v9 J-loop ~45min -> ckpt в /kaggle/working -> метрики ~2-5min на CPU.
     Если fail ПОСЛЕ ckpt: скачать exp27_jcache.pt из output, починить, --resume локально.
   - Локально: HF rate-limit даёт stale-lock hangs при параллельных from_pretrained — чистить locks, не запускать параллельно.
