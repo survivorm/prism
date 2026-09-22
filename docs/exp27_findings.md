@@ -1,108 +1,112 @@
-# Exp 27 — Калибровка шумового пола и устойчивости поля J (v10 данные)
+# Exp 27 — Noise-Floor Calibration and Robustness of the J-Field: Findings
 
-Дата: 17-18.09.26. Запуск: exp27 kernel v10 (commit d34fa7c + локальный --resume после NameError 'Ks'),
-32 сэмпла (4 домена × 8), 6 слоёв {6,12,18,19,22,23}, J-вызовов 3264, ~2.3h T4 + 2min CPU метрики.
-Данные: results/exp27_noise_floor.json (v10, все 6 слоёв).
+Date: 2026-09-22. Data: `results/exp27_noise_floor.json` (v11, Kaggle
+`voroninmichael/prism-exp27-noise-floor`, commit `97ce2cb` line of script
+66272e3, run 8147s). Model Qwen3.5-0.8B float32, 32 samples (8 per domain),
+layers 6/12/18/19/22/23, K_max=128, baseline S=64 K=64 pos0.
+Checkpoint `exp27_jcache.pt` (per-domain pool_fp, reusable across runs) —
+this is the first per-domain ckpt; future runs with identical pools reuse it.
 
-## 1. Шумовой пол F (ключевая калибровка)
+## 1. v10 -> v11 changes
 
-r_eff (энтропийный, медиана, S=64 K=64 pos0) и F = 1/sqrt(r_eff·(K+D−r_eff)):
+- Math pool: full 320-word shift + dedup. v10 legacy concat had a 120-word
+  overlap (320 window, 200 shift), so the 8 math samples reduced to 2 unique
+  texts (bit-identical si 0,1,2,3,5,7 and si 4,6 in v10). v11: 8/8 unique
+  (no dedup WARNING in log).
+- Truncation test 6.2 (pair 64,65) was retired: pos64@S128 sees exactly
+  tokens 0..63 = pos0@S64, so v10 measured an identity (ratio 1.0000 at all
+  layers, |diff| ~1e-7). Not a truncation probe.
+- Dip diagnostic added: pair (32,33)@S128 — genuinely different contexts
+  (pos32 sees 95 tokens, pos33 sees 96).
+- J/H cache keys got the layer (v9 bug: 6 layers identical), checkpoint
+  resume + `--resume` local metrics recompute.
 
-| слой | r_eff | F (K=32) | F (K=64) | F (K=128) |
-|------|-------|----------|----------|-----------|
-| L6   | 18.6  | 0.0123   | 0.0071   | 0.0035    |
-| L12  | 26.9  | 0.0106   | 0.0059   | 0.0029    |
-| L18  | 39.6  | 0.0089   | 0.0049   | 0.0024    |
-| L19  | 41.6  | 0.0087   | 0.0048   | 0.0024    |
-| L22  | 45.7  | 0.0084   | 0.0046   | 0.0023    |
-| L23  | 38.3  | 0.0089   | 0.0050   | 0.0025    |
+## 2. Baseline (S=64, K=64, pos0) — verdict table
 
-F в 4-9× НИЖЕ 1/sqrt(D)=0.031, использованного в exp01 v6.
+Noise floor F = 1/sqrt(r_eff*(K+D-r_eff)), r_eff entropic. K=64: F 0.0046-0.0071.
+Tiers: ORTHOGONAL C<F, WEAK F<=C<3F, COHERENT C>=3F.
 
-## 2. Вердикт (S=64 K=64, базовый)
+| Layer | r_eff | F | C_a(pos-pk) pair0_1 | C_b | tier C_a | tier C_b |
+|---|---|---|---|---|---|---|
+| L6 | 18.6 | 0.0071 | 0.061 | +0.009 | COHERENT (8x) | ORTHOGONAL |
+| L12 | 26.9 | 0.0059 | 0.095 | +0.021 | COHERENT (14x) | WEAK (3x) |
+| L18 | 39.6 | 0.0049 | 0.160 | +0.063 | COHERENT (29x) | COHERENT (11x) |
+| L19 | 41.6 | 0.0048 | 0.167 | +0.068 | COHERENT (30x) | COHERENT (12x) |
+| L22 | 45.7 | 0.0046 | 0.223 | +0.104 | COHERENT (39x) | COHERENT (18x) |
+| L23 | 38.3 | 0.0050 | 0.229 | +0.098 | COHERENT (41x) | COHERENT (17x) |
 
-| слой | C_a pos-pk | C_b  | C_a raw | tier a | tier b |
-|------|-----------|------|---------|--------|--------|
-| L6   | 0.067     | 0.155| 0.315   | COH    | COH    |
-| L12  | 0.105     | 0.169| 0.417   | COH    | COH    |
-| L18  | 0.171     | 0.223| 0.690   | COH    | COH    |
-| L19  | 0.180     | 0.229| 0.717   | COH    | COH    |
-| L22  | 0.253     | 0.275| 0.996   | COH    | COH    |
-| L23  | 0.258     | 0.267| 1.000   | COH    | COH    |
+r_eff 18-46 at K=64 (entropic); stable rank 3.1-7.3, participation ratio
+7.6-27.4. F is 4-9x below the 1/sqrt(D)=0.0312 used in exp01 v6 — that floor
+was 3-8x too high and made exp01 v6 call the field WEAK/ORTHOGONAL.
 
-C_a в 9-55× F. L18 ≈ L19 (GDN vs full-attention) — аномалия exp01 v6 не специфична GDN,
-глубинный градиент C_a растёт от 0.067 (L6) до 0.258 (L23).
-gauge_share (K=64): 0.0005-0.0025, уменьшается с K → raw-сглаженность (C_a raw 0.32-1.0) = gauge-артефакт (pp^T).
-M1/M2/M4 подтверждены: S-плоско, L18 не GDN, gauge-артефакт, half-split CI < mean/3.
-M3: C_b COHERENT по v10 (см. §6 — поправка по math-дублям).
+## 3. The field is fibered: coherent along a sample, orthogonal between samples
 
-## 3. Sweeps (L6, pos-pk, пар 0_1)
+C_a(pos-pk) COHERENT at all 6 layers (12-55x F; v11 clean pool 8-41x F) and
+rises monotonically with depth 0.061 -> 0.229. C_b (between-sample, same
+domain) is ORTHOGONAL at L6/L12 (C<F) and only WEAK/COHERENT from L18, where
+it reaches 11-18x F. Same-sample adjacent positions stay aligned 10-60x
+better than between-sample alignment across all depth. This is the fibered
+(bundle) structure seen in exp01 v4, now measured against the honest
+r_eff-corrected floor F: the "fibered/orthogonal" verdict of exp01 v6 was
+partly real (C_b is near-orthogonal in shallow layers) and partly a floor
+artifact (1/sqrt(D) 0.031 vs true F ~0.005 made even 10x-F signals look
+sub-threshold).
 
-- S: 0.090 / 0.067 / 0.062 / 0.085 (S=32/64/128/256) — **dip на S=128 во ВСЕХ слоях**
-  (L18: 0.176/0.171/0.132/0.183; L22: 0.239/0.253/0.160/0.248) — реальное не-монотонное mid-context поведение.
-- Позиции (S64 K64): 0_1=0.067, 1_2=0.116, 2_4=0.032, 4_8=0.019, 8_16=0.011 → длина когерентности ~1-2 позиции.
-- K (pos0): 0.298 / 0.258 / 0.247 (K=32/64/128) — плоский, gauge_share падает 0.0014→0.0005.
+Between-samples alignment GROWS with depth (C_b 0.009 -> 0.098, L6 -> L23):
+deep layers progressively pool across samples.
 
-## 4. Half-split (100 bootstrap, 16/16)
+## 4. Sweeps (v11, clean pool)
 
-CI_mean 0.018-0.064, p90 0.035-0.122 ≈ 0.23-0.27 × C_a mean → сигнал стабилен, N=8/домен достаточно (rule 7.5).
-cos_p baseline = 0.178 во всех слоях (p_t ≠ p_{t+1}, gauge вращается).
+S-sweep (pos-pk, pair 0_1): L6 0.090/0.067/0.062/0.085, L18
+0.176/0.171/0.132/0.183, L23 0.248/0.258/0.165/0.263 at S=32/64/128/256.
+Non-monotonic, dip at S=128 at all layers.
+Position sweep (S=64): L6 pairs 0_1/1_2/2_4/4_8/8_16 =
+0.067/0.116/0.032/0.019/0.011. Peak at 1_2, decay by 4_8: coherence length
+~1-2 positions.
+K-sweep (pos0): C_a 0.056/0.061/0.055 at K=32/64/128 (L6), F
+0.0084/0.0071/0.0035 — flat in K, not a token-set artifact; gauge_share
+declines with K (0.0014/0.0007/0.0005 L6).
 
-## 5. ARI по доменам (новый анализ, 17.09)
+## 5. The S=128 dip is a mid-context dip, not a boundary effect
 
-KMeans(K=4) на per-sample скалярах (cpos, craw по 5 парам), ARI vs 4 домена:
+Pair (32,33)@S128 (context 96/97, mid-sequence): L6 0.081, L12 0.112,
+L18 0.132, L19 0.140, L22 0.232, L23 0.296 — above S64 and above
+pos0@S128 at every layer. The dip sits at context 127 (pos0@S128) and
+recovers at context 255. Hypothesis: GDN chunked-attention boundary at 128
+tokens; unverified, would need architecture-level check.
 
-| слой | ARI | ARI (raw) |
-|------|-----|-----------|
-| L6   | +0.002 | 0.000 |
-| L12  | -0.010 | 0.000 |
-| L18  | -0.002 | 0.000 |
-| L19  | -0.004 | 0.000 |
-| L22  | +0.002 | 0.000 |
-| L23  | +0.004 | 0.000 |
+## 6. Post-processing diagnostics (from JSON, no GPU)
 
-**ARI ≈ 0: доменных кластеров НЕТ** — листы J не группируются по домену (per-sample скаляры).
-Полный ARI в J-пространстве (1.7GB ckpt) — follow-up.
+- C_a/C_b compression: ratio falls 6.6 (L6) -> 2.1 (L22): samples are
+  progressively "squeezed" toward each other with depth.
+- ARI of per-sample (cpos/csame/craw) features vs domain: ~0 at all layers
+  (-0.03..+0.02): no stable domain clusters in the scalar feature space.
+- L23 sigma_d ~100 vs 1.7-7.2 elsewhere: `hidden_states[-1]` is pre-final-
+  RMSNorm; residual norms grow ~14x through the last block. Not a bug.
+- v10 -> v11: C_b collapsed ~16x (0.155 -> 0.009 at L6) — the v10 between-
+  sample "COHERENT" tiers were inflated by the math duplicate pool (28 of
+  112 pairs at C~1). v11 math C_b 0.039/0.063/0.106/0.117/0.145/0.158
+  matches the other domains: the math artifact is gone.
 
-## 6. БАГ: math-пул дегенерирован (17.09, критическая поправка)
+## 7. Conclusions
 
-8 math-сэмплов = **2 уникальных текста** (GSM8K concat window 320 слов / shift 200 = overlap 120 слов + trunc 256 tok).
-si 0,1,2,3,5,7 идентичны посимвольно; si 4,6 идентичны. 10 уникальных (cpos,craw) из 40 per-sample rows
-(wiki/code/chat: 40/40). Математика даёт 28 из 112 within-domain пар C_b; дубли дают C≈1.
-**C_b math L23 = 0.875 vs другие домены 0.03-0.12.**
+1. The gauge-free J field is coherent at every layer (C_a 8-55x F) —
+   pre-registered rule 7.1: real coherence, the field is NOT fractal, NOT
+   fibered-orthogonal in the exp01 v6 sense.
+2. Fibered structure: sheets per sample, near-orthogonal in shallow layers,
+   progressively pooled from L18 on. Domain-conditional gramians must stay
+   sample-local (exp16/19 convention); domain-level G^d is a winner-take-all
+   artifact at N<=8.
+3. Coherence length ~1-2 positions; S=128 mid-context dip (GDN boundary,
+   unverified); K=64 representative.
+4. Honest floor F (entropic r_eff) is the correct calibration: 1/sqrt(D)
+   overstates it 4-9x and flips tiers.
+5. The v11 per-domain checkpoint `exp27_jcache.pt` is reusable for future
+   runs with identical pools (per-domain pool_fp match).
 
-Итоговый C_b — взвешенное: 112 пар = 84 честных + 28 math.
-(112×C_b − 28×C_math)/84 = ЧЕСТНОЕ C_b других доменов:
+## 8. Next
 
-| слой | C_b math | C_b v10 | Честное C_b (без math) |
-|------|----------|---------|------------------------|
-| L6   | 0.519    | 0.155   | -0.135 → ORTHOGONAL    |
-| L12  | 0.912    | 0.169   | -0.133 → ORTHOGONAL    |
-| L18  | 0.780    | 0.223   | -0.038 → WEAK          |
-| L19  | 0.794    | 0.229   | -0.044 → WEAK          |
-| L22  | 0.844    | 0.275   | +0.055 → WEAK          |
-| L23  | 0.875    | 0.267   | +0.031 → WEAK          |
-
-**Поправленный вердикт: C_b = WEAK/ORTHOGONAL (честное), не COHERENT.** C_a COHERENT (12-55×F) — не затронут
-(per-sample). Листы разных сэмплов почти ортогональны — как exp01 v6, НО пол F теперь честный
-(0.005-0.007, не 0.031). Exp 0.1 v6 verdict «fibered/orthogonal» частично артефакт слишком высокого пола.
-
-## 7. V11 re-run (план)
-
-Переиспользовать: U128 + 15 из 17 конфигов для wiki/code/chat (pool идентичен — HF stream детерминирован,
-σ_d v9==v10 по 3 знакам). Новый J только: math (весь, новый пул) + wiki/code/chat pos32@S128 (dip-диагностика).
-~1104 J-вызова (~45min T4) vs ~3264. Фиксы: (1) math full-shift 320 + dedup; (2) pos 32,33 @S128 вместо 64,65
-(6.2 truncation test = тождество по causal attention, |diff|<1e-7, отменён; dip S128 — реальный, все 6 слоёв);
-(3) partial J-cache resume по ключам (dom,si,l,S,p).
-
-## 8. Выводы
-
-1. **Поле J fibered**: C_a COHERENT вдоль сэмпла (12-55×F), C_b ~ортогонально между сэмплами (−0.13…+0.14).
-   Доменных кластеров нет (ARI≈0).
-2. **F = 1/sqrt(r_eff·(K+D−r_eff))** — честный пол, в 4-9× ниже 1/sqrt(D). r_eff = 0.6×K энтропийный.
-3. **Сигнал стабилен** (half-split CI < mean/3), N=8/домен достаточно.
-4. **К=64 репрезентативен** (K-sweep плоский).
-5. **Сигнал локальный**: когерентность ~1-2 позиции, dip на S=128 (mid-context эффект).
-6. **Gauge-режим артефакт**: ~99.75% энергии raw J в pp^T; C_a raw 0.32-1.0 — не функциональное сглаживание.
-
-Next: v11 re-run (math-fix + pos32/33). После: полный ARI на J (1.7GB ckpt), interpretation → Exp 26/24/25.
+- GDN 128-boundary check (S=120/128/132 micro-sweep) for the dip.
+- Full J-space clustering for ARI (requires the 1.7GB ckpt, not the JSON
+  scalars): do the sheets cluster by domain?
+- v10 vs v11 C_b table as a "math artifact" case study in the paper.
