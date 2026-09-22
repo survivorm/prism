@@ -175,21 +175,21 @@ def main(
             print(f"J-cache ckpt loaded: n={len(ck.get('JR', {}))}")
         except Exception as e:
             print(f"J-cache ckpt load failed: {e}; fresh run")
-    if ck is not None:
-        U128 = list(ck["U128"])
-        print(f"U_128 frozen from ckpt ({len(U128)} tokens)")
-    else:
-        counts: dict[int, int] = {}
-        for dom in domains:
-            for si, s in enumerate(pool[dom]):
-                with torch.no_grad():
-                    out = m(input_ids=s["input_ids"].to(m.device),
-                            attention_mask=s["attention_mask"].to(m.device))
-                p = torch.softmax(out.logits[0, -1].float(), dim=-1)
-                for t in p.topk(128).indices.tolist():
-                    counts[t] = counts.get(t, 0) + 1
-        U128 = sorted([t for t, _ in sorted(counts.items(), key=lambda x: -x[1])[:128]])
-        print(f"U_128 built fresh ({len(U128)} tokens)")
+    # U128 is ALWAYS built fresh from the current pools. Cached J rows are
+    # reused only if the checkpoint's token set equals this one (J depends
+    # on U128 via the projector), so a v10 ckpt is reusable iff the v11
+    # math-pool fix did not change the top-128 set.
+    counts: dict[int, int] = {}
+    for dom in domains:
+        for si, s in enumerate(pool[dom]):
+            with torch.no_grad():
+                out = m(input_ids=s["input_ids"].to(m.device),
+                        attention_mask=s["attention_mask"].to(m.device))
+            p = torch.softmax(out.logits[0, -1].float(), dim=-1)
+            for t in p.topk(128).indices.tolist():
+                counts[t] = counts.get(t, 0) + 1
+    U128 = sorted([t for t, _ in sorted(counts.items(), key=lambda x: -x[1])[:128]])
+    print(f"U_128 built fresh ({len(U128)} tokens)")
 
     cfgs = _j_configs()
     positions_all = sorted({p for _, _, p in cfgs})
@@ -199,11 +199,13 @@ def main(
     # --- partial checkpoint reuse (v11) ---
     # Per-domain pool fingerprint: math is regenerated (v11 pool fix), so its
     # fingerprint differs from the ckpt and its entries are recomputed.
-    pool_fp = {d: hashlib.sha256(pool[d][0]["input_ids"].flatten().numpy().tobytes())
-               .hexdigest()[:12] for d in domains}
-    pool_fp_combined = hashlib.sha256(
-        b"".join(pool[d][0]["input_ids"].flatten().numpy().tobytes()
-                 for d in domains)).hexdigest()[:12]
+    # pool fingerprint over ALL samples of the domain (first-sample-only
+    # would falsely match: v10/v11 math sample 0 is the same text).
+    pool_fp = {}
+    for d in domains:
+        blob = b"".join(x["input_ids"].flatten().numpy().tobytes()
+                        for x in pool[d])
+        pool_fp[d] = hashlib.sha256(blob).hexdigest()[:12]
     ckpt_fp = ck["pool_fp"] if ck is not None else {}
     JR: dict[tuple, torch.Tensor] = {}
     P128: dict[tuple, torch.Tensor] = {}
@@ -211,27 +213,42 @@ def main(
     H: dict[tuple, torch.Tensor] = {}
     n_tot = n * len(layers) * len(cfgs)
     if ck is not None:
-        # v11: accept only COMPLETE ckpts (partial from a crashed run would
-        # leave _metrics with missing keys -> KeyError)
-        if len(ck["JR"]) != n * len(layers) * len(cfgs):
-            print(f"ckpt PARTIAL/legacy-n ({len(ck['JR'])}/{n_tot}) -> fresh run")
+        # v11: accept only COMPLETE ckpts (partial -> missing keys in
+        # _metrics -> KeyError). Key coverage, NOT count: leftover extra
+        # keys (stale v10 (128,64)/(128,65)) are fine; missing keys not.
+        _exp = {(d, si, l, S, p) for d in domains for si in range(n)
+                for l in layers for (S, _, p) in cfgs}
+        _miss = _exp - set(ck["JR"])
+        if _miss:
+            print(f"ckpt coverage: missing {len(_miss)} keys -> fresh run")
             ck = None
     if ck is not None:
-        if isinstance(ckpt_fp, str):  # legacy combined fp (v10): reuse only if
-            # the WHOLE pool is byte-identical (v11 changes math -> no reuse)
-            match = ckpt_fp == pool_fp_combined
-            print(f"legacy ckpt fp match={match}")
+        ck_U128 = set(ck["U128"])
+        u128_ok = ck_U128 == set(U128)
+        # legacy v10 ckpt stores pool_fp as ONE combined string -> only the
+        # U128-equality gate is available; per-domain v11 ckpts get the
+        # stricter per-domain pool check too.
+        if isinstance(ckpt_fp, str):
+            # legacy v10 ckpt: no per-domain fp -> the only unverifiable
+            # domain is math (v11 pool fix); regenerate it, reuse the rest.
+            dom_ok = lambda d: d != "math"
+            fp_note = "legacy ckpt: U128 set-equality; math regenerated"
         else:
-            match = True
-    if ck is not None and match:
-        for k in ck["JR"]:
-            dom_ok = (isinstance(ckpt_fp, str)
-                      or pool_fp.get(k[0]) == ckpt_fp.get(k[0]))
-            if dom_ok:
-                JR[k], P128[k], RANKS[k], H[k] = (ck["JR"][k], ck["P128"][k],
-                                                   ck["RANKS"][k], ck["H"][k])
-        changed = [d for d in domains if pool_fp[d] != ckpt_fp.get(d)]
-        print(f"J-cache REUSE: {len(JR)}/{n_tot} entries; regenerated domains: {changed}")
+            dom_ok = lambda d: pool_fp[d] == ckpt_fp.get(d)
+            fp_note = "per-domain pool fp"
+        if u128_ok:
+            for k in ck["JR"]:
+                if k in _exp and dom_ok(k[0]):
+                    JR[k], P128[k], RANKS[k], H[k] = (ck["JR"][k],
+                                                       ck["P128"][k],
+                                                       ck["RANKS"][k], ck["H"][k])
+            changed = [d for d in domains if not dom_ok(d)]
+            print(f"J-cache REUSE: {len(JR)}/{n_tot} entries "
+                  f"(U128 set-identical, {fp_note}); regenerated: {changed}")
+        else:
+            print(f"U128 set CHANGED (|Δ|={len(set(U128) ^ ck_U128)} tokens) "
+                  f"-> all J recomputed; math pool fix altered token set")
+    u128_frozen = len(JR) > 0
 
     # One forward per (sample, S) only where J is missing: logits + hs at pos.
     fwd: dict[tuple, dict] = {}
@@ -279,7 +296,7 @@ def main(
     print(f"J cache: {done} raw J [128, {D}] on CPU")
 
     per_layer = _metrics(JR, P128, RANKS, H, D, layers, domains,
-                          n_samples, cfgs)
+                          n_samples, cfgs, u128_frozen=u128_frozen)
     # ---- save --------------------------------------------------------------
     import subprocess
 
@@ -301,6 +318,8 @@ def main(
             .cpu().numpy().tobytes()
         ).hexdigest()[:16],
         "U128_sha256_8": hashlib.sha256(U_bytes).hexdigest()[:16],
+        "U128_source": ("fresh (v11 pools); J partly cached from v10 ckpt, U128 set-identical"
+                       if u128_frozen else "fresh (v11 pools)"),
         "device": device,
     }
     result = {
@@ -319,7 +338,7 @@ def main(
     print(f"[OK] exp27 saved to {out_path}")
     print(json.dumps(manifest, indent=1))
 
-def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
+def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs, u128_frozen=False):
     # ---- per-layer metrics -------------------------------------------------
     n = n_samples * len(domains)
     Ss = sorted({S for S, _, _ in cfgs})
@@ -389,8 +408,9 @@ def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
                         "r_eff_PR": float(np.median(rk_pr)), "F": float(F),
                         "gauge_share": float(np.median(gs)),
                     })
+        _pu = {64: pos_pairs_S64, 128: pos_pairs_S128}
         Lres["pos_pairs"] = {str(S): [list(pr) for pr in
-            (pos_pairs_S64 if S == 64 else pos_pairs_Sother)] for S in Ss}
+            _pu.get(S, pos_pairs_Sother)] for S in Ss}
         per_layer[str(l)] = Lres
         print(f"L{l}: configs done")
 
@@ -495,7 +515,7 @@ def main_cli():
         ck = torch.load(args.resume, map_location="cpu")
         per_layer = _metrics(ck["JR"], ck["P128"], ck["RANKS"], ck["H"],
                              ck["D"], ck["layers"], ck["domains"],
-                             ck["n_samples"], ck["cfgs"])
+                             ck["n_samples"], ck["cfgs"], u128_frozen=True)
         out_path = os.path.join(args.results_dir, "exp27_noise_floor.json")
         result = {"params": {"mode": "resume", "D": ck["D"],
                              "layers": ck["layers"], "n_samples": ck["n_samples"],
