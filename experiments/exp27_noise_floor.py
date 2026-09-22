@@ -77,17 +77,29 @@ def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dic
         if len(data) < n:  # intrinsically short (gsm8k): concatenate
             buf = ""
             out = []
+            consumed = 0  # v11 fix: full non-overlapping 320-word windows (v10 had 120-word
+                          # overlap + words recomputed from buf start -> 2 unique texts of 8)
             for t in big:
                 buf += " " + tok.decode(t["input_ids"][0], skip_special_tokens=True).strip()
                 words = buf.split(" ")
-                while len(out) < n and len(words) >= 64:
-                    ids = tok(" ".join(words[:320]), max_length=L, truncation=True, return_tensors="pt")
+                while len(out) < n and len(words) - consumed >= 64:
+                    ids = tok(" ".join(words[consumed:consumed + 320]), max_length=L, truncation=True, return_tensors="pt")
                     if ids["input_ids"].shape[1] >= L:
                         out.append(ids)
-                        words = words[200:]  # consume so next sample is mostly fresh
+                        consumed += 320  # full window consumed
                         continue
                     break
-            data = (data + out)[:n]
+            data = (data + out)
+            seen, ded = set(), []  # v11: dedup (v10 math had 2 unique of 8)
+            for x in data:
+                t = tuple(x["input_ids"][0].tolist())
+                if t not in seen:
+                    seen.add(t)
+                    ded.append(x)
+            if len(ded) < n:
+                print(f"  pool {dom}: WARNING dedup -> {len(ded)} unique < {n}, "
+                      f"padding with dup (C_b for this domain will be inflated)")
+            data = (ded + data)[:n]
         else:
             data = data[:n]
         print(f"  pool {dom}: {len(data)} @ {L}")
@@ -115,7 +127,7 @@ def _j_configs() -> list[tuple[int, int, int]]:
     cfgs = [(64, 128, p) for p in (0, 1, 2, 4, 8, 16)]
     for S in (32, 128, 256):
         cfgs += [(S, 128, p) for p in (0, 1, 2)]
-    cfgs += [(128, 128, 64), (128, 128, 65)]  # truncation test 6.2 (both positions)
+    cfgs += [(128, 128, 32), (128, 128, 33)]  # v11: S=128 dip diagnostic (pos 64/65 was causal identity)
     return cfgs
 
 def main(
@@ -152,65 +164,96 @@ def main(
     print(f"Pool OK: {n} samples")
 
     # Nested token set U_128: top-128 by final-logit frequency at S=256.
-    counts: dict[int, int] = {}
-    for dom in domains:
-        for si, s in enumerate(pool[dom]):
-            with torch.no_grad():
-                out = m(input_ids=s["input_ids"].to(m.device),
-                        attention_mask=s["attention_mask"].to(m.device))
-            p = torch.softmax(out.logits[0, -1].float(), dim=-1)
-            for t in p.topk(128).indices.tolist():
-                counts[t] = counts.get(t, 0) + 1
-    U128 = sorted([t for t, _ in sorted(counts.items(), key=lambda x: -x[1])[:128]])
-    print(f"U_128 built ({len(U128)} tokens)")
+    # v11 REUSE: with a checkpoint present, U128 is frozen at the v10 value.
+    # J depends on U128 (projector onto the token set), so wiki/code/chat
+    # samples (identical to v10) keep their cached J only under identical U128.
+    ckpt = os.path.join(results_dir, "exp27_jcache.pt")
+    ck: dict | None = None
+    if os.path.exists(ckpt):
+        try:
+            ck = torch.load(ckpt, map_location="cpu")
+            print(f"J-cache ckpt loaded: n={len(ck.get('JR', {}))}")
+        except Exception as e:
+            print(f"J-cache ckpt load failed: {e}; fresh run")
+    if ck is not None:
+        U128 = list(ck["U128"])
+        print(f"U_128 frozen from ckpt ({len(U128)} tokens)")
+    else:
+        counts: dict[int, int] = {}
+        for dom in domains:
+            for si, s in enumerate(pool[dom]):
+                with torch.no_grad():
+                    out = m(input_ids=s["input_ids"].to(m.device),
+                            attention_mask=s["attention_mask"].to(m.device))
+                p = torch.softmax(out.logits[0, -1].float(), dim=-1)
+                for t in p.topk(128).indices.tolist():
+                    counts[t] = counts.get(t, 0) + 1
+        U128 = sorted([t for t, _ in sorted(counts.items(), key=lambda x: -x[1])[:128]])
+        print(f"U_128 built fresh ({len(U128)} tokens)")
 
     cfgs = _j_configs()
     positions_all = sorted({p for _, _, p in cfgs})
     Ss = sorted({S for S, _, _ in cfgs})
     print(f"J configs: {len(cfgs)} per sample/layer; positions {positions_all}; S {Ss}")
 
-    # --- checkpoint: resume J-cache from a prior run (same pool/cfgs/U128) ---
-    pool_fp = hashlib.sha256(
+    # --- partial checkpoint reuse (v11) ---
+    # Per-domain pool fingerprint: math is regenerated (v11 pool fix), so its
+    # fingerprint differs from the ckpt and its entries are recomputed.
+    pool_fp = {d: hashlib.sha256(pool[d][0]["input_ids"].flatten().numpy().tobytes())
+               .hexdigest()[:12] for d in domains}
+    pool_fp_combined = hashlib.sha256(
         b"".join(pool[d][0]["input_ids"].flatten().numpy().tobytes()
                  for d in domains)).hexdigest()[:12]
-    ckpt = os.path.join(results_dir, "exp27_jcache.pt")
-    do_j = True
-    if os.path.exists(ckpt):
-        try:
-            ck = torch.load(ckpt, map_location="cpu")
-            ok = (ck["cfgs"] == cfgs and ck["U128"] == U128
-                  and ck["pool_fp"] == pool_fp and ck["layers"] == layers)
-            print(f"J-cache ckpt: match={ok} (n={len(ck.get('JR', {}))})")
-            if ok:
-                JR, P128, RANKS, H = ck["JR"], ck["P128"], ck["RANKS"], ck["H"]
-                do_j = False
-                print(f"J-cache RESUMED from {ckpt} — skipping J-loop")
-        except Exception as e:
-            print(f"J-cache ckpt load failed: {e}; recomputing")
-
-    # One forward per (sample, S): logits + hs at all positions.
-    # (only needed for the J-loop; on resume H comes from the checkpoint)
-    fwd: dict[tuple, dict] = {}
-    if do_j:
-        for dom in domains:
-            for si in range(n_samples):
-                s = pool[dom][si]
-                for S in Ss:
-                    fwd[(dom, si, S)] = _forward_prefix(m, s, S, layers, positions_all)
-        print(f"Forward cache: {len(fwd)} forwards")
-
-    # J-cache at U_128 per (dom, si, S, pos), plus per-sample ranks.
+    ckpt_fp = ck["pool_fp"] if ck is not None else {}
     JR: dict[tuple, torch.Tensor] = {}
     P128: dict[tuple, torch.Tensor] = {}
     RANKS: dict[tuple, tuple[float, float, float]] = {}
     H: dict[tuple, torch.Tensor] = {}
+    n_tot = n * len(layers) * len(cfgs)
+    if ck is not None:
+        # v11: accept only COMPLETE ckpts (partial from a crashed run would
+        # leave _metrics with missing keys -> KeyError)
+        if len(ck["JR"]) != n * len(layers) * len(cfgs):
+            print(f"ckpt PARTIAL/legacy-n ({len(ck['JR'])}/{n_tot}) -> fresh run")
+            ck = None
+    if ck is not None:
+        if isinstance(ckpt_fp, str):  # legacy combined fp (v10): reuse only if
+            # the WHOLE pool is byte-identical (v11 changes math -> no reuse)
+            match = ckpt_fp == pool_fp_combined
+            print(f"legacy ckpt fp match={match}")
+        else:
+            match = True
+    if ck is not None and match:
+        for k in ck["JR"]:
+            dom_ok = (isinstance(ckpt_fp, str)
+                      or pool_fp.get(k[0]) == ckpt_fp.get(k[0]))
+            if dom_ok:
+                JR[k], P128[k], RANKS[k], H[k] = (ck["JR"][k], ck["P128"][k],
+                                                   ck["RANKS"][k], ck["H"][k])
+        changed = [d for d in domains if pool_fp[d] != ckpt_fp.get(d)]
+        print(f"J-cache REUSE: {len(JR)}/{n_tot} entries; regenerated domains: {changed}")
 
+    # One forward per (sample, S) only where J is missing: logits + hs at pos.
+    fwd: dict[tuple, dict] = {}
+    for dom in domains:
+        for si in range(n_samples):
+            for S in Ss:
+                need_p = sorted({p for l in layers for (S2, _, p) in cfgs
+                                 if S2 == S and (dom, si, l, S, p) not in JR})
+                if need_p:
+                    fwd[(dom, si, S)] = _forward_prefix(m, pool[dom][si], S, layers, need_p)
+    print(f"Forward cache: {len(fwd)} forwards")
+
+    # J-cache at U_128 per (dom, si, S, pos), plus per-sample ranks.
+    # (JR/P128/RANKS/H already populated above from ckpt reuse — do NOT reinit)
     total = n * len(layers) * len(cfgs)
-    done = 0
+    done = len(JR)
     for dom in domains:
         for si in range(n_samples):
             for l in layers:
                 for (S, _, p) in cfgs:
+                    if (dom, si, l, S, p) in JR:
+                        continue  # reused from checkpoint
                     f = fwd[(dom, si, S)]
                     p128 = torch.softmax(f["logits"][-(p + 1)], dim=-1)[U128]
                     p128 = (p128 / p128.sum()).to(m.device)
@@ -225,7 +268,7 @@ def main(
                     H[(dom, si, l, S, p)] = f["hs"][l][p]
                     done += 1
                 print(f"  {dom} s{si} L{l}: {len(cfgs)} J done ({done}/{total})")
-    if do_j:
+    if done > 0 or len(JR) < total:  # v11: persist newly computed J (reuse+new)
         torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
                     "cfgs": cfgs, "U128": U128, "pool_fp": pool_fp,
                     "layers": layers, "D": D, "n_samples": n_samples,
@@ -283,9 +326,12 @@ def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
     Ks = (32, 64, 128)
     pos_pairs_S64 = ((0, 1), (1, 2), (2, 4), (4, 8), (8, 16))
     pos_pairs_Sother = ((0, 1), (1, 2))
-    pos_pairs_S128 = ((0, 1), (1, 2), (64, 65))  # truncation test 6.2
+    pos_pairs_S128 = ((0, 1), (1, 2), (32, 33))  # v11: dip diagnostic (64,65 = causal identity, retired)
     per_layer: dict[str, dict] = {}
     for l in layers:
+        missing = [(d, si, l, 64, 0) for d in domains for si in range(n_samples)
+                   if (d, si, l, 64, 0) not in JR]
+        assert not missing, f"JR missing {len(missing)} keys, e.g. {missing[:3]}"
         Lres: dict = {"D": D}
         Lres["configs"] = {}
         # sigma_d per S (pos 0, full samples of the S-prefix pool).
@@ -396,8 +442,8 @@ def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
             "per_sample": [[d, c1, c2, c3] for (d, c1, c2, c3) in base_samples],
             "cos_p": base_cos_p,
         }
-        # truncation test 6.2: C_a(S=128, pos 64->65) vs C_a(S=64, pos 0->1).
-        Lres["trunc_test"] = Lres["configs"].get("S128_K64_pair64_65", {})
+        # v11 dip diagnostic: C_a(S=128, pos 32->33, ctx 96/97) vs pos0 (ctx 127).
+        Lres["trunc_test"] = Lres["configs"].get("S128_K64_pair32_33", {})
         per_layer[str(l)] = Lres
     return per_layer
 
@@ -423,7 +469,7 @@ def _selfcheck() -> None:
     assert abs(_cos(v, -v) + 1.0) < 1e-5
     # config set.
     cfgs = _j_configs()
-    assert (64, 128, 16) in cfgs and (256, 128, 0) in cfgs and (128, 128, 64) in cfgs
+    assert (64, 128, 16) in cfgs and (256, 128, 0) in cfgs and (128, 128, 32) in cfgs
     assert len(cfgs) == 6 + 9 + 2, f"cfg count {len(cfgs)}"
     print("selfcheck OK (ranks, F, cos, configs)")
 
