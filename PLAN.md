@@ -68,10 +68,13 @@
       pair (32,33)@S128 (context 96/97, mid-sequence) vs pos0@S128 (ctx 127) vs pos0@S64 (ctx 63).
     - FIX C: отменён (middle chunk) — pos32 pair достаточен, YAGNI.
     - cfgs v11: S64(6)+S32(3)+S128{0,1,2,32,33}(5)+S256(3) = 17.
-    - REUSE v10-ckpt: wiki/code/chat S∈{32,64,256} + S128{0,1,2} = 15 из 17 (дет. сэмпл + U128).
-      New J: math 17×8×6=816 + wiki/code/chat S128{32,33} 2×24×6=288 = 1104 J (~45 min T4).
-      Forwards: math all S (32) + wiki/code/chat S128 (24) = 56.
-    - JSON: exp27_noise_floor_v11.json. findings.md обновить после.
+    - REUSE: per-domain pool_fp + legacy-combined (v10) + partial-reject + _metrics key-guard.
+      **РЕАЛЬНОСТЬ (проверено по v10-ckpt):** v10-ckpt хранит pool_fp как legacy СТРОКУ (combined,
+      не per-domain) + n_samples=8. v11 меняет math → combined fp не совпадает → **reuse НЕ
+      сработает → v11 = ПОЛНЫЙ пересчёт 3264 J (~2.3h T4)**. Reuse-код остаётся для будущих
+      ckpt (per-domain fp). 1104-J сценарий недостижим без re-pull v10-ckpt в per-domain.
+    - JSON: exp27_noise_floor.json (оверрайт v10, т.к. полный пересчёт). findings.md обновить после.
+    - v11 PUSHED.
 
   - ЧЕКПОИНТ-ЦЕПОЧКА: v9 J-loop ~45min -> ckpt в /kaggle/working -> метрики ~2-5min на CPU.
     Если fail ПОСЛЕ ckpt: скачать exp27_jcache.pt из output, починить, --resume локально.
