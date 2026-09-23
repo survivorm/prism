@@ -23,7 +23,7 @@ def get_layer_types(model: AutoModelForCausalLM) -> list[str]:
 
 _DOMAIN_DATASETS = {
     "wiki": ("allenai/c4", "en", "train", "text"),
-    "math": ("openai/gsm8k", "main", "train", "question"),
+    "math": ("nvidia/OpenMathInstruct-2", None, "train", "problem"),
     "code": ("neyralabs/apex-agents", None, "train", "prompt"),
     "chat": ("HuggingFaceH4/ultrachat_200k", None, "train_sft", "messages"),
 }
@@ -75,7 +75,7 @@ def load_calibration_data(
 ) -> list[dict[str, torch.Tensor]]:
     """Load and tokenize calibration data.
 
-    domain: 'wiki' (C4), 'math' (GSM8K), 'code' (apex-agents), 'chat' (ultrachat).
+    domain: 'wiki' (C4), 'math' (OpenMathInstruct-2), 'code' (apex-agents), 'chat' (ultrachat).
     Falls back to wiki if the target dataset is unavailable.
     """
     tokenizer = AutoTokenizer.from_pretrained(model_name)

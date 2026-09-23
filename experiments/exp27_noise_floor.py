@@ -58,7 +58,10 @@ def _ranks(J: torch.Tensor) -> tuple[float, float, float]:
 def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dict:
     """Per domain: n texts of exactly L tokens. ONE stream pass (min_length=1):
     long texts kept, shorts concatenated (left-aligned prefix property holds).
-    Retries on rate-limited (near-empty) streams."""
+    Retries on rate-limited (near-empty) streams.
+    v12: math = nvidia/OpenMathInstruct-2 'problem' (14M rows, many >= L tokens);
+    concat fallback kept only as safety net. Overdraw n*64: math has short
+    problems, need margin for the >=L filter."""
     from transformers import AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(model_name)
@@ -67,14 +70,17 @@ def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dic
         big: list[dict] = []
         for att in range(5):
             big = load_calibration_data(
-                model_name, max_length=L, min_length=1, n_samples=n * 32, domain=dom,
+                model_name, max_length=L, min_length=1, n_samples=n * 64, domain=dom,
             )
-            if len(big) >= n * 4:
+            data0 = [s for s in big if s["input_ids"].shape[1] >= L]
+            # break: stream gave >=L filter enough, OR the pass finished a full
+            # n*64 buffer (no point in a 5th pass when the source is just short)
+            if len(data0) >= n or len(big) >= n * 64:
                 break
-            print(f"  pool {dom}: stream gave {len(big)} < {n * 4}, retry {att + 1}...")
+            print(f"  pool {dom}: stream gave {len(data0)} >=L, retry {att + 1}...")
             time.sleep(10 * (att + 1))
-        data = [s for s in big if s["input_ids"].shape[1] >= L]
-        if len(data) < n:  # intrinsically short (gsm8k): concatenate
+        data = data0
+        if len(data) < n:  # intrinsically short sources: concatenate
             buf = ""
             out = []
             consumed = 0  # v11 fix: full non-overlapping 320-word windows (v10 had 120-word
@@ -320,6 +326,8 @@ def main(
         "U128_sha256_8": hashlib.sha256(U_bytes).hexdigest()[:16],
         "U128_source": ("fresh (v11 pools); J partly cached from v10 ckpt, U128 set-identical"
                        if u128_frozen else "fresh (v11 pools)"),
+        "math_source": "nvidia/OpenMathInstruct-2 (v12)",
+        "pool_fp": pool_fp,  # data provenance (fallback to C4 would show in the log AND change these)
         "device": device,
     }
     result = {
