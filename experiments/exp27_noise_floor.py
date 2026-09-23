@@ -216,7 +216,7 @@ def main(
         # v11: accept only COMPLETE ckpts (partial -> missing keys in
         # _metrics -> KeyError). Key coverage, NOT count: leftover extra
         # keys (stale v10 (128,64)/(128,65)) are fine; missing keys not.
-        _exp = {(d, si, l, S, p) for d in domains for si in range(n)
+        _exp = {(d, si, l, S, p) for d in domains for si in range(n_samples)
                 for l in layers for (S, _, p) in cfgs}
         _miss = _exp - set(ck["JR"])
         if _miss:
