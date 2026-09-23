@@ -1,31 +1,3 @@
-## exp27 v12 — review: math pool = OpenMathInstruct-2
-
-Контекст: v11 прошёл (3264 J, 2.26h), но math-пул = 2 уникальных текста из 8
-(GSM8K-вопросы ~40 токенов, concat-окно с 120-словным перекрытием). В v11 math
-исправлен (полный сдвиг 320 слов + dedup), но пул из 2-3 уникальных GSM8K-вопросов
-всё равно узкий. Решено: math = nvidia/OpenMathInstruct-2 (колонка 'problem',
-14M строк, diverse: augmented_math/math/augmented_gsm8k/mixue).
-
-Дельта v11 -> v12 (полный пересчёт, ~2.3h T4, без ckpt-переиспользования):
-1. prism/calibration.py: math -> ("nvidia/OpenMathInscript-2"... "problem") — 1 строка
-2. _load_pool: overdraw n*32 -> n*64 (длинных проблем ~2%: 9/500 >= 256 токенов;
-   concat-fallback (v11, без перекрытий + dedup) добирает остальное)
-3. retry-цикл: break при data0 >= n ИЛИ полный буфер (не жрём 5 passes на коротких источниках)
-4. manifest: math_source + pool_fp (провенанс данных)
-
-Локальный зонд (500 строк стрима): 23 >=128, 11 >=200, 9 >=256 токенов.
-Пул соберётся из ~8 длинных проблем (если их >=8 в overdraw) либо concat'ом.
-Первые ~500 строк стрима = diverse-микс (не однородные дубли) — проверено по viewer.
-
-Сам-ревью (полный проход):
-- pool: 3 сценария (>=8 длинных / <8 -> concat / rate-limit -> retry) — все корректны
-- retry: data0 всегда определён; полный буфер -> сразу break
-- ckpt: fresh Kaggle run без ckpt -> полный расчёт (указано пользователем)
-- _metrics: ноль изменений
-- AST + selfcheck: OK
-
-Скрипт:
-```python
 """Exp 27: Noise-floor calibration and robustness sweep for J^(p)(x).
 
 docs/Exp27.md. Closes the five holes of exp01 v6:
