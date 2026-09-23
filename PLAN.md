@@ -74,7 +74,15 @@
       сработает → v11 = ПОЛНЫЙ пересчёт 3264 J (~2.3h T4)**. Reuse-код остаётся для будущих
       ckpt (per-domain fp). 1104-J сценарий недостижим без re-pull v10-ckpt в per-domain.
     - JSON: exp27_noise_floor.json (оверрайт v10, т.к. полный пересчёт). findings.md обновить после.
-    - v11 PUSHED.
+    - v11 PUSHED. **v11 COMPLETE 09-23 (8147s T4, zero reuse, full 3264J):** C_b чистый (math dedup ok):
+      +0.009/+0.021/+0.063/+0.068/+0.104/+0.098 (L6..L23) = ORTH/WEAK -> 18x F рост с глубиной.
+      C_a 0.061..0.229 (8-41x F). Dip @ S128 = context 127 (не mid-context). L23 sigma_d ~96-104 =
+      pre-RMSNorm (не баг). ARI ~ 0 (скаляры, домены не кластеризуются). findings.md (112+ строк, 669fd02).
+    - **POST pair matrix (496 пар, jcache локально, без GPU):** тело ~0 + положительный хвост
+      (max 0.29 -> 0.83 с глубиной), same-dom = cross-dom (Δ<0.01) -> волокна НЕ доменные.
+      results/exp27_pair_matrix_S64K64p0.pt + findings §6.5.
+    - **Будущее:** --pair-matrix в ядре не нужен (сделано post-proc). GDN 128-boundary micro-sweep.
+      J-space ARI (по матрицам, не скалярам).
 
   - ЧЕКПОИНТ-ЦЕПОЧКА: v9 J-loop ~45min -> ckpt в /kaggle/working -> метрики ~2-5min на CPU.
     Если fail ПОСЛЕ ckpt: скачать exp27_jcache.pt из output, починить, --resume локально.

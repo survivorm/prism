@@ -88,6 +88,29 @@ tokens; unverified, would need architecture-level check.
   112 pairs at C~1). v11 math C_b 0.039/0.063/0.106/0.117/0.145/0.158
   matches the other domains: the math artifact is gone.
 
+## 6.5 Full between-sample pair matrix (496 pairs, S64 K64 pos0)
+
+Post-processed from the v11 jcache (no GPU). Gauge-free J, cosine of
+J_i/delta_ij over all 32 samples; `results/exp27_pair_matrix_S64K64p0.pt`
+(32x32 per layer). Within-domain column reproduces the JSON C_b_mean exactly.
+
+| layer | min | p5 | mean | p95 | max | same-dom | cross-dom |
+|---|---|---|---|---|---|---|---|
+| L6 | -0.031 | -0.003 | +0.011 | +0.050 | +0.288 | +0.009 | +0.012 |
+| L12 | -0.077 | 0.000 | +0.021 | +0.105 | +0.339 | +0.021 | +0.021 |
+| L18 | -0.000 | 0.000 | +0.065 | +0.262 | +0.615 | +0.063 | +0.066 |
+| L19 | -0.000 | 0.000 | +0.072 | +0.291 | +0.623 | +0.068 | +0.073 |
+| L22 | 0.000 | 0.000 | +0.109 | +0.436 | +0.749 | +0.104 | +0.111 |
+| L23 | 0.000 | 0.000 | +0.106 | +0.471 | +0.831 | +0.098 | +0.108 |
+
+Reading: the body of the distribution is at 0 (most pairs orthogonal,
+p5 = 0 from L12 up) plus a long positive tail (max 0.29 -> 0.83 with
+depth) - a minority of "aligned" pairs growing with depth, the same
+gradient as the C_b mean. **No domain structure**: same-domain mean =
+cross-domain mean within 0.01 at every layer, matching the ARI ~ 0 of
+Section 6 - the fibers are not domain fibers. Almost no anti-correlated
+pairs (min >= -0.077): no "opposite" sheets observed.
+
 ## 7. Conclusions
 
 1. The gauge-free J field is coherent at every layer (C_a 8-55x F) —
@@ -107,6 +130,7 @@ tokens; unverified, would need architecture-level check.
 ## 8. Next
 
 - GDN 128-boundary check (S=120/128/132 micro-sweep) for the dip.
-- Full J-space clustering for ARI (requires the 1.7GB ckpt, not the JSON
-  scalars): do the sheets cluster by domain?
+- Full J-space clustering for ARI on the J matrices themselves (the scalar
+  ARI of Section 6 is ~0; the 32x32 pair matrices of Section 6.5 show the
+  positive tail is not domain-structured).
 - v10 vs v11 C_b table as a "math artifact" case study in the paper.
