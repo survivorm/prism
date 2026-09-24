@@ -83,13 +83,10 @@
       results/exp27_pair_matrix_S64K64p0.pt + findings §6.5.
     - **Будущее:** --pair-matrix в ядре не нужен (сделано post-proc). GDN 128-boundary micro-sweep.
       J-space ARI (по матрицам, не скалярам).
-  - **v12 (ждёт ревью, commit 1eddbd2):** math-пул = nvidia/OpenMathInstruct-2 'problem'
-    (GSM8K-вопросы degenerate). overdraw n*32->n*64; retry: break при data0>=n или полный буфер;
-    manifest += math_source/pool_fp. **ПОЛНЫЙ пересчёт 3264J ~2.3h T4** (user: «если реально
-    требуют пересчёта — пересчитаем, не так дорого подождать»). Локальный зонд: 9/500 строк >=256 токенов
-    -> concat-fallback (v11-окна + dedup) основной путь, long-проблемы — bonus. Без shuffle стрима
-    (первые ~500 строк = diverse-микс, проверено по viewer).
-    **РЕВЬЮ-ГЕЙТ: docs/exp27_v12_review.md -> правки/отмашка -> push.**
+  - **v12 COMPLETE (9679s, commit 1eddbd2+19d7740):** math = nvidia/OpenMathInstruct-2 'problem'
+    (fp e71cc282c85d, dedup 8/8). C_a ≈ v11 (0.071..0.246), C_b чуть ниже v11 (0.010..0.088).
+    **exp27.5 pair matrix (полная 496 пар):** same≈cross на ВСЕХ слоях (домен. структура плоская),
+    positive tail растёт с глубиной: p95 0.04->0.42, max 0.46->0.81. Sanity: means == C_b_mean OK.
 
   - ЧЕКПОИНТ-ЦЕПОЧКА: v9 J-loop ~45min -> ckpt в /kaggle/working -> метрики ~2-5min на CPU.
     Если fail ПОСЛЕ ckpt: скачать exp27_jcache.pt из output, починить, --resume локально.
