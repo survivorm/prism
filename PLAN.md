@@ -83,7 +83,21 @@
       results/exp27_pair_matrix_S64K64p0.pt + findings §6.5.
     - **Будущее:** --pair-matrix в ядре не нужен (сделано post-proc). GDN 128-boundary micro-sweep.
       J-space ARI (по матрицам, не скалярам).
-  - **v12 COMPLETE (9679s, commit 1eddbd2+19d7740):** math = nvidia/OpenMathInstruct-2 'problem'
+  ### exp27.5 FULL (docs/Exp27.5.md) — post-proc из jcache, без GPU
+  - [x] **А (частично):** pair matrix 496 (C_ij, S64 K128 pos0, 6 слоёв) — results/exp27_pair_matrix_S64K64p0.json + exp27_5_postprocess.json (half-split CI, ARI~0, dip). commit 46e60f4/97a5334.
+  - [ ] **A. domain:** C_within/C_cross/T_domain (в pair matrix есть) + p_perm (B=1000 пермутации доменных меток) + p_rot (B=100 спектральных нулей: G_i = R_i Λ_i R_i^T, R_i — случайная ортогональная из Хаара)
+  - [ ] **A. half-split ПО ТЗ (не мой 16/16-по-наблюдениям):** на КАЖДЫЙ домен 8 сэмплов → все C(8,4)=70 разбиений 4+4; C_within^A (6 пар) vs C_within^B (6 пар); Δ_half = |CA-CB|, S_half = 1-|CA-CB|/(max+eps); отчёт mean Δ_half, mean S_half (по доменам, 6 слоёв)
+  - [ ] **B. корреляции (Spearman, 496 пар):** ρ(C_ij, Δh) — Δh = ‖h_i-h_j‖₂, h из H[(dom,si,l,64,0)]; ρ(C_ij, ΔH) — H_i = -Σ p log p на U128; ρ(C_ij, Δσ_z) — σ_z,i = std_U(log p_i) (ДЕВИАЦИЯ: z не в ckpt, log p вместо logits — пометить в JSON); ρ(C_ij, ΔlogE) — E_i = ‖J_i‖²_F, E<1e-12 → exclude + логировать; ρ(C_ij, Δg_uni) — g_uni,i = ‖Q J_i‖²_F/‖J_i‖²_F, Q = uu^T, u = 1/√128·1
+  - [ ] **B. entropy quartiles:** 32 сэмпла → 4 квартиля по H_i (по 8); C_within-quartile vs C_cross-quartile; T_ent + пермутационный тест (метки квартилей, размеры групп фикс) B=1000
+  - [ ] **C. clustering (label-free, D^G = 1-K^G, K^G = косинус грамианов G_i = J_i J_i^T):** linkage=average precomputed; k=2..8 silhouette S(k) → S_max + argmax k; gap statistic (B=100 spectral nulls, W_k = Σ (D²)/2n_c, правило Gap(k)≥Gap(k+1)-s_{k+1}); half-split silhouette 16+16 ×50 (mean S^A, mean S^B, corr); ρ_NN (within-cluster K^G vs ближайший сосед); cophenetic corr (Spearman D^G vs coph)
+  - [ ] **D. uniform mode:** mean/max g_uni + доля g_uni>0.01; C_drop = C_ij - C_ij^rest, J_rest = (I-Q)J_i (ожидаем ≈0)
+  - [ ] **JSON 13.1:** results/exp27_5_postprocess.json (заменить текущий 1.2K-файл: params + per_layer{domain{C_within,C_cross,T_domain,p_perm,p_rot}, halfsplit{mean_abs_diff,mean_stability}, correlations{5}, entropy_quartiles{4}, uniform_mode{3}, clustering{9}})
+  - [ ] **Таблица 13.2 + выводы** в docs/exp27_findings.md (сценарии 15.1-15.5)
+  - ДАННЫЕ: jcache 1.7G локально (JR [128,1024] gauge-free по (dom,si,l,S,pos), P128 [128] норм p, H hidden states). J в ckpt УЖЕ gauge-free → P не применять повторно (11.1). K=128 = полный JR (не срез). seed=42 фиксированный.
+  - Скрипт: experiments/exp27_5_postprocess.py (новый; текущий results-файл — его временный выход).
+  - Границы: не трогать exp27_noise_floor.py, не пушить GPU (всё CPU), jcache не коммитить (gitignore).
+
+    - **v12 COMPLETE (9679s, commit 1eddbd2+19d7740):** math = nvidia/OpenMathInstruct-2 'problem'
     (fp e71cc282c85d, dedup 8/8). C_a ≈ v11 (0.071..0.246), C_b чуть ниже v11 (0.010..0.088).
     **exp27.5 pair matrix (полная 496 пар):** same≈cross на ВСЕХ слоях (домен. структура плоская),
     positive tail растёт с глубиной: p95 0.04->0.42, max 0.46->0.81. Sanity: means == C_b_mean OK.
