@@ -38,3 +38,5 @@ results/.gramians
 *.orig
 _auto_chain/exp27_v9/
 results/*.json
+
+results/exp27_jcache.pt
