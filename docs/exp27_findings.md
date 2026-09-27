@@ -135,76 +135,63 @@ pairs (min >= -0.077): no "opposite" sheets observed.
   positive tail is not domain-structured).
 - v10 vs v11 C_b table as a "math artifact" case study in the paper.
 
-## 9. Exp 27.5 (significance, coupling, clustering — post-processing of v11 jcache)
+## 9. Exp 27.5 — significance, coupling, clustering (post-processing of v11 jcache)
 
-S=64, K=128, pos=0, N=32, seed=42. Code: experiments/exp27_5_postprocess.py.
+Spec `docs/Exp27.5.md`; script `experiments/exp27_5_postprocess.py`; output
+`results/exp27_5_postprocess.json`. Block A: permutation test (B=1000) + spectral
+null (B_rot=100, eigenvalue-preserving) + half-split stability (70 partitions of
+8 per domain). Block B: Spearman rho(C, Delta h/H/sigma_z/logE/g_uni) + entropy
+quartile test. Block C: agglomerative clustering (k=2..8), silhouette, gap,
+rho_NN, cophenetic, half-split silhouette. Block D: uniform-mode share g_uni.
 
-### 9.1 Domain axis (Block A)
+**Critical correction (review `docs/exp27.5_review.md`):** the first 27.5 pass
+computed the pair cosine from the **RAW** `JR` cached Jacobians, not the gauge-free
+`J^(p) = P(p)J` that spec §5.1/§11.1 require (the cache holds raw J; the projector
+was never applied). The bug: the per-sample mean was computed with einsum
+`'ik,ikd->kd'` (summed over samples) instead of `'ik,ikd->id'` (per-sample), so the
+uniform mode was NOT removed. Corrected projection gives `g_uni = 3e-13` (spec's
+machine-epsilon expectation) and `sum_k J^(p)_{i,k,d} = 0` exactly. The raw-J "coherence
+grows with depth 0.17→0.99" was a **gauge (uniform-mode) artifact**, not signal.
 
-| layer | C_within | C_cross | T_domain | p_perm | p_rot |
-|---:|---:|---:|---:|---:|---:|
-| 6  | 0.177 | 0.166 | +0.010 | 0.047 | 0.010 |
-| 12 | 0.255 | 0.240 | +0.016 | 0.007 | 0.010 |
-| 18 | 0.637 | 0.626 | +0.011 | 0.017 | 0.010 |
-| 19 | 0.681 | 0.673 | +0.009 | 0.032 | 0.010 |
-| 22 | 0.877 | 0.876 | +0.001 | 0.283 | 0.277 |
-| 23 | 0.994 | 0.994 | +0.000 | 0.065 | 0.455 |
+All numbers below are gauge-free (S=64, K=128, pos0, N=32, 496 pairs, seed 20260918).
 
-- Domain axis REAL at L6-L19 (p_perm < 0.05 AND p_rot < 0.05 — survives the
-  eigenvalue-preserving null: not a pure spectral artifact), marginal at L23
-  (p_perm=0.065), absent at L22/L23 where C_within == C_cross (everything
-  aligned; T_domain -> 0). Effect sizes tiny (T ~ 0.01): domain is a minor
-  axis, not a partition.
-- halfsplit reliability: mean_stability 0.77 -> 0.999 with depth (stable).
+| L | C_within | C_cross | T_domain | p_perm | p_rot | halfstab | rho(C,dlh) | rho(C,dH) | rho(C,dlogE) | S_max | coph |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 6  | 0.010 | 0.0075 | +0.0026 | 0.167 | 0.010 | 0.303 | -0.079 | -0.171 | -0.102 | 0.129 | 0.469 |
+| 12 | 0.018 | 0.0132 | +0.0044 | 0.138 | 0.010 | 0.305 | -0.069 | -0.179 | -0.173 | 0.159 | 0.527 |
+| 18 | 0.045 | 0.0422 | +0.0032 | 0.338 | 0.010 | 0.382 | -0.089 | -0.174 | -0.185 | 0.182 | 0.629 |
+| 19 | 0.049 | 0.0466 | +0.0028 | 0.324 | 0.010 | 0.369 | -0.023 | -0.168 | -0.177 | 0.183 | 0.633 |
+| 22 | 0.072 | 0.0736 | -0.0019 | 0.518 | 0.911 | 0.418 | -0.168 | -0.074 | -0.055 | 0.188 | 0.595 |
+| 23 | 0.065 | 0.0732 | -0.0078 | 0.710 | 1.000 | 0.402 | -0.209 | -0.055 | -0.177 | 0.190 | 0.542 |
 
-### 9.2 Signal axes (Block B)
+- **C_within ≈ exp27 C_b** (both within-domain, between-sample): 0.010→0.065 here
+  (K128) vs 0.009→0.098 in the main sweep (K64) — consistent. The raw-J 27.5 numbers
+  (0.18→1.0) are void.
+- **Domain axis NOT significant**: p_perm 0.14–0.71 (all ≥ 0.05), T_domain 0.003–0.007
+  (1–3% of C). Spec §15.1 — domains do not explain the coherence.
+- **Spectral null rejected only at L6–L19** (p_rot = 0.010); at L22/L23 p_rot = 0.91/1.0,
+  so the weak late-layer signal is not distinguishable from spectral structure.
+- **No cross-sample cluster structure**: S_max 0.13–0.19 (< 0.3 = weak/none),
+  half-split stability 0.30–0.42 (weak, not the 0.77+ the raw-J pass showed),
+  cophenetic 0.47–0.63 (marginal).
+- **rho_NN ill-conditioned** here (11–32): with cosines ~0.01–0.07 both K_within and
+  K_to_nearest are ~0, so the ratio is dominated by float noise. The spec's 1/1.5/2
+  thresholds were set for the raw-J regime; do not read separation from it.
+- **Direction–magnitude coupling** is the one robust signal: rho(C, Delta logE) is
+  consistently negative (-0.10…-0.19) across all layers — pairs with closer Jacobian
+  norms align more.
 
-- rho(C, Delta h) negative at L6/L12 (-0.37/-0.30), ~0 at L18/L19: shallow
-  layers pair cosine is ANTI-correlated with hidden distance (structure is
-  local, not global-h driven); deep layers: no hidden-space axis.
-- rho(C, Delta H) negative everywhere (-0.24 -> +0.04): entropy axis weak,
-  monotone in depth.
-- rho(C, Delta logE) negative (up to -0.50 at L18): coherent pairs are
-  pairs of comparable energy (direction-magnitude coupling, not scale).
-- Entropy-quartile test: p = 0.25-0.45 at L6/L12/L22/L23, marginal at
-  L18 (p=0.040). Quartiles do not explain the structure.
+**Verdict (corrected):** at the between-sample level the gauge-free J field shows weak-to-moderate
+between-sample coherence (C ~ 0.01–0.07, = 1.6x the r_eff floor at L6 rising to ~17x
+at L23, so real in the deep layers and at-floor in the shallow ones) with **no significant
+domain axis,
+no stable cross-sample clusters, and a spectral-null pass only in the mid layers (L6–L19)**.
+This is spec scenario §15.1 — a strong negative result for cross-sample geometry; the
+working paradigm stays per-sample local objects and trajectories. The raw-J "coherence
+grows with depth" was a uniform-mode artifact and is retracted.
 
-### 9.3 Label-free clustering (Block C, on D^G = 1 - token-gramian cosine)
-
-| layer | S_max | argmax k | gap k | rho_NN | coph |
-|---:|---:|---:|---:|---:|---:|
-| 6  | 0.220 | 3 | 5 | 1.275 | 0.749 |
-| 12 | 0.305 | 2 | 7 | 1.280 | 0.715 |
-| 18 | 0.361 | 4 | 5 | 1.096 | 0.808 |
-| 19 | 0.461 | 3 | 7 | 1.136 | 0.772 |
-| 22 | 0.626 | 2 | 2 | 1.193 | 0.799 |
-| 23 | 0.601 | 2 | 2 | 1.001 | 0.807 |
-
-- S_max >= 0.3 from L12 (notable); strongest at L22 (0.626, k=2 — a single
-  coarse split in deep layers where everything is aligned). rho_NN ~ 1.1-1.3
-  (weak separation), coph 0.71-0.81 (cluster tree consistent with D^G).
-- Reading (pre-registered 15.2 flavor): cluster structure exists and grows
-  with depth, is NOT domain-structured (Section 6.5 + p_rot null), and
-  dissolves into a global alignment at L22/L23. Axis attribution: energy
-  (logE) and, in shallow layers, local hidden distance.
-
-### 9.4 Uniform mode (Block D)
-
-g_uni 0.12-0.20 (12-20% of J energy in the uniform token direction),
-C_drop = C - C_rest: -0.004 .. -0.025 — removing the uniform direction
-slightly lowers pair cosines: the uniform mode is a shared, weakly
-structure-bearing component, not an artifact carrier.
-
-### 9.5 Conclusion (27.5)
-
-Scenario 15.2 (non-domain structure) with a domain shadow: a real but minor
-domain axis at L6-L19 (survives the spectral null), a depth-growing
-label-free cluster structure that is NOT domain-organized, and a transition
-to global alignment at L22/L23. Domain-conditional objects are not
-justified; the working paradigm stays per-sample, with depth as the primary
-axis.
-
-Bugs found in review-vs-TZ (fixed before the run): gap-statistic null was
-degenerate (the same 32 rotations reused across all 100 nulls -> gap invalid)
-and the rotation generator was unseeded (determinism). Both fixed in
-b9a0dea; results above are from the fixed code.
+Bugs fixed in this pass: (1) gauge-free projection einsum (`->kd` → `->id`, the blocker);
+(2) entropy-quartile sign (`-H` → `H`) — a no-op for the numbers (argsort sign only swaps
+quartile labels 0↔3, same partition), removed + documented; (3) gap-statistic null
+degeneracy (all 100 nulls shared 32 rotations → gap invalid; now fresh seeded rotations
+per null); (4) gap rotations now seeded (determinism).

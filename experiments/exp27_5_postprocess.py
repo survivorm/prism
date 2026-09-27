@@ -373,9 +373,12 @@ def run_layer(l, J, P, U, h, labels, rng, D):
     iu = np.triu_indices_from(C, 1)
     corr = {'rho_C_' + k: pair_spearman(C, Dp[k]) for k in
             ['dh', 'dH', 'dsigma_z', 'dlogE', 'dg_uni']}
-    T_ent, p_ent, cw, cc = entropy_quartile_test(C, -np.einsum(
-        'ik,ik->i', P / P.sum(1, keepdims=True),
-        np.log(P / P.sum(1, keepdims=True) + 1e-12)), rng, B=1000)
+    # Quartiles by entropy H. argsort(-H) would give the same 4x8 partition
+    # with quartile labels 0<->3 swapped; T_ent and its permutation test are
+    # invariant to that swap (review C is a no-op for the numbers).
+    _H = np.einsum('ik,ik->i', P / P.sum(1, keepdims=True),
+                   np.log(P / P.sum(1, keepdims=True) + 1e-12))
+    T_ent, p_ent, cw, cc = entropy_quartile_test(C, _H, rng, B=1000)
 
     t0 = time.time()
     KG = token_gramian_cosine(J)
@@ -458,12 +461,18 @@ def main():
     ck = torch.load(a.jcache, map_location='cpu', weights_only=False)
     U = np.asarray(ck['U128'], dtype=np.int64)
     for l in LAYERS:
-        J = np.stack([ck['JR'][(dom, i, l, 64, 0)][:K_MAX].numpy()
-                      for dom in domains for i in range(n_samples)], 0)
+        Jraw = np.stack([ck['JR'][(dom, i, l, 64, 0)][:K_MAX].numpy()
+                         for dom in domains for i in range(n_samples)], 0)
         P = np.stack([ck['P128'][(dom, i, l, 64, 0)][:K_MAX].numpy()
                       for dom in domains for i in range(n_samples)], 0)
         h = np.stack([ck['H'][(dom, i, l, 64, 0)].numpy()
                       for dom in domains for i in range(n_samples)], 0)
+        # Spec 5.1: cache holds RAW J. Apply gauge-free projector J^(p) = P(p)J =
+        # p*(J - Jbar_p) with p = P128 renormalized on U (P128 already restricted+renorm'd).
+        # Jbar must be PER-SAMPLE: Jbar[i,d] = sum_k p[i,k] J[i,k,d] (n, D).
+        p = P / P.sum(1, keepdims=True)
+        Jbar = np.einsum('ik,ikd->id', p, Jraw)          # (n, D)
+        J = p[:, :, None] * (Jraw - Jbar[:, None, :])    # (n, K, D), sum_k J = 0
         per_layer[str(l)] = run_layer(l, J, P, U, h, labels, rng, int(ck['D']))
 
     out = dict(

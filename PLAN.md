@@ -3,8 +3,17 @@
 - [x] код: experiments/exp27_5_postprocess.py (по docs/Exp27.5.md, seed=42, B=1000)
 - [x] review против ТЗ: 2 бага (gap-null вырождение: те же 32 ротации на 100
       итераций; R без manual_seed) — починены (b9a0dea)
-- [x] прогон CPU 2 мин → results/exp27_5_postprocess.json
-- [x] findings: docs/exp27_findings.md §9
+- [x] **review docs/exp27.5_review.md**: blocker-баг gauge-free проекции
+      (einsum 'ik,ikd->kd' суммировал по сэмплам, не по токенам → uniform-мода
+      не снималась). Фикс 'ik,ikd->id' + Jbar[:,None,:]. g_uni 0.12-0.20 -> 3e-13.
+      **Вердикт инвертирован**: «когерентность растёт с глубиной 0.17->0.99» была
+      gauge-artifact (raw J). Честные gauge-free: C_within 0.010->0.065 (нет роста с
+      глубиной), доменная ось НЕ значима (p_perm 0.14-0.71), кросс-сэмпловых
+      кластеров нет (S_max 0.13-0.19). = сценарий ТЗ §15.1.
+      Sign баг entropy-quartile (-H) — no-op для чисел (argsort знак = swap меток
+      0<->3, та же 4x8 partitions), убран + закомментирован.
+- [x] прогон CPU 2 мин → results/exp27_5_postprocess.json (gauge-free)
+- [x] findings: docs/exp27_findings.md §9 (gauge-free, raw-J retracted)
 
 
 # GPU-аудит: какие эксперименты требуют re-run (запрошено пользователем, 2026-08-31)
