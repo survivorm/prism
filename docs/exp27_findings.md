@@ -134,3 +134,77 @@ pairs (min >= -0.077): no "opposite" sheets observed.
   ARI of Section 6 is ~0; the 32x32 pair matrices of Section 6.5 show the
   positive tail is not domain-structured).
 - v10 vs v11 C_b table as a "math artifact" case study in the paper.
+
+## 9. Exp 27.5 (significance, coupling, clustering — post-processing of v11 jcache)
+
+S=64, K=128, pos=0, N=32, seed=42. Code: experiments/exp27_5_postprocess.py.
+
+### 9.1 Domain axis (Block A)
+
+| layer | C_within | C_cross | T_domain | p_perm | p_rot |
+|---:|---:|---:|---:|---:|---:|
+| 6  | 0.177 | 0.166 | +0.010 | 0.047 | 0.010 |
+| 12 | 0.255 | 0.240 | +0.016 | 0.007 | 0.010 |
+| 18 | 0.637 | 0.626 | +0.011 | 0.017 | 0.010 |
+| 19 | 0.681 | 0.673 | +0.009 | 0.032 | 0.010 |
+| 22 | 0.877 | 0.876 | +0.001 | 0.283 | 0.277 |
+| 23 | 0.994 | 0.994 | +0.000 | 0.065 | 0.455 |
+
+- Domain axis REAL at L6-L19 (p_perm < 0.05 AND p_rot < 0.05 — survives the
+  eigenvalue-preserving null: not a pure spectral artifact), marginal at L23
+  (p_perm=0.065), absent at L22/L23 where C_within == C_cross (everything
+  aligned; T_domain -> 0). Effect sizes tiny (T ~ 0.01): domain is a minor
+  axis, not a partition.
+- halfsplit reliability: mean_stability 0.77 -> 0.999 with depth (stable).
+
+### 9.2 Signal axes (Block B)
+
+- rho(C, Delta h) negative at L6/L12 (-0.37/-0.30), ~0 at L18/L19: shallow
+  layers pair cosine is ANTI-correlated with hidden distance (structure is
+  local, not global-h driven); deep layers: no hidden-space axis.
+- rho(C, Delta H) negative everywhere (-0.24 -> +0.04): entropy axis weak,
+  monotone in depth.
+- rho(C, Delta logE) negative (up to -0.50 at L18): coherent pairs are
+  pairs of comparable energy (direction-magnitude coupling, not scale).
+- Entropy-quartile test: p = 0.25-0.45 at L6/L12/L22/L23, marginal at
+  L18 (p=0.040). Quartiles do not explain the structure.
+
+### 9.3 Label-free clustering (Block C, on D^G = 1 - token-gramian cosine)
+
+| layer | S_max | argmax k | gap k | rho_NN | coph |
+|---:|---:|---:|---:|---:|---:|
+| 6  | 0.220 | 3 | 5 | 1.275 | 0.749 |
+| 12 | 0.305 | 2 | 7 | 1.280 | 0.715 |
+| 18 | 0.361 | 4 | 5 | 1.096 | 0.808 |
+| 19 | 0.461 | 3 | 7 | 1.136 | 0.772 |
+| 22 | 0.626 | 2 | 2 | 1.193 | 0.799 |
+| 23 | 0.601 | 2 | 2 | 1.001 | 0.807 |
+
+- S_max >= 0.3 from L12 (notable); strongest at L22 (0.626, k=2 — a single
+  coarse split in deep layers where everything is aligned). rho_NN ~ 1.1-1.3
+  (weak separation), coph 0.71-0.81 (cluster tree consistent with D^G).
+- Reading (pre-registered 15.2 flavor): cluster structure exists and grows
+  with depth, is NOT domain-structured (Section 6.5 + p_rot null), and
+  dissolves into a global alignment at L22/L23. Axis attribution: energy
+  (logE) and, in shallow layers, local hidden distance.
+
+### 9.4 Uniform mode (Block D)
+
+g_uni 0.12-0.20 (12-20% of J energy in the uniform token direction),
+C_drop = C - C_rest: -0.004 .. -0.025 — removing the uniform direction
+slightly lowers pair cosines: the uniform mode is a shared, weakly
+structure-bearing component, not an artifact carrier.
+
+### 9.5 Conclusion (27.5)
+
+Scenario 15.2 (non-domain structure) with a domain shadow: a real but minor
+domain axis at L6-L19 (survives the spectral null), a depth-growing
+label-free cluster structure that is NOT domain-organized, and a transition
+to global alignment at L22/L23. Domain-conditional objects are not
+justified; the working paradigm stays per-sample, with depth as the primary
+axis.
+
+Bugs found in review-vs-TZ (fixed before the run): gap-statistic null was
+degenerate (the same 32 rotations reused across all 100 nulls -> gap invalid)
+and the rotation generator was unseeded (determinism). Both fixed in
+b9a0dea; results above are from the fixed code.
