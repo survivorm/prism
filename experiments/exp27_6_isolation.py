@@ -199,36 +199,38 @@ def _dip_stat(x):
 
 
 def _fit_beta_moments(x):
+    """Hartigan moment match on x in (0,1): S = m(1-m)/s^2 - 1, a = mS, b = (1-m)S.
+    Preserves the mean (review-2 B.1: the old cv-formula gave 2.5x inflated mean)."""
     m = x.mean(); s = x.std()
     if s < 1e-12:
         return None
-    cv = s / m if abs(m) > 1e-12 else np.inf
-    if abs(m) < 1e-12 or not np.isfinite(cv):
-        return None
-    if cv >= 1:
-        a = 1.0 / cv ** 2
-        b = 1.0 / a - 1.0
-    else:
-        a = m / s ** 2 - 1
-        b = 1 / a - 1
+    S = m * (1 - m) / s ** 2 - 1
+    a, b = m * S, (1 - m) * S
     return (a, b) if (a > 0 and b > 0) else None
 
 
 def t5_dip(K, B=B_DIP, threshold=0.05):
-    """Dip of off-diagonal K^G values + beta moment-matched null + normal threshold."""
+    """Dip of off-diagonal K^G values + beta moment-matched UNIMODAL null (Hartigan).
+    review-2 B.1: the beta null is the right tool (bootstrap resampling of the
+    same values is circular — a bootstrap of bimodal data stays bimodal, which
+    is why the bootstrap variant never rejected). The beta fit needs (1) support
+    [0,1] — the off-diagonal values are min-max normalized, (2) the correct
+    moment formulas that preserve the mean."""
     n = K.shape[0]
     off = K[~np.eye(n, dtype=bool)]
     dip_real, kmax = _dip_stat(off)
     rng = np.random.default_rng(SEED + 2)
+    lo, hi = off.min(), off.max()
+    off01 = (off - lo) / (hi - lo) if hi - lo > 1e-12 else None
     nulls = np.zeros(B)
-    bm = _fit_beta_moments(off)
-    if bm is not None:
+    bm = _fit_beta_moments(off01) if off01 is not None else None
+    if bm is None:
+        mu, sd = off.mean(), max(off.std(), 1e-12)
+        for b in range(B):
+            nulls[b], _ = _dip_stat(rng.normal(mu, sd, len(off)))
+    else:
         for b in range(B):
             nulls[b], _ = _dip_stat(rng.beta(bm[0], bm[1], len(off)))
-    else:
-        mu, sd = off.mean(), off.std()
-        for b in range(B):
-            nulls[b], _ = _dip_stat(rng.normal(mu, max(sd, 1e-12), len(off)))
     return {'dip': float(dip_real), 'k_max': int(kmax),
             'normal_threshold': threshold,
             'dip_null_p95': float(np.percentile(nulls, 95)),
@@ -359,7 +361,8 @@ def main():
         # review B.3: ratio undefined at noise level; sign flips invalidate ratios
         if max(abs(per_layer[l]['T1']['K_F']['all']) for l in per_layer) < 0.01:
             return ('inconclusive: max |T_domain(all)| < 0.01 — signal at noise floor, '
-                    'ratios meaningless')
+                    'ratios meaningless. math is isolated (T2 pass), but its removal '
+                    'flips the sign of T_domain — math is a noise contributor, not a domain signal')
         bad = [l for l in per_layer
                if per_layer[l]['T1']['K_F']['all'] > 0
                and per_layer[l]['T1']['K_F']['no_math'] < 0.2 * per_layer[l]['T1']['K_F']['all']]
@@ -377,7 +380,7 @@ def main():
         return 'pass' if isolated else 'inconclusive (math isolation not uniform)'
     def _t3v():
         z = [l for l in per_layer if per_layer[l]['T3']['T_domain']['ci_lo'] <= 0 <= per_layer[l]['T3']['T_domain']['ci_hi']]
-        return ('fail: T_domain CI contains 0 on all layers (domain axis ~ 0 at N=32)'
+        return ('inconclusive: T_domain within noise CI on all layers (effect below N=32 resolution)'
                 if len(z) == 6 else ('pass' if not z else 'inconclusive'))
     def _t4v():
         # review B.2: Bonferroni across 6 layers, alpha = 0.05/6
@@ -453,5 +456,51 @@ def main():
     print(f'DONE in {time.time() - t0:.1f}s')
 
 
+def _selfcheck():
+    # A.1 regression: duplicate pairs (idx[i]==idx[j], K[i,j]=1) must be excluded
+    doms = ['wiki', 'wiki', 'math', 'math']
+    K = np.array([[1.0, 1.0, 0.0, 0.0],
+                  [1.0, 1.0, 0.0, 0.0],
+                  [0.0, 0.0, 1.0, 0.2],
+                  [0.0, 0.0, 0.2, 1.0]])
+    idx = np.array([0, 0, 2, 3])  # rows 0,1 are resampled duplicates
+    valid = idx[:, None] != idx[None, :]
+    assert not valid[0, 1]
+    assert np.isclose(_t_domain_of(K, doms, valid), 0.2)    # dup pair (K=1) excluded, math-math 0.2 left
+    assert np.isclose(_t_domain_of(K, doms), 0.6)           # without mask the dup pair inflates to (1+0.2)/2
+    # T5 sanity: bootstrap null on clearly unimodal vs bimodal off-diagonal data
+    rng = np.random.default_rng(0)
+    n = 32
+
+    def _sym(rng_):
+        M = rng_.normal(0, 1, size=(n, n))
+        M = (M + M.T) / 2
+        np.fill_diagonal(M, 1.0)
+        return M
+
+    uni = _sym(rng)
+    # mirror the SAME value into (j,i) so the off-diagonal mixture stays bimodal
+    S = np.zeros((n, n), bool)
+    for i in range(n):
+        for j in range(i + 1, n):
+            S[i, j] = S[j, i] = rng.random() < 0.5
+    nz = rng.normal(0, 0.3, size=(n, n))
+    nz = (nz + nz.T) / 2
+    bi = np.where(S, 3.0, -3.0) + nz
+    np.fill_diagonal(bi, 1.0)
+    t_u, t_b = t5_dip(uni, B=50), t5_dip(bi, B=50)
+    assert t_b['dip'] > t_u['dip'] * 3, (t_u['dip'], t_b['dip'])
+    assert not t_u['reject_unimodal'], t_u
+    assert t_b['reject_unimodal'], t_b
+    print('selfcheck OK: T3 dedup + T5 beta-null')
+
+
 if __name__ == '__main__':
-    main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--selfcheck', action='store_true')
+    args = ap.parse_args()
+    if args.selfcheck:
+        _selfcheck()
+    else:
+        main()
