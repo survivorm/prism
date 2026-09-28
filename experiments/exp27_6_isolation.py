@@ -113,17 +113,20 @@ def t2_bock(Kg, doms):
             ia = np.where(doms == da)[0]
             ib = np.where(doms == db)[0]
             if a == b:
-                M[a, b] = np.mean([Kg[i, j] for i, j in zip(ia, ib) if i != j])
+                M[a, b] = np.mean([Kg[i, j] for i in ia for j in ib if i != j])
             else:
                 M[a, b] = Kg[np.ix_(ia, ib)].mean()
     return M
 
 
-def _t_domain_of(K, doms):
-    within = [K[i, j] for i in range(len(doms)) for j in range(len(doms))
-              if i != j and doms[i] == doms[j]]
-    cross = [K[i, j] for i in range(len(doms)) for j in range(len(doms))
-             if i != j and doms[i] != doms[j]]
+def _t_domain_of(K, doms, valid=None):
+    """valid: (n,n) bool mask excluding resampled duplicate pairs idx[i]==idx[j]."""
+    n = len(doms)
+    valid = valid if valid is not None else np.ones((n, n), bool)
+    within = [K[i, j] for i in range(n) for j in range(n)
+              if i != j and valid[i, j] and doms[i] == doms[j]]
+    cross = [K[i, j] for i in range(n) for j in range(n)
+             if i != j and valid[i, j] and doms[i] != doms[j]]
     return np.mean(within) - np.mean(cross)
 
 
@@ -136,11 +139,11 @@ def t3_bootstrap(K, doms, H_q, B=B_BOOT):
         idx = rng.integers(0, n, n)
         Kb = K[np.ix_(idx, idx)]
         doms_b = doms[idx]
-        # exclude diagonal duplicates from statistics
-        Td[b] = _t_domain_of(Kb, doms_b)
+        valid = idx[:, None] != idx[None, :]   # exclude resampled duplicate pairs (Kb[i,j]=1)
+        Td[b] = _t_domain_of(Kb, doms_b, valid)
         qb = H_q[idx]
-        w = [Kb[i, j] for i in range(n) for j in range(n) if i != j and qb[i] == qb[j]]
-        c = [Kb[i, j] for i in range(n) for j in range(n) if i != j and qb[i] != qb[j]]
+        w = [Kb[i, j] for i in range(n) for j in range(n) if valid[i, j] and qb[i] == qb[j]]
+        c = [Kb[i, j] for i in range(n) for j in range(n) if valid[i, j] and qb[i] != qb[j]]
         Te[b] = np.mean(w) - np.mean(c)
     def _ci(v):
         return {'mean': float(v.mean()), 'p2.5': float(np.percentile(v, 2.5)),
@@ -161,7 +164,7 @@ def _cluster_labels(DG, ks=range(2, 9)):
         lab = sch.fcluster(Z, t=k, criterion='maxclust')
         if len(set(lab)) < 2:
             continue
-        s = skm.silhouette_score(DG, lab)
+        s = skm.silhouette_score(DG, lab, metric='precomputed')
         if s > best_s:
             best_k, best_s = k, s
     lab = sch.fcluster(Z, t=best_k, criterion='maxclust')
@@ -229,7 +232,7 @@ def t5_dip(K, B=B_DIP, threshold=0.05):
     return {'dip': float(dip_real), 'k_max': int(kmax),
             'normal_threshold': threshold,
             'dip_null_p95': float(np.percentile(nulls, 95)),
-            'reject_unimodal': bool(dip_real > threshold)}
+            'reject_unimodal': bool(dip_real > np.percentile(nulls, 95))}  # review B.4: null-based
 
 
 def t6_eigengap(Kf, Kg):
@@ -295,11 +298,11 @@ def t8_per_sample(J, P, H, labels):
             Jg = (Pl[i][:, None] * (Jraw - c[None, :]))  # gauge-free (same as _gram)
             E = float((Jg ** 2).sum())  # TZ 11.2: E = ||J_i||_F^2 (gauge-free J)
 
-            # TZ 11.2: g_uni = ||Q J_i||^2_F / E_i, Q = u u^T, u = p/||p||
-            # ||QJ||_F^2 = sum_k (u^T J_k)^2 = (c^2).sum() / ||p||^2
-            pnorm2 = float((Pl[i] ** 2).sum())
-            E_g = float((c ** 2).sum()) / max(pnorm2, 1e-12)
-            g_uni = E_g / max(E, 1e-12)
+            # TZ 11.2: g_uni = ||Q J_i||^2_F / E_i, Q = u u^T, u = 1/sqrt(K)
+            # (uniform direction, not p-direction; gauge-free projection kills it — review A.3)
+            u = np.ones(K) / np.sqrt(K)
+            uJ = Jg.T @ u
+            g_uni = float((uJ ** 2).sum()) / max(E, 1e-12)
             sv = torch.linalg.svdvals(Jg)
             lam = sv ** 2
             p = lam / lam.sum().clamp_min(1e-12)
@@ -353,15 +356,16 @@ def main():
 
     # --- TZ 13: per-task verdicts ---
     def _t1v():
-        degenerate = [l for l in per_layer
-                      if abs(per_layer[l]['T1']['K_F']['all']) < 1e-3]
-        if degenerate:
-            return (f'inconclusive: |T_domain(all)| < 1e-3 on {degenerate} — ratio undefined, '
-                    f'report absolute values instead')
+        # review B.3: ratio undefined at noise level; sign flips invalidate ratios
+        if max(abs(per_layer[l]['T1']['K_F']['all']) for l in per_layer) < 0.01:
+            return ('inconclusive: max |T_domain(all)| < 0.01 — signal at noise floor, '
+                    'ratios meaningless')
         bad = [l for l in per_layer
-               if per_layer[l]['T1']['K_F']['no_math'] < 0.2 * per_layer[l]['T1']['K_F']['all']]
+               if per_layer[l]['T1']['K_F']['all'] > 0
+               and per_layer[l]['T1']['K_F']['no_math'] < 0.2 * per_layer[l]['T1']['K_F']['all']]
         ok = [l for l in per_layer
-              if per_layer[l]['T1']['K_F']['no_math'] >= 0.5 * per_layer[l]['T1']['K_F']['all']]
+              if per_layer[l]['T1']['K_F']['all'] > 0
+              and per_layer[l]['T1']['K_F']['no_math'] >= 0.5 * per_layer[l]['T1']['K_F']['all']]
         if len(ok) == 6: return 'pass'
         if bad: return f'fail: T1 no_math < 0.2*all at {bad}'
         return 'inconclusive'
@@ -376,8 +380,14 @@ def main():
         return ('fail: T_domain CI contains 0 on all layers (domain axis ~ 0 at N=32)'
                 if len(z) == 6 else ('pass' if not z else 'inconclusive'))
     def _t4v():
+        # review B.2: Bonferroni across 6 layers, alpha = 0.05/6
+        alpha = 0.05 / 6
         p = [per_layer[l]['T4']['p_value'] for l in per_layer]
-        return 'pass' if all(x >= 0.05 for x in p) else 'fail: ARI significant somewhere'
+        sig = [l for l, x in zip(per_layer, p) if x < 0.05]
+        corr = [l for l, x in zip(per_layer, p) if x < alpha]
+        if not sig: return 'pass'
+        if corr: return f'fail: ARI significant (Bonferroni) at {corr}'
+        return f'inconclusive: raw p<0.05 at {sig} but not Bonferroni alpha={alpha:.4f}'
     def _t5v():
         rej = [l for l in per_layer if per_layer[l]['T5']['S64_pos0']['reject_unimodal']]
         return 'pass' if len(rej) >= 3 else ('inconclusive' if rej else 'fail: unimodal')
