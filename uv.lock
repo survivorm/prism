@@ -643,6 +643,26 @@ wheels = [
 ]
 
 [[package]]
+name = "diptest"
+version = "0.11.0"
+source = { registry = "https://nexus.ninfra.ru/repository/pypi-prod-all/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "psutil" },
+]
+sdist = { url = "https://nexus.ninfra.ru/repository/pypi-prod-all/packages/diptest/0.11.0/diptest-0.11.0.tar.gz", hash = "sha256:cd74d61d4e2620aa4c40900b7ff0ff48b7517fd00871c9066f737ba4081b2f81" }
+wheels = [
+    { url = "https://nexus.ninfra.ru/repository/pypi-prod-all/packages/diptest/0.11.0/diptest-0.11.0-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:f192191bcd50d9ec715b5fb6b259a1fb136970e979b69ec0f2f47d419653a12b" },
+    { url = "https://nexus.ninfra.ru/repository/pypi-prod-all/packages/diptest/0.11.0/diptest-0.11.0-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:c35497a46c727618004ab0a34ceb5e17b52d83487d87de3e3a103863f0b4d49e" },
+    { url = "https://nexus.ninfra.ru/repository/pypi-prod-all/packages/diptest/0.11.0/diptest-0.11.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0c582ae71d4577faed5fc8487b03f9d8c00f80d6290f5455785fd1222d879b72" },
+    { url = "https://nexus.ninfra.ru/repository/pypi-prod-all/packages/diptest/0.11.0/diptest-0.11.0-cp313-cp313-win_amd64.whl", hash = "sha256:737a17bc806b0761684d2e2bbba7a83ec7f9d77b5bda3b2b613f59e0abba8256" },
+    { url = "https://nexus.ninfra.ru/repository/pypi-prod-all/packages/diptest/0.11.0/diptest-0.11.0-cp314-cp314-macosx_13_0_arm64.whl", hash = "sha256:4c7aca12a559137395dd195e091eb4056d01f787a1861b97d20c609340d94bbe" },
+    { url = "https://nexus.ninfra.ru/repository/pypi-prod-all/packages/diptest/0.11.0/diptest-0.11.0-cp314-cp314-macosx_13_0_x86_64.whl", hash = "sha256:ab5666183fd0051598ad1c7cca0e70d084efdc503245c9294bcf7cd4ad141b62" },
+    { url = "https://nexus.ninfra.ru/repository/pypi-prod-all/packages/diptest/0.11.0/diptest-0.11.0-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:1965173824566d873f6c7ecfcc7949b83f18880515488ecefd367bbbb7a01369" },
+    { url = "https://nexus.ninfra.ru/repository/pypi-prod-all/packages/diptest/0.11.0/diptest-0.11.0-cp314-cp314-win_amd64.whl", hash = "sha256:15886ee258cf7ce94fd443e29984a732230972a2ffdfb4bebea3bd2cf42bbb85" },
+]
+
+[[package]]
 name = "entrypoints"
 version = "0.4"
 source = { registry = "https://nexus.ninfra.ru/repository/pypi-prod-all/simple" }
@@ -1943,6 +1963,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "datasets" },
+    { name = "diptest" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "papermill" },
@@ -1962,6 +1983,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "datasets", specifier = ">=2.14.0" },
+    { name = "diptest", specifier = ">=0.11.0" },
     { name = "matplotlib", specifier = ">=3.7.0" },
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "papermill", specifier = ">=2.7.0" },
