@@ -195,3 +195,8 @@ Bugs fixed in this pass: (1) gauge-free projection einsum (`->kd` → `->id`, th
 quartile labels 0↔3, same partition), removed + documented; (3) gap-statistic null
 degeneracy (all 100 nulls shared 32 rotations → gap invalid; now fresh seeded rotations
 per null); (4) gap rotations now seeded (determinism).
+
+### Review F.4–F.6 (docs/exp27.5_review.md) — выполнено
+- **F.4** half-split silhouette с фиксированным k* (was: max-over-k антикоррелировал): corr теперь −0.33…+0.21 (было −0.83…−0.19) — близок к 0, т.е. **устойчивых кластеров всё равно нет**, но метрика честная.
+- **F.5** gap с per-k fresh nulls: кривые теперь с пиками (sel_k = 2–3), не монотонные.
+- **F.6** sensitivity по 5 срезам (S32/S64K32/pos1/S128/S256): T_domain ~0 со сменой знака по срезам, S_max 0.07–0.18 (нигде ≥0.3), rho_NN 7–300 (вырожден при C~0.01). **Вердикт «кросс-сэмпловой структуры нет» устойчив к срезу.**

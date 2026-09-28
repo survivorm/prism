@@ -233,28 +233,26 @@ def clustering_diagnostics(DG, J, rng, k_range=range(2, 9), B_gap=B_GAP, B_hh=B_
         Z, labels = _fit_agglo(DG, k)
         Z_all[k] = Z
         sil[k] = silhouette_avg(DG, labels)
-    # gap statistic: eigenvalue-preserving nulls
+    # gap statistic: eigenvalue-preserving nulls, PER-K fresh rotations
+    # (review F.5: shared nulls across k gave a monotone, non-piking curve;
+    # standard Tibshirani uses independent nulls per k)
     gap, s_k = {}, {}
     logW0 = {}
     for k in k_range:
         _, labels = _fit_agglo(DG, k)
         logW0[k] = np.log(_W_k(DG, labels, k) + 1e-12)
-    # v27.5r: null distances generated once, shared across k (same reference
-    # distribution for all k — standard gap practice; per-k fresh nulls would
-    # cost 7x more).
     En_np = np.einsum('ikd,ikd->i', J, J)
     Jt = torch.from_numpy(J)
     En_t = torch.tensor(En_np, dtype=torch.float32)
-    # B_gap eigenvalue-preserving nulls: one random orthogonal R per null
-    torch.manual_seed(SEED + 1000)
-    R_all = torch.linalg.qr(torch.randn(B_gap * n, J.shape[1], J.shape[1]))[0]
-    Dnulls = [1.0 - _rotated_cosine_t(R_all[b * n:(b + 1) * n], Jt, En_t)[0]
-              for b in range(B_gap)]
     for k in k_range:
+        torch.manual_seed(SEED + 1000 + k * 7919)  # fresh nulls per k, seeded
+        R_all = torch.linalg.qr(torch.randn(B_gap * n, J.shape[1], J.shape[1]))[0]
+        Dnulls = [1.0 - _rotated_cosine_t(R_all[b * n:(b + 1) * n], Jt, En_t)[0]
+                  for b in range(B_gap)]
         Wn = []
         for Dn in Dnulls:
-            _, labels = _fit_agglo(Dn, k)
-            Wn.append(np.log(_W_k(Dn, labels, k) + 1e-12))
+            _, labels_n = _fit_agglo(Dn, k)
+            Wn.append(np.log(_W_k(Dn, labels_n, k) + 1e-12))
         Wn = np.array(Wn)
         gap[k] = float(Wn.mean() - logW0[k])
         s_k[k] = float(Wn.std(ddof=1) * np.sqrt(1 + 1 / B_gap))
@@ -295,22 +293,19 @@ def clustering_diagnostics(DG, J, rng, k_range=range(2, 9), B_gap=B_GAP, B_hh=B_
     Dc = out[0] if np.ndim(out[0]) else out[1]  # 1D condensed cophenetic
     iu = np.triu_indices_from(DG, 1)
     coph = spearman(DG[iu], Dc)
-    # half-split silhouette 16+16 x 50 (S_max over k=2..8 per half)
-    def _smax(DG_sub, kmax=8):
-        vals = []
-        for k in range(2, min(kmax, DG_sub.shape[0]) + 1):
-            _, lb = _fit_agglo(DG_sub, k)
-            if len(np.unique(lb)) < 2:
-                continue
-            vals.append(silhouette_avg(DG_sub, lb))
-        return max(vals) if vals else 0.0
-
+    # half-split silhouette (review F.4: max-over-k halves anticorrelate by
+    # construction — fix k* from the full data, S(k*) on each half)
+    _, lb_full = _fit_agglo(DG, best_k)
+    k_fixed = best_k
     sA, sB = [], []
     for _ in range(B_hh):
         perm = rng.permutation(n)
         iA, iB = perm[:n // 2], perm[n // 2:]
-        sA.append(_smax(DG[np.ix_(iA, iA)]))
-        sB.append(_smax(DG[np.ix_(iB, iB)]))
+        DG_A, DG_B = DG[np.ix_(iA, iA)], DG[np.ix_(iB, iB)]
+        _, lbA = _fit_agglo(DG_A, k_fixed)
+        _, lbB = _fit_agglo(DG_B, k_fixed)
+        sA.append(silhouette_avg(DG_A, lbA) if len(np.unique(lbA)) >= 2 else 0.0)
+        sB.append(silhouette_avg(DG_B, lbB) if len(np.unique(lbB)) >= 2 else 0.0)
     sA, sB = np.array(sA), np.array(sB)
     hh_corr = float(np.corrcoef(sA, sB)[0, 1]) if sA.std() > 0 and sB.std() > 0 else 0.0
     return dict(
@@ -324,6 +319,7 @@ def clustering_diagnostics(DG, J, rng, k_range=range(2, 9), B_gap=B_GAP, B_hh=B_
         halfsplit_silhouette_mean_A=float(sA.mean()),
         halfsplit_silhouette_mean_B=float(sB.mean()),
         halfsplit_silhouette_corr=hh_corr,
+        halfsplit_k_fixed=int(k_fixed),
     )
 
 
@@ -404,6 +400,63 @@ def run_layer(l, J, P, U, h, labels, rng, D):
     )
 
 
+def _light_metrics(J, P, U, h, labels):
+    """F.6 sensitivity slice: T_domain (B=200 perm) + S_max + rho_NN (k=4)."""
+    C, E, _ = gramian_cosine(J, P, U, h)
+    T0, p_perm = perm_test_domain(C, labels, np.random.default_rng(SEED), B=200)
+    DG = 1.0 - token_gramian_cosine(J)
+    _, lb = _fit_agglo(DG, 4)
+    smax = silhouette_avg(DG, lb)
+    KG = 1.0 - DG
+    num, den = 0.0, 0.0
+    for c in sorted(set(lb.tolist())):
+        ic = np.where(lb == c)[0]
+        if len(ic) < 2:
+            continue
+        Kw = KG[np.ix_(ic, ic)]
+        iu = np.triu_indices_from(Kw, 1)
+        best_neigh = -2.0
+        for d2 in sorted(set(lb.tolist())):
+            if d2 == c:
+                continue
+            K_cd = KG[np.ix_(ic, np.where(lb == d2)[0])].mean()
+            best_neigh = max(best_neigh, K_cd)
+        num += len(ic) * (Kw[iu].mean() / (best_neigh + 1e-12))
+        den += len(ic)
+    return float(T0), float(p_perm), float(smax), float(num / den if den else 0.0)
+
+
+def sensitivity(ck, domains, n_samples, U, rng):
+    """F.6: does the 'no structure' verdict hold across S / K / position slices?"""
+    labels = [d for d in domains for _ in range(n_samples)]
+    out = {}
+    slices = [('S32_K128_p0', 32, 128, 0), ('S64_K32_p0', 64, 32, 0),
+              ('S64_K128_p1', 64, 128, 1), ('S128_K128_p0', 128, 128, 0),
+              ('S256_K128_p0', 256, 128, 0)]
+    for name, S, K, pos in slices:
+        per_l = {}
+        for l in LAYERS:
+            try:
+                Jraw = np.stack([ck['JR'][(d, i, l, S, pos)][:K].numpy()
+                                 for d in domains for i in range(n_samples)], 0)
+                P = np.stack([ck['P128'][(d, i, l, S, pos)][:K].numpy()
+                              for d in domains for i in range(n_samples)], 0)
+                h = np.stack([ck['H'][(d, i, l, S, pos)].numpy()
+                              for d in domains for i in range(n_samples)], 0)
+            except KeyError:
+                per_l[str(l)] = None
+                continue
+            p = P / P.sum(1, keepdims=True)
+            J = p[:, :, None] * (Jraw - np.einsum('ik,ikd->id', p, Jraw)[:, None, :])
+            T0, pp, sm, rn = _light_metrics(J, P, U, h, labels)
+            per_l[str(l)] = dict(T_domain=float(T0), p_perm=float(pp), S_max_k4=float(sm), rho_NN_k4=float(rn))
+        out[name] = per_l
+        print(f'sensitivity {name}: T_domain per layer ' +
+              ' '.join(f'L{k}={v["T_domain"]:+.4f}' if v else f'L{k}=n/a'
+                       for k, v in per_l.items()), flush=True)
+    return out
+
+
 def selfcheck():
     # identity: diagonal ~ 1, values in [-1,1]
     Jt = torch.from_numpy(np.random.default_rng(0).standard_normal((8, 16, 32)).astype(np.float32))
@@ -475,12 +528,16 @@ def main():
         J = p[:, :, None] * (Jraw - Jbar[:, None, :])    # (n, K, D), sum_k J = 0
         per_layer[str(l)] = run_layer(l, J, P, U, h, labels, rng, int(ck['D']))
 
+    print('sensitivity (F.6):', flush=True)
+    sens = sensitivity(ck, domains, n_samples, U, rng)
+
     out = dict(
         params=dict(layers=LAYERS, domains=domains, S=64, K=K_MAX, position=0,
                     n_samples=len(labels), n_permutations=B_PERM,
                     n_rot_null=B_ROT, n_gap_null=B_GAP,
                     n_halfsplit_cluster=B_HH, seed=SEED),
         per_layer=per_layer,
+        sensitivity=sens,
     )
     with open(a.out, 'w') as f:
         json.dump(out, f, indent=1)
