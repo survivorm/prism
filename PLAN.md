@@ -1,20 +1,4 @@
-## Exp 27.5 (COMPLETE, 09-23)
-
-- [x] код: experiments/exp27_5_postprocess.py (по docs/Exp27.5.md, seed=42, B=1000)
-- [x] review против ТЗ: 2 бага (gap-null вырождение: те же 32 ротации на 100
-      итераций; R без manual_seed) — починены (b9a0dea)
-- [x] **review docs/exp27.5_review.md**: blocker-баг gauge-free проекции
-      (einsum 'ik,ikd->kd' суммировал по сэмплам, не по токенам → uniform-мода
-      не снималась). Фикс 'ik,ikd->id' + Jbar[:,None,:]. g_uni 0.12-0.20 -> 3e-13.
-      **Вердикт инвертирован**: «когерентность растёт с глубиной 0.17->0.99» была
-      gauge-artifact (raw J). Честные gauge-free: C_within 0.010->0.065 (нет роста с
-      глубиной), доменная ось НЕ значима (p_perm 0.14-0.71), кросс-сэмпловых
-      кластеров нет (S_max 0.13-0.19). = сценарий ТЗ §15.1.
-      Sign баг entropy-quartile (-H) — no-op для чисел (argsort знак = swap меток
-      0<->3, та же 4x8 partitions), убран + закомментирован.
-- [x] прогон CPU 2 мин → results/exp27_5_postprocess.json (gauge-free)
-- [x] findings: docs/exp27_findings.md §9 (gauge-free, raw-J retracted)
-
+# Prism — PLAN
 
 # GPU-аудит: какие эксперименты требуют re-run (запрошено пользователем, 2026-08-31)
 
@@ -347,8 +331,6 @@ In-box agent = mini-swe-agent DefaultAgent (BoxAgent subclass: 85% auto-compact,
 
 **Paper status:** exp16 behavioral check integrated. exp17/exp18 sections still missing (exp18 cancelled; exp17 data not yet produced).
 
-# Prism — PLAN
-
 ## Запрос (фиксация)
 
 Выполнить ТЗ `docs/Exp27.6.md`: P0-приложение к Exp 27.5 — domain isolation, block
@@ -376,10 +358,27 @@ structure и null-baselines для вердиктов 27.5. 8 задач T1–T8
 - [x] прогон CPU 2 мин → results/exp27_5_postprocess.json
 - [x] findings: docs/exp27_findings.md (секция Exp 27.5)
 
-## DONE / DOING / NEXT
+## Exp 27.6 (COMPLETE, 09-23, run12)
 
 - [x] ТЗ 27.6 прочитано, входы инвентаризированы
-- [ ] **DOING** T1: T_domain (K^F и K^G) для {all, no_math, no_chat, no_code} × 6 слоёв
+- [x] T1–T8 все считаются, JSON + PNG + вердикты (run12, 224s CPU)
+- [x] **ревью-1 (коллега): 6 P0-багов закрыты** — gauge-free einsum (samples→tokens,
+      g_uni 0.12-0.20→3e-13), gap-null свежие ротации, half-split ARI на скалярах,
+      T3 dedup-маска (T_dom 0.128→0.0024), T2 диагональ (NaN→0.024-0.044),
+      T5 null_p95 вместо hardcoded 0.05
+- [x] **ревью-2 (docs/Exp27.6_review.md): T5 beta moment-match не сохранял mean
+      (cv-формула, mean_fit 2.5×)** → правильные формулы S=m(1-m)/s²-1, a=mS, b=(1-m)S
+      + min-max в (0,1) (bootstrap-вариант отвергнут: ресэмплинг бимодального остаётся
+      бимодальным — circular). T3 verdict 'fail'→'inconclusive', T1 detail (math = noise
+      contributor). Selfcheck: T3-dedup + T5 (uni не reject / bi reject).
+- [x] **verdicts run12:** T1 inconclusive (max|T_dom|<0.01), T2 pass (math изолирован
+      4-5×), T3 inconclusive (0.0024±0.011, CI∋0 все слои), T4 inconclusive (L12 raw
+      p<0.05, Bonferroni не выдерживает), T5 pass (12/12 reject, dip 0.006-0.011 vs
+      null_p95 0.005-0.006, маржа 1.1-1.5× — на грани), T6 pass (r_eff 24-32 из 31,
+      спектр плоский → silhouette 27.5 = шум), T7 pass (ρ=1.0 CI[1,1] p=0.003),
+      T8 pass (r_eff коррелирует с H)
+- [x] **paper §13** (27.5/27.6: fibered, T-блоки, P0-баги, оговорки) + строка в итоговую картину
+- [x] findings: docs/exp27_findings.md (секция Exp 27.5/27.6)
 - [ ] T2: Bock 4×4 на K^G (диагональ per_domain + off-diag 6×6) + PNG 4 панели
 - [ ] T6: eigengap спектра K^F и K^G (λ1..λ31, gap_ratios 2/3..5, r_eff, has_structure)
 - [ ] T3: bootstrap CI на T_domain и T_ent (B=1000, ресэмплинг сэмплов, quartile-метки из P128)
@@ -390,6 +389,39 @@ structure и null-baselines для вердиктов 27.5. 8 задач T1–T8
 - [ ] JSON + PNG + вердикты pass/fail/inconclusive по T1–T8
 - [ ] findings: дописать в docs/exp27_findings.md, обновить вердикты 27.5 (п.13 ТЗ), коммит
 
+## Математический аппарат в paper (Math_map.md, порциями <=5, DOING порция)
+
+Карта: docs/Math_map.md (исправления A1-A7, B1-B3, В1-В2, Г1-Г4, Д1-Д7), детали: docs/Math.md.
+Аудит: B1/B2/B3 (леммы gauge/Фишер/ротация) + A3 (фиксация p_U + утечка) + A2 (C) — УЖЕ в
+блоке аппарата §13 и §1; D5 (Gap≈1-Bridge) и D6 (P — не проектор) — уже верны в §1.6/§13.
+Порциями <=5, каждая в DOING, после — DONE.
+
+### Порция 1 (DOING): Блок А — определения §1.1-1.6
+- [ ] A1 §1.6: Gap ∈ [0,1] → [0,2] + семантика (0 совпадение, 2 анти, ≈1 нулевой уровень)
+- [ ] A6 §1.6: абсолютный τ=1e-6 → относительный τ_l = 0.01·median_i‖J_S[i]‖ + отчёт доли sentinel
+- [ ] A7 §1.6/§1.7: веса w_i = p_L(i)/Σ p_L — явная нормировка + асимметрия p_L осознана (система отсчёта старшей модели)
+- [ ] A5 §1.5: формальные определения uniformity(u) и gauge_share (u1, σ1, спектр J^(p))
+- [ ] D4 §1: фиксация позиции «все карты/Якобианы — для t = S-1, если не указано иное»
+
+### Порция 2: Блок Д — мелочи (по 4 пункта)
+- [ ] D1 §6: нумерация — два пункта 5 → пере-нумерация (6/7)
+- [ ] D3 §5/§1.3: H3 «сохранение семантики» → «E-проекция нетривиальное выравнивание (≠ случайное)»
+- [ ] D2 §9 (12b): «5 дифференциальных направлений» — согласовать с 11a (r=PR≈5.9 @L6) + оговорка
+- [ ] D7 §1.4: E_S G_S^{-1} = (E_S^T)^+ явно + условие σ_min(E_L^T E_S) > 0
+
+### Порция 3: Архитектура §3 + статистика §4 (4 пункта)
+- [ ] В1 §3.6: производная RMSNorm (1/r)(I-uu^T)diag(1+w), ранг D-1, не ортогональна
+- [ ] G2 §4: статистический каркас — bootstrap 1000 + permutation 1000 + ε_rel = ε/‖h_l‖
+- [ ] G3 §1.6: компаньон масштаба s(l) = log(‖J_S‖_F/‖J_S^target‖_F) к Gap (масштабная слепота)
+- [ ] D0 §1/§5: разведение рангов (спектральный PR vs функциональный r_KL(ε)) — один абзац + оговорки в §14/§11
+
+### Порция 4: Новые блоки (только с Math.md, не выдумывать)
+- [ ] В2: FTLE (топ-m, QR/Benettin, сумма = -inf из-за RMSNorm) — новый под-блок, если Math.md даёт формулы
+- [ ] Г1: две кривизны (токенная gauge-связность vs hidden-фрустрация, Procrustes, голономия H_123)
+- [ ] Г4: Marchenko-Pastur null для спектра JJ^T
+- [ ] (запас) A4: r_KL формализация отдельно, если D0 влезает одним абзацем
+
+Не трогать: §2 (алгоритм) без изменений; нумерацию §12-§13 не сдвигать; код-блоки §2 как есть.
 ## Границы (не менять)
 
 - S=64, K=128, pos=0, seed=42, B=1000 — по ТЗ
