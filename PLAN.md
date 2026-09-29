@@ -199,6 +199,29 @@
 - [x] **§11 exp13/14/15 fixed against JSON (c07c138):** exp13 transition L12→L18 → gradual L12→L18 / jump L18→L23 + sentinel-cause note; exp14 K=256→K=64 + gauge_share «0.31→0.08» → NON-monotone (peak 0.48 L3) + PR non-monotone + broken table sep (3 dashes/6 cols); exp15 verdict-4 «scheme D holds higher bridge» → DEPTH CONFOUND (D 3rd anchor = 0.8B L13 shallower than A/B/C L15/16/14) + sentinel-cause note. §10: defrag 6–18×→2.7–18.9×; «map works for quantization»→«map = min-sensitivity direction (same KL, lower Δh)»; gauge-share row → «non-monotone (peak 0.48 L3)» (reattributed Exp13,14→Exp14). exp12b glued >Оговорка→blockquote; exp12c «preserves structure»→«Jacobian direction, not function»; hypotheses table 7-dash→5-dash sep.
 - [x] **exp2a_cka_identity.py** pre-existing uncommitted fix: old `CKA(X,X)` same-tensor (=1.0 by construction, validated nothing) → disjoint sample groups (real consistency check) + `_selfcheck()` construction invariants (identity/scale/translation/perm). Self-check PASSED. n-samples 5→8.
 
+## Math.md -> paper: полное прохождение по 200 строк (2026-09-23)
+
+Math_map.md уничтожен (user). Работаем СТРОГО по docs/Math.md (1627 строк),
+последовательно, пачками <=200 строк. Math.md сам себя патчит — там, где
+встречается дублирующаяся информация, звать пользователя (решает, какая версия).
+7.2/7.3 user уже поправил — брать оставшиеся (финальные) версии.
+
+Пачки:
+- [ ] P1: строки 1-200 (заголовок, §1 слой-переходные Якобианы 1.1-1.5, §2.1-2.2)
+- [ ] P2: строки 201-400 (§2.3-2.4, §3 FTLE, §4 gauge-Fisher 4.1-4.2)
+- [ ] P3: строки 401-600 (§4.3-4.4, §5 транспорт/кривизна, §7.3 EVT, §8 per-token)
+- [ ] P4: строки 601-800 (§9 multi-point, §10 сводка, Блок1 1.1-1.5)
+- [ ] P5: строки 801-1000 (Блок1 1.6-1.7, Блок2 леммы 7.1/7.2)
+- [ ] P6: строки 1001-1200 (Блок3 стат.каркас, Блок4 впрок, порядок работы, #2 лемма 7.3)
+- [ ] P7: строки 1201-1400 (#3 исправления 1.1-1.3, #4 лемма 7.6, #5 стат.каркас, #6 впрок)
+- [ ] P8: строки 1401-1627 (#5 мелочи, #6 Фишеров косинус, #4 cocycle, #5 §14, #6 §15)
+
+Правила:
+- дубль в Math.md -> стоп, звать user, сам не выбираю
+- добавляю в paper только то, чего нет (проверка grep перед вставкой)
+- не дублировать в тело то, на что уже есть ссылка appendix (FTLE, кривизны)
+- коммит после каждой пачки
+
 ## NEXT
 
 - [x] **Paper: 4 new GPU results integrated** (commit 43e7ded): exp4 (N=4 K-sweep, 7 K-values × 6 par, converges K≥32), exp10b (N=8, centered<softmax<raw), exp11c (N=8, defrag destroys monotonicity at all r≤32: spearman 0.81/0.71/0.43), exp6 L18 SNR (new section: SNR=2.80 r-invariant, PR 2.1→16.9, gauge_share top-r 0.60→0.19).
