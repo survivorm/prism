@@ -1298,6 +1298,40 @@ Exp 0.1 показал, что Грамианы sample-local: внутри до�
 
 **Оговорки.** (1) T5 dip на грани критического значения (0.006–0.011 vs null_p95 ~0.005): маржа 1.1–1.5×, вердикт «pass» — минимальный, би-модальность слабее, чем заявлено selfcheck-бимодальностью. (2) N=32: разрешение $T_3$ — CI ±0.011, эффекты меньше неотличимы от нуля. (3) L23 = контроль (≈ lm_head, pre-final-RMSNorm, $\sigma_d \approx 96$–104 — норма для residual stream). (4) S=128 dip (ctx 127) — эффект длины контекста, не mid-context (пара (32,33)@S128 выше S64 pos0 на всех слоях); гипотеза GDN chunk-boundary @128 не проверена.
 
+### Математический аппарат Exp 27/27.5/27.6
+
+Объекты (Exp 27, exp27 v11; слой l ∈ {6,12,18,19,22,23}, токены x ∈ U_128, |U|=K):
+
+- $h_t = h(x, t) \in \mathbb{R}^D$ — скрытое состояние на позиции t; $J_t = \partial h_{l,t} / \partial x \in \mathbb{R}^{D \times K}$ — Якобиан скрытого состояния по токенам (backprop; в кэше хранится уже gauge-free $J^{(p)}_t$).
+- **Гаучев проектор**: $P(p) = \mathrm{diag}(p) - pp^T$, где $p$ — softmax, нормированный на U. $P(p)$ — ортогональный проектор на подпространство, ортонормальное $p$ (ядро = $\mathrm{span}\{p\}$).
+- **Gauge-free Якобиан**: $J^{(p)}_t = P(p_t) J_t$. Три конвенции пар (t1, t2): **pos-pk** (каноническая: $P(p_{t1})J_{t1}$ и $P(p_{t2})J_{t2}$ — проектор на своём положении), **same-pk** (оба члена с $p_{t1}$ или оба с $p_{t2}$), **raw** (без проектора).
+- **Расстояние**: $\delta = \|h_{t1} - h_{t2}\|_2$ (скрытое, не текстовое). $\sigma_d$ — норма покомпонентного std скрытых состояний на последней позиции (median по доменам).
+- **Метрики**: $C_a = \mathrm{mean}\ \cos(J^{(p_1)}_{t1}, J^{(p_2)}_{t2})$ по position-парам одного образца; $C_b = \mathrm{mean}\ \cos$ по sample-парам одного домена (pos 0); $T_{domain} = C_{within} - C_{cross}$ (27.5/27.6: $C_{within}$ = 112 пар в доменах, $C_{cross}$ = 384 междоменных, N=32 = 4×8).
+- **Эффективное измерение** ($r_{eff}$): распределение $p_k = \sigma_k^2 / \sum \sigma^2$ по сингулярным значениям $J$ [K, D]. Основной: **ентропический ранг** $r_{eff} = \exp(-\sum p_k \log p_k)$; вторичные: stable rank $= \|J\|_F^2/\sigma_1^2$, participation ratio $= (\sum \sigma^2)^2 / \sum \sigma^4$.
+- **Шумовой пол**: $F = 1/\sqrt{r_{eff}\,(K + D - r_{eff})}$ (медиана $r_{eff}$ по слоям; в 27.5/27.6 — по конфигурации). Вердикты: $C < F$ — ORTHOGONAL, $F \le C < 3F$ — WEAK, $C \ge 3F$ — COHERENT.
+- **Half-split**: N/2 + N/2 разделение, $\Delta_{half} = |C_a^A - C_a^B|$, CI из 100 bootstrap-ресэмпл (27.6: по каждому домену отдельно, $N_d/2 + N_d/2$).
+
+27.5 (постпроцессинг jcache, slice S=64, K=128, pos 0):
+
+- **Матрицы сходства**: $K^G_{ij} = \cos(J_i J_i^T, J_j J_j^T) = \langle J_iJ_i^T, J_jJ_j^T \rangle_F / (\|J_iJ_i^T\|_F \|J_jJ_j^T\|_F)$ — косинус token-грамианов; $K^F_{ij} = \cos(J_i, J_j)$ — прямые косинусы $J$ (Frobenius).
+- **Null-модели**: (a) перестановка domain-меток, $B_{perm}=1000$ → $p_{perm}$ (односторонняя); (b) **спектральный null**: $G^{null}_i = R_i \Lambda_i R_i^T$ — случайные ортогональные вращения, сохраняющие собственные значения грамиана ($R_i \sim Haar$, $B_{rot}=100$) → $p_{rot}$.
+- **Оси сигнала** (Spearman $\rho(C_{ij}, \Delta)$): $\Delta h$ (скрытая дистанция), $\Delta H$ (энтропия softmax на U), $\Delta\sigma_z$ (std логитов на U), $\Delta\log E$ ($E = \|J_i\|_F^2$), $\Delta g_{uni}$; $g_{uni} = \|Q J_i\|_F^2 / E_i$, $Q = uu^T$, $u = \mathbf{1}/\sqrt{K}$ (доля энергии в uniform-режиме). Entropy-quartile: 32 образца → 4 квартiles по $H$, $T_{ent} = C_{within-quartile} - C_{cross-quartile}$ + size-preserving перестановка.
+- **Кластеризация** (без доменных меток): $D^G = 1 - K^G$; agglomerative (average linkage, precomputed), $k = 2..8$; silhouette $S_{max}$; gap statistic ($B_{gap}=100$ eigenvalue-preserving nulls); $\rho_{NN} = \bar{K}_{within\,cluster} / \bar{K}_{nearest}$; cophenetic correlation; half-split silhouette (16+16, ×50).
+
+27.6 (блок-перестановки, T-блоки):
+
+- **T4**: $T_4(L) = C_a(L) - C_b(L)$ (layer-level difference); null = block-permutation по доменам (сохраняет within-domain корреляцию); $p_{4,adj} = B \cdot \min(0.05, p_4 / \alpha_4)$, где $\alpha_4 = 0.05/(n_{layers})$ (Bonferroni по слоям).
+- **T5**: Hartigan dip-test на распределение 112 $C_b$-значений (бимодальность); $p_{dip}$ из β-null: параметры $a = mS$, $b = (1-m)S$, $S = m(1-m)/s^2 - 1$ (moment-matching на эмпирическое $m, s^2$), $B=100$ β-выборок.
+- **T6**: $\lambda_1, \lambda_2$ собственных значений усреднённой $K^G$ (32×32); $\Delta\lambda = \lambda_1 - \lambda_2$ (eigengap); $r_{eff}(K^G) = \exp(-\sum \lambda_k \log \lambda_k)$ (нормировка $\sum \lambda_k = 1$).
+- **T8**: $C_b$ на math-only пуле (8 образцов, 28 пар) vs full pool (4 домена, 112 пар).
+- **T1**: вырожденные Якобианы ($E_i = \|J_i\|_F^2 < 10^{-12}$) исключаются; фиксируется доля $n_{degen}/32$ (все слои: 0).
+
+Чувствительность:
+
+- **Per-$k^*$ gap test**: $K^G_{k^*}$ = $k^*$-й главный компонент $K^G$ (без усреднения по компонентам) для $k^* \in \{2,3,4\}$; если eigengap не виден на всех $k^*$, он отсутствует, а не усреднён.
+- **Per-$S$ dip**: Hartigan dip для каждого $S \in \{64, 128\}$ отдельно.
+- **K-чувствительность $r_{eff}$**: $r_{eff}$ пересчитана для $K \in \{64, 128, 256\}$ (ранки $J$ по сингулярным значениям [K, D] — K-зависимы); $\Delta r_{eff}$ (K=128 vs K=64) < 3% на всех слоях — спектральный вывод K-устойчив.
+
 ### 13.1. Выводы Exp 27.5/27.6: факты, интерпретации, открытые вопросы
 
 **Строго установленные факты** (следуют из данных без дополнительных предположений):
