@@ -237,6 +237,18 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 
 Границы (не менять): exp27 jcache не трогать; токены/типы не в кэше → пункт ТЗ «тип токена» пропускать (зафиксировать в findings); одна модель (0.8B), сравнение 4B не в этом кэше.
 
+## Exp 28b: dense J-profile cache (S=128, t=0..127)
+- Запрос: данные, которых хватит МНОГО (user: «Давай сделаем данные, которых потом будет хватать. Даже если 8-16 ч GPU»).
+- Dense S=128 (t=0..127) покрывает S=64/32 dense (каузальность, exp27 identity); S=256 dense = 49k J ~20-30ч — не влезает, не делаем.
+- 24,576 J (128 pos x 32 samples x 6 layers) ~ 12-16ч T4 (префиксы короче exp27, ~1.5-2 с/J).
+- Per-LAYER ckpt-файлы exp28_jcache_L{l}.pt (~2.1GB each, RAM-безопасно, resume = слой).
+- Loop order: l outer (save+free per layer), fwd per sample (logits 128xV + hs all 128 pos).
+- [x] PLAN
+- [ ] exp28_dense.py (на базе exp27: pool v12, U128, J loop dense)
+- [ ] register push_all.py exp28b + silent-error audit + selfcheck + smoke
+- [ ] PUSH (user go-ahead)
+- [ ] post локально: exp28 fixed (baseline Dxr Haar, B=200, profiles, MAD) на dense кэше
+
 ## NEXT
 
 - [x] **Paper: 4 new GPU results integrated** (commit 43e7ded): exp4 (N=4 K-sweep, 7 K-values × 6 par, converges K≥32), exp10b (N=8, centered<softmax<raw), exp11c (N=8, defrag destroys monotonicity at all r≤32: spearman 0.81/0.71/0.43), exp6 L18 SNR (new section: SNR=2.80 r-invariant, PR 2.1→16.9, gauge_share top-r 0.60→0.19).
