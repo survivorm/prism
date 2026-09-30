@@ -247,7 +247,10 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - [x] register push_all.py + silent-error audit (fixed: RAM fwd-free, resume S-check, --s-dense)
 - [x] CPU-смoke — убит: HF-стриминг пула rate-limit локально (28+ мин); Kaggle проходит это за минуты
 - [x] PUSHED v1 (как exp28b): FAIL на 1074с — первый же t=127 (позиция 0): J-префикс 1 токен -> prefix-pass на 0 токенах -> GDN reshape краш (exp27 никогда не ходил в 0: там prefix = S-t-1 >= 31). Ckpt не писался, потеря = 0. КERNEL УБИТ user (переименование в exp27b).
-- [x] FIX: t=S-1 -> пустой DynamicCache(config=...) (состояние после 0 токенов; как нативный fresh 1-token pass); compute_jacobian_for_tokens принимает prefix_cache (default None, старые callers не тронуты); _deep_clone_cache getattr(dtype/device) для несинициализированных слоёв. Локальный GDN-форвард CPU не проверяется (triton-ядро вешается локально), структурный тест пустого кэша пройден.
+- [x] FIX: t=S-1 -> пустой DynamicCache() (состояние после 0 токенов; как нативный fresh 1-token pass); compute_jacobian_for_tokens принимает prefix_cache (default None, старые callers не тронуты); _deep_clone_cache getattr(dtype/device) для несинициализированных слоёв.
+- [x] PUSHED v2 (73c2200): REAL FIX — pc строился, но не передавался в вызов (аргумент prefix_cache=pc потерялся) -> тот же краш. v2 KILLED user (через ~15 мин до t=127 в любом случае).
+- [x] Ревью (docs/Exp27b_review.md) — проверено и починено (218ce8e): DynamicCache НЕ был импортирован (v2 = NameError на t=127), any->all в resume (partial ckpt), docstring; в exp27_noise_floor.py: dead make_png/u128_frozen/sys, недостижимая legacy-ветка, fingerprint names+shapes.
+- [x] v3 PUSHED (218ce8e, RUNNING): DynamicCache imported, all() resume.
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 
 ## NEXT
