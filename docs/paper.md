@@ -63,6 +63,8 @@ $$J_l^{(t)}\big|_{\mathcal{U}} \in \mathbb{R}^{|\mathcal{U}| \times D}$$
 
 $$D_l(x) = \frac{\partial h^{l+1}(x)}{\partial h^l(x)} \in \mathbb{R}^{D \times D}$$
 
+Векторное тождество: $J = \sum_j p_{U,j}J_j$, где $J_j = \partial z_j / \partial h$ — строка Якобиана для токена $j$ (сумма по $U$ полная, $\sum_{j\in U} p_U = 1$). Из него следуют: $J = 0$ при $p_U = 0$, инъективность на классах эквивалентности $J \sim J + \mathbf{1}w^T$, и $M_p \succeq 0$, $\ker M_p = \mathrm{span}\{\mathbf{1}\}$ (лемма 7.1, см. §13).
+
 **Правило композиции.** По цепному правилу:
 
 $$J_l^{(t)} = W_{\mathrm{lm}} \prod_{i=l}^{L-1} D_i(x)$$
