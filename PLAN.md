@@ -245,7 +245,8 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - [x] exp28_dense.py (pool v12 как exp27 v11, U128 fresh, J loop dense; AST+selfcheck; mock-reuse на реальном v11 ckpt: 3184/3328 matched, 144 recompute, 58 forwards)
 - [x] register push_all.py + silent-error audit (fixed: RAM fwd-free, resume S-check, --s-dense)
 - [x] CPU-смoke — убит: HF-стриминг пула rate-limit локально (28+ мин); Kaggle проходит это за минуты
-- [x] PUSHED v1: voroninmichael/prism-exp28b-dense-profile (RUNNING, ~15-16ч T4; poller poll_exp28b.sh — manual status checks)
+- [x] PUSHED v1: FAIL на 1074с — первый же t=127 (позиция 0): J-префикс 1 токен -> prefix-pass на 0 токенах -> GDN reshape краш (exp27 никогда не ходил в 0: там prefix = S-t-1 >= 31). Ckpt не писался, потеря = 0.
+- [x] FIX: t=S-1 -> пустой DynamicCache(config=...) (состояние после 0 токенов; как нативный fresh 1-token pass); compute_jacobian_for_tokens принимает prefix_cache (default None, старые callers не тронуты); _deep_clone_cache getattr(dtype/device) для несинициализированных слоёв. Локальный GDN-форвард CPU не проверяется (triton-ядро вешается локально), структурный тест пустого кэша пройден.
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 
 ## NEXT

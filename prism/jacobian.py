@@ -16,6 +16,7 @@ def compute_jacobian_for_tokens(
     input_ids: torch.Tensor,
     attention_mask: torch.Tensor,
     token_set: list[int],
+    prefix_cache=None,
 ) -> torch.Tensor:
     """Compute Jacobian of logits w.r.t. hidden state at layer_idx.
 
@@ -31,7 +32,8 @@ def compute_jacobian_for_tokens(
     """
     model.eval()
     S = input_ids.shape[1]
-    prefix_cache = _run_prefix_pass(model, input_ids, attention_mask)
+    if prefix_cache is None:
+        prefix_cache = _run_prefix_pass(model, input_ids, attention_mask)
     h = _extract_hidden_state(model, input_ids, attention_mask, layer_idx)
     # Match model dtype to avoid mismatch in decoder (fp16 models on GPU)
     model_dtype = next(model.parameters()).dtype
@@ -114,8 +116,8 @@ def _deep_clone_cache(cache):
             nl.keys = _cl(layer.keys)
             nl.values = _cl(layer.values)
             nl.is_initialized = layer.is_initialized
-            nl.dtype = layer.dtype
-            nl.device = layer.device
+            nl.dtype = getattr(layer, "dtype", None)
+            nl.device = getattr(layer, "device", None)
             for k, v in vars(layer).items():
                 if k not in vars(nl):
                     setattr(nl, k, _copy.deepcopy(v))

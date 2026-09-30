@@ -181,6 +181,14 @@ def main(
                     p128 = (p128 / p128.sum()).to(m.device)
                     ids_k = pool[dom][si]["input_ids"][:, :S - t]
                     mask_k = pool[dom][si]["attention_mask"][:, :S - t]
+                    pc = None
+                    if S - t == 1:
+                        # J at position 0: prefix is a single token -> the
+                        # prefix pass would run the model on 0 tokens, which
+                        # the GDN layers cannot handle (reshape [1,0,-1,H]).
+                        # An empty DynamicCache is exactly the state after
+                        # 0 tokens; the decoder pass is a fresh 1-token pass.
+                        pc = DynamicCache(config=m.config)
                     Jr = compute_jacobian_for_tokens(
                         m, l, ids_k.to(m.device), mask_k.to(m.device), U128
                     ).float()
