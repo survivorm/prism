@@ -239,15 +239,14 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 
 ## Exp 28b: dense J-profile cache (S=128, t=0..127)
 - Запрос: данные, которых хватит МНОГО (user: «Давай сделаем данные, которых потом будет хватать. Даже если 8-16 ч GPU»).
-- Dense S=128 (t=0..127) покрывает S=64/32 dense (каузальность, exp27 identity); S=256 dense = 49k J ~20-30ч — не влезает, не делаем.
-- 24,576 J (128 pos x 32 samples x 6 layers) ~ 12-16ч T4 (префиксы короче exp27, ~1.5-2 с/J).
-- Per-LAYER ckpt-файлы exp28_jcache_L{l}.pt (~2.1GB each, RAM-безопасно, resume = слой).
-- Loop order: l outer (save+free per layer), fwd per sample (logits 128xV + hs all 128 pos).
+- Dense S=128 (t=0..127) покрывает S=64/32 dense (каузальность, exp27 identity); S=256 dense = 49k J ~20-30ч — не влезает.
+- 24,576 J (128 pos x 32 samples x 6 layers) ~ 12-16ч T4. Per-LAYER ckpt-файлы exp28_jcache_L{l}.pt (~2.1GB each, resume = слой).
 - [x] PLAN
-- [ ] exp28_dense.py (на базе exp27: pool v12, U128, J loop dense)
-- [ ] register push_all.py exp28b + silent-error audit + selfcheck + smoke
-- [ ] PUSH (user go-ahead)
-- [ ] post локально: exp28 fixed (baseline Dxr Haar, B=200, profiles, MAD) на dense кэше
+- [x] exp28_dense.py (pool v12 как exp27 v11, U128 fresh, J loop dense; AST+selfcheck; mock-reuse на реальном v11 ckpt: 3184/3328 matched, 144 recompute, 58 forwards)
+- [x] register push_all.py + silent-error audit (fixed: RAM fwd-free, resume S-check, --s-dense)
+- [x] CPU-смoke — убит: HF-стриминг пула rate-limit локально (28+ мин); Kaggle проходит это за минуты
+- [x] PUSHED v1: voroninmichael/prism-exp28b-dense-profile (RUNNING, ~15-16ч T4; poller poll_exp28b.sh — manual status checks)
+- [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 
 ## NEXT
 
