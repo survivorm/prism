@@ -196,14 +196,14 @@ KERNELS = {
         "runner_extra": "",
         "note": "Exp 27: noise-floor calibration (r_eff -> F) + S/K/position sweeps, layers {6,12,18,19,22,23} (19,23 full-attention), 256-token pool, nested U128. ~5.4k J, ~2.5-3h T4.",
     },
-    "exp28b": {
-        "dir": "kernel-exp28b",
-        "slug": "exp28b-dense-profile",
-        "id": "voroninmichael/prism-exp28b-dense-profile",
-        "title": "Prism: exp28b-dense-profile",
-        "exp_file": "experiments/exp28_dense.py",
+    "exp27b": {
+        "dir": "kernel-exp27b",
+        "slug": "exp27b-dense-profile",
+        "id": "voroninmichael/prism-exp27b-dense-profile",
+        "title": "Prism: exp27b-dense-profile",
+        "exp_file": "experiments/exp27b_dense.py",
         "runner_extra": "",
-        "note": "Exp 28b: dense J-profile cache S=128 t=0..127, 24,576 J, ~12-16h T4, per-layer ckpt files (1.7GB each). Feeds exp28 post + future dense analysis.",
+        "note": "Exp 27b: dense J-profile cache S=128 t=0..127, 24,576 J, ~12-16h T4, per-layer ckpt files (1.7GB each). Same exp27 pools/model; feeds exp28 post + future dense analysis.",
     },
     "exp19": {
         "dir": "kernel-exp19",

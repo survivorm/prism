@@ -237,7 +237,7 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 
 Границы (не менять): exp27 jcache не трогать; токены/типы не в кэше → пункт ТЗ «тип токена» пропускать (зафиксировать в findings); одна модель (0.8B), сравнение 4B не в этом кэше.
 
-## Exp 28b: dense J-profile cache (S=128, t=0..127)
+## Exp 27b: dense J-profile cache (S=128, t=0..127) — rename от exp28b (09-30, data-exp для exp27-пула)
 - Запрос: данные, которых хватит МНОГО (user: «Давай сделаем данные, которых потом будет хватать. Даже если 8-16 ч GPU»).
 - Dense S=128 (t=0..127) покрывает S=64/32 dense (каузальность, exp27 identity); S=256 dense = 49k J ~20-30ч — не влезает.
 - 24,576 J (128 pos x 32 samples x 6 layers) ~ 12-16ч T4. Per-LAYER ckpt-файлы exp28_jcache_L{l}.pt (~2.1GB each, resume = слой).

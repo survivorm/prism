@@ -63,7 +63,7 @@ $$J_l^{(t)}\big|_{\mathcal{U}} \in \mathbb{R}^{|\mathcal{U}| \times D}$$
 
 $$D_l(x) = \frac{\partial h^{l+1}(x)}{\partial h^l(x)} \in \mathbb{R}^{D \times D}$$
 
-Векторное тождество: $J = \sum_j p_{U,j}J_j$, где $J_j = \partial z_j / \partial h$ — строка Якобиана для токена $j$ (сумма по $U$ полная, $\sum_{j\in U} p_U = 1$). Из него следуют: $J = 0$ при $p_U = 0$, инъективность на классах эквивалентности $J \sim J + \mathbf{1}w^T$, и $M_p \succeq 0$, $\ker M_p = \mathrm{span}\{\mathbf{1}\}$ (лемма 7.1, см. §13).
+**О взвешенных строках.** Величина $\sum_{j\in U} p_{U,j} J_j$ (сумма по $U$ полная, $\sum_{j\in U} p_{U,j} = 1$), где $J_j = \partial z_j / \partial h$ — строка Якобиана для токена $j$, — это вероятностно-взвешенное среднее строк Якобиана: вектор-строка $1 \times D$, в общем случае не равный самой матрице $J$. Свойства gauge-оператора $M_p$ ($M_p \succeq 0$, $\ker M_p = \mathrm{span}\{\mathbf{1}\}$, инъективность на классах $J \sim J + \mathbf{1}w^T$) установлены в лемме 7.1 (см. §13) и из этого среднего не выводятся.
 
 **Правило композиции.** По цепному правилу:
 
@@ -73,9 +73,9 @@ $$J_l^{(t)} = W_{\mathrm{lm}} \prod_{i=l}^{L-1} D_i(x)$$
 
 **Структура pre-norm блока.** Для $h^{l+1} = h^l + \mathrm{MLP}(\mathrm{RMSNorm}(h^l + \mathrm{Attn}(\mathrm{RMSNorm}(h^l))))$:
 
-$$D_l = I + \frac{\partial \mathrm{MLP}}{\partial \tilde h} \cdot \frac{\partial \mathrm{RMSNorm}}{\partial \hat h} \cdot \left( I + \frac{\partial \mathrm{Attn}}{\partial \tilde h} \cdot \frac{\partial \mathrm{RMSNorm}}{\partial h^l} \right)$$
+$$D_l = I + \frac{\partial \mathrm{MLP}}{\partial \bar h} \cdot \frac{\partial \mathrm{RMSNorm}}{\partial \hat h} \cdot \left( I + \frac{\partial \mathrm{Attn}}{\partial \tilde h} \cdot \frac{\partial \mathrm{RMSNorm}}{\partial h^l} \right)$$
 
-где $\tilde h = \mathrm{RMSNorm}(h^l)$, $\hat h = h^l + \mathrm{Attn}(\tilde h)$; вклад каждого RMSNorm — как в §3.6.
+где $\tilde h = \mathrm{RMSNorm}(h^l)$ (вход Attn), $\hat h = h^l + \mathrm{Attn}(\tilde h)$ (вход второго RMSNorm), $\bar h = \mathrm{RMSNorm}(\hat h)$ (вход MLP); вклад каждого RMSNorm — как в §3.6.
 
 
 
@@ -129,7 +129,7 @@ $$\bar{G}_l = \frac{1}{N} \sum_{i=1}^{N} J_l^{(i)} \cdot \left(J_l^{(i)}\right)^
 - **uniformity**: $\mathrm{uniformity}(u) = \langle u, \mathbf{1}_{\mathcal{U}}/\sqrt{K} \rangle^2 \in [0,1]$ — доля направления $u$ вдоль uniform-режима $\mathcal{U}$;
 - **gauge_share**: $\sigma_1^2 \cdot \mathrm{uniformity}(u_1) / \sum_i \sigma_i^2$ — доля энергии $J^{(p)}$, приходящаяся на gauge-направление.
 
-(Не путать с gauge_share $\|P(p)J\|_F^2/\|J\|_F^2$ из §12–13 — доля энергии *сырого* $J$, убиваемой проекцией $P$.)
+(Не путать с gauge_share $\|P(p)J\|_F^2/\|J\|_F^2$ из §12–13: $P(p)J = J^{(p)}$ — это gauge-free часть, т.е. доля энергии *сырого* $J$, **оставшейся** после убийства gauge-направления; убиваемая uniform-компонента — $\|QJ\|_F^2/\|J\|_F^2$, где $Q = uu^T$, $u = \mathbf{1}/\sqrt K$.)
 
 > **Разведение рангов.** В статье символ $r$ используется в двух смыслах, которые следует отличать:
 > 1. **Спектральный ранг**: participation ratio / stable rank спектра $JJ^T$ (таблицы §14, §11).
@@ -141,7 +141,7 @@ $$\bar{G}_l = \frac{1}{N} \sum_{i=1}^{N} J_l^{(i)} \cdot \left(J_l^{(i)}\right)^
 
 **Определение.** Разрыв (gap) Якобиана для слоя $l$:
 
-$$\mathcal{G}_{\text{gap}}(l) = \frac{1}{|\mathcal{U}|} \sum_{i \in \mathcal{U}} w_i \cdot \left(1 - \frac{J_S[i] \cdot J_S^{\text{target}}[i]}{\|J_S[i]\| \cdot \|J_S^{\text{target}}[i]\| + \epsilon}\right)$$
+$$\mathcal{G}_{\text{gap}}(l) = \sum_{i \in \mathcal{U}} w_i \cdot \left(1 - \frac{J_S[i] \cdot J_S^{\text{target}}[i]}{\|J_S[i]\| \cdot \|J_S^{\text{target}}[i]\| + \epsilon}\right)$$
 
 где:
 
@@ -174,9 +174,9 @@ $$\tau_l = 0.01 \cdot \mathrm{median}_i\big(\|J_S[i]\|\big)$$
 | **gap (разрыв)** $\mathcal{G}_{\text{gap}}$ | вероятностно-взвешенная $(1 - \cos)$ | **меньше = лучше** |
 | **bridge (мост)** $\mathcal{B}_{\text{bridge}}$ | (взвешенное) среднее $\cos$ | **больше = лучше** |
 
-$$\mathcal{B}_{\text{bridge}}(l) = \frac{1}{|\mathcal{U}|} \sum_{i \in \mathcal{U}} w_i \cdot \frac{J_S[i] \cdot J_S^{\text{target}}[i]}{\|J_S[i]\| \cdot \|J_S^{\text{target}}[i]\| + \epsilon}$$
+$$\mathcal{B}_{\text{bridge}}(l) = \sum_{i \in \mathcal{U}} w_i \cdot \frac{J_S[i] \cdot J_S^{\text{target}}[i]}{\|J_S[i]\| \cdot \|J_S^{\text{target}}[i]\| + \epsilon}$$
 
-В общем случае $\mathcal{G}_{\text{gap}} \approx 1 - \mathcal{B}_{\text{bridge}}$ (точно, если веса $w_i$ совпадают; при усреднении по строкам без весов — ровно $1-\cos$). Эксперименты 1–15 отчётывают **gap** (lower-is-better); эксперименты 16–19 отчётуют **bridge** (higher-is-better, $\cos$). В JSON: ключи `gap` (эксп. 1–15) и `bridge` (эксп. 16–19) — направление теперь однозначно.
+В общем случае $\mathcal{G}_{\text{gap}} = 1 - \mathcal{B}_{\text{bridge}}$ точно (при совпадающих весах $w_i$; при усреднении по строкам без весов — ровно $1-\cos$). Эксперименты 1–15 отчётывают **gap** (lower-is-better); эксперименты 16–19 отчётуют **bridge** (higher-is-better, $\cos$). В JSON: ключи `gap` (эксп. 1–15) и `bridge` (эксп. 16–19) — направление теперь однозначно.
 
 ---
 
@@ -329,11 +329,11 @@ def compute_jacobian_for_tokens(
 
 > **⚠️ ЗАМЕЧАНИЕ ПО ПАМЯТИ.** Для длинных последовательностей это ~1-2 GB. Если не хватает памяти — уменьшить $S$ до 512.
 
-> **Определение (projected Jacobian).** Для задач, инвариантных к uniform shift логитов (softmax, cross-entropy), важна не $J$ целиком, а её gauge-free компонента (проектор $\mathrm{diag}(p) - pp^T$, не ортогональный проектор в общем случае):
+> **Определение (projected Jacobian).** Для задач, инвариантных к uniform shift логитов (softmax, cross-entropy), важна не $J$ целиком, а её gauge-free компонента (оператор $\mathrm{diag}(p) - pp^T$ — якобиан softmax, gauge-оператор; не проектор: $P^2 \ne P$):
 >
 > $$J^{(p)} = (\mathrm{diag}(p) - pp^T) J$$
 >
-> где $p = p_U \in \mathbb{R}^K$ — softmax логитов, **урезанный и ренормализованный** на токен-сете $U$: $p_U(k) = p(k) / \sum_{j\in U} p(j)$ для $k \in U$. Это приближение полного gauge-проектора (утечка $O(p(U)(1-p(U)))$, см. §13). Матрица $\mathrm{diag}(p) - pp^T$ — ковариационная матрица one-hot с распределением $p$, линейный оператор, убивающий gauge-направление $\mathbf{1}$. Оператор убирает gauge-направление (uniform shift), сохраняя только token-discriminating направления. $J^{(p)}$ используется в §8 (defrag) и §9 (surgery).
+> где $p = p_U \in \mathbb{R}^K$ — softmax логитов, **урезанный и ренормализованный** на токен-сете $U$: $p_U(k) = p(k) / \sum_{j\in U} p(j)$ для $k \in U$. Это приближение полного gauge-оператора (утечка $O(p(U)(1-p(U)))$, см. §13). Матрица $\mathrm{diag}(p) - pp^T$ — ковариационная матрица one-hot с распределением $p$, линейный оператор, убивающий gauge-направление $\mathbf{1}$. Оператор убирает gauge-направление (uniform shift), сохраняя только token-discriminating направления. $J^{(p)}$ используется в §8 (defrag) и §9 (surgery).
 
 ### 2.3. Шаг 2: Якобианов Мост
 
@@ -344,7 +344,7 @@ def jacobian_bridge(
     E_L: torch.Tensor,       # [V, D_L] — эмбеддинги старшей
     E_S: torch.Tensor,       # [V, D_S] — эмбеддинги младшей
     probs_L: torch.Tensor,   # [|U|] — вероятности токенов в старшей модели
-    threshold: float = 1e-6, # порог затухания градиента
+    threshold_rel: float = 0.01,  # относительный порог: τ = 0.01 · median(‖J_S[i]‖) (см. §1.6)
 ) -> float:
     """
     Вычисляет Якобианов лосс между старшей и младшей моделями.
@@ -361,10 +361,12 @@ def jacobian_bridge(
     G_inv = torch.linalg.pinv(E_S.float().T @ E_S.float())  # [D_S, D_S]
     J_S_target = J_L_projected @ E_S.float() @ G_inv  # [|U|, D_S]
     
-    # Маска затухших градиентов
+    # Маска затухших градиентов (относительный порог, §1.6: τ_l = 0.01 · median_i ‖J_S[i]‖;
+    # исторически использовался абсолютный порог τ = 1e-6)
     J_S_norms = J_S.float().norm(dim=1)       # [|U|]
     J_target_norms = J_S_target.norm(dim=1)    # [|U|]
-    valid_mask = (J_S_norms > threshold) & (J_target_norms > threshold)  # [|U|]
+    tau = threshold_rel * J_S_norms.median()
+    valid_mask = (J_S_norms > tau) & (J_target_norms > tau)  # [|U|]
     
     if valid_mask.sum() == 0:
         return 1.0  # максимальный лосс, если всё затухло
@@ -548,7 +550,7 @@ Qwen3.5 использует Multi-dimensional RoPE (MRoPE) с `position_ids` ф
 
 $$\frac{\partial y}{\partial x} = \frac{1}{r}\,\mathrm{diag}(g)\,\big(I - \hat u \hat u^T\big)$$
 
-(порядок множителей важен: $\mathrm{diag}(g)$ — слева; при $g = \mathbf{1}$ матрица симметрична, при $g \neq \mathbf{1}$ — нет; $r = \|x\|_2/\sqrt{D}$, $\hat u = x/\|x\|_2$, $\|\hat u\| = 1$). Свойства: вектор $g^{-1}\odot \hat u$ (покомпонентно) — нулевой собственный вектор, матрица ранга $\le D-1$ **неортогональна**; композиция через RMSNorm даёт вклад $(1/r)\,\mathrm{diag}(g)(I - \hat u \hat u^T)$ в полный слой-переходный Jacobian $D_l$ (уравнение (1.4) Math). Каждый RMSNorm — множитель ранга $D-1$, поэтому произведение $\prod D_i$ вырождено ($\det = 0$) и **полная** сумма показателей Ляпунова равна $-\infty$; FTLE определяется **только для top-$m$ сингулярных значений**. При вычислении FTLE в сумму top-$m$ показателей входит вклад $\log(1/r)$ на каждом RMSNorm (см. appendix Math.md §3 «FTLE» — QR-алгоритм, лог-аккумуляция, оговорки n = 24–32): это дрейф масштаба от нормировки, а не хаотичность.
+(порядок множителей важен: $\mathrm{diag}(g)$ — слева; при $g = \mathbf{1}$ матрица симметрична, при $g \neq \mathbf{1}$ — нет; $r = \|x\|_2/\sqrt{D}$, $\hat u = x/\|x\|_2$, $\|\hat u\| = 1$). Свойства: $\hat u$ — нулевой собственный вектор ($M\hat u = \tfrac{1}{r}\,\mathrm{diag}(g)(\hat u - \hat u) = 0$), матрица ранга $\le D-1$ **неортогональна**; композиция через RMSNorm даёт вклад $(1/r)\,\mathrm{diag}(g)(I - \hat u \hat u^T)$ в полный слой-переходный Jacobian $D_l$ (уравнение (1.4) Math). Каждый RMSNorm — множитель ранга $D-1$, поэтому произведение $\prod D_i$ вырождено ($\det = 0$) и **полная** сумма показателей Ляпунова равна $-\infty$; FTLE определяется **только для top-$m$ сингулярных значений**. При вычислении FTLE в сумму top-$m$ показателей входит вклад $\log(1/r)$ на каждом RMSNorm (см. appendix Math.md §3 «FTLE» — QR-алгоритм, лог-аккумуляция, оговорки n = 24–32): это дрейф масштаба от нормировки, а не хаотичность.
 
 ---
 
@@ -715,7 +717,7 @@ Sparse map (пропорциональное выравнивание, 11 сло
 
 **Вывод:**
 1. Inverse Gramian критичен: без него loss 0.82 vs $10^{-8}$ — разница в 10⁷×.
-2. Learned bridge matrix ≠ случайная ортогональная матрица: random orthogonal R даёт loss ≈ 1.02 (максимум), тогда как learned W даёт loss ≈ 0. Это strong evidence что W выполняет конкретную работу по выравниванию подпространств, а не просто вращает.
+2. Learned bridge matrix ≠ случайная ортогональная матрица: random orthogonal R даёт loss ≈ 1.02 (уровень ортогональности, т.е. выравнивание отсутствует; максимум диапазона gap $[0,2]$ равен 2 — анти-выравнивание), тогда как learned W даёт loss ≈ 0. Это strong evidence что W выполняет конкретную работу по выравниванию подпространств, а не просто вращает.
 3. Три режима: corrected (≈0) < raw (0.82) < random R (1.02). Порядок подтверждает, что Gramian correction убирает bias, а learned W убирает rotation.
 
 ### Эксперимент 4 (N=4, K-sweep): Чувствительность к $|\mathcal{U}|$ (кросс-модельный 4B → 0.8B)
@@ -732,7 +734,7 @@ Sparse map (пропорциональное выравнивание, 11 сло
 | 128 | 1.0030 | 0.9377 | 0.8920 | 0.8021 | 0.6547 | 0.4336 | 0.787 |
 | 256 | 1.0024 | 0.9375 | 0.8911 | 0.8011 | 0.6518 | 0.4313 | 0.786 |
 
-**Вывод:** Метрика сходится при K ≥ 32; после K=64 изменение < 0.3% на par. Ранние par (0→0) почти не реагируют на K (1.018→1.002), поздние (30→22) чувствительны (0.451→0.431).
+**Вывод:** Метрика сходится при K ≥ 32; после K=64 изменение < 1.5% на par (максимум ≈ 1.3% — пара 30→22: 0.4370 → 0.4313). Ранние par (0→0) почти не реагируют на K (1.018→1.002), поздние (30→22) чувствительны (0.451→0.431).
 
 ### Эксперимент 5 (N=2, K=8): Перестановка эмбеддингов (0.8B)
 
@@ -811,7 +813,7 @@ CKA ≈ 0 для всех слоёв — представления геомет
 | 18 | 1.8K | 357 | 317 |
 | 23 | 2.8 | 2.2 | 1.3 |
 
-**Вывод:** Eigenvalues падают с 6M → 3 (layer 0 → 23). Топ-3 eigenvalues слоя 0 составляют ~70% от следа — доминирование **масштабной** моды (scale mode), а не uniform gauge (uniformity слоя 0 = 0.45 по Exp 10a). Uniform gauge доминирует в средних слоях (6–18, uniformity ≈ 0.95). В слое 23 спектр «плоский» — дифференциальная чувствительность. Это подтверждает, что ранние слои кодируют mainly gauge (common-mode baseline), поздние — семантику.
+**Вывод:** Eigenvalues падают с 6M → 3 (layer 0 → 23). Топ-3 eigenvalues слоя 0 составляют ~61% от следа (10.5M из 17.2M, след — по Exp 14) — доминирование **масштабной** моды (scale mode), а не uniform gauge (uniformity слоя 0 = 0.45 по Exp 10a). Uniform gauge доминирует в средних слоях (6–18, uniformity ≈ 0.95). В слое 23 спектр «плоский» — дифференциальная чувствительность. Это подтверждает, что ранние слои кодируют mainly gauge (common-mode baseline), поздние — семантику.
 
 ### Эксперимент 10a (N=4, K=32)
 
@@ -986,18 +988,20 @@ Spearman корреляция между величиной common-mode ($\|v_0^
 
 Возмущаем $h_l \leftarrow h_l \pm \varepsilon \cdot v$ при одинаковой норме $\|v\|=1$, $\varepsilon=1.0$. Мерим KL($p_{\text{orig}} \| p_{\text{pert}}$).
 
-| Слой | uniformity($v_g$) | KL$_g$ (avg ± std) | KL$_d$ (avg ± std) | ratio KL$_d$/KL$_g$ |
+| Слой | uniformity($u_g$) | KL$_g$ (avg ± std) | KL$_d$ (avg ± std) | ratio KL$_d$/KL$_g$ |
 | --- | --- | --- | --- | --- |
 | 6 | 0.92 | 7.04 ± 0.37 | 7.55 ± 0.58 | 1.07× |
 | 12 | 0.94 | 7.46 ± 0.47 | 7.80 ± 0.51 | 1.05× |
 | 18 | 0.97 | 6.42 ± 0.97 | 6.69 ± 0.94 | 1.04× |
+
+($u_g$ — левый сингулярный вектор в token-пространстве; $v_g$ живёт в hidden-пространстве, uniformity определён только для $u_g$.)
 
 **Результат ε-sweep:**
 1. **Линейный режим (ε ≤ 0.1):** KL_g = KL_d (ratio = 1.00×). Gauge и differential направления неразличимы — в первом порядке оба дают одинаковый KL.
 2. **Нелинейный переход (ε = 0.5–1.0):** Появляется слабый разрыв (max ratio = 1.07×, L6, ε=1.0): KL_g(L6) 7.34 → 7.04, KL_d(L6) 7.52 → 7.55; на L18 gap остаётся малым (1.01× → 1.04×).
 3. **Интерпретация:** Модель не игнорирует gauge-направление (KL_g не меньше KL_d). Gauge «просачивается» через нелинейности decoder. Разрыв при ε=1.0 — не gauge-инвариантность, а нелинейное затухание gauge-сигнала.
 
-**Что подтверждено:** uniformity $v_g$ = 0.92–0.97 на слоях 6–18 — gauge direction существует и имеет равномерную структуру. **Структурное разделение** работает; **функциональная разделимость** при полном forward — нет. (Последующий Exp 0.1, §12, исключил альтернативное объяснение нелинейного перехода — фрактальности поля $J$: на масштабах $\sigma_d$ поле когерентно, первый порядок корректен.)
+**Что подтверждено:** uniformity левого сингулярного вектора $u_g$ = 0.92–0.97 на слоях 6–18 — gauge direction существует и имеет равномерную структуру. **Структурное разделение** работает; **функциональная разделимость** при полном forward — нет. (Последующий Exp 0.1, §12, исключил альтернативное объяснение нелинейного перехода — фрактальности поля $J$: на масштабах $\sigma_d$ поле когерентно, первый порядок корректен.)
 
 > **Рефрейм:** map — **направление минимальной чувствительности**. При равном destruktive budget (KL≈15) map-квантование даёт меньшее возмущение hidden space (Δh 0.22–0.63 vs 0.82–2.52), чем uniform — но **оба варианта разрушают модель полностью** (PPL 10⁶–10⁸). Это не «map сохраняет модель», а «map направляет разрушение эффективнее» (см. exp12b).
 
@@ -1364,8 +1368,8 @@ Exp 0.1 показал, что Грамианы sample-local: внутри до�
 Объекты (Exp 27, exp27 v11; слой l ∈ {6,12,18,19,22,23}, токены x ∈ U_128, |U|=K):
 
 - $h_t = h(x, t) \in \mathbb{R}^D$ — скрытое состояние на позиции t; $J_t = \partial h_{l,t} / \partial x \in \mathbb{R}^{D \times K}$ — Якобиан скрытого состояния по токенам (backprop; в кэше хранится уже gauge-free $J^{(p)}_t$).
-- **Gauge-оператор**: $P(p) = \mathrm{diag}(p) - pp^T$, где $p = p_U$ — softmax, урезанный и ренормализованный на U. $P$ симметричен, полуопределённо положителен ($x^T P x = \mathrm{Var}_p[x] \ge 0$), $\ker P = \mathrm{span}\{\mathbf{1}\}$, rank = $K-1$; $P^2 \ne P$ (не проектор; идемпотентен лишь при $p = \mathrm{uniform}$). Тождество: $P = \partial \mathrm{softmax}/\partial z$, поэтому $J^{(p)} = P J = \partial p / \partial h$ — канонический Якобиан выходного распределения, и $J^T P J$ — информация Фишера: $\mathrm{KL}(p \| p_{h+\delta}) = \tfrac{1}{2}\delta^T J^T P J\, \delta + O(\|\delta\|^3)$.
-- **Gauge-free Якобиан**: $J^{(p)}_t = P(p_t) J_t$. Три конвенции пар (t1, t2): **pos-pk** (каноническая: $P(p_{t1})J_{t1}$ и $P(p_{t2})J_{t2}$ — проектор на своём положении), **same-pk** (оба члена с $p_{t1}$ или оба с $p_{t2}$), **raw** (без проектора). Инвариантность: $JJ^T$-статистики инвариантны к $J \mapsto J O$ ($O \in O(D)$), vec-косинус $C$ — нет ($\mathbb{E}_{Haar}[C] = 0$): нулевое $C$ между сэмплами априори не различает «нет структуры» и «ротационная структура» (одинаковые грамианы, разные вращения); дискриминант — сравнение грамианов по доменам (§13.1, факт 5). Утечка на усечённом носителе: $O(p(U)(1-p(U)))$ (независимый равномерный сдвиг $\mathbf{1}_U$ обнуляется точно).
+- **Gauge-оператор**: $P(p) = \mathrm{diag}(p) - pp^T$, где $p = p_U$ — softmax, урезанный и ренормализованный на U. $P$ симметричен, полуопределённо положителен ($x^T P x = \mathrm{Var}_p[x] \ge 0$), $\ker P = \mathrm{span}\{\mathbf{1}\}$, rank = $K-1$; $P$ не идемпотентен ни при каком $p$ (даже при $p = \mathrm{uniform}$: $P = \tfrac{1}{K}I - \tfrac{1}{K^2}\mathbf{1}\mathbf{1}^T$ и $P^2 = \tfrac{1}{K}P \ne P$ при $K>1$) — это не проектор, а якобиан softmax (gauge-оператор). Тождество: $P = \partial \mathrm{softmax}/\partial z$, поэтому $J^{(p)} = P J = \partial p / \partial h$ — канонический Якобиан выходного распределения, и $J^T P J$ — информация Фишера: $\mathrm{KL}(p \| p_{h+\delta}) = \tfrac{1}{2}\delta^T J^T P J\, \delta + O(\|\delta\|^3)$.
+- **Gauge-free Якобиан**: $J^{(p)}_t = P(p_t) J_t$. Три конвенции пар (t1, t2): **pos-pk** (каноническая: $P(p_{t1})J_{t1}$ и $P(p_{t2})J_{t2}$ — gauge-оператор на своём положении), **same-pk** (оба члена с $p_{t1}$ или оба с $p_{t2}$), **raw** (без gauge-оператора). Инвариантность: $JJ^T$-статистики инвариантны к $J \mapsto J O$ ($O \in O(D)$), vec-косинус $C$ — нет ($\mathbb{E}_{Haar}[C] = 0$): нулевое $C$ между сэмплами априори не различает «нет структуры» и «ротационная структура» (одинаковые грамианы, разные вращения); дискриминант — сравнение грамианов по доменам (§13.1, факт 5). Утечка на усечённом носителе: $O(p(U)(1-p(U)))$ (независимый равномерный сдвиг $\mathbf{1}_U$ обнуляется точно).
 - **Расстояние**: $\delta = \|h_{t1} - h_{t2}\|_2$ (скрытое, не текстовое). $\sigma_d$ — норма покомпонентного std скрытых состояний на последней позиции (median по доменам).
 - **Метрики**: $C_a = \mathrm{mean}\ \cos(J^{(p_1)}_{t1}, J^{(p_2)}_{t2})$ по position-парам одного образца; $C_b = \mathrm{mean}\ \cos$ по sample-парам одного домена (pos 0); $T_{domain} = C_{within} - C_{cross}$ (27.5/27.6: $C_{within}$ = 112 пар в доменах, $C_{cross}$ = 384 междоменных, N=32 = 4×8).
 - **Эффективное измерение** ($r_{eff}$): распределение $p_k = \sigma_k^2 / \sum \sigma^2$ по сингулярным значениям $J$ [K, D]. Основной: **ентропический ранг** $r_{eff} = \exp(-\sum p_k \log p_k)$; вторичные: stable rank $= \|J\|_F^2/\sigma_1^2$, participation ratio $= (\sum \sigma^2)^2 / \sum \sigma^4$.
@@ -1381,7 +1385,7 @@ Exp 0.1 показал, что Грамианы sample-local: внутри до�
 
 27.6 (блок-перестановки, T-блоки):
 
-- **T4**: $T_4(L) = C_a(L) - C_b(L)$ (layer-level difference); null = block-permutation по доменам (сохраняет within-domain корреляцию); $p_{4,adj} = B \cdot \min(0.05, p_4 / \alpha_4)$, где $\alpha_4 = 0.05/(n_{layers})$ (Bonferroni по слоям).
+- **T4**: $T_4(L) = C_a(L) - C_b(L)$ (layer-level difference); null = block-permutation по доменам (сохраняет within-domain корреляцию); Bonferroni-коррекция по слоям: $p_{4,\text{adj}} = \min(1, p_4 \cdot n_{\text{layers}})$ (значимо при $p_{4,\text{adj}} < 0.05$, эквивалентно $p_4 < 0.05/n_{\text{layers}}$).
 - **T5**: Hartigan dip-test на распределение 112 $C_b$-значений (бимодальность); $p_{dip}$ из β-null: параметры $a = mS$, $b = (1-m)S$, $S = m(1-m)/s^2 - 1$ (moment-matching на эмпирическое $m, s^2$), $B=100$ β-выборок.
 - **T6**: $\lambda_1, \lambda_2$ собственных значений усреднённой $K^G$ (32×32); $\Delta\lambda = \lambda_1 - \lambda_2$ (eigengap); $r_{eff}(K^G) = \exp(-\sum \lambda_k \log \lambda_k)$ (нормировка $\sum \lambda_k = 1$).
 - **T8**: $C_b$ на math-only пуле (8 образцов, 28 пар) vs full pool (4 домена, 112 пар).

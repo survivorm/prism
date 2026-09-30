@@ -1,12 +1,12 @@
 """Exp 28b — dense J-profile cache, S=128, t=0..127.
 
-One-off GPU cache to feed exp28 (leaf structure / curvature) and future
+One-off GPU cache to feed exp27b/exp28 (leaf structure / curvature) and future
 post-processing: gauge-free J(t) at EVERY position of the 128-prefix for all
 32 samples and 6 layers. Causal prefixes make S=64/32 dense profiles free
 slices of this cache (exp27 causal-identity, verified).
 
 24,576 J calls (128 t x 32 samples x 6 layers) ~ 12-16h T4.
-Per-layer checkpoint files results/exp28_jcache_L{l}.pt (~2.1GB, RAM-safe,
+Per-layer checkpoint files results/exp27b_jcache_L{l}.pt (~2.1GB, RAM-safe,
 layer-granular resume). Post-processing stays local (no GPU).
 """
 
@@ -151,7 +151,7 @@ def main(
 
     t0 = time.time()
     for l in layers:
-        ck_l = os.path.join(results_dir, f"exp28_jcache_L{l}.pt")
+        ck_l = os.path.join(results_dir, f"exp27b_jcache_L{l}.pt")
         JR: dict[tuple, torch.Tensor] = {}
         P128: dict[tuple, torch.Tensor] = {}
         RANKS: dict[tuple, tuple[float, float, float]] = {}
@@ -208,7 +208,7 @@ def main(
                     "domains": domains, "S": S}, ck_l)
         print(f"L{l}: saved {ck_l} ({len(JR)}/{total} J) "
               f"[{(time.time() - t0) / 60:.1f} min total]")
-    print(f"[OK] exp28_dense cache: {len(layers)} layers x {n} samples x {S} t "
+    print(f"[OK] exp27b_dense cache: {len(layers)} layers x {n} samples x {S} t "
           f"in {(time.time() - t0) / 60:.0f} min, S={S}")
 
 def _ranks(J: torch.Tensor) -> tuple[float, float, float]:

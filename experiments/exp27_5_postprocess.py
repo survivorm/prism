@@ -223,6 +223,26 @@ def _W_k(DG, labels, k):
     return W
 
 
+def _rho_nn(KG, labels):
+    num, den = 0.0, 0.0
+    for c in sorted(set(labels.tolist())):
+        ic = np.where(labels == c)[0]
+        if len(ic) < 2:
+            continue
+        Kw = KG[np.ix_(ic, ic)]
+        K_within = Kw[np.triu_indices_from(Kw, 1)].mean()
+        best_neigh = -2.0
+        for d in set(labels.tolist()):
+            if d == c:
+                continue
+            K_cd = KG[np.ix_(ic, np.where(labels == d)[0])].mean()
+            best_neigh = max(best_neigh, K_cd)
+        rho_c = 1.0 if abs(best_neigh) < 0.05 else K_within / best_neigh  # review guard
+        num += len(ic) * rho_c
+        den += len(ic)
+    return float(num / den if den else 0.0)
+
+
 def clustering_diagnostics(DG, J, rng, k_range=range(2, 9), B_gap=B_GAP, B_hh=B_HH):
     from scipy.cluster.hierarchy import cophenet
     from scipy.spatial.distance import squareform
@@ -263,30 +283,11 @@ def clustering_diagnostics(DG, J, rng, k_range=range(2, 9), B_gap=B_GAP, B_hh=B_
             ksel = k
             break
     best_k = max(ks, key=lambda k: sil[k])
-    # rho_NN for the best-silhouette clustering
-    _, labels = _fit_agglo(DG, best_k)
     KG = 1.0 - DG
-    uniq = sorted(set(labels.tolist()))
-    num, den = 0.0, 0.0
-    for c in uniq:
-        ic = np.where(labels == c)[0]
-        nc = len(ic)
-        if nc < 2:
-            continue
-        Kw = KG[np.ix_(ic, ic)]
-        iu = np.triu_indices_from(Kw, 1)
-        K_within = Kw[iu].mean()
-        best_neigh = -2.0
-        for d in uniq:
-            if d == c:
-                continue
-            idd = np.where(labels == d)[0]
-            K_cd = KG[np.ix_(ic, idd)].mean()
-            best_neigh = max(best_neigh, K_cd)
-        rho_c = K_within / (best_neigh + 1e-12)
-        num += nc * rho_c
-        den += nc
-    rho_NN = num / den
+    rho_curve = {str(k): _rho_nn(KG, _fit_agglo(DG, k)[1]) for k in ks}
+    _, labels = _fit_agglo(DG, best_k)
+    sizes = sorted(int((labels == c).sum()) for c in set(labels.tolist()))
+    rho_NN = rho_curve[str(best_k)]
     # cophenetic (Spearman per spec 9.7)
     Z = Z_all[best_k]
     out = cophenet(Z, squareform(DG, checks=False))
@@ -315,6 +316,8 @@ def clustering_diagnostics(DG, J, rng, k_range=range(2, 9), B_gap=B_GAP, B_hh=B_
         gap_curve={str(k): gap[k] for k in ks},
         gap_selected_k=int(ksel) if ksel is not None else None,
         rho_NN=float(rho_NN),
+        rho_NN_curve={str(k): float(v) for k, v in rho_curve.items()},
+        cluster_sizes_best_k=sizes,
         cophenetic_corr=float(coph),
         halfsplit_silhouette_mean_A=float(sA.mean()),
         halfsplit_silhouette_mean_B=float(sB.mean()),
@@ -343,7 +346,7 @@ def uniform_mode_block(J, C, E):
     )
 
 
-def run_layer(l, J, P, U, h, labels, rng, D):
+def run_layer(l, J, P, U, h, labels, rng, D, ck=None):
     print(f'--- layer {l} ---', flush=True)
     E_all = np.einsum('ikd,ikd->i', J, J)
     valid = E_all > 1e-12
@@ -384,6 +387,7 @@ def run_layer(l, J, P, U, h, labels, rng, D):
           f'rhoNN={clus["rho_NN"]:.3f} ({time.time()-t0:.1f}s)', flush=True)
 
     unif = uniform_mode_block(J, C, E)
+    corr_pos = corr_per_position(ck, l, labels, len(labels) // 4, ['wiki', 'math', 'code', 'chat']) if ck is not None else {}
     return dict(
         domain=dict(C_within=mean_offdiag(C, m), C_cross=mean_offdiag(C, ~m),
                     T_domain=T0, p_perm=p_perm, p_rot=p_rot),
@@ -394,10 +398,33 @@ def run_layer(l, J, P, U, h, labels, rng, D):
         clustering=clus,
         n_excluded_energy=excl,
         other_axes=dict(text_length='constant (S=64, pos=0 slice)',
-                        position='constant (pos=0)',
+                        position='constant in main slice; per-position corr below',
                         dataset_source='tested as domain axis (block A)',
                         mean_top_p_size='not_cached (logits not in jcache)'),
+        corr_per_position=corr_pos,
     )
+
+
+def corr_per_position(ck, l, labels, n_samples, domains, S=64, K=128):
+    """Review rec 2: rho(C, Delta features) at S=64 positions 1, 2, 4, 8 (main slice = pos 0)."""
+    out = {}
+    for pos in (1, 2, 4, 8):
+        try:
+            Jraw = np.stack([ck['JR'][(d, i, l, S, pos)][:K].numpy()
+                             for d in domains for i in range(n_samples)], 0)
+            P = np.stack([ck['P128'][(d, i, l, S, pos)][:K].numpy()
+                          for d in domains for i in range(n_samples)], 0)
+            h = np.stack([ck['H'][(d, i, l, S, pos)].numpy()
+                          for d in domains for i in range(n_samples)], 0)
+        except KeyError:
+            out[str(pos)] = None
+            continue
+        p = P / P.sum(1, keepdims=True)
+        Jp = p[:, :, None] * (Jraw - np.einsum('ik,ikd->id', p, Jraw)[:, None, :])
+        C, E, Dp = gramian_cosine(Jp, P, None, h)
+        out[str(pos)] = {k: pair_spearman(C, Dp[k]) for k in
+                         ['dh', 'dH', 'dlogE', 'dg_uni']}
+    return out
 
 
 def _light_metrics(J, P, U, h, labels):
@@ -421,7 +448,7 @@ def _light_metrics(J, P, U, h, labels):
                 continue
             K_cd = KG[np.ix_(ic, np.where(lb == d2)[0])].mean()
             best_neigh = max(best_neigh, K_cd)
-        num += len(ic) * (Kw[iu].mean() / (best_neigh + 1e-12))
+        num += len(ic) * (1.0 if abs(best_neigh) < 0.05 else Kw[iu].mean() / best_neigh)
         den += len(ic)
     return float(T0), float(p_perm), float(smax), float(num / den if den else 0.0)
 
@@ -526,7 +553,7 @@ def main():
         p = P / P.sum(1, keepdims=True)
         Jbar = np.einsum('ik,ikd->id', p, Jraw)          # (n, D)
         J = p[:, :, None] * (Jraw - Jbar[:, None, :])    # (n, K, D), sum_k J = 0
-        per_layer[str(l)] = run_layer(l, J, P, U, h, labels, rng, int(ck['D']))
+        per_layer[str(l)] = run_layer(l, J, P, U, h, labels, rng, int(ck['D']), ck)
 
     print('sensitivity (F.6):', flush=True)
     sens = sensitivity(ck, domains, n_samples, U, rng)
