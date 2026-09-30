@@ -1,8 +1,9 @@
 """Exp 28b — dense J-profile cache, S=128, t=0..127.
 
 One-off GPU cache to feed exp27b/exp28 (leaf structure / curvature) and future
-post-processing: gauge-free J(t) at EVERY position of the 128-prefix for all
-32 samples and 6 layers. Causal prefixes make S=64/32 dense profiles free
+post-processing: raw J(t) + p128 at EVERY position of the 128-prefix for all
+32 samples and 6 layers (gauge-free J = softmax projector applied
+downstream in exp28/exp27.5 post-processing). Causal prefixes make S=64/32 dense profiles free
 slices of this cache (exp27 causal-identity, verified).
 
 24,576 J calls (128 t x 32 samples x 6 layers) ~ 12-16h T4.
@@ -20,6 +21,7 @@ import torch
 
 from prism.calibration import load_calibration_data
 from prism.jacobian import compute_jacobian_for_tokens
+from transformers import DynamicCache
 
 S_DENSE = 128
 LAYERS_DEFAULT = (6, 12, 18, 19, 22, 23)
@@ -166,7 +168,7 @@ def main(
         fwd: dict[tuple, dict] = {}
         for dom in domains:
             for si in range(n_samples):
-                if any((dom, si, t) in JR for t in range(S)):
+                if all((dom, si, t) in JR for t in range(S)):
                     continue
                 fwd[(dom, si)] = _forward_dense(m, pool[dom][si], S, layers)
         done = len(JR)
@@ -188,7 +190,7 @@ def main(
                         # the GDN layers cannot handle (reshape [1,0,-1,H]).
                         # An empty DynamicCache is exactly the state after
                         # 0 tokens; the decoder pass is a fresh 1-token pass.
-                        pc = DynamicCache(config=m.config)
+                        pc = DynamicCache()  # same style as prism/jacobian.py (version-safe)
                     Jr = compute_jacobian_for_tokens(
                         m, l, ids_k.to(m.device), mask_k.to(m.device), U128,
                         prefix_cache=pc,

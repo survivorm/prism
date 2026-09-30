@@ -143,7 +143,6 @@ def main(
     layers=(6, 12, 18, 19, 22, 23),
     n_samples=8,
     domains=("wiki", "math", "code", "chat"),
-    make_png: bool = False,
 ):
     torch.manual_seed(42)
     if device == "auto":
@@ -250,7 +249,7 @@ def main(
                                                        ck["RANKS"][k], ck["H"][k])
             changed = [d for d in domains if not dom_ok(d)]
             print(f"J-cache REUSE: {len(JR)}/{n_tot} entries "
-                  f"(U128 set-identical, {fp_note}); regenerated: {changed}")
+                  f"(U128 set-identical, per-domain fp match); regenerated: {changed}")
         else:
             print(f"U128 set CHANGED (|Δ|={len(set(U128) ^ ck_U128)} tokens) "
                   f"-> all J recomputed; math pool fix altered token set")
@@ -320,8 +319,8 @@ def main(
         "git_hash": _git_hash(),
         "model": model,
         "model_state_sha256_8": hashlib.sha256(
-            torch.flatten(m.state_dict()[list(m.state_dict().keys())[0]])
-            .cpu().numpy().tobytes()
+            "|".join(f"{k}{tuple(v.shape)}"
+                     for k, v in m.state_dict().items()).encode()
         ).hexdigest()[:16],
         "U128_sha256_8": hashlib.sha256(U_bytes).hexdigest()[:16],
         "U128_source": ("fresh (v11 pools); J partly cached from v10 ckpt, U128 set-identical"
@@ -346,7 +345,7 @@ def main(
     print(f"[OK] exp27 saved to {out_path}")
     print(json.dumps(manifest, indent=1))
 
-def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs, u128_frozen=False):
+def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
     # ---- per-layer metrics -------------------------------------------------
     n = n_samples * len(domains)
     Ss = sorted({S for S, _, _ in cfgs})
@@ -419,7 +418,6 @@ def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs, u128_froze
         _pu = {64: pos_pairs_S64, 128: pos_pairs_S128}
         Lres["pos_pairs"] = {str(S): [list(pr) for pr in
             _pu.get(S, pos_pairs_Sother)] for S in Ss}
-        per_layer[str(l)] = Lres
         print(f"L{l}: configs done")
 
         # C_a per (S, K) on pos pairs: 3 conventions + L; per-sample lists
@@ -511,7 +509,6 @@ def main_cli():
     ap.add_argument("--layers", default="6,12,18,19,22,23")
     ap.add_argument("--n-samples", type=int, default=8)
     ap.add_argument("--domains", default="wiki,math,code,chat")
-    ap.add_argument("--make-png", action="store_true")
     ap.add_argument("--selfcheck", action="store_true")
     ap.add_argument("--resume", default=None,
                     help="path to exp27_jcache.pt: metrics only, no model")
