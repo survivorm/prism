@@ -224,6 +224,19 @@ Math_map.md уничтожен (user). Работаем СТРОГО по docs/M
 - не дублировать в тело то, на что уже есть ссылка appendix (FTLE, кривизны)
 - коммит после каждой пачки
 
+## Exp 28: Листовая структура и локальная кривизна (docs/Exp28.md, user 09-29 «готовь и запускай»)
+
+Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, без GPU.
+Цель: границы листов (главные углы V-подпространств) + локальная кривизна (голономия Procrustes) + корреляция с позицией.
+
+- [ ] PLAN (этот блок)
+- [ ] experiments/exp28_leaf_structure.py: Δ_SVD(t) на последовательных парах (конец: (S-1,S-2),(S-2,S-3) для S=32/64/128/256; середина: (95,94)@S128 из pos {33,32}; бонус: gap-пары S64 (S-5,S-4),(S-9,S-5),(S-17,S-9) → спад по Δt) + κ(t) на тройках (S-3,S-2,S-1) + r sweep {8,16,32} + рандом-базолиния (Haar R_t vs data)
+- [ ] run → results/exp28_leaf_structure.json
+- [ ] findings → docs/exp28_findings.md
+- [ ] интеграция в paper (лист/анизотропия §12) — только после результата
+
+Границы (не менять): exp27 jcache не трогать; токены/типы не в кэше → пункт ТЗ «тип токена» пропускать (зафиксировать в findings); одна модель (0.8B), сравнение 4B не в этом кэше.
+
 ## NEXT
 
 - [x] **Paper: 4 new GPU results integrated** (commit 43e7ded): exp4 (N=4 K-sweep, 7 K-values × 6 par, converges K≥32), exp10b (N=8, centered<softmax<raw), exp11c (N=8, defrag destroys monotonicity at all r≤32: spearman 0.81/0.71/0.43), exp6 L18 SNR (new section: SNR=2.80 r-invariant, PR 2.1→16.9, gauge_share top-r 0.60→0.19).
