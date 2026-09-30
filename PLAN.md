@@ -242,7 +242,7 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - Dense S=128 (t=0..127) покрывает S=64/32 dense (каузальность, exp27 identity); S=256 dense = 49k J ~20-30ч — не влезает.
 - 24,576 J (128 pos x 32 samples x 6 layers) ~ 12-16ч T4. Per-LAYER ckpt-файлы exp28_jcache_L{l}.pt (~2.1GB each, resume = слой).
 - [x] PLAN
-- [x] PUSHED v1 (после rename, commit fdf133a): voroninmichael/prism-exp27b-dense-profile RUNNING
+- [x] PUSHED v1 (после rename): FAIL на 1042с — тот же GDN краш (позиция 0): pc строился, НО не передавался в compute_jacobian_for_tokens (аргумент потерялся). Фикс: prefix_cache=pc.
 - [x] exp28_dense.py (pool v12 как exp27 v11, U128 fresh, J loop dense; AST+selfcheck; mock-reuse на реальном v11 ckpt: 3184/3328 matched, 144 recompute, 58 forwards)
 - [x] register push_all.py + silent-error audit (fixed: RAM fwd-free, resume S-check, --s-dense)
 - [x] CPU-смoke — убит: HF-стриминг пула rate-limit локально (28+ мин); Kaggle проходит это за минуты

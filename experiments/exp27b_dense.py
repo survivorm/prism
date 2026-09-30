@@ -190,7 +190,8 @@ def main(
                         # 0 tokens; the decoder pass is a fresh 1-token pass.
                         pc = DynamicCache(config=m.config)
                     Jr = compute_jacobian_for_tokens(
-                        m, l, ids_k.to(m.device), mask_k.to(m.device), U128
+                        m, l, ids_k.to(m.device), mask_k.to(m.device), U128,
+                        prefix_cache=pc,
                     ).float()
                     JR[(dom, si, t)] = Jr.cpu()
                     P128[(dom, si, t)] = p128.cpu()
