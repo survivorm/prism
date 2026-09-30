@@ -242,10 +242,11 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - Dense S=128 (t=0..127) покрывает S=64/32 dense (каузальность, exp27 identity); S=256 dense = 49k J ~20-30ч — не влезает.
 - 24,576 J (128 pos x 32 samples x 6 layers) ~ 12-16ч T4. Per-LAYER ckpt-файлы exp28_jcache_L{l}.pt (~2.1GB each, resume = слой).
 - [x] PLAN
+- [x] PUSHED v1 (после rename, commit fdf133a): voroninmichael/prism-exp27b-dense-profile RUNNING
 - [x] exp28_dense.py (pool v12 как exp27 v11, U128 fresh, J loop dense; AST+selfcheck; mock-reuse на реальном v11 ckpt: 3184/3328 matched, 144 recompute, 58 forwards)
 - [x] register push_all.py + silent-error audit (fixed: RAM fwd-free, resume S-check, --s-dense)
 - [x] CPU-смoke — убит: HF-стриминг пула rate-limit локально (28+ мин); Kaggle проходит это за минуты
-- [x] PUSHED v1: FAIL на 1074с — первый же t=127 (позиция 0): J-префикс 1 токен -> prefix-pass на 0 токенах -> GDN reshape краш (exp27 никогда не ходил в 0: там prefix = S-t-1 >= 31). Ckpt не писался, потеря = 0.
+- [x] PUSHED v1 (как exp28b): FAIL на 1074с — первый же t=127 (позиция 0): J-префикс 1 токен -> prefix-pass на 0 токенах -> GDN reshape краш (exp27 никогда не ходил в 0: там prefix = S-t-1 >= 31). Ckpt не писался, потеря = 0. КERNEL УБИТ user (переименование в exp27b).
 - [x] FIX: t=S-1 -> пустой DynamicCache(config=...) (состояние после 0 токенов; как нативный fresh 1-token pass); compute_jacobian_for_tokens принимает prefix_cache (default None, старые callers не тронуты); _deep_clone_cache getattr(dtype/device) для несинициализированных слоёв. Локальный GDN-форвард CPU не проверяется (triton-ядро вешается локально), структурный тест пустого кэша пройден.
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 
