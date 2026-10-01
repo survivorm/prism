@@ -262,7 +262,8 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - [x] v12 SMOKE PUSHED (n_samples=2,1024J): goal s/J + ckpt reuse. KILLED user (~960/1024) — no loss. User: full run, ckpt reuse.
 - [x] v13 SMOKE (1361s): ckpt reuse WORKS (J 513-1024, 2 forwards, 809s). s/J ~7.9 (slow 2nd half). NO conv-state crash. FULL-RUN PLAN: 4 pushes (1,2,3,4 samples) with ckpt reuse → each ≤6.4h.
 - [x] exp27 shared-pip-cell fix: v13 had fla[cuda] (yanked torch 2.5.1→2.14.1, broke torchvision nms); v14: flash-linear-attention==0.4.2 --no-build-isolation (0.5+ needs torch>=2.7, 2.5.1 incompatible), causal_conv1d REMOVED (17-min nvcc build then vmap 'Batching rule not implemented for _causal_conv1d_bwd_cpp' crash in v14)
-- [x] v14 SMOKE PUSHED (n_samples=1,layers=[6], pip cell fixed; kernel build v8, slug prism-exp27b-dense-profile): GOAL = verify model LOADS (plain fla no torch yank) + re-measure s/J. STATUS: RUNNING.
+- [x] v14 SMOKE PUSHED (n_samples=1,layers=[6], pip cell fixed; kernel build ...): vmap crash DaoAILab::_causal_conv1d_bwd_cpp (batched grads, 2026-09-24); ROOT CAUSE: fla not installed (build isolation pulls torch 2.12.1, breaks 2.5.1) + causal_conv1d built by nvcc (17min) and crashes under vmap.
+- [ ] v9 SMOKE PUSHED (fla==0.4.2 --no-build-isolation, causal_conv1d REMOVED): 2026-09-24, RUNNING
 - [ ] FULL exp27b (3328J, N=32, 6 layers): 4 pushes with ckpt reuse (each ≤6.4h) IF smoke s/J ≤~6.3. Budget ~11h single-push if no reuse.
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
