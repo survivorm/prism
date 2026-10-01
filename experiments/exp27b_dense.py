@@ -190,7 +190,7 @@ def main(
                         # the GDN layers cannot handle (reshape [1,0,-1,H]).
                         # An empty DynamicCache is exactly the state after
                         # 0 tokens; the decoder pass is a fresh 1-token pass.
-                        pc = DynamicCache()  # same style as prism/jacobian.py (version-safe)
+                        pc = DynamicCache(config=m.config)  # config ОБЯЗАТЕЛЕН: без него layers=[] -> GDN conv-state IndexError  # same style as prism/jacobian.py (version-safe)
                     Jr = compute_jacobian_for_tokens(
                         m, l, ids_k.to(m.device), mask_k.to(m.device), U128,
                         prefix_cache=pc,
