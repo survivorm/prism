@@ -257,7 +257,14 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
   - v5: manual `kaggle kernels push` WITHOUT rebuild → notebook 10:14 (old code). Log 512/4096 J = 6 layers 32 samples ~12.5h. User stopped.
   - v6: rebuild OK, smoke kwargs OK, but `U128.numel()` crashed (U128 is a LIST) + `[:, :128]` silent bug (first 128 vocab ids, not top-128 by freq).
 - [x] v7 FIXES: p128 gather by `torch.as_tensor(U128)` (matches exp27); intra-layer ckpt every 1024 J (crash loses <=1.5h not ~7h); GDN kernels in build (flash-linear-attention + causal_conv1d; failure = reference fallback, correct but slow).
-- [ ] v7 SMOKE PUSHED (n_samples=1, layers=[6] = 512 J). GOAL: measure s/J with fla/causal_conv1d. At 6.2 s/J full run = 43h > 12h cap → NEEDS speedup OR 6 single-layer pushes (per-layer ckpts). REMOVE smoke kwargs from push_all.py before full run.
+- [x] v8-v10 SMOKE (n_samples=1,layers=[6]): v8 FAIL DynamicCache(config) (transformers 5.12.1 cache has no .config) → v9 no-arg DynamicCache() + _deep_clone_cache no-op on empty (worked v11/v12/v13, 1024-J ckpt written ~17min) → v10 = v9 (killed user, no loss).
+- [x] v11 (smoke, 1501s OK): s/J measured — 653s (J1-512) + 173s (513-1024) → ~5-7 s/J, ~55% faster than exp27's 15s/J; full 3328J ≈ 10.9h < 12h T4 cap (MARGINAL). NO GDN conv-state error (plain fla ok). U128 from fresh pools; ckpt not reusable for full run (sample count differs).
+- [x] v12 SMOKE PUSHED (n_samples=2,1024J): goal s/J + ckpt reuse. KILLED user (~960/1024) — no loss. User: full run, ckpt reuse.
+- [x] v13 SMOKE (1361s): ckpt reuse WORKS (J 513-1024, 2 forwards, 809s). s/J ~7.9 (slow 2nd half). NO conv-state crash. FULL-RUN PLAN: 4 pushes (1,2,3,4 samples) with ckpt reuse → each ≤6.4h.
+- [ ] exp27 shared-pip-cell fix: v13 had fla[cuda] (yanked torch 2.5.1→2.14.1 → import fail) → plain `flash-linear-attention` (fla = GDN chunk-scan triton kernels, the real speedup; transformers resolves chunk_gated_delta_rule from fla) + `causal_conv1d --no-build-isolation || true` (conv only, nvcc=T4 absent, non-fatal).
+- [x] v14 SMOKE PUSHED (n_samples=1,layers=[6], pip cell fixed; kernel build v8, slug prism-exp27b-dense-profile): GOAL = verify model LOADS (plain fla no torch yank) + re-measure s/J. STATUS: RUNNING.
+- [ ] FULL exp27b (3328J, N=32, 6 layers): 4 pushes with ckpt reuse (each ≤6.4h) IF smoke s/J ≤~6.3. Budget ~11h single-push if no reuse.
+- [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 
 ## NEXT
