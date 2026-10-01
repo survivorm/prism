@@ -250,7 +250,8 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - [x] FIX: t=S-1 -> пустой DynamicCache() (состояние после 0 токенов; как нативный fresh 1-token pass); compute_jacobian_for_tokens принимает prefix_cache (default None, старые callers не тронуты); _deep_clone_cache getattr(dtype/device) для несинициализированных слоёв.
 - [x] PUSHED v2 (73c2200): REAL FIX — pc строился, но не передавался в вызов (аргумент prefix_cache=pc потерялся) -> тот же краш. v2 KILLED user (через ~15 мин до t=127 в любом случае).
 - [x] Ревью (docs/Exp27b_review.md) — проверено и починено (218ce8e): DynamicCache НЕ был импортирован (v2 = NameError на t=127), any->all в resume (partial ckpt), docstring; в exp27_noise_floor.py: dead make_png/u128_frozen/sys, недостижимая legacy-ветка, fingerprint names+shapes.
-- [x] v3 PUSHED (218ce8e, RUNNING): DynamicCache imported, all() resume.
+- [x] v3 PUSHED (218ce8e): FAIL на 1040с (тот же t=127): DynamicCache() без config= -> layers=[] -> GDN update_conv_state IndexError (5.12.1).
+- [x] v4 PUSHED: DynamicCache(config=m.config) (24 слоя, то же что jacobian-clone, работал в v12 на Kaggle).
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 
 ## NEXT
