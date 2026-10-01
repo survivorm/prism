@@ -142,11 +142,21 @@ def build_kernel(
         "!pip uninstall -y -q torch torchvision torchaudio cudf easyocr numba-cuda dask-cuda pylibraft-cu12 raft-dask-cu12 pylibcudf-cu12 rmm-cu12 quantecon cuvs-cu12 ucxx-cu12 cuml-cu12 cuda-python cuml libcuml libcuvs libraft numba ydata-profiling google-colab\n"
         "!pip install -q torch==2.5.1+cu121 torchvision==0.20.1+cu121 --index-url https://download.pytorch.org/whl/cu121\n"
         "!pip install -q " + " ".join(deps) + "\n"
-        # GDN optimized kernels: causal_conv1d (CUDA, compiles at build time — may
-        # fail) + flash-linear-attention (pure Python). Separate line so a failure
-        # here does NOT block main deps; `!` in a notebook cell does not halt on
-        # non-zero exit, and Qwen3.5 falls back to reference GDN (slower, correct).
-        "!pip install -q flash-linear-attention causal_conv1d\n"
+        # GDN optimized kernels (user-recommended). MUST run AFTER the torch install
+        # with --no-build-isolation: both build against the installed torch, and pip's
+        # build isolation hides it (ModuleNotFoundError: No module named 'torch').
+        # Two SEPARATE lines: one `pip install A B` aborts on the first build failure,
+        # so a causal_conv1d (CUDA) build failure would also kill fla. `!` in a notebook
+        # cell does not halt on non-zero exit; fallback = reference GDN.
+        # NOTE: NO [cuda] extra — it pulls torch>=2.7 and upgrades the preinstalled
+        # torch 2.5.1+cu121, breaking torchvision 0.20.1 (nms operator) -> transformers
+        # import chain dies (exp27 v13, 09-23). Plain fla is a pure wheel.
+        "!pip install -q flash-linear-attention==0.4.2 --no-build-isolation\n"
+        # causal_conv1d REMOVED (v14): the CUDA build succeeds (17 min nvcc) and then
+        # crashes under vmap with 'Batching rule not implemented for
+        # DaoAILab::_causal_conv1d_bwd_cpp' — harmful, not helpful. GDN chunk kernels
+        # come from fla only; the conv1d fallback is reference-attention quality.
+
         "!pip install -q -U transformers\n"
     )
 
