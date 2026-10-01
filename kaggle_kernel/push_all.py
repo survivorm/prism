@@ -202,9 +202,8 @@ KERNELS = {
         "id": "voroninmichael/prism-exp27b-dense-profile",
         "title": "Prism: exp27b-dense-profile",
         "exp_file": "experiments/exp27b_dense.py",
-        "runner_extra": "",
-        "note": "Exp 27b: dense J-profile cache S=128 t=0..127, 24,576 J, ~12-16h T4, per-layer ckpt files (1.7GB each). Same exp27 pools/model; feeds exp28 post + future dense analysis.",
-        "runner_extra": "n_samples=1, layers=[6],",  # SMOKE v5: 4 samples x 128 t x L6 = 512 J (~1h @ current 6.2s/J; ~17min if batched). remove for full run
+        "note": "Exp 27b: dense J-profile cache S=128 t=0..127, 24,576 J, per-layer ckpt files. Same exp27 pools/model; feeds exp28 post + future dense analysis.",
+        "runner_extra": "kwargs['n_samples'] = 1\nkwargs['layers'] = [6]\n",  # SMOKE v6: 4 samples x 128 t x L6 = 512 J (~17-53min). REMOVE for full run (n_samples=8, all layers).
     },
     "exp19": {
         "dir": "kernel-exp19",

@@ -142,6 +142,11 @@ def build_kernel(
         "!pip uninstall -y -q torch torchvision torchaudio cudf easyocr numba-cuda dask-cuda pylibraft-cu12 raft-dask-cu12 pylibcudf-cu12 rmm-cu12 quantecon cuvs-cu12 ucxx-cu12 cuml-cu12 cuda-python cuml libcuml libcuvs libraft numba ydata-profiling google-colab\n"
         "!pip install -q torch==2.5.1+cu121 torchvision==0.20.1+cu121 --index-url https://download.pytorch.org/whl/cu121\n"
         "!pip install -q " + " ".join(deps) + "\n"
+        # GDN optimized kernels: causal_conv1d (CUDA, compiles at build time — may
+        # fail) + flash-linear-attention (pure Python). Separate line so a failure
+        # here does NOT block main deps; `!` in a notebook cell does not halt on
+        # non-zero exit, and Qwen3.5 falls back to reference GDN (slower, correct).
+        "!pip install -q flash-linear-attention causal_conv1d\n"
         "!pip install -q -U transformers\n"
     )
 

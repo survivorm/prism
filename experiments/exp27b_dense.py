@@ -86,18 +86,21 @@ def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dic
         per[dom] = data
     return per
 
-def _forward_dense(m, s: dict, S: int, layers: list[int], U128: torch.Tensor) -> dict:
+def _forward_dense(m, s: dict, S: int, layers: list[int], U128: list) -> dict:
     """One forward on the S-prefix: p128 [S, 128] + hidden states at ALL
     positions (from the end, p=0..S-1) for each layer.
 
     RAM (review pt 2): keep p128 [S, 128] per sample, NOT [S, V] logits —
     32 samples x [128, 151936] f32 = 244MB vs [S,128] x1000 smaller.
+    U128 is a LIST of token ids (top-128 by frequency) — gather columns
+    by id (same as exp27 softmax(...)[U128]), NOT the first 128 vocab ids.
     """
     ids = s["input_ids"][:, :S].to(m.device)
     attn = s["attention_mask"][:, :S].to(m.device)
     with torch.no_grad():
         out = m(input_ids=ids, attention_mask=attn, output_hidden_states=True)
-    p128 = torch.softmax(out.logits[0].float(), dim=-1)[:, : U128.numel()].cpu()  # [S, 128]
+    u = torch.as_tensor(U128, dtype=torch.long, device=out.logits.device)
+    p128 = torch.softmax(out.logits[0].float(), dim=-1)[:, u].cpu()  # [S, 128]
     hs = {}
     for l in layers:
         hs[l] = out.hidden_states[l + 1][0].float().cpu()  # [S, D], all pos
@@ -204,6 +207,13 @@ def main(
                     RANKS[(dom, si, t)] = _ranks(Jr)
                     H[(dom, si, t)] = f["hs"][l][S - 1 - t]
                     done += 1
+                    if done % 1024 == 0:
+                        # intra-layer ckpt: a crash mid-layer loses <=1024 J (~1.5h),
+                        # not the whole layer (~7h). Save is ~1s, negligible.
+                        torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
+                                    "U128": U128, "pool_fp": pool_fp,
+                                    "layers": layers, "D": D, "n_samples": n_samples,
+                                    "domains": domains, "S": S}, ck_l)
                     if done % 512 == 0:
                         print(f"  L{l} J {done}/{total} "
                               f"({(time.time() - t0) / 60:.1f} min total)")
