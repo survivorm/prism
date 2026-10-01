@@ -86,18 +86,22 @@ def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dic
         per[dom] = data
     return per
 
-def _forward_dense(m, s: dict, S: int, layers: list[int]) -> dict:
-    """One forward on the S-prefix: logits + hidden states at ALL positions
-    (from the end, p=0..S-1) for each layer."""
+def _forward_dense(m, s: dict, S: int, layers: list[int], U128: torch.Tensor) -> dict:
+    """One forward on the S-prefix: p128 [S, 128] + hidden states at ALL
+    positions (from the end, p=0..S-1) for each layer.
+
+    RAM (review pt 2): keep p128 [S, 128] per sample, NOT [S, V] logits —
+    32 samples x [128, 151936] f32 = 244MB vs [S,128] x1000 smaller.
+    """
     ids = s["input_ids"][:, :S].to(m.device)
     attn = s["attention_mask"][:, :S].to(m.device)
     with torch.no_grad():
         out = m(input_ids=ids, attention_mask=attn, output_hidden_states=True)
-    logits = out.logits[0].float().cpu()
+    p128 = torch.softmax(out.logits[0].float(), dim=-1)[:, : U128.numel()].cpu()  # [S, 128]
     hs = {}
     for l in layers:
         hs[l] = out.hidden_states[l + 1][0].float().cpu()  # [S, D], all pos
-    return {"logits": logits, "hs": hs}
+    return {"p128": p128, "hs": hs}
 
 def main(
     model="Qwen/Qwen3.5-0.8B",
@@ -152,6 +156,13 @@ def main(
         pool_fp[d] = hashlib.sha256(blob).hexdigest()[:12]
 
     t0 = time.time()
+    # Hoist forward cache OUT of the layer loop (review pt: 192 forwards -> 32).
+    # p128 [S,128] + hs for all layers per sample; ~50MB each, 32 in memory.
+    fwd: dict[tuple, dict] = {}
+    for dom in domains:
+        for si in range(n_samples):
+            fwd[(dom, si)] = _forward_dense(m, pool[dom][si], S, layers, U128)
+    print(f"Forward cache: {len(fwd)} forwards")
     for l in layers:
         ck_l = os.path.join(results_dir, f"exp27b_jcache_L{l}.pt")
         JR: dict[tuple, torch.Tensor] = {}
@@ -165,12 +176,6 @@ def main(
                 print(f"L{l}: resumed {len(JR)}/{n * S} J from ckpt")
             else:
                 print(f"L{l}: ckpt U128/pool mismatch -> recompute layer")
-        fwd: dict[tuple, dict] = {}
-        for dom in domains:
-            for si in range(n_samples):
-                if all((dom, si, t) in JR for t in range(S)):
-                    continue
-                fwd[(dom, si)] = _forward_dense(m, pool[dom][si], S, layers)
         done = len(JR)
         total = n * S
         for dom in domains:
@@ -179,8 +184,7 @@ def main(
                     if (dom, si, t) in JR:
                         continue
                     f = fwd[(dom, si)]
-                    p128 = torch.softmax(f["logits"][S - 1 - t], dim=-1)[U128]
-                    p128 = (p128 / p128.sum()).to(m.device)
+                    p128 = (f["p128"][S - 1 - t] / f["p128"][S - 1 - t].sum()).to(m.device)  # [128]
                     ids_k = pool[dom][si]["input_ids"][:, :S - t]
                     mask_k = pool[dom][si]["attention_mask"][:, :S - t]
                     pc = None

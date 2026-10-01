@@ -204,6 +204,7 @@ KERNELS = {
         "exp_file": "experiments/exp27b_dense.py",
         "runner_extra": "",
         "note": "Exp 27b: dense J-profile cache S=128 t=0..127, 24,576 J, ~12-16h T4, per-layer ckpt files (1.7GB each). Same exp27 pools/model; feeds exp28 post + future dense analysis.",
+        "runner_extra": "n_samples=1, layers=[6],",  # SMOKE v5: 4 samples x 128 t x L6 = 512 J (~1h @ current 6.2s/J; ~17min if batched). remove for full run
     },
     "exp19": {
         "dir": "kernel-exp19",

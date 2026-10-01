@@ -251,7 +251,9 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - [x] PUSHED v2 (73c2200): REAL FIX — pc строился, но не передавался в вызов (аргумент prefix_cache=pc потерялся) -> тот же краш. v2 KILLED user (через ~15 мин до t=127 в любом случае).
 - [x] Ревью (docs/Exp27b_review.md) — проверено и починено (218ce8e): DynamicCache НЕ был импортирован (v2 = NameError на t=127), any->all в resume (partial ckpt), docstring; в exp27_noise_floor.py: dead make_png/u128_frozen/sys, недостижимая legacy-ветка, fingerprint names+shapes.
 - [x] v3 PUSHED (218ce8e): FAIL на 1040с (тот же t=127): DynamicCache() без config= -> layers=[] -> GDN update_conv_state IndexError (5.12.1).
-- [x] v4 PUSHED: DynamicCache(config=m.config) (24 слоя, то же что jacobian-clone, работал в v12 на Kaggle).
+- [x] v4 PUSHED: DynamicCache(config=m.config) (24 слоя, то же что jacobian-clone, работал в v12 на Kaggle). STALLED — user стопнул (квота).
+- [x] Review v2 (docs/Exp27b_review.md) — 3 фикса: (1) prism/jacobian.py: is_grads_batched — 128 autograd.grad -> 1 backward (verified: batched max diff 0.0 на линейном, 7e-5 на нелинейном 3-слойном; 3.4x на синтетике, 5-10x ожидается на реальном tail); (2) exp27b _forward_dense: p128 [S,128] вместо [S,V] (RAM x1000); (3) hoist fwd: 32 forward'а, не 192.
+- [ ] SMOKE v5 PUSHED (n_samples=1, layers=[6] = 512 J, ~1h @ текущих 6.2с/J, ~17 мин если batched сработал). СMOKE runner_extra в push_all.py УДАЛИТЬ перед full run.
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 
 ## NEXT
