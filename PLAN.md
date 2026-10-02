@@ -263,8 +263,18 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - [x] v13 SMOKE (1361s): ckpt reuse WORKS (J 513-1024, 2 forwards, 809s). s/J ~7.9 (slow 2nd half). NO conv-state crash. FULL-RUN PLAN: 4 pushes (1,2,3,4 samples) with ckpt reuse → each ≤6.4h.
 - [x] exp27 shared-pip-cell fix: v13 had fla[cuda] (yanked torch 2.5.1→2.14.1, broke torchvision nms); v14: flash-linear-attention==0.4.2 --no-build-isolation (0.5+ needs torch>=2.7, 2.5.1 incompatible), causal_conv1d REMOVED (17-min nvcc build then vmap 'Batching rule not implemented for _causal_conv1d_bwd_cpp' crash in v14)
 - [x] v14 SMOKE PUSHED (n_samples=1,layers=[6], pip cell fixed; kernel build ...): vmap crash DaoAILab::_causal_conv1d_bwd_cpp (batched grads, 2026-09-24); ROOT CAUSE: fla not installed (build isolation pulls torch 2.12.1, breaks 2.5.1) + causal_conv1d built by nvcc (17min) and crashes under vmap.
-- [ ] v9 SMOKE PUSHED (fla==0.4.2 --no-build-isolation, causal_conv1d REMOVED): 2026-09-24, RUNNING
-- [ ] FULL exp27b (3328J, N=32, 6 layers): 4 pushes with ckpt reuse (each ≤6.4h) IF smoke s/J ≤~6.3. Budget ~11h single-push if no reuse.
+- [x] v9 SMOKE RAN: fla==0.4.2 --no-build-isolation + causal_conv1d removed.
+  J-loop 512 J = 247s (0.48 s/J — TRITON Kernels WORK), ckpt 288MB, then
+  NameError 'J' (main-local, _metrics line 191).
+- [x] v10 SMOKE PUSHED: _metrics J=None fix + FLA probe (prints available +
+  fla-core version). Both `fla` and `fla-core` dists install (v10 log) —
+  transformers 5.12.1 detector = is_flash_linear_attention_available:
+  find_spec('fla') + version >= 0.2.2 via packages_distributions(); probe
+  output decides.
+- [x] v11 FULL PUSHED (RUNNING): n_samples=8, all 4 domains, 6 layers, S=128,
+  24,576 J. ~3.3h at v9 rate (triton); ~90h at torch fallback. 12h cap: OK if
+  triton works. ckpt per-layer (exp27b_j_L{l}.pt) — any crash is resumable.
+- [ ] FULL exp27b results + ckpt pull + exp28 post (needs v11 done).- [ ] FULL exp27b (3328J, N=32, 6 layers): 4 pushes with ckpt reuse (each ≤6.4h) IF smoke s/J ≤~6.3. Budget ~11h single-push if no reuse.
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 

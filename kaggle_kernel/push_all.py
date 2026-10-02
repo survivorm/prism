@@ -203,7 +203,8 @@ KERNELS = {
         "title": "Prism: exp27b-dense-profile",
         "exp_file": "experiments/exp27b_dense.py",
         "note": "Exp 27b: dense J-profile cache S=128 t=0..127, 24,576 J, per-layer ckpt files. Same exp27 pools/model; feeds exp28 post + future dense analysis.",
-        "runner_extra": "kwargs['n_samples'] = 1\nkwargs['layers'] = [6]\n",  # SMOKE v6: 4 samples x 128 t x L6 = 512 J (~17-53min). REMOVE for full run (n_samples=8, all layers).
+        # FULL: n_samples=8 x 4 domains x 128 t x 6 layers = 24,576 J (no smoke overrides).
+        # ~3.3h T4 IF fla triton kernels work (v9: 0.48 s/J); ~90h at torch fallback — v10 FLA probe decides.
     },
     "exp19": {
         "dir": "kernel-exp19",
