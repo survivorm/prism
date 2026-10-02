@@ -122,6 +122,13 @@ def main(
         device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
 
+    # fla probe: if missing, transformers silently falls back to slow torch GDN
+    import importlib.util, importlib.metadata as _md
+    _fla_ok = importlib.util.find_spec("fla") is not None
+    _fla_ver = _md.version("fla-core") if _fla_ok else "not installed"
+    print(f"FLA probe: available={_fla_ok} fla-core={_fla_ver} "
+          f"(fla==0.4.2 + transformers 5.12.1 required for fast GDN kernels)")
+
     from transformers import AutoModelForCausalLM
 
     print(f"Loading {model}...")

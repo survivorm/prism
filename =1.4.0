@@ -1,0 +1,6 @@
+Defaulting to user installation because normal site-packages is not writeable
+Looking in indexes: https://nexus.ninfra.ru/repository/pypi-prod-all/simple, https://pypi.ngenix.net/root/dev/
+Collecting causal-conv1d
+  Downloading https://pypi.ngenix.net/root/pypi/%2Bf/320/2758494eaa7b5/causal_conv1d-1.7.0.tar.gz (30 kB)
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'error'
