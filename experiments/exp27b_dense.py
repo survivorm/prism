@@ -173,13 +173,19 @@ def main(
         for si in range(n_samples):
             fwd[(dom, si)] = _forward_dense(m, pool[dom][si], S, layers, U128)
     print(f"Forward cache: {len(fwd)} forwards")
+    # Cross-push resume: self kernel_source (build_kernel.py adds our own
+    # id) mounts the previous run's /kaggle/working at /kaggle/input/<slug>/,
+    # so per-layer ckpts survive the working wipe.
+    _slug = "prism-exp27b-dense-profile"
+    ck_dirs = [results_dir, os.path.join("/kaggle/input", _slug, "results")]
     for l in layers:
-        ck_l = os.path.join(results_dir, f"exp27b_jcache_L{l}.pt")
         JR: dict[tuple, torch.Tensor] = {}
         P128: dict[tuple, torch.Tensor] = {}
         RANKS: dict[tuple, tuple[float, float, float]] = {}
         H: dict[tuple, torch.Tensor] = {}
-        if os.path.exists(ck_l):
+        ck_l = next((os.path.join(dd, f"exp27b_jcache_L{l}.pt")
+                     for dd in ck_dirs if os.path.exists(os.path.join(dd, f"exp27b_jcache_L{l}.pt"))), None)
+        if ck_l:
             ck = torch.load(ck_l, map_location="cpu")
             if ck["U128"] == U128 and ck["pool_fp"] == pool_fp and ck.get("S") == S:
                 JR, P128, RANKS, H = ck["JR"], ck["P128"], ck["RANKS"], ck["H"]
@@ -224,7 +230,9 @@ def main(
                     if done % 512 == 0:
                         print(f"  L{l} J {done}/{total} "
                               f"({(time.time() - t0) / 60:.1f} min total)")
-                fwd.pop((dom, si), None)  # free this sample's logits+hs
+                # NO fwd.pop here: the forward cache is consumed by ALL six
+                # layers, popping it inside the layer loop leaves nothing for
+                # L12+ (v12/v13 crashes: UnboundLocalError then KeyError).
         torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
                     "U128": U128, "pool_fp": pool_fp,
                     "layers": layers, "D": D, "n_samples": n_samples,

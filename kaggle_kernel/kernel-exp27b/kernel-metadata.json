@@ -6,5 +6,8 @@
   "language": "python",
   "code_file": "kernel.ipynb",
   "id": "voroninmichael/prism-exp27b-dense-profile",
-  "title": "Prism: exp27b-dense-profile"
+  "title": "Prism: exp27b-dense-profile",
+  "kernel_sources": [
+    "voroninmichael/prism-exp27b-dense-profile"
+  ]
 }

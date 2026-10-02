@@ -372,8 +372,13 @@ def build_kernel(
     # if "/" in kernel_id:
     #     meta["slug"] = kernel_id.split("/")[-1]
     # If 409 persists: remove meta["id"] to force Kaggle to create new kernel
-    if kernel_sources:
-        meta["kernel_sources"] = kernel_sources
+    # Self-source habit: list our own kernel id in kernel_sources so the
+    # previous version's /kaggle/working (checkpoints!) is mounted at
+    # /kaggle/input/<slug>/ on the next run (survives the working wipe).
+    ks = list(kernel_sources or [])
+    if kernel_id and kernel_id not in ks:
+        ks.append(kernel_id)
+    meta["kernel_sources"] = ks
     if dataset_sources:
         meta["dataset_sources"] = dataset_sources
     with open(meta_path, "w") as f:
