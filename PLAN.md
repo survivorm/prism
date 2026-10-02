@@ -274,6 +274,8 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - [x] v11 FULL PUSHED (RUNNING): n_samples=8, all 4 domains, 6 layers, S=128,
   24,576 J. ~3.3h at v9 rate (triton); ~90h at torch fallback. 12h cap: OK if
   triton works. ckpt per-layer (exp27b_j_L{l}.pt) — any crash is resumable.
+- [x] v12 FULL FAIL at L12 start (2123s): 'del fwd' was INSIDE the layer loop (fwd built once for all 6 layers, killed after L6 -> L12 UnboundLocalError). L6 COMPLETE + saved (4096 J, 30.8 min, 0.45 s/J = triton confirmed, total ~3.2h OK). Intra-layer ckpt (1024 J) worked.
+- [x] v13 FULL PUSHED: del fwd moved after loop (fwd.pop per-sample stays). L6 resumes from exp27b_jcache_L6.pt, L12-L23 fresh, ~2.9h remaining.
 - [ ] FULL exp27b results + ckpt pull + exp28 post (needs v11 done).- [ ] FULL exp27b (3328J, N=32, 6 layers): 4 pushes with ckpt reuse (each ≤6.4h) IF smoke s/J ≤~6.3. Budget ~11h single-push if no reuse.
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
