@@ -185,6 +185,7 @@ def main(
         H: dict[tuple, torch.Tensor] = {}
         ck_l = next((os.path.join(dd, f"exp27b_jcache_L{l}.pt")
                      for dd in ck_dirs if os.path.exists(os.path.join(dd, f"exp27b_jcache_L{l}.pt"))), None)
+        save_l = os.path.join(results_dir, f"exp27b_jcache_L{l}.pt")  # writes always to working, /kaggle/input is read-only
         if ck_l:
             ck = torch.load(ck_l, map_location="cpu")
             if ck["U128"] == U128 and ck["pool_fp"] == pool_fp and ck.get("S") == S:
@@ -226,7 +227,7 @@ def main(
                         torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
                                     "U128": U128, "pool_fp": pool_fp,
                                     "layers": layers, "D": D, "n_samples": n_samples,
-                                    "domains": domains, "S": S}, ck_l)
+                                    "domains": domains, "S": S}, save_l)
                     if done % 512 == 0:
                         print(f"  L{l} J {done}/{total} "
                               f"({(time.time() - t0) / 60:.1f} min total)")
@@ -236,8 +237,8 @@ def main(
         torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
                     "U128": U128, "pool_fp": pool_fp,
                     "layers": layers, "D": D, "n_samples": n_samples,
-                    "domains": domains, "S": S}, ck_l)
-        print(f"L{l}: saved {ck_l} ({len(JR)}/{total} J) "
+                    "domains": domains, "S": S}, save_l)
+        print(f"L{l}: saved {save_l} ({len(JR)}/{total} J) "
               f"[{(time.time() - t0) / 60:.1f} min total]")
     print(f"[OK] exp27b_dense cache: {len(layers)} layers x {n} samples x {S} t "
           f"in {(time.time() - t0) / 60:.0f} min, S={S}")
