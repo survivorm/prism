@@ -275,7 +275,8 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
   24,576 J. ~3.3h at v9 rate (triton); ~90h at torch fallback. 12h cap: OK if
   triton works. ckpt per-layer (exp27b_j_L{l}.pt) — any crash is resumable.
 - [x] v12 FULL FAIL at L12 start (2123s): 'del fwd' was INSIDE the layer loop (fwd built once for all 6 layers, killed after L6 -> L12 UnboundLocalError). L6 COMPLETE + saved (4096 J, 30.8 min, 0.45 s/J = triton confirmed, total ~3.2h OK). Intra-layer ckpt (1024 J) worked.
-- [x] v13 FULL PUSHED: del fwd moved after loop (fwd.pop per-sample stays). NO cross-push reuse (/kaggle/working wiped per push, v12 L6 ckpt gone) — full 24,576 J fresh ~3.3h. Cross-push reuse would need 2.2GB dataset upload + sources entry: ~31min saved, YAGNI now.
+- [x] v13 FULL PUSHED — FAIL at 36min: fwd.pop inside layer loop emptied the forward cache after L6 → L12 KeyError ('wiki',0). L6 ckpt saved + pulled locally (2.07GB, 4096 J).
+- [x] v14 PUSHED (kernel v13): fwd.pop removed (cache needed by all 6 layers, ~2.5GB CPU RAM fine); build_kernel.py now auto-adds SELF id to kernel_sources for ALL kernels (habit, per user); exp27b looks for per-layer ckpts in /kaggle/input/<slug>/results/ (previous run's working via self-source) → L6 resumes, L12-L23 fresh ~2.9h.
 - [ ] FULL exp27b results + ckpt pull + exp28 post (needs v11 done).- [ ] FULL exp27b (3328J, N=32, 6 layers): 4 pushes with ckpt reuse (each ≤6.4h) IF smoke s/J ≤~6.3. Budget ~11h single-push if no reuse.
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 - [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
