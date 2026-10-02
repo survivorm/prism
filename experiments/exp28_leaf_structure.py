@@ -170,8 +170,8 @@ def _thirds(arr, T):
     (0..T//3, T//3..2T//3, 2T//3..T) — same positions for d1 and k2
     (review item 4). NaN-aware."""
     a = np.asarray(arr, dtype=float)
-    b = a.shape[-1]
-    return [float(np.nanmean(a[:, i * T // 3:min((i + 1) * T // 3, b)], axis=0)) for i in range(3)]
+    b = a.shape[1]
+    return [float(np.nanmean(a[:, i * T // 3:min((i + 1) * T // 3, b)])) for i in range(3)]
 
 
 def summarize_profile(d1, k2):

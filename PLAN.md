@@ -233,8 +233,8 @@ Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, б�
 - [x] experiments/exp28_leaf_structure.py: Δ_SVD(t) + κ(t) на dense кэше exp27b (t=0..127), r sweep {8,16,32}, Haar-базлайн B=200, MAD-границы
 - [x] review docs/Exp28_errors.md: +kappa_flat_frac, boundary_positions в JSON, thirds на общей сетке, deg→kappa, double-SVD убран
 - [x] оптимизации (коллега): batched SVD [T,K,D] на док, r-sweep = префиксы одного SVD, sign-gauging выкинут (метрики sign-инвариантны), pin на P-ядра (0-3), torch 4 потока → ~5.3с/док (было ~20мин/слой)
-- [ ] run → results/exp28_leaf_structure.json (запущен 10-02, pid 2152961, ETA ~30 мин)
-- [ ] findings → docs/exp28_findings.md
+- [x] run → results/exp28_leaf_structure.json (10-02, 22 min)
+- [x] findings → docs/exp28_findings.md: НЕТ листов L6-L22 (Δ≈rand), лист только в L23 (Δ=0.266, κ=0.018 vs rand 5.45), κ спадает 3.96→0.018 с глубиной (раскрутка), границы в L23 равномерны
 - [ ] интеграция в paper (лист/анизотропия §12) — только после результата
 
 Границы (не менять): exp27 jcache не трогать; токены/типы не в кэше → пункт ТЗ «тип токена» пропускать (зафиксировать в findings); одна модель (0.8B), сравнение 4B не в этом кэше.
