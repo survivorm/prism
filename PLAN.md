@@ -229,9 +229,11 @@ Math_map.md уничтожен (user). Работаем СТРОГО по docs/M
 Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, без GPU.
 Цель: границы листов (главные углы V-подпространств) + локальная кривизна (голономия Procrustes) + корреляция с позицией.
 
-- [ ] PLAN (этот блок)
-- [ ] experiments/exp28_leaf_structure.py: Δ_SVD(t) на последовательных парах (конец: (S-1,S-2),(S-2,S-3) для S=32/64/128/256; середина: (95,94)@S128 из pos {33,32}; бонус: gap-пары S64 (S-5,S-4),(S-9,S-5),(S-17,S-9) → спад по Δt) + κ(t) на тройках (S-3,S-2,S-1) + r sweep {8,16,32} + рандом-базолиния (Haar R_t vs data)
-- [ ] run → results/exp28_leaf_structure.json
+- [x] PLAN (этот блок)
+- [x] experiments/exp28_leaf_structure.py: Δ_SVD(t) + κ(t) на dense кэше exp27b (t=0..127), r sweep {8,16,32}, Haar-базлайн B=200, MAD-границы
+- [x] review docs/Exp28_errors.md: +kappa_flat_frac, boundary_positions в JSON, thirds на общей сетке, deg→kappa, double-SVD убран
+- [x] оптимизации (коллега): batched SVD [T,K,D] на док, r-sweep = префиксы одного SVD, sign-gauging выкинут (метрики sign-инвариантны), pin на P-ядра (0-3), torch 4 потока → ~5.3с/док (было ~20мин/слой)
+- [ ] run → results/exp28_leaf_structure.json (запущен 10-02, pid 2152961, ETA ~30 мин)
 - [ ] findings → docs/exp28_findings.md
 - [ ] интеграция в paper (лист/анизотропия §12) — только после результата
 
