@@ -225,7 +225,6 @@ def main(
                         print(f"  L{l} J {done}/{total} "
                               f"({(time.time() - t0) / 60:.1f} min total)")
                 fwd.pop((dom, si), None)  # free this sample's logits+hs
-        del fwd
         torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
                     "U128": U128, "pool_fp": pool_fp,
                     "layers": layers, "D": D, "n_samples": n_samples,
@@ -234,6 +233,7 @@ def main(
               f"[{(time.time() - t0) / 60:.1f} min total]")
     print(f"[OK] exp27b_dense cache: {len(layers)} layers x {n} samples x {S} t "
           f"in {(time.time() - t0) / 60:.0f} min, S={S}")
+    del fwd
 
 def _ranks(J: torch.Tensor) -> tuple[float, float, float]:
     """(entropic, stable, participation-ratio) rank of J [K, D]."""
