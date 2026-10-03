@@ -235,7 +235,7 @@ Post-processing ДЕНСНОГО кэша exp27b (J[(dom,si,t)], K=128, D=1024, 
 - [x] selfcheck (flat d<0.05, k<1e-4, flat_frac 1.0; curved 0.0; rand reproducible) + L6 smoke 232с
 - [DOING] FULL RUN 6 layers → /data/prism_kernels/exp28/ (~25min, pid 1746446, 09-30 16:xx)
 - [ ] findings → docs/exp28_findings.md
-- [ ] интеграция в paper (лист/анизотропия §12) — только после результата
+- [DOING] интеграция в paper (лист/анизотропия §12) — findings готовы (09-30)
 
 Границы (не менять): kэши exp27b не трогать; токены/типы не в кэше → пункт ТЗ «тип токена» пропускать; одна модель (0.8B).
 
@@ -282,9 +282,6 @@ Post-processing ДЕНСНОГО кэша exp27b (J[(dom,si,t)], K=128, D=1024, 
 - [x] v14 CRASH (read-only mount): resumed L6 from /kaggle/input OK (4096/4096), but layer-end save went to the same read-only path -> RuntimeError, ckpt never landed in working; v13 output no longer downloadable (latest-version only) so the L6 ckpt is lost.
 - [x] v15 PUSHED (kernel v14): save_l fix — ckpt reads from /kaggle/input, writes always to working results/. L6 recomputed from scratch (~24 min, confirmed in log), L12-L23 fresh, ETA ~3.0h. After this run the next self-source chain resumes for real.
 - [x] exp27b COMPLETE 119 min (7177s, < 2h): 6 layers x 32 samples x 128 tokens, 6 x 2.07GB ckpts in /data/prism_kernels/exp27b/results/. Per-layer speed 0.46/0.37/0.27/0.26/0.20/0.19 s/J (L6..L23) — monotonically faster with depth, decoder-pass re-runs blocks l..23 (17 blocks for L6, 0 for L23). Next: post-processing (dense profile metrics) locally.
-- [ ] FULL exp27b results + ckpt pull + exp28 post (needs v11 done).- [ ] FULL exp27b (3328J, N=32, 6 layers): 4 pushes with ckpt reuse (each ≤6.4h) IF smoke s/J ≤~6.3. Budget ~11h single-push if no reuse.
-- [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
-- [ ] post локально: exp28 fixed (baseline Dxr Haar B=200, Δ_SVD/κ profiles, MAD, B=200, exp28_errors.md) на dense кэше → docs/exp28_findings.md
 
 ## NEXT
 
