@@ -226,18 +226,18 @@ Math_map.md уничтожен (user). Работаем СТРОГО по docs/M
 
 ## Exp 28: Листовая структура и локальная кривизна (docs/Exp28.md, user 09-29 «готовь и запускай»)
 
-Post-processing кэша exp27 v11 (J, K=128, D=1024, 3264 entries) — CPU, без GPU.
-Цель: границы листов (главные углы V-подпространств) + локальная кривизна (голономия Procrustes) + корреляция с позицией.
+Post-processing ДЕНСНОГО кэша exp27b (J[(dom,si,t)], K=128, D=1024, t=0..127, 6 x 2.07GB) — CPU, без GPU.
+Цель: границы листов (главные углы V-подпространств, TZ: V не U) + локальная кривизна (голономия Procrustes O(r)) + позиция.
 
-- [x] PLAN (этот блок)
-- [x] experiments/exp28_leaf_structure.py: Δ_SVD(t) + κ(t) на dense кэше exp27b (t=0..127), r sweep {8,16,32}, Haar-базлайн B=200, MAD-границы
-- [x] review docs/Exp28_errors.md: +kappa_flat_frac, boundary_positions в JSON, thirds на общей сетке, deg→kappa, double-SVD убран
-- [x] оптимизации (коллега): batched SVD [T,K,D] на док, r-sweep = префиксы одного SVD, sign-gauging выкинут (метрики sign-инвариантны), pin на P-ядра (0-3), torch 4 потока → ~5.3с/док (было ~20мин/слой)
-- [x] run → results/exp28_leaf_structure.json (10-02, 22 min)
-- [x] findings → docs/exp28_findings.md: НЕТ листов L6-L22 (Δ≈rand), лист только в L23 (Δ=0.266, κ=0.018 vs rand 5.45), κ спадает 3.96→0.018 с глубиной (раскрутка), границы в L23 равномерны
+- [x] experiments/exp28_leaf_structure.py: Δ_SVD(t) + κ(t), r sweep {8,16,32}, Haar-базлайн B=200, MAD-границы, deg→NaN
+- [x] review 1 (docs/Exp28_errors.md 09-29): +kappa_flat_frac (kappa<1e-3, отдельно от flat_frac), boundary_positions в JSON, thirds на общей сетке, deg в kappa, double-SVD убран
+- [x] review 2 (docs/Exp28_errors.md 09-30): §1 (rand baseline = random subspaces, не rotation — метрики basis-invariant, selfcheck flat/curved/rand), §2 (Procrustes без det-fix — O(r), sign-gauge H=I), §3 (jacobian.py — не трогаем), §4 (оптимизации: batched SVD, r-prefixes, sign-gauging off, P-ядра + 4 BLAS потока по правилу user)
+- [x] selfcheck (flat d<0.05, k<1e-4, flat_frac 1.0; curved 0.0; rand reproducible) + L6 smoke 232с
+- [DOING] FULL RUN 6 layers → /data/prism_kernels/exp28/ (~25min, pid 1746446, 09-30 16:xx)
+- [ ] findings → docs/exp28_findings.md
 - [ ] интеграция в paper (лист/анизотропия §12) — только после результата
 
-Границы (не менять): exp27 jcache не трогать; токены/типы не в кэше → пункт ТЗ «тип токена» пропускать (зафиксировать в findings); одна модель (0.8B), сравнение 4B не в этом кэше.
+Границы (не менять): kэши exp27b не трогать; токены/типы не в кэше → пункт ТЗ «тип токена» пропускать; одна модель (0.8B).
 
 ## Exp 27b: dense J-profile cache (S=128, t=0..127) — rename от exp28b (09-30, data-exp для exp27-пула)
 - Запрос: данные, которых хватит МНОГО (user: «Давай сделаем данные, которых потом будет хватать. Даже если 8-16 ч GPU»).
