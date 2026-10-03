@@ -233,9 +233,9 @@ Post-processing ДЕНСНОГО кэша exp27b (J[(dom,si,t)], K=128, D=1024, 
 - [x] review 1 (docs/Exp28_errors.md 09-29): +kappa_flat_frac (kappa<1e-3, отдельно от flat_frac), boundary_positions в JSON, thirds на общей сетке, deg в kappa, double-SVD убран
 - [x] review 2 (docs/Exp28_errors.md 09-30): §1 (rand baseline = random subspaces, не rotation — метрики basis-invariant, selfcheck flat/curved/rand), §2 (Procrustes без det-fix — O(r), sign-gauge H=I), §3 (jacobian.py — не трогаем), §4 (оптимизации: batched SVD, r-prefixes, sign-gauging off, P-ядра + 4 BLAS потока по правилу user)
 - [x] selfcheck (flat d<0.05, k<1e-4, flat_frac 1.0; curved 0.0; rand reproducible) + L6 smoke 232с
-- [DOING] FULL RUN 6 layers → /data/prism_kernels/exp28/ (~25min, pid 1746446, 09-30 16:xx)
-- [ ] findings → docs/exp28_findings.md
-- [DOING] интеграция в paper (лист/анизотропия §12) — findings готовы (09-30)
+- [x] FULL RUN 6 layers → /data/prism_kernels/exp28/ (**22 min, 10-02 12:xx**)
+- [x] findings v2 → docs/exp28_findings.md: L23 лист (Δ=0.266 vs rand 0.051, p≈0.015), κ floor 0.0175 (curved-rigid), **κ-флэт (порог 1e-3 ТЗ 10.3) = 0.000 ВСЕГДА — TZ-flat нигде нет**
+- [DOING] интеграция в paper (лист/анизотропия §12)
 
 Границы (не менять): kэши exp27b не трогать; токены/типы не в кэше → пункт ТЗ «тип токена» пропускать; одна модель (0.8B).
 
