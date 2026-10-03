@@ -30,6 +30,11 @@ MAD boundary detection; 3264... 192 docs, batched SVD, ~22 min CPU.
    the whole document (thirds 0.261/0.269/0.268). 277 MAD-boundaries spread
    UNIFORMLY over the document (mean position 63.9; 78/107/92 per third) —
    local rough spots, not segment boundaries.
+2a. **No TZ-flat patches anywhere.** At the TZ 10.3 threshold (kappa < 1e-3),
+   kappa_flat_frac = 0.000 at ALL layers including L23 — the L23 kappa floor is
+   0.0175 (17.5x the threshold), so the L23 leaf is a RIGID-BUT-CURVED sheet,
+   not a flat one: the local frame barely rotates (Δ 0.27 rad) and twists
+   little (κ ~0.018) relative to random, but does not close.
 3. **Coexistence with exp27.** C_a(coherence of gauge-free J along a sample,
    8–41×F, L6–L23) is a norm/direction correlation of individual J rows;
    subspace rotation at random speed means the "sheet" is not an r-dimensional
