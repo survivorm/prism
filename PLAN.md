@@ -1,13 +1,17 @@
 # Prism — PLAN
 
-## E-30…E-34 (docs/exps_30-35.md, 2026-09-26)
-E-30/31/33/34 = локальный CPU postprocessing на exp27b_dense.pt; E-32 = единственный GPU. E-35 — свободный слот.
-- [ ] E-30: ESG rank-лестница r_raw vs r_gf (K=64/128) → results/exp30_esg_ranks.json
-- [ ] E-31: C(Δpos) полный J + границы предложений (offset_mapping) → results/exp31_cpos_full.json
-- [ ] E-32: Hessian-инъекции b_l, α∈{1,3}, слои {6,12,18} → results/exp32_injection.json (kernel)
-- [ ] E-33: L23 геодезика vs линейная интерполяция → results/exp33_l23_curvature.json
-- [ ] E-34: ESG-кластеризация (спектры, ARI, perm-test) → results/exp34_esg_clustering.json
-
+## E-30…E-35 (docs/exps_30-35.md, 2026-09-26) — правки exps_review.md внесены по теме
+Нумерация = порядок запуска. Мэппинг ревью→моя: review-E-34→E-30, review-E-31→E-31,
+review-E-32→E-32, review-E-35(геодезика+Δ_SVD-preflight)→E-33, review-E-33(голономия)→E-35.
+Слои в кэше {6,12,18,19,22,23} (L0 нет), cache-t конвенция, JR=raw J, RANKS уже посчитаны.
+- [x] TZ: все 3 блока ревью применены по теме + сверено (58 проверок)
+- [ ] E-30: ESG rank-лестница r_raw vs r_gf + ρ=offdiag/diag (K-инвар.) + null + контроль ρ↔|Δp|
+- [ ] E-31: C(Δpos) полный J + C_top-16 + границы предложений (wiki/chat) + pre-flight dP↔границы
+- [ ] E-32: Hessian-инъекции b, ε_canon=0.15‖h‖, α∈{1,3}, слои{6,12,18}, только в h (GPU, 2-3h)
+- [ ] E-33-preflight: регрессия Δ_SVD~α·d_S+β·|Δp| (OLS+HC3+VIF) — блокирует E-33-full
+- [ ] E-33-full: геодезика vs линейная, M-pinning, r-sweep (только если α значим)
+- [ ] E-34: ESG-кластеризация (спектры, ARI, perm-test), слои{6,12,18,22,23}
+- [ ] E-35: голономия preflight «транспорт vs случайный»
 
 ## Exp 29: Fisher-Rao метрика поля J (docs/Exp29.md)
 
