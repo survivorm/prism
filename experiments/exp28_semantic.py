@@ -16,6 +16,15 @@ v2 per docs/Exp28_errors.md review fixes:
       domain_blocks and kappa
   2.3 vectorized perm_test (exact label counts, B x M boolean matrix)
 
+v3 per docs/Exp28_errors.md review round 2 (2026-10-04):
+  2.1 perm_test EXACT positives via argsort (binomial masks were not exact)
+  2.2/2.6 worker computes d(r) r=8/16/32 + kappa profile and sends ~1KB;
+      V_all (500MB) and the Js stacks (2GB) leave the parent, J is read in
+      the worker from the COW-forked ckpt
+  2.4 boundary alignment: d(t) is the V_t -> V_{t+1} transition, absz is
+      reported for BOTH z(t) (pre-jump) and z(t+1) (post-jump)
+  2.5 os.sched_getaffinity saved to params for reproducibility
+
 Tests (CPU, no GPU, no model; r=16 to reproduce exp28 MAD boundaries exactly):
   1. P-axes: top-8 right singular vectors of the pooled (P_t - mean) stack;
      per-token z-scores within doc; |z| boundary vs rest (permutation B=2000);
@@ -46,6 +55,7 @@ B_TOP = 8
 LAYER = 23
 SEED = 20260928
 N_THREADS = 1  # one thread per process; 4 forked processes pinned OUTSIDE via taskset (user rule)
+T_TOTAL = 128  # exp27b dense cache: t = 0..127
 
 RESULTS = 'results/exp28_semantic.json'
 
@@ -71,27 +81,48 @@ def boundary_mask(d, flat_t=1e-6):
     mad = float(torch.nanmedian((d - dm).abs()))
     return (d > dm + max(2.0 * mad, flat_t))
 
-
 def perm_test(x, labels, B=B_PERM, seed=SEED):
     """Mean x[labels] - mean x[~labels]; one-sided p via B random masks with the
-    EXACT same number of positives as the real labels (vectorized)."""
+    EXACT same number of positives as the real labels (argsort selection)."""
     x = np.asarray(x, float)
     l = np.asarray(labels, bool)
-    stat = x[l].mean() - x[~l].mean()
+    stat = float(x[l].mean() - x[~l].mean()) if l.sum() else 0.0
     M = x.size
+    k = int(l.sum())
+    if k == 0 or k == M:
+        return stat, 1.0
     g = np.random.default_rng(seed)
-    lab = g.random((B, M)) < l.mean()
+    idx = np.argsort(g.random((B, M)), axis=1)[:, :k]
+    lab = np.zeros((B, M), bool)
+    lab[np.arange(B)[:, None], idx] = True
     sel = lab @ x
-    cnt = lab.sum(axis=1)
-    stats = sel / np.maximum(cnt, 1) - (x.sum() - sel) / np.maximum(M - cnt, 1)
-    return float(stat), float((stats >= stat).sum() + 1) / (B + 1)
+    stats = sel / k - (x.sum() - sel) / (M - k)
+    return stat, float((stats >= stat).sum() + 1) / (B + 1)
 
 
-def _svd_docs(Js, idxs, conn):
+def kappa_from_V(V, r):
+    """kappa(t) = ||procr(V_t,V_{t+1}) procr(V_{t+1},V_{t+2}) procr(V_t,V_{t+2})^-1 - I||_F."""
+    def _pol(M):
+        U, _, Wt = torch.linalg.svd(M, full_matrices=False)
+        return U @ Wt
+    Vr = V[:, :, :r]
+    M01 = Vr[:-2].transpose(-1, -2) @ Vr[1:-1]
+    M12 = Vr[1:-1].transpose(-1, -2) @ Vr[2:]
+    M02 = Vr[:-2].transpose(-1, -2) @ Vr[2:]
+    Hhol = _pol(M01) @ _pol(M12) @ _pol(M02).transpose(-1, -2)
+    return (Hhol - torch.eye(r)).flatten(1).norm(dim=1)
+
+
+def _worker(ck, keys, idxs, conn):
+    """SVD + d(r) profiles + kappa in the worker; send only profiles (~1KB)."""
     torch.set_num_threads(1)
-    for i, J in zip(idxs, Js):
+    for i, (d, s) in zip(idxs, keys):
+        J = torch.stack([ck['JR'][(d, s, t)] for t in range(T_TOTAL)])
         _, _, Vh = torch.linalg.svd(J, full_matrices=False)
-        conn.send((i, Vh[:, :32].transpose(-1, -2).numpy()))
+        V = Vh[:, :32].transpose(-1, -2)                      # [T, D, 32]
+        drs = tuple(d_profile_from_V(V, r).numpy() for r in (8, 16, 32))
+        krow = kappa_from_V(V, 16).numpy()                    # [T-2]
+        conn.send((i, drs, krow))
     conn.close()
 
 
@@ -109,28 +140,25 @@ def main():
     docs28_list = json.load(open(E28_JSON))['layers'][str(LAYER)]['docs']
     docs28 = {(d['dom'], d['si']): d for d in docs28_list}
     doms_order = [(d['dom'], d['si']) for d in docs28_list]
-    J_all = ck['JR']
 
-    # --- SVD per document, 4 forked processes (batched CPU SVD is sequential) ---
+    # --- SVD + d(r) + kappa per document in 4 forked workers; profiles only back ---
     import multiprocessing as mp
-    Js = [torch.stack([J_all[(d, s, t)] for t in range(T)]) for (d, s) in doms_order]
     conns = [mp.Pipe() for _ in range(4)]
     procs = []
     for w in range(4):
-        c = mp.Process(target=_svd_docs, args=(Js[w::4], list(range(w, N, 4)), conns[w][1]))
+        c = mp.Process(target=_worker, args=(ck, doms_order[w::4], list(range(w, N, 4)), conns[w][1]))
         c.daemon = True
         c.start()
         procs.append(c)
-    V_all = [None] * N
+    profs = [None] * N
+    krows = [None] * N
     for w in range(4):
         for _ in range(len(range(w, N, 4))):
-            i, v = conns[w][0].recv()
-            V_all[i] = torch.from_numpy(np.asarray(v))
+            i, drs, krow = conns[w][0].recv()
+            profs[i], krows[i] = drs, krow
     for c in procs:
         c.join()
-    del Js
-    d16 = [d_profile_from_V(V, 16) for V in V_all]
-    msk = {r: [boundary_mask(d_profile_from_V(V, r)).numpy() for V in V_all] for r in (8, 16, 32)}
+    msk = {r: [boundary_mask(torch.from_numpy(p[i])) for p in profs] for i, r in ((0, 8), (1, 16), (2, 32))}
 
     # self-check: r=16 boundaries match the saved exp28 JSON exactly
     for i, (d, s) in enumerate(doms_order):
@@ -160,7 +188,8 @@ def main():
     lab = np.zeros(N * T1, bool)
     for i in range(N):
         lab[i * T1:(i + 1) * T1] = msk[16][i]
-    absz = Zs[:, :T1, :B_TOP].numpy().reshape(N * T1, B_TOP)
+    absz = Zs[:, :T1, :B_TOP].numpy().reshape(N * T1, B_TOP)      # pre-jump: z(t)
+    absz_post = Zs[:, 1:, :B_TOP].numpy().reshape(N * T1, B_TOP)  # post-jump: z(t+1)
     axes_out = {}
     adj = np.zeros(N * T1, bool)
     for i in range(N):
@@ -169,9 +198,11 @@ def main():
                 adj[i * T1 + u] = True
     for a in range(B_TOP):
         stat, pval = perm_test(absz[:, a], lab)
+        stat_p, pval_p = perm_test(absz_post[:, a], lab)
         stat_a, pval_a = perm_test(absz[:, a], adj)
         axes_out[f'axis{a}'] = {
             'mean_absz_boundary_vs_rest': round(stat, 4), 'p_perm': round(pval, 5),
+            'mean_absz_post': round(stat_p, 4), 'p_perm_post': round(pval_p, 5),
             'adjacent_vs_far': round(stat_a, 4), 'p_perm_adj': round(pval_a, 5),
         }
 
@@ -194,7 +225,7 @@ def main():
         dyn[nm] = {'boundary_vs_rest': round(stat, 4), 'p_perm': round(pval, 5)}
 
     # --- test 3: domain blocks — hierarchical clustering of L23 d-profiles ---
-    Dmat = np.stack([d16[i].numpy() for i in range(N)])      # [N,T1], reuses SVD
+    Dmat = np.stack([p[1] for p in profs])                          # [N,T1], r=16
     nr = np.linalg.norm(Dmat, axis=1, keepdims=True).clip(min=1e-12)
     Dn = Dmat / nr
     C = Dn @ Dn.T                                             # cosine [N,N]
@@ -223,20 +254,8 @@ def main():
             per_dom.append(round(float((aa & bb).sum() / max((aa | bb).sum(), 1)), 3))
         jac[str(r)] = {'jaccard_vs_r16': round(pooled_jac, 4), 'per_domain': per_dom}
 
-    # --- test 5: pooled kappa profile L23 (r=16) — check peaks at t ~ 31/63/95 ---
-    def _pol(M):
-        U, _, Wt = torch.linalg.svd(M, full_matrices=False)
-        return U @ Wt
-
-    krow = []
-    for V in V_all:                                           # reuses the cached SVD
-        Vr = V[:, :, :16]
-        M01 = Vr[:-2].transpose(-1, -2) @ Vr[1:-1]
-        M12 = Vr[1:-1].transpose(-1, -2) @ Vr[2:]
-        M02 = Vr[:-2].transpose(-1, -2) @ Vr[2:]
-        Hhol = _pol(M01) @ _pol(M12) @ _pol(M02).transpose(-1, -2)
-        krow.append((Hhol - torch.eye(16)).flatten(1).norm(dim=1).numpy())
-    kprof = np.nanmean(np.stack(krow), axis=0)
+    # --- test 5: pooled kappa profile L23 (r=16) - check peaks at t ~ 31/63/95 ---
+    kprof = np.nanmean(np.stack(krows), axis=0)
     peaks = sorted(range(1, len(kprof) - 1), key=lambda t: -kprof[t])[:5]
 
     out = {
@@ -246,7 +265,9 @@ def main():
             'boundary_def': 'd(t) > median + max(2*MAD, 1e-6), per doc, r=16 (== exp28 JSON, self-checked)',
             'p_axes': 'top-8 right singular vectors of pooled (P_t - mean); per-doc z-score',
             'token_types': 'NOT in cache — TZ bullet skipped (token IDs unavailable)',
-            'perm_test': 'one-sided, vectorized, exact label counts',
+            'perm_test': 'one-sided, B random masks with EXACT positive count (argsort)',
+            'alignment': 'lab[t] = transition V_t -> V_{t+1}; pre = z(t), post = z(t+1)',
+            'affinity': sorted(os.sched_getaffinity(0)), 'threads_per_proc': N_THREADS,
             'inputs': f'{CKPT_DIR}/exp27b_jcache_L{LAYER}.pt, {E28_JSON}',
         },
         'p_axes': {'axis_thirds_mean': thirds, 'boundary_vs_rest': axes_out, 'per_domain': dom_out},
