@@ -1,5 +1,14 @@
 # Prism — PLAN
 
+## E-30…E-34 (docs/exps_30-35.md, 2026-09-26)
+E-30/31/33/34 = локальный CPU postprocessing на exp27b_dense.pt; E-32 = единственный GPU. E-35 — свободный слот.
+- [ ] E-30: ESG rank-лестница r_raw vs r_gf (K=64/128) → results/exp30_esg_ranks.json
+- [ ] E-31: C(Δpos) полный J + границы предложений (offset_mapping) → results/exp31_cpos_full.json
+- [ ] E-32: Hessian-инъекции b_l, α∈{1,3}, слои {6,12,18} → results/exp32_injection.json (kernel)
+- [ ] E-33: L23 геодезика vs линейная интерполяция → results/exp33_l23_curvature.json
+- [ ] E-34: ESG-кластеризация (спектры, ARI, perm-test) → results/exp34_esg_clustering.json
+
+
 ## Exp 29: Fisher-Rao метрика поля J (docs/Exp29.md)
 
 **DONE:**
