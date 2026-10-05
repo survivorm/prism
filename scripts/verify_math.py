@@ -141,12 +141,12 @@ def main():
     check("softmax_jacobian kills constant J", bool(torch.allclose(Jc1, 0, atol=1e-7)))
 
     # ---------- 5. Identity bridge on real embeddings (tie W=E) -------------
-    from prism.bridge import jacobian_bridge
+    from prism.bridge import jacobian_gap
 
     E = model.model.embed_tokens.weight.detach().float()
     torch.manual_seed(1)
     J_true = torch.randn(16, D)
-    loss_id = jacobian_bridge(J_true, J_true, E, E, torch.softmax(torch.randn(16), 0))
+    loss_id = jacobian_gap(J_true, J_true, E, E, torch.softmax(torch.randn(16), 0))
     check("identity bridge loss ~ 0 with real E (W=E)", loss_id < 1e-5, f"loss={loss_id:.2e}")
 
     # ---------- 6. J_logit = W[token_set] @ J_ref chain (last layer) --------

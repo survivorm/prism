@@ -38,6 +38,40 @@
           "gauge_share": 0.1984914179165858,
           "trace_top_r": 19317.20703125
         }
+      },
+      "spectral_round3": {
+        "wiki": {
+          "stable_rank_full": 1.7473177909851074,
+          "PR_full": 33.5207405090332,
+          "stable_rank_top8": 1.317757487297058,
+          "gauge_share_top8": 0.4642799800871343,
+          "trace_full": 27531.65234375,
+          "K": 256
+        },
+        "code": {
+          "stable_rank_full": 1.5782097578048706,
+          "PR_full": 28.915142059326172,
+          "stable_rank_top8": 1.279658317565918,
+          "gauge_share_top8": 0.48411298180041545,
+          "trace_full": 34730.36328125,
+          "K": 256
+        },
+        "math": {
+          "stable_rank_full": 1.982026219367981,
+          "PR_full": 32.844417572021484,
+          "stable_rank_top8": 1.542209267616272,
+          "gauge_share_top8": 0.4140933846577701,
+          "trace_full": 39911.2578125,
+          "K": 256
+        },
+        "chat": {
+          "stable_rank_full": 1.2726001739501953,
+          "PR_full": 19.168563842773438,
+          "stable_rank_top8": 1.1106868982315063,
+          "gauge_share_top8": 0.5816374675701759,
+          "trace_full": 46937.15625,
+          "K": 256
+        }
       }
     }
   },
@@ -57,6 +91,7 @@
       16,
       32,
       64
-    ]
+    ],
+    "note_round3": "added full-spectrum stable rank / PR for L18 (round 3)"
   }
 }

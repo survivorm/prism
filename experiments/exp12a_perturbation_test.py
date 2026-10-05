@@ -85,7 +85,7 @@ def run_full_decoder(
 
 def main(
     model="Qwen/Qwen3.5-0.8B",
-    n_samples=4,
+    n_samples=8,
     K=64,
     max_length=64,
     min_length=32,
@@ -96,7 +96,7 @@ def main(
     torch.manual_seed(42)
 
     if eps_list is None:
-        eps_list = [1.0]
+        eps_list = [0.01, 0.1, 0.5, 1.0]
 
     samples = load_calibration_data(model, max_length, min_length, n_samples)
 
@@ -159,14 +159,22 @@ def main(
                 uniformity = torch.abs(U_j.T @ ones)  # [min(K,D)]
                 gauge_idx = uniformity.argmax()
                 v_g = Vt_j[gauge_idx]
+                sigma_g = float(S_j[gauge_idx])
 
                 # Top right singular vector of J^(p)
-                _, _, Vt_p = torch.linalg.svd(J_p.float(), full_matrices=False)
+                _, S_p, Vt_p = torch.linalg.svd(J_p.float(), full_matrices=False)
                 v_d = Vt_p[0]
+                sigma_d = float(S_p[0])
 
                 # Normalize
                 v_g = v_g / v_g.norm()
                 v_d = v_d / v_d.norm()
+
+                # First-order (linear) predictor: KL_lin(v) = ½ ‖J^(p) v‖² = ½ Var_p(J v)
+                # [L-fisher]; compares the full-decoder KL below with the linear term
+                kl_lin_g = 0.5 * float((J_p @ v_g).norm() ** 2)
+                kl_lin_d = 0.5 * float((J_p @ v_d).norm() ** 2)
+                h_norm = float(h_base.norm())
 
                 results_g = {}
                 results_d = {}
@@ -186,6 +194,12 @@ def main(
                     "layer": layer,
                     "sample": si,
                     "uniformity_vg": uniformity[gauge_idx].item(),
+                    "sigma_g": sigma_g,
+                    "sigma_d": sigma_d,
+                    "norm_h": h_norm,
+                    "KL_lin_g": kl_lin_g,
+                    "KL_lin_d": kl_lin_d,
+                    "ratio_lin": kl_lin_d / (kl_lin_g + 1e-30),
                     "KL_g_minus": results_g[-1],
                     "KL_g_plus": results_g[+1],
                     "KL_d_minus": results_d[-1],
@@ -207,7 +221,8 @@ def main(
         all_results[eps_key] = eps_results
 
     os.makedirs(results_dir, exist_ok=True)
-    all_results["params"] = {"model": model, "n_samples": n_samples, "K": K, "max_length": max_length, "min_length": min_length, "eps_list": eps_list}
+    all_results["params"] = {"model": model, "n_samples": n_samples, "K": K, "max_length": max_length, "min_length": min_length, "eps_list": eps_list,
+                             "note": "round3: added sigma_g/sigma_d, norm_h, KL_lin_* (first-order predictor ½‖J^(p)v‖²)"}
     with open(os.path.join(results_dir, "exp12a_perturbation_test.json"), "w") as f:
         json.dump(all_results, f, indent=2)
     print(f"\nSaved to {results_dir}/exp12a_perturbation_test.json")
@@ -216,11 +231,11 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Exp 12A: Perturbation test")
     parser.add_argument("--model", default="Qwen/Qwen3.5-0.8B")
-    parser.add_argument("--n-samples", type=int, default=4)
+    parser.add_argument("--n-samples", type=int, default=8)
     parser.add_argument("--K", type=int, default=64)
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--min-length", type=int, default=32)
-    parser.add_argument("--eps-list", default="1.0",
+    parser.add_argument("--eps-list", default="0.01,0.1,0.5,1.0",
                         help="Comma-separated epsilon values, e.g. 0.01,0.1,0.5,1.0")
     parser.add_argument("--results-dir", default="results")
     args = parser.parse_args()

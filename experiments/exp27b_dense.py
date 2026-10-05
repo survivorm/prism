@@ -100,6 +100,8 @@ def _forward_dense(m, s: dict, S: int, layers: list[int], U128: list) -> dict:
     with torch.no_grad():
         out = m(input_ids=ids, attention_mask=attn, output_hidden_states=True)
     u = torch.as_tensor(U128, dtype=torch.long, device=out.logits.device)
+    # NOTE: p128 here is RAW (sub-stochastic, sum < 1 over U128). Callers MUST
+    # re-normalize before use (the J-cache P128 stores the NORMALIZED version).
     p128 = torch.softmax(out.logits[0].float(), dim=-1)[:, u].cpu()  # [S, 128]
     hs = {}
     for l in layers:
