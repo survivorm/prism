@@ -35,6 +35,8 @@ Tests (CPU, no GPU, no model; r=16 to reproduce exp28 MAD boundaries exactly):
      linkage, k=4, ARI vs domain labels.
   4. r-sensitivity (8/16/32) of the boundary set: Jaccard pooled + per-domain.
   5. Pooled kappa profile L23 (r=16) - check peaks at t ~ 31/63/95.
+  6. Axis-2 attribution on U128 (top token weights, p_t ratios at boundaries)
+     + real next-token types from the rebuilt pool-ids cache (token-type TZ bullet).
 Boundary definition = exp28: d(t) > median + max(2*MAD, 1e-6) per document
 (d over t=0..T1-1, r=16). Output: results/exp28_semantic.json.
 """
@@ -49,6 +51,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 CKPT_DIR = '/data/prism_kernels/exp27b/results'
 E28_JSON = '/data/prism_kernels/exp28/exp28_leaf_structure.json'
+IDS_PT = os.path.join(CKPT_DIR, 'exp27b_pool_ids_L23.pt')  # rebuilt input_ids (re-streamed pool == ckpt pool_fp)
 R_MAIN = 16
 B_PERM = 2000
 B_TOP = 8
@@ -77,8 +80,10 @@ def d_profile_from_V(V, r):
 
 
 def boundary_mask(d, flat_t=1e-6):
-    dm = float(torch.nanmedian(d))
-    mad = float(torch.nanmedian((d - dm).abs()))
+    # numpy mask: np.nonzero on a torch tensor is broken in numpy>=2.5 (returns 1 idx)
+    d = d.numpy() if torch.is_tensor(d) else np.asarray(d, float)
+    dm = float(np.nanmedian(d))
+    mad = float(np.nanmedian(np.abs(d - dm)))
     return (d > dm + max(2.0 * mad, flat_t))
 
 def perm_test(x, labels, B=B_PERM, seed=SEED):
@@ -119,7 +124,7 @@ def _worker(ck, keys, idxs, conn):
     for i, (d, s) in zip(idxs, keys):
         J = torch.stack([ck['JR'][(d, s, t)] for t in range(T_TOTAL)])
         _, _, Vh = torch.linalg.svd(J, full_matrices=False)
-        V = Vh[:, :32].transpose(-1, -2)                      # [T, D, 32]
+        V = Vh[:, :32].transpose(-1, -2)                      # [T, D, 32]; Vh is [T,K,D] batched SVD
         drs = tuple(d_profile_from_V(V, r).numpy() for r in (8, 16, 32))
         krow = kappa_from_V(V, 16).numpy()                    # [T-2]
         conn.send((i, drs, krow))
@@ -158,7 +163,7 @@ def main():
             profs[i], krows[i] = drs, krow
     for c in procs:
         c.join()
-    msk = {r: [boundary_mask(torch.from_numpy(p[i])) for p in profs] for i, r in ((0, 8), (1, 16), (2, 32))}
+    msk = {r: [boundary_mask(p[i]) for p in profs] for i, r in ((0, 8), (1, 16), (2, 32))}
 
     # self-check: r=16 boundaries match the saved exp28 JSON exactly
     for i, (d, s) in enumerate(doms_order):
@@ -258,23 +263,65 @@ def main():
     kprof = np.nanmean(np.stack(krows), axis=0)
     peaks = sorted(range(1, len(kprof) - 1), key=lambda t: -kprof[t])[:5]
 
+    # --- test 6: axis-2 token attribution + real next-token types (TZ bullet) ---
+    tok = torch.load(IDS_PT, map_location='cpu', weights_only=False)
+    Ua = np.asarray(ck['U128'])
+    assert {d: tok['meta'][d]['pool_fp'] for d in ck['domains']} == {d: ck['pool_fp'][d] for d in ck['domains']}, 'pool-ids fp mismatch'
+    idsA = np.array([list(ids) for d in ck['domains'] for ids in tok['ids'][d]])   # [N,T]
+    V2 = Axes[:, 2].numpy()
+    w2 = V2 / np.abs(V2).sum()
+    top8 = np.argsort(-np.abs(w2))[:8]
+    energy = float((w2[top8] ** 2).sum())
+    top8_tok = [[int(Ua[j]), round(float(w2[j]), 4)] for j in top8]
+    STRUCT = {220: 'space', 198: 'nl', 11: 'comma', 271: 'nnl'}
+    nU = np.isin(idsA[:, 1:], Ua)                                             # [N,T1], next token in U128
+    nU_idx = {int(t): i for i, t in enumerate(Ua)}
+    is_struct = np.isin(idsA[:, 1:], list(STRUCT))                            # [N,T1]
+    pos = (np.arange(T1)[None, :] + T1 * np.arange(N)[:, None]).reshape(-1)  # flat [N*T1]
+    lab_f = lab.reshape(-1); nU = nU.reshape(-1); is_struct = is_struct.reshape(-1)
+    Pn = P.numpy()
+    pbv = Pn[pos[lab_f] // T1, pos[lab_f] % T1, :].mean(0)
+    prv = Pn[pos[~lab_f] // T1, pos[~lab_f] % T1, :].mean(0)
+    corr_v2 = float(np.corrcoef(V2, pbv - prv)[0, 1])
+    pstruct = {nm: {'boundary': float((idsA[:, 1:] == tid).reshape(-1)[pos[lab_f]].mean()),
+                    'rest': float((idsA[:, 1:] == tid).reshape(-1)[pos[~lab_f]].mean())}
+               for nm, tid in STRUCT.items()}
+    pstruct_all = {'boundary': float(is_struct[pos[lab_f]].mean()), 'rest': float(is_struct[pos[~lab_f]].mean())}
+    # p_t of the REAL next token, on the nU subset (next token in U128)
+    Uinv = {int(t): j for j, t in enumerate(Ua)}
+    sel = pos[nU]
+    nxt = idsA[sel // T1, sel % T1 + 1]
+    pnext = Pn[sel // T1, sel % T1, Uinv[nxt.tolist()]]
+    pnext_mean = {'boundary': float(pnext[lab_f[nU]].mean()), 'rest': float(pnext[~lab_f[nU]].mean())}
+    ratio_struct = {}
+    for nm, tid in STRUCT.items():
+        j = int(np.where(Ua == tid)[0][0])
+        ratio_struct[nm] = {'boundary': float(Pn[lab_f // T1, lab_f % T1, j].mean()), 'rest': float(Pn[pos[~lab_f] // T1, pos[~lab_f] % T1, j].mean())}
+    att = {
+        'axis_energy_top8': round(energy, 4), 'top8_token_weight': top8_tok,
+        'struct_next_type': pstruct_all, 'struct_next_type_by_token': pstruct,
+        'p_real_next_token': pnext_mean, 'n_next_in_U128': int(nU.sum()), 'frac_next_in_U128': round(float(nU.mean()), 3),
+        'p_struct_at_boundary': ratio_struct, 'corr_V2_pb_minus_pr': round(corr_v2, 3),
+    }
+
     out = {
         'params': {
             'layer': LAYER, 'r_main': R_MAIN, 'b_perm': B_PERM, 'b_top': B_TOP,
             'seed': SEED, 'n_docs': N, 'T': T,
             'boundary_def': 'd(t) > median + max(2*MAD, 1e-6), per doc, r=16 (== exp28 JSON, self-checked)',
             'p_axes': 'top-8 right singular vectors of pooled (P_t - mean); per-doc z-score',
-            'token_types': 'NOT in cache — TZ bullet skipped (token IDs unavailable)',
+            'token_types': f'real next tokens from rebuilt pool-ids cache ({IDS_PT}); fp matched vs ckpt pool_fp, all 4 domains',
             'perm_test': 'one-sided, B random masks with EXACT positive count (argsort)',
             'alignment': 'lab[t] = transition V_t -> V_{t+1}; pre = z(t), post = z(t+1)',
             'affinity': sorted(os.sched_getaffinity(0)), 'threads_per_proc': N_THREADS,
-            'inputs': f'{CKPT_DIR}/exp27b_jcache_L{LAYER}.pt, {E28_JSON}',
+            'inputs': f'{CKPT_DIR}/exp27b_jcache_L{LAYER}.pt, {E28_JSON}, {IDS_PT}',
         },
         'p_axes': {'axis_thirds_mean': thirds, 'boundary_vs_rest': axes_out, 'per_domain': dom_out},
         'dynamics': dyn,
         'domain_blocks': {'ari_k4': ari},
         'r_sensitivity': jac,
         'kappa_profile_l23': {'pooled': kprof.tolist(), 'top5_peak_positions': peaks},
+        'axis2_token_attribution': att,
     }
     with open(RESULTS, 'w') as f:
         json.dump(out, f)
@@ -285,6 +332,7 @@ def main():
     print('ARI k=4:', round(ari, 3))
     print('r-sensitivity:', jac)
     print('kappa top peaks at t:', peaks, 'values:', [round(float(kprof[t]), 4) for t in peaks])
+    print('axis2 attribution:', att)
 
 
 if __name__ == '__main__':
