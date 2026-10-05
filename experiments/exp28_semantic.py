@@ -266,7 +266,7 @@ def main():
     # --- test 6: axis-2 token attribution + real next-token types (TZ bullet) ---
     tok = torch.load(IDS_PT, map_location='cpu', weights_only=False)
     Ua = np.asarray(ck['U128'])
-    assert {d: tok['meta'][d]['pool_fp'] for d in ck['domains']} == {d: ck['pool_fp'][d] for d in ck['domains']}, 'pool-ids fp mismatch'
+    assert tok['meta']['pool_fp'] == {d: ck['pool_fp'][d] for d in ck['domains']}, 'pool-ids fp mismatch'
     idsA = np.array([list(ids) for d in ck['domains'] for ids in tok['ids'][d]])   # [N,T]
     V2 = Axes[:, 2].numpy()
     w2 = V2 / np.abs(V2).sum()
@@ -285,18 +285,19 @@ def main():
     corr_v2 = float(np.corrcoef(V2, pbv - prv)[0, 1])
     pstruct = {nm: {'boundary': float((idsA[:, 1:] == tid).reshape(-1)[pos[lab_f]].mean()),
                     'rest': float((idsA[:, 1:] == tid).reshape(-1)[pos[~lab_f]].mean())}
-               for nm, tid in STRUCT.items()}
+               for tid, nm in STRUCT.items()}
     pstruct_all = {'boundary': float(is_struct[pos[lab_f]].mean()), 'rest': float(is_struct[pos[~lab_f]].mean())}
     # p_t of the REAL next token, on the nU subset (next token in U128)
     Uinv = {int(t): j for j, t in enumerate(Ua)}
     sel = pos[nU]
     nxt = idsA[sel // T1, sel % T1 + 1]
-    pnext = Pn[sel // T1, sel % T1, Uinv[nxt.tolist()]]
+    pnext = Pn[sel // T1, sel % T1, [Uinv[t] for t in nxt.tolist()]]
     pnext_mean = {'boundary': float(pnext[lab_f[nU]].mean()), 'rest': float(pnext[~lab_f[nU]].mean())}
+    bi, ri = np.flatnonzero(lab_f), np.flatnonzero(~lab_f)
     ratio_struct = {}
-    for nm, tid in STRUCT.items():
+    for tid, nm in STRUCT.items():
         j = int(np.where(Ua == tid)[0][0])
-        ratio_struct[nm] = {'boundary': float(Pn[lab_f // T1, lab_f % T1, j].mean()), 'rest': float(Pn[pos[~lab_f] // T1, pos[~lab_f] % T1, j].mean())}
+        ratio_struct[nm] = {'boundary': float(Pn[bi // T1, bi % T1, j].mean()), 'rest': float(Pn[ri // T1, ri % T1, j].mean())}
     att = {
         'axis_energy_top8': round(energy, 4), 'top8_token_weight': top8_tok,
         'struct_next_type': pstruct_all, 'struct_next_type_by_token': pstruct,
