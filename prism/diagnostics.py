@@ -28,8 +28,8 @@ def run_layer_diagnostics(
     exp_name="exp2_heatmap",
 ) -> dict[str, float]:
     """Compute bridge loss for each layer pair and save results."""
-    E_L, _ = extract_embeddings(model_large)
-    E_S, _ = extract_embeddings(model_small)
+    E_L = extract_embeddings(model_large)
+    E_S = extract_embeddings(model_small)
     results: dict[str, float] = {}
 
     for l_L, l_S in layer_mapping.items():
@@ -78,7 +78,7 @@ def run_heatmap(
     samples,
     results_dir="results",
 ) -> dict[str, float]:
-    """Run cross-model heatmap (8B -> 0.8B)."""
+    """Run cross-model heatmap (large -> small)."""
     results = run_layer_diagnostics(
         model_large,
         model_small,
@@ -120,9 +120,9 @@ def _plot_heatmap(
         [f"{li}->{si}" for li, si in zip(l_L_vals, l_S_vals, strict=True)]
     )
     ax.set_yticks([0])
-    ax.set_yticklabels(["L_bridge"])
+    ax.set_yticklabels(["gap (lower=better)"])
     fig.colorbar(im, ax=ax)
-    ax.set_title("Jacobian Bridge Loss (8B -> 0.8B)")
+    ax.set_title("Jacobian gap per layer pair")
     fig.tight_layout()
     fig.savefig(os.path.join(results_dir, "exp2_heatmap.png"))
     plt.close(fig)

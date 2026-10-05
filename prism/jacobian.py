@@ -1,6 +1,7 @@
 """Jacobian computation for decoder layers."""
 
 import contextlib
+import logging
 
 import torch
 from transformers import DynamicCache
@@ -28,10 +29,18 @@ def compute_jacobian_for_tokens(
         token_set: list of token IDs to compute gradients for.
 
     Returns:
-        J: [|U|, D] Jacobian matrix (unnormalized).
+        J: [K, D] Jacobian matrix (K = len(token_set), unnormalized).
     """
     model.eval()
     S = input_ids.shape[1]
+    # Constraint: single sequence, no padding. The replay phase builds causal
+    # masks from the cache length with attention_mask=None, so any padding
+    # token in the prefix would be silently treated as valid context.
+    if attention_mask is not None and not bool(attention_mask.all()):
+        raise ValueError(
+            "compute_jacobian_for_tokens: only unpadded single sequences are "
+            "supported (the replay phase cannot honor a padding mask)."
+        )
     if prefix_cache is None:
         prefix_cache = _run_prefix_pass(model, input_ids, attention_mask)
     h = _extract_hidden_state(model, input_ids, attention_mask, layer_idx)
@@ -102,6 +111,21 @@ def _deep_clone_cache(cache):
     read object and the in-place-written object are different objects).
 
     Extra unknown attributes are deep-copied as a forward-compat safety net.
+
+    Cache OBJECT-level attributes (e.g. ``offloading`` on 5.15.1; 4.x carried
+    ``_seen_tokens``) are copied from ``vars(cache)`` after the layer loop:
+    a fresh ``DynamicCache()`` would reset them. On 5.15.1 ``get_seq_length()``
+    is derived from ``keys.shape`` (not an object field), so the post-clone
+    assert below passes on both paths — on a version that tracks sequence
+    length in cache state it turns a silent Jacobian corruption into a loud
+    error.
+
+    ``copy.deepcopy(prefix_cache)`` DOES produce independent copies on 5.15.1
+    (tensor values are not shared). _deep_clone_cache exists for (a) detached
+    tensors (no spurious CopyBackwards in the enable_grad decode) and
+    (b) robustness to per-layer attribute renames — not because deepcopy
+    shares storage. Neither clone fixes the in-place write into a graph-saved
+    node; that is _clone_gdn_states_on_entry's job (see its docstring).
     """
     import copy as _copy
 
@@ -112,6 +136,11 @@ def _deep_clone_cache(cache):
     for idx in range(len(cache.layers)):
         layer = cache.layers[idx]
         if isinstance(layer, DynamicLayer):
+            # Deliberately NOT a vars()-walk: full-attention state fields are
+            # stable across versions, and a rename would fail LOUD
+            # (AttributeError), not silently corrupt the decode. The GDN
+            # branch below IS generic, because GDN state fields have
+            # demonstrably drifted between versions/backends.
             nl = DynamicLayer()
             nl.keys = _cl(layer.keys)
             nl.values = _cl(layer.values)
@@ -142,6 +171,16 @@ def _deep_clone_cache(cache):
                 else:
                     setattr(nl, k, _copy.deepcopy(v))
             new_cache.layers.append(nl)
+    # Cache object-level state (offloading flag on 5.15.1; 4.x: _seen_tokens):
+    # a fresh DynamicCache() would reset it. ``layers`` is rebuilt above;
+    # list-valued attrs are skipped to avoid aliasing the original.
+    for k, v in vars(cache).items():
+        if k == "layers" or isinstance(v, list):
+            continue
+        setattr(new_cache, k, _copy.deepcopy(v))
+    # Guard: the clone must report the same sequence length (loud, not
+    # silent, on a version that tracks it in cache state).
+    assert new_cache.get_seq_length() == cache.get_seq_length()
     return new_cache
 
 
@@ -149,38 +188,76 @@ def _deep_clone_cache(cache):
 def _clone_gdn_states_on_entry():
     """Clone GDN kernel state inputs at entry: read object != written object.
 
-    transformers 5.15 Qwen3_5GatedDeltaNet.forward reads the cache's
-    recurrent_states[0] / conv_states and passes them to
-    torch_recurrent_gated_delta_rule / causal_conv1d_update. The recurrent
-    loop saves that read object (version 0) for backward. Afterwards
-    update_recurrent_state does a stored.copy_(new) IN PLACE on the very
-    same object (5.15 cudagraph static-address optimisation) → version
-    0→1 → "modified by an inplace operation: ... output 0 of CopyBackwards"
-    in any create_graph decode. Cloning at kernel entry makes the loop's
-    saved input the fresh clone; the in-place write lands on the cache's
-    original (a different object) → no in-place on a saved node.
-    Scoped: restores the original kernels on exit.
+    transformers 5.15 Qwen3_5GatedDeltaNet.forward resolves the kernels as
+    free variables of its own module (modeling_qwen3_5), so patching the
+    module attributes works — verified on 5.15.1 (calls at modeling L457/
+    L506). On
+    a version where GDN forward binds the kernels by a different route
+    (an alias imported into another module), the patch silently no-ops and
+    the in-place autograd error below resurfaces LOUD — that is the
+    detection signal; there is no silent degradation.
+
+    The recurrent loop saves the read object (version 0) for backward.
+    Afterwards update_recurrent_state does a stored.copy_(new) IN PLACE on
+    the very same object (5.15 cudagraph static-address optimisation) →
+    version 0→1 → "modified by an inplace operation" in any backward through
+    the decode (create_graph not required; the clone is also a no-op safety
+    net for create_graph=True graph retention). Cloning at kernel entry makes
+    the loop's saved input the fresh clone; the in-place write lands on the
+    cache's original (a different object) → no in-place on a saved node.
+
+    Re-entrancy: nesting is a NO-OP (counter below) — the outer context's
+    wrappers are already active and cloning is idempotent (clone-of-clone
+    changes nothing). Overwriting mq.<kernel> from OUTSIDE during the patch
+    window is user error and is NOT protected (the outer exit restores its
+    captured orig, discarding the overwrite).
+
+    If the Qwen3.5 module cannot be imported, a WARNING is logged ONCE per
+    interpreter (not per decode; non-Qwen3.5 builds are fine — for Qwen3.5
+    with enable_grad=True the in-place autograd error is NOT protected).
     """
+    global _GDN_PATCH_DEPTH
     try:
         from transformers.models.qwen3_5 import modeling_qwen3_5 as mq
     except Exception:
+        if not getattr(_clone_gdn_states_on_entry, "_warned", False):
+            logging.getLogger(__name__).warning(
+                "GDN monkey-patch skipped (transformers.models.qwen3_5 not "
+                "importable). If the model is Qwen3.5 with enable_grad=True, "
+                "in-place autograd errors may occur.")
+            _clone_gdn_states_on_entry._warned = True
         yield  # non-Qwen3.5 build: nothing to patch
+        return
+
+    _GDN_PATCH_DEPTH += 1
+    if _GDN_PATCH_DEPTH > 1:
+        # Nested: outer context already patched; wrappers chain, and the
+        # clone is idempotent, so nothing to do here.
+        yield
+        _GDN_PATCH_DEPTH -= 1
         return
 
     orig_rec = mq.torch_recurrent_gated_delta_rule
     orig_conv = mq.causal_conv1d_update
 
-    def rec(q, k, v, g, beta, initial_state, output_final_state,
+    def rec(q, k, v, g, beta, *args, initial_state=None, output_final_state=True,
             use_qk_l2norm_in_kernel=False, **kw):
+        # initial_state/output_final_state arrive as KEYWORDS in 5.15.1
+        # (and may be positional on other versions, hence *args); clone the
+        # bound state, forward everything else untouched. A kernel whose
+        # signature drops these names falls through to **kw and fails loud.
         if initial_state is not None:
             initial_state = initial_state.clone()
-        return orig_rec(q, k, v, g, beta, initial_state, output_final_state,
-                        use_qk_l2norm_in_kernel, **kw)
+        return orig_rec(q, k, v, g, beta, *args, initial_state=initial_state,
+                        output_final_state=output_final_state,
+                        use_qk_l2norm_in_kernel=use_qk_l2norm_in_kernel, **kw)
 
-    def conv(h, cs, w, b, a):
+    def conv(h, cs, *args, **kw):
+        # (cs, weight, [bias, activation], ...) — positional tail is
+        # version-dependent; forward everything we don't own.
         if cs is not None:
             cs = cs.clone()
-        return orig_conv(h, cs, w, b, a)
+        return orig_conv(h, cs, *args, **kw)
 
     mq.torch_recurrent_gated_delta_rule = rec
     mq.causal_conv1d_update = conv
@@ -189,6 +266,10 @@ def _clone_gdn_states_on_entry():
     finally:
         mq.torch_recurrent_gated_delta_rule = orig_rec
         mq.causal_conv1d_update = orig_conv
+        _GDN_PATCH_DEPTH -= 1
+
+
+_GDN_PATCH_DEPTH = 0
 
 
 def _run_decoder_pass(
@@ -197,7 +278,8 @@ def _run_decoder_pass(
     """Decode h through remaining layers using prefix cache."""
     # Clone cache tensors independently to avoid in-place mutation
     cache_clone = _deep_clone_cache(prefix_cache)
-    text_model = model.model  # Qwen3_5TextModel
+    # Wrapper-safe: flat CausalLM -> model.model; mm wrapper -> .language_model
+    text_model = _lm_module(model)
 
     pos = torch.full((4, 1, 1), S - 1, dtype=torch.long, device=h.device)
     text_position_ids = pos[0]
@@ -205,7 +287,8 @@ def _run_decoder_pass(
     position_embeddings = text_model.rotary_emb(h, rope_position_ids)
 
     x = h
-    n_layers = model.config.num_hidden_layers
+    layer_types = _layer_types(model)
+    n_layers = _n_layers(model)
     start = layer_idx + 1
 
     causal_mask_mapping = _build_causal_masks(
@@ -214,7 +297,7 @@ def _run_decoder_pass(
 
     with _clone_gdn_states_on_entry():
         for i in range(start, n_layers):
-            layer_type = model.config.layer_types[i]
+            layer_type = layer_types[i]
             attn_mask = causal_mask_mapping[layer_type]
             x = text_model.layers[i](
                 x,
@@ -258,7 +341,12 @@ def _compute_jacobian_rows(
     Replaces the per-row autograd.grad loop (K backwards through the
     decoder tail) with a single vmap-style pass: grad_outputs=eye(K)
     gives all K rows at once, 3-15x faster on T4 (review point 5).
-    Verified identical to the loop on synthetic linear + nonlinear graphs.
+    Verified identical to the loop on synthetic linear + nonlinear graphs;
+    on the real GDN decoder tail this is an EMPIRICAL property of the
+    transformers 5.15 kernels (torch_recurrent_gated_delta_rule / causal
+    conv1d update under vmap-style batched backward) — there is no
+    per-row fallback, so a transformers upgrade that breaks this shows up
+    as a runtime error, not silent degradation.
     """
     K = len(token_set)
     return torch.autograd.grad(
@@ -271,7 +359,7 @@ def _compute_jacobian_rows(
 
 
 def softmax_jacobian(J: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
-    """Gauge-invariant Jacobian: J^(p) = diag(p) - pp^T @ J.
+    """Gauge-invariant Jacobian: J^(p) = (diag(p) - pp^T) @ J.
 
     J^(p)_i = p_i * (J_i - J_bar_p),  J_bar_p = sum_k p_k * J_k
     Removes the common-mode shift (gauge) from raw Jacobian.
@@ -293,7 +381,7 @@ def _last_layer_jacobian(h: torch.Tensor, norm: torch.nn.Module) -> torch.Tensor
     output gives a matrix with ~0.87 relative error (no longer LayerNorm-like
     statistics). Qwen3.5's final norm is Qwen3_5RMSNorm:
       h_norm = (h * rsqrt(mean(h^2) + eps) * (1 + w))
-      J = r * (diag(1+w) - xhat x^T / D),  r = rsqrt(mean(h^2)+eps), xhat = r*h
+      J = r · diag(1+w) · (I - xhat xhat^T / D),  r = rsqrt(mean(h^2)+eps), xhat = r*h
     LayerNorm: J = (I - 1/D - xhat xhat^T / D) / std, rows scaled by w.
     """
     # h may arrive as [1, S, D] (full-sequence hidden_states) or [1, D]/[D].

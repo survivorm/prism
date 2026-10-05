@@ -2,7 +2,7 @@
 
 import torch
 
-from prism.bridge import jacobian_bridge
+from prism.bridge import jacobian_gap
 
 
 def test_identity_loss_is_zero():
@@ -12,7 +12,7 @@ def test_identity_loss_is_zero():
     J = torch.randn(4, D)
     E = torch.eye(D)  # E^T @ E = I
     p = torch.ones(4) / 4
-    loss = jacobian_bridge(J, J, E, E, p)
+    loss = jacobian_gap(J, J, E, E, p)
     assert loss < 0.001
 
 
@@ -21,7 +21,7 @@ def test_antiparallel_loss_is_one():
     J = torch.randn(4, 8)
     E = torch.randn(10, 8)
     p = torch.ones(4) / 4
-    loss = jacobian_bridge(J, -J, E, E, p)
+    loss = jacobian_gap(J, -J, E, E, p)
     assert loss > 0.99
 
 
@@ -33,7 +33,7 @@ def test_loss_in_range():
     E_S = torch.randn(100, 8)
     p = torch.rand(4)
     p = p / p.sum()
-    loss = jacobian_bridge(J_L, J_S, E_L, E_S, p)
+    loss = jacobian_gap(J_L, J_S, E_L, E_S, p)
     assert -0.001 <= loss <= 2.001
 
 
@@ -44,7 +44,7 @@ def test_decayed_gradients_masked():
     E_L = torch.randn(10, 8)
     E_S = torch.randn(10, 8)
     p = torch.ones(4) / 4
-    loss = jacobian_bridge(J_L, J_S, E_L, E_S, p)
+    loss = jacobian_gap(J_L, J_S, E_L, E_S, p)
     # All rows masked → max loss
     assert loss >= 0.9
 
@@ -56,5 +56,5 @@ def test_different_dimensions():
     E_L = torch.randn(1000, 256)
     E_S = torch.randn(1000, 64)
     p = torch.ones(6) / 6
-    loss = jacobian_bridge(J_L, J_S, E_L, E_S, p)
+    loss = jacobian_gap(J_L, J_S, E_L, E_S, p)
     assert -0.001 <= loss <= 2.001
