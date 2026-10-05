@@ -271,8 +271,8 @@ def main():
     V2 = Axes[:, 2].numpy()
     w2 = V2 / np.abs(V2).sum()
     top8 = np.argsort(-np.abs(w2))[:8]
-    energy = float((w2[top8] ** 2).sum())
-    top8_tok = [[int(Ua[j]), round(float(w2[j]), 4)] for j in top8]
+    energy = float((V2[top8] ** 2).sum())  # L2: V2 unit-norm
+    top8_tok = [[int(Ua[j]), round(float(V2[j] ** 2), 4)] for j in top8]  # L2-share
     STRUCT = {220: 'space', 198: 'nl', 11: 'comma', 271: 'nnl'}
     nU = np.isin(idsA[:, 1:], Ua)                                             # [N,T1], next token in U128
     nU_idx = {int(t): i for i, t in enumerate(Ua)}
@@ -282,7 +282,7 @@ def main():
     Pn = P.numpy()
     pbv = Pn[pos[lab_f] // T1, pos[lab_f] % T1, :].mean(0)
     prv = Pn[pos[~lab_f] // T1, pos[~lab_f] % T1, :].mean(0)
-    corr_v2 = float(np.corrcoef(V2, pbv - prv)[0, 1])
+    corr_v2 = float(abs(np.corrcoef(V2, pbv - prv)[0, 1]))  # sign SVD-undefined
     pstruct = {nm: {'boundary': float((idsA[:, 1:] == tid).reshape(-1)[pos[lab_f]].mean()),
                     'rest': float((idsA[:, 1:] == tid).reshape(-1)[pos[~lab_f]].mean())}
                for tid, nm in STRUCT.items()}
