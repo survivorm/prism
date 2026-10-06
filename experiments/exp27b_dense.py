@@ -9,6 +9,12 @@ slices of this cache (exp27 causal-identity, verified).
 24,576 J calls (128 t x 32 samples x 6 layers) ~ 12-16h T4.
 Per-layer checkpoint files results/exp27b_jcache_L{l}.pt (~2.1GB, RAM-safe,
 layer-granular resume). Post-processing stays local (no GPU).
+
+Each ckpt stores, per (dom, si, t): JR (raw J), P128 (NORMALIZED p128 row,
+sum=1), P128_RAW (RAW sub-stochastic p128 row, sum<1 — added for exp34
+null-model / exp35-preflight regression, which need the softmax mass outside
+U128). P128_RAW is identical across layers; old ckpts lacking it resume via
+ck.get("P128_RAW", {}), so a fresh run is only needed to populate it.
 """
 
 import argparse
@@ -183,6 +189,7 @@ def main(
     for l in layers:
         JR: dict[tuple, torch.Tensor] = {}
         P128: dict[tuple, torch.Tensor] = {}
+        P128_RAW: dict[tuple, torch.Tensor] = {}
         RANKS: dict[tuple, tuple[float, float, float]] = {}
         H: dict[tuple, torch.Tensor] = {}
         ck_l = next((os.path.join(dd, f"exp27b_jcache_L{l}.pt")
@@ -192,6 +199,7 @@ def main(
             ck = torch.load(ck_l, map_location="cpu")
             if ck["U128"] == U128 and ck["pool_fp"] == pool_fp and ck.get("S") == S:
                 JR, P128, RANKS, H = ck["JR"], ck["P128"], ck["RANKS"], ck["H"]
+                P128_RAW = ck.get("P128_RAW", {})  # optional: old ckpts lack it
                 print(f"L{l}: resumed {len(JR)}/{n * S} J from ckpt")
             else:
                 print(f"L{l}: ckpt U128/pool mismatch -> recompute layer")
@@ -220,13 +228,19 @@ def main(
                     ).float()
                     JR[(dom, si, t)] = Jr.cpu()
                     P128[(dom, si, t)] = p128.cpu()
+                    # RAW (unnormalized, sub-stochastic) p128 row, in ADDITION to
+                    # the normalized P128 — exp34 null-model / exp35-preflight need
+                    # the raw softmax mass outside U128 (dP, sentinel thresholds).
+                    # Same keys as P128, [128] each, identical across layers.
+                    P128_RAW[(dom, si, t)] = f["p128"][S - 1 - t].cpu()
                     RANKS[(dom, si, t)] = _ranks(Jr)
                     H[(dom, si, t)] = f["hs"][l][S - 1 - t]
                     done += 1
                     if done % 1024 == 0:
                         # intra-layer ckpt: a crash mid-layer loses <=1024 J (~1.5h),
                         # not the whole layer (~7h). Save is ~1s, negligible.
-                        torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
+                        torch.save({"JR": JR, "P128": P128, "P128_RAW": P128_RAW,
+                                    "RANKS": RANKS, "H": H,
                                     "U128": U128, "pool_fp": pool_fp,
                                     "layers": layers, "D": D, "n_samples": n_samples,
                                     "domains": domains, "S": S}, save_l)
@@ -236,7 +250,8 @@ def main(
                 # NO fwd.pop here: the forward cache is consumed by ALL six
                 # layers, popping it inside the layer loop leaves nothing for
                 # L12+ (v12/v13 crashes: UnboundLocalError then KeyError).
-        torch.save({"JR": JR, "P128": P128, "RANKS": RANKS, "H": H,
+        torch.save({"JR": JR, "P128": P128, "P128_RAW": P128_RAW,
+                    "RANKS": RANKS, "H": H,
                     "U128": U128, "pool_fp": pool_fp,
                     "layers": layers, "D": D, "n_samples": n_samples,
                     "domains": domains, "S": S}, save_l)
