@@ -87,13 +87,15 @@ def load_calibration_data(
     min_length: int = 64,
     n_samples: int = 4,
     domain: str = "wiki",
+    save_offset_mapping: bool = False,
 ) -> list[dict[str, torch.Tensor]]:
     """Load and tokenize calibration data.
 
     Defaults match the tested protocol (paper §12/C.6: S=64, filter >= 64,
     N=4); experiments pass explicit lengths. domain: 'wiki' (C4), 'math'
     (OpenMathInstruct-2), 'code' (apex-agents), 'chat' (ultrachat). Falls back
-    to wiki if the target dataset is unavailable.
+    to wiki if the target dataset is unavailable. save_offset_mapping: adds
+    `offset_mapping` to each sample (E-31 sentence boundaries).
     """
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     ds_id, cfg, split, field = _load_dataset_for_domain(domain)
@@ -107,11 +109,25 @@ def load_calibration_data(
         text = _extract_text_from_sample(raw, field)
         if not text:
             continue
-        tokens = tokenizer(
-            text, max_length=max_length, truncation=True, return_tensors="pt"
-        )
-        if tokens["input_ids"].shape[1] >= min_length:
-            samples.append(tokens)
+        if save_offset_mapping:
+            toks = tokenizer(
+                text, max_length=max_length, truncation=True,
+                add_special_tokens=False, return_offsets_mapping=True,
+            )
+            if len(toks["input_ids"][0]) >= min_length:
+                samples.append({
+                    "input_ids": toks["input_ids"][0],
+                    "offset_mapping": torch.tensor(
+                        toks["offset_mapping"][0], dtype=torch.int32
+                    ),
+                })
+        else:
+            tokens = tokenizer(
+                text, max_length=max_length, truncation=True,
+                return_tensors="pt",
+            )
+            if tokens["input_ids"].shape[1] >= min_length:
+                samples.append(tokens)
         if len(samples) >= n_samples:
             break
     return samples
