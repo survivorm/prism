@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 
 import numpy as np
@@ -69,6 +70,23 @@ def dsvd_right(Ja, Jb, r):
     fa = sa[:, r - 1] / sa[:, 0].clamp_min(1e-30) < FLAT_REL
     fb = sb[:, r - 1] / sb[:, 0].clamp_min(1e-30) < FLAT_REL
     return a, fa, fb
+
+
+def _np2py(o):
+    """numpy → python, NaN/Inf сохраняются (для чекпоинта, в отличие от _clean)."""
+    if isinstance(o, dict):
+        return {str(k): _np2py(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_np2py(v) for v in o]
+    if isinstance(o, np.ndarray):
+        return _np2py(o.tolist())
+    if isinstance(o, np.bool_):
+        return bool(o)
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.floating):
+        return float(o)
+    return o
 
 
 def _clean(o):
@@ -486,6 +504,8 @@ def main():
     a.add_argument("--r", type=int, default=16, help="subspace dimension (E-33r: 16)")
     a.add_argument("--sample-cap", type=int, default=0, help="max documents (0=all)")
     a.add_argument("--full", action="store_true", help="+D3 +D4 (priority 2)")
+    a.add_argument("--resume", action="store_true",
+                   help="resume from results/exp36_gauge_anatomy.ckpt.json (skip done docs)")
     a.add_argument("--selfcheck", action="store_true")
     args = a.parse_args()
 
@@ -503,9 +523,10 @@ def main():
     ck0 = cks[layers[0]]
     domains = sorted({k[0] for k in ck0["JR"]})
     docs = [(d, s) for d in domains for s in range(ck0["n_samples"])]
-    ref = set((d, s) for d in domains for s in range(ck0["n_samples"]))
+    ref = set((k[0], k[1]) for k in ck0["JR"])
     for l in layers:
-        assert set(cks[l]["JR"]) == ref, f"layer {l}: docs mismatch vs {layers[0]}"
+        assert set((k[0], k[1]) for k in cks[l]["JR"]) == ref, \
+            f"layer {l}: (domain,sample) set mismatch vs {layers[0]}"
     if args.sample_cap > 0:
         docs = docs[:args.sample_cap]
 
@@ -534,7 +555,23 @@ def main():
         "summary": {},
     }
 
+    CKPT = "results/exp36_gauge_anatomy.ckpt.json"
+    if args.resume and os.path.exists(CKPT):
+        ckpt = json.load(open(CKPT))
+        done = {int(k): v for k, v in ckpt["per_doc"].items()}
+        res["per_doc"].update(done)
+        if args.full:
+            res["d4_pairs"].update({int(k): v for k, v in ckpt["d4_pairs"].items()})
+        print(f"resume: {len(done)}/{len(docs)} docs already done")
+
+    def save_ckpt():
+        with open(CKPT, "w") as f:
+            json.dump({"per_doc": _np2py(res["per_doc"]),
+                       "d4_pairs": _np2py(res["d4_pairs"])}, f, ensure_ascii=False)
+
     for i, (d, s) in enumerate(docs):
+        if i in res["per_doc"] and (not args.full or i in res["d4_pairs"]):
+            continue   # resume: doc уже посчитан
         row = {}
         Ucache = {}      # layer → left singular vectors [S, K, K] (для D4)
         for l in layers:
@@ -566,6 +603,7 @@ def main():
             del Ucache
         if (i + 1) % 4 == 0 or i == len(docs) - 1:
             print(f"  doc {i+1}/{len(docs)} ({d}_{s}) t={time.time()-t0:.0f}s", flush=True)
+        save_ckpt()
 
     # ---------------- summary ----------------
     for l in layers:
@@ -612,6 +650,8 @@ def main():
 
     with open("results/exp36_gauge_anatomy.json", "w") as f:
         json.dump(_clean(res), f, indent=2, ensure_ascii=False)
+    if os.path.exists(CKPT):
+        os.remove(CKPT)
 
     # ---------------- markdown ----------------
     md = ["# E-36: Gauge Anatomy", "",
