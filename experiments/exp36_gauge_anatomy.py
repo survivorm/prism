@@ -94,9 +94,14 @@ def _clean(o):
 
 
 def _fmt(x, nd=4):
+    if isinstance(x, dict):
+        x = x.get("median")
     if x is None:
+        return "—"
+    f = float(x)
+    if not np.isfinite(f):
         return "NaN"
-    return f"{x:.{nd}f}"
+    return f"{f:.{nd}f}"
 
 
 # ============================================================
@@ -148,7 +153,8 @@ def doc_d1(Jdoc, r, delta_grid, sent, s=None, Vh=None):
         out[f"d1_perp_{dt}"] = np.where(mask & ~(flatp2[:-dt] | flatp2[dt:]).numpy(),
                                         a.numpy(), np.nan)
         a = pair_angles(Vh, r, dt)
-        out[f"d1_raw_{dt}"] = np.where(mask & ~flat1[:-dt].numpy(), a.numpy(), np.nan)
+        out[f"d1_raw_{dt}"] = np.where(mask & ~(flat1[:-dt] | flat1[dt:]).numpy(),
+                                           a.numpy(), np.nan)
     return out
 
 
@@ -174,11 +180,12 @@ def p_apply(J, p):
 def doc_d3(Jdoc, Pdoc, r, sent, dt=1):
     """TZ E-36.3: p_t = p̄ + δp_t. Δ_SVD (Δ=1) трёх версий:
     P(p̄)·J_t (fixed-P), P(p_t)·J_t (dynamic), ΔP_t·J_t = (P(p_t)−P(p̄))·J_t.
-    p̄ = mean_t по non-sentinel позициям. → dict [T−1] per version."""
+    p̄ = медиана по non-sentinel позициям (конвенция E-33r.2 A; см. meta.deviation).
+    → dict [T−1] per version."""
     T = Jdoc.shape[0]
-    sent_t = torch.as_tensor(sent, dtype=torch.bool)
+    sent_t = torch.as_tensor(sent, dtype=torch.bool, device=Jdoc.device)
     alive = ~sent_t
-    pbar = Pdoc[alive].mean(dim=0) if alive.any() else Pdoc.mean(dim=0)
+    pbar = Pdoc[alive].median(dim=0).values if alive.any() else Pdoc.mean(dim=0)
     Ppbar = p_apply(Jdoc, pbar.unsqueeze(0).expand(T, -1))
     Ppt = p_apply(Jdoc, Pdoc)
     DPt = Ppt - Ppbar
@@ -311,7 +318,7 @@ def test_d1():
     assert np.isnan(o["d1_raw_1"]).all(), "raw flat on rank-1"
     # sentinel: pair (0,1) и (T-2,T-1) — NaN
     assert np.isnan(o["d1_par_1"][0]) and np.isnan(o["d1_par_1"][T - 2]), "sentinel mask"
-    assert np.isfinite(o["d1_par_1"][2]).all(), "middle finite"
+    assert np.isfinite(o["d1_par_1"][2]), "middle finite"
     # Δ=2: pair (0,2) тоже NaN (sent[0]), pair (1,3) NaN (sent[1])
     assert np.isnan(o["d1_par_2"][:2]).all(), "sentinel d2"
 
@@ -389,7 +396,8 @@ def test_d3():
     # fixed-P: P(p̄)·J_t ≠ 0 (не всё gauge), но rank-1 → top-r не дефинируемо
     assert np.isnan(o["d3_fp"]).all(), ("fp", o["d3_fp"][:4])
     # P(p̄)·J ≠ 0 (в отличие от dyn) — sanity
-    Ppbar = p_apply(J, (P.mean(0).unsqueeze(0) / P.mean(0).norm(dim=-1, keepdim=True)))
+    pbar = (P.mean(0) / P.mean(0).norm()).unsqueeze(0).expand(T, -1)
+    Ppbar = p_apply(J, pbar)
     assert Ppbar.abs().sum() > 1e-3
 
     # (b) non-gauge поле + constant p: ΔP = 0 → flat; fp finite
@@ -469,7 +477,8 @@ def _stats(arr):
     if v.size == 0:
         return None
     return {"median": float(np.median(v)), "p10": float(np.percentile(v, 10)),
-            "p90": float(np.percentile(v, 90)), "n": int(v.size)}
+            "p90": float(np.percentile(v, 90)), "n": int(v.size),
+            "frac_nan": 1.0 - v.size / max(1, arr.size)}
 
 
 def main():
@@ -494,6 +503,9 @@ def main():
     ck0 = cks[layers[0]]
     domains = sorted({k[0] for k in ck0["JR"]})
     docs = [(d, s) for d in domains for s in range(ck0["n_samples"])]
+    ref = set((d, s) for d in domains for s in range(ck0["n_samples"]))
+    for l in layers:
+        assert set(cks[l]["JR"]) == ref, f"layer {l}: docs mismatch vs {layers[0]}"
     if args.sample_cap > 0:
         docs = docs[:args.sample_cap]
 
@@ -505,6 +517,17 @@ def main():
             "n_docs": len(docs), "S": int(ck0["S"]),
             "sentinel": "PRaw.sum(-1) < 0.5 (E-33r)",
             "full": bool(args.full), "cache_dir": CKPT_DIR, "timing_sec": None,
+            "deviation": [
+                "D1: P_U действует слева (P_U·J, строки) — формула 'J·P_U' в ТЗ "
+                "размерностно невозможна ([K,D]·[K,K]); код = конвенция E-33r/paper §8",
+                "D3: p̄ = медиана по non-sentinel позициям (конвенция E-33r.2 A), "
+                "а не полное mean_t(p_t) из ТЗ",
+                "D2/D5: не парные метрики — sentinel-позиции включены (by design); "
+                "в sentinel J_t вырожден и u_1/v_1 численно произволен → медианы "
+                "разбавлены ~frac_sentinel шумом",
+                "D1 raw: flat-проверка на оба endpoint'а (строже E-33r, который "
+                "проверяет только левый; согласовано с dsvd_right E-36)",
+            ],
         },
         "per_doc": {},     # [i][str(layer)] = {doc, d1, d2, d5, [d3]}
         "d4_pairs": {},    # [i][f"{la}-{lb}"] = {...}
@@ -517,7 +540,7 @@ def main():
         for l in layers:
             ck = cks[l]
             Jdoc, Pdoc, sent = E33R.load_doc(ck, d, s)
-            Hdoc = E33R.load_H(ck, d, s)
+            Hdoc = E33R.load_H(ck, d, s).to(torch.float32)
             Jt = Jdoc.to(torch.float32)
             # один SVD raw J на (док, слой): общий для D1-raw, D2, D5, D4-u1
             U, S, Vh = torch.linalg.svd(Jt, full_matrices=False)
