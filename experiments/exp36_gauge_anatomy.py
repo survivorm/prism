@@ -40,18 +40,6 @@ FLAT_REL = 1e-6  # E-28/E-33r (RANK_EPS): «субпространство не�
 # helpers
 # ============================================================
 
-def dangle(A, B):
-    """Max principal angle between row subspaces of A, B [T, n, k].
-
-    a(t) = arccos( min svdvals(A^T B) ). Для 1-мерных подпространств
-    arccos(|cos|) — угол между линиями (знак сингулярного вектора не важен).
-    """
-    M = A.transpose(-1, -2) @ B                      # [T, k, k]
-    s = torch.linalg.svdvals(M).flip(-1)             # убывание
-    s = torch.clamp(s, 0, 1)
-    return torch.arccos(s.min(dim=-1).values)        # [T]
-
-
 def dangle1(a, b):
     """Угол между 1-мерными подпространствами (|cos|, знак не важен)."""
     return torch.arccos(torch.clamp((a * b).sum(dim=-1).abs(), 0, 1))
@@ -543,9 +531,11 @@ def main():
                 "размерностно невозможна ([K,D]·[K,K]); код = конвенция E-33r/paper §8",
                 "D3: p̄ = медиана по non-sentinel позициям (конвенция E-33r.2 A), "
                 "а не полное mean_t(p_t) из ТЗ",
-                "D2/D5: не парные метрики — sentinel-позиции включены (by design); "
-                "в sentinel J_t вырожден и u_1/v_1 численно произволен → медианы "
-                "разбавлены ~frac_sentinel шумом",
+                "D2/D5: не парные метрики — sentinel-маска E-33r не применяется, "
+                "sentinel-позиции (PRaw.sum<0.5) включены как обычные samples (by design); "
+                "проверено: J_t и h_t на sentinel НЕ вырождены (‖J_t‖ и |β| того же "
+                "порядка, что и на non-sentinel), т.е. это не шум, а валидные точки; "
+                "D4: α(t) — не парная по t метрика, sentinel-позиции тоже валидны",
                 "D1 raw: flat-проверка на оба endpoint'а (строже E-33r, который "
                 "проверяет только левый; согласовано с dsvd_right E-36)",
             ],
