@@ -40,6 +40,15 @@ FLAT_REL = 1e-6  # E-28/E-33r (RANK_EPS): «субпространство не�
 # helpers
 # ============================================================
 
+def svd_safe(X):
+    """torch.linalg.svd с защитой от неконвергенции (вырожденные/ill-conditioned).
+    → (U, S, Vh) или None (все метрики → NaN)."""
+    try:
+        return torch.linalg.svd(X, full_matrices=False)
+    except Exception:
+        return None
+
+
 def dangle1(a, b):
     """Угол между 1-мерными подпространствами (|cos|, знак не важен)."""
     return torch.arccos(torch.clamp((a * b).sum(dim=-1).abs(), 0, 1))
@@ -48,9 +57,20 @@ def dangle1(a, b):
 def dsvd_right(Ja, Jb, r):
     """E-28 метрика (правые/D-side подпространства): max principal angle между
     top-r правыми сингулярными подпространствами Ja, Jb [T, n, k].
-    → (angle [T], flat_a [T], flat_b [T]); flat = s_r/s_1 < FLAT_REL."""
-    _, sa, Vha = torch.linalg.svd(Ja, full_matrices=False)
-    _, sb, Vhb = torch.linalg.svd(Jb, full_matrices=False)
+    → (angle [T], flat_a [T], flat_b [T]); flat = s_r/s_1 < FLAT_REL или SVD не сошёлся."""
+    T = Ja.shape[0]
+    na = svd_safe(Ja)
+    nb = svd_safe(Jb)
+    T = Ja.shape[0]   # длина парного ряда (Ja уже sliced)
+    if na is None:
+        return (torch.full((T,), float("nan")),
+                torch.ones(T, dtype=torch.bool), torch.ones(T, dtype=torch.bool))
+    _, sa, Vha = na
+    if nb is None:
+        fb = torch.ones(T, dtype=torch.bool)
+        return (torch.full((T,), float("nan")),
+                (sa[:, r - 1] / sa[:, 0].clamp_min(1e-30) < FLAT_REL), fb)
+    _, sb, Vhb = nb
     Va = Vha[:, :r].transpose(-1, -2)              # [T, k, r]
     Vb = Vhb[:, :r].transpose(-1, -2)
     s = torch.linalg.svdvals(Va.transpose(-1, -2) @ Vb).clamp(max=1.0 - 1e-12)
@@ -143,24 +163,45 @@ def doc_d1(Jdoc, r, delta_grid, sent, s=None, Vh=None):
     out = {"energy_par_F": (Jpar.norm(dim=(-1, -2)) / Jn).numpy()}
 
     # Jpar rank-1 (все строки = token-mean): Δ_SVD = угол топ-1 правых (r=1)
-    _, spar, Vhp = torch.linalg.svd(Jpar, full_matrices=False)
+    _sp = svd_safe(Jpar)
+    Vhp = _sp[2] if _sp else None
+    flatp1 = Jpar.norm(dim=(-1, -2)) < 1e-6 * Jn    # Jpar≈0 (fp32 residual): top-1 = шум; 0/4096 в exp27b
     # Jperp: топ-r (r)
-    _, sperp, Vhp2 = torch.linalg.svd(Jperp, full_matrices=False)
-    flatp2 = (sperp[:, r - 1] / sperp[:, 0].clamp_min(1e-30) < FLAT_REL)
+    _se = svd_safe(Jperp)
+    if _se:
+        _, sperp, Vhp2 = _se
+        flatp2 = (sperp[:, r - 1] / sperp[:, 0].clamp_min(1e-30) < FLAT_REL)
+    else:
+        Vhp2 = None
+        flatp2 = torch.ones(T, dtype=torch.bool)
     if s is None:
-        _, s, Vh = torch.linalg.svd(Jdoc, full_matrices=False)
-    flat1 = (s[:, r - 1] / s[:, 0].clamp_min(1e-30) < FLAT_REL)
+        _s = svd_safe(Jdoc)
+        s, Vh = (_s[1], _s[2]) if _s else (None, None)
+    if s is not None:
+        flat1 = (s[:, r - 1] / s[:, 0].clamp_min(1e-30) < FLAT_REL)
+    else:
+        flat1 = torch.ones(T, dtype=torch.bool)
 
     for dt in delta_grid:
         mask = (~(sent_t[:-dt] | sent_t[dt:])).numpy()
-        a = pair_angles(Vhp, 1, dt)
-        out[f"d1_par_{dt}"] = np.where(mask, a.numpy(), np.nan)   # rank-1: flat невозможен
-        a = pair_angles(Vhp2, r, dt)
-        out[f"d1_perp_{dt}"] = np.where(mask & ~(flatp2[:-dt] | flatp2[dt:]).numpy(),
-                                        a.numpy(), np.nan)
-        a = pair_angles(Vh, r, dt)
-        out[f"d1_raw_{dt}"] = np.where(mask & ~(flat1[:-dt] | flat1[dt:]).numpy(),
+        if Vhp is not None:
+            a = pair_angles(Vhp, 1, dt)
+            out[f"d1_par_{dt}"] = np.where(mask & ~flatp1[:-dt].numpy() & ~flatp1[dt:].numpy(),
+                                           a.numpy(), np.nan)   # rank-1: flat по σ невозможен
+        else:
+            out[f"d1_par_{dt}"] = np.full(T - dt, np.nan)
+        if Vhp2 is not None:
+            a = pair_angles(Vhp2, r, dt)
+            out[f"d1_perp_{dt}"] = np.where(mask & ~(flatp2[:-dt] | flatp2[dt:]).numpy(),
+                                            a.numpy(), np.nan)
+        else:
+            out[f"d1_perp_{dt}"] = np.full(T - dt, np.nan)
+        if Vh is not None:
+            a = pair_angles(Vh, r, dt)
+            out[f"d1_raw_{dt}"] = np.where(mask & ~(flat1[:-dt] | flat1[dt:]).numpy(),
                                            a.numpy(), np.nan)
+        else:
+            out[f"d1_raw_{dt}"] = np.full(T - dt, np.nan)
     return out
 
 
@@ -186,12 +227,15 @@ def p_apply(J, p):
 def doc_d3(Jdoc, Pdoc, r, sent, dt=1):
     """TZ E-36.3: p_t = p̄ + δp_t. Δ_SVD (Δ=1) трёх версий:
     P(p̄)·J_t (fixed-P), P(p_t)·J_t (dynamic), ΔP_t·J_t = (P(p_t)−P(p̄))·J_t.
-    p̄ = медиана по non-sentinel позициям (конвенция E-33r.2 A; см. meta.deviation).
+    p̄ = НОРМИРОВАННАЯ медиана по non-sentinel позициям (Σp=1; см. meta.deviation).
     → dict [T−1] per version."""
     T = Jdoc.shape[0]
     sent_t = torch.as_tensor(sent, dtype=torch.bool, device=Jdoc.device)
     alive = ~sent_t
     pbar = Pdoc[alive].median(dim=0).values if alive.any() else Pdoc.mean(dim=0)
+    pbar = pbar / pbar.sum().clamp_min(1e-30)   # нормировка: P(p) — якобиан softmax только для Σp=1
+    # (медиана по строкам симплекса Σ ≈ 0.006; P(c·p) ≠ c·P(p): diag-член линейный,
+    # ppᵀ-член квадратичный — ненормированная версия ≈ чистый diag, не gauge-оператор)
     Ppbar = p_apply(Jdoc, pbar.unsqueeze(0).expand(T, -1))
     Ppt = p_apply(Jdoc, Pdoc)
     DPt = Ppt - Ppbar
@@ -344,7 +388,15 @@ def test_d1():
     o3 = doc_d1(J3, r, grid, sent)
     assert np.allclose(o3["energy_par_F"], 1.0, atol=1e-5)
     assert np.isnan(o3["d1_perp_1"][1:]).all(), "perp flat masked"
-
+    # (d) token-mean = 0: Jpar = 0 → SVD не соходится → d1_par NaN (не падает)
+    torch.manual_seed(2)
+    Z = torch.randn(T, K, D)
+    Z = Z - Z.mean(dim=1, keepdim=True)          # строки zero-mean → token-mean = 0
+    o4 = doc_d1(Z, r, grid, sent)
+    assert np.allclose(o4["energy_par_F"], 0.0, atol=1e-5)
+    assert np.isnan(o4["d1_par_1"]).all(), "Jpar=0 → par NaN"
+    mfin4 = np.isfinite(o4["d1_perp_1"])
+    assert mfin4.any(), "perp жив (J ≠ 0)"
     print("test_d1: all passed")
 
 
@@ -529,15 +581,18 @@ def main():
             "deviation": [
                 "D1: P_U действует слева (P_U·J, строки) — формула 'J·P_U' в ТЗ "
                 "размерностно невозможна ([K,D]·[K,K]); код = конвенция E-33r/paper §8",
-                "D3: p̄ = медиана по non-sentinel позициям (конвенция E-33r.2 A), "
-                "а не полное mean_t(p_t) из ТЗ",
+                "D3: p̄ = медиана по non-sentinel позициям, НОРМИРОВАННАЯ (Σp=1) — "
+                "P(p) — якобиан softmax только для вероятностного вектора; "
+                "ненормированная медиана (E-33r.2 A) давала P ≈ diag, не gauge-оператор. "
+                "Пересчитано в exp36_d3_refit (см. meta.d3_refit)"
                 "D2/D5: не парные метрики — sentinel-маска E-33r не применяется, "
                 "sentinel-позиции (PRaw.sum<0.5) включены как обычные samples (by design); "
                 "проверено: J_t и h_t на sentinel НЕ вырождены (‖J_t‖ и |β| того же "
                 "порядка, что и на non-sentinel), т.е. это не шум, а валидные точки; "
                 "D4: α(t) — не парная по t метрика, sentinel-позиции тоже валидны",
                 "D1 raw: flat-проверка на оба endpoint'а (строже E-33r, который "
-                "проверяет только левый; согласовано с dsvd_right E-36)",
+                "проверяет только левый; согласовано с dsvd_right E-36); "
+                "Jpar=0-страховка (не срабатывала: 0/4096 позиций в exp27b)",
             ],
         },
         "per_doc": {},     # [i][str(layer)] = {doc, d1, d2, d5, [d3]}
