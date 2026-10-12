@@ -233,7 +233,7 @@ def k_metrics(Jdoc, Pdoc, sent, eps_cal, eps_grid, dtype=torch.float32):
         s1 = Sx[:, 0].clamp_min(1e-300)
         out[f"rank_{name}_cal"] = ((Sx / s1.unsqueeze(1)) > eps_cal).sum(-1).numpy()
         for e in eps_grid:
-            tag = f"1e{int(round(-np.log10(e)))}"   # 1e-4 → "1e4"
+            tag = f"1e{-int(round(-np.log10(e)))}"   # 1e-4 → "1e-4"
             out[f"rank_{name}_{tag}"] = ((Sx / s1.unsqueeze(1)) > e).sum(-1).numpy()
         # dim ker = #{σ_i < eps_cal * σ_1}
         out[f"dimker_{name}"] = (K - (Sx / s1.unsqueeze(1) > eps_cal).sum(-1)).numpy()
@@ -616,7 +616,9 @@ def main():
         for f in mkeys:
             if f in ("sent_frac_per_doc", "sent_per_pos"):
                 continue
-            entry[f] = agg_positions([r["m"][f] for r in rows])
+            # баг-фикс тегов: ранний ран прогнал JSONL с "1e4" (без минуса) → "1e-4"
+            key = f.replace("_1e4", "_1e-4").replace("_1e5", "_1e-5").replace("_1e6", "_1e-6")
+            entry[key] = agg_positions([r["m"][f] for r in rows])
         b_entry = {}
         # B — только по alive позициям (non-sentinel AND non-peaked, ТЗ §3: p_max>0.9 исключать)
         for c in ("whitespace", "punctuation", "newline", "content"):
@@ -635,6 +637,7 @@ def main():
         b_entry["peaked_only_frac"] = float(b_entry["excluded_frac"] - entry["sent_frac"]) if rows else None
         entry["B"] = b_entry
         b_per_layer[str(l)] = b_entry
+        per_layer[str(l)] = entry   # BUG-FIX: entry не попадал в per_layer → A.1 JSON пустой
         po = b_entry["peaked_only_frac"]
         ex = b_entry["excluded_frac"]
         print(f"  L{l} agg (B alive: cat_content={b_entry['cat_content'].get('med'):.3f} "
