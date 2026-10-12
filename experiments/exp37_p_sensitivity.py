@@ -103,7 +103,15 @@ def k_left_svd(Kx):
 # ---------------- categories (B) ----------------
 
 def build_categories(ck):
-    """U128 → token id → category {whitespace, punctuation, newline, content}."""
+    """U128 → token id → category {whitespace, punctuation, newline, content}.
+
+    E-37 review §2.4 (фиксация отклонения от ТЗ §3): ТЗ требует категории из
+    exp28_semantic.json. В exp28_semantic.json есть top-8 axis-атрибуция
+    (220=space, 198=newline, 11=comma — совпадает с decode), но полного
+    128-token справочника категорий нет (token_types — текст про provenance,
+    не мапа). Поэтому: decode-классификация, верифицированная на якорях exp28
+    (220/198/11 дают то же, что в exp28_semantic.json). Профиль U128:
+    content 108 / punctuation 13 / newline 6 / whitespace 1."""
     from transformers import AutoTokenizer
     tok = AutoTokenizer.from_pretrained(MODEL)
     U = [int(x) for x in np.asarray(ck["U128"]).tolist()]
@@ -148,11 +156,17 @@ def calibrate(ck, docs, n_pos=N_A0_POS):
                 "s32_top32": s32[:K_TOP].numpy(),
                 "top32_fp32_over_fp64": top_ratio,
                 "tail_95fp64": float(np.percentile(tail, 95)),
+                "tail_05fp64": float(np.percentile(tail, 5)),
                 "tail_mean_fp64": float(tail.mean()),
             })
         del Jdoc, Pdoc
     tail_all = np.concatenate(sigma_tail_fp64)
     sigma_noise = float(np.percentile(tail_all, 95))
+    # §2.5-фикс: spread по позициям (p05/p95 position-level p95 и p05 хвостов) —
+    # калиброванный порог не должен быть чувствителен к случайной выборке позиций;
+    # min/p99 по хвосту целиком для оценки выбросов
+    pos_p95 = np.array([p["tail_95fp64"] for p in out_positions])
+    pos_p05 = np.array([p["tail_05fp64"] for p in out_positions])
     # σ_1 typical (median of top-1 across positions) for relative scaling
     s1 = np.array([p["s64_top32"][0] for p in out_positions])
     s1_med = float(np.median(s1))
@@ -161,6 +175,12 @@ def calibrate(ck, docs, n_pos=N_A0_POS):
     return {
         "n_positions": len(out_positions),
         "sigma_noise_fp64_tail95": sigma_noise,
+        "tail_fp64_min": float(tail_all.min()),
+        "tail_fp64_p99": float(np.percentile(tail_all, 99)),
+        "pos_p95_p05": float(np.percentile(pos_p95, 5)),
+        "pos_p95_p95": float(np.percentile(pos_p95, 95)),
+        "pos_p05_p05": float(np.percentile(pos_p05, 5)),
+        "pos_p05_p95": float(np.percentile(pos_p05, 95)),
         "s1_median_fp64": s1_med,
         "rank_eps_calibrated": rank_eps,
         "top32_fp32_over_fp64_med": float(np.median(top_ratio_all)),
@@ -173,9 +193,14 @@ def calibrate(ck, docs, n_pos=N_A0_POS):
 
 # ---------------- A.1: K anatomy ----------------
 
-def k_metrics(Jdoc, Pdoc, sent, eps_cal, eps_grid):
+def k_metrics(Jdoc, Pdoc, sent, eps_cal, eps_grid, dtype=torch.float32):
     """K_t = J_t − P(p_t)·J_t (perP) и K_t = J_t − P(p̄)·J_t (fixP).
-    p̄ — нормированная медиана по non-sentinel. Возвращает (dict метрик [T], pbar)."""
+    p̄ — нормированная медиана по non-sentinel позициям. Возвращает (dict метрик [T], pbar).
+    E-37 review §3 (фиксация отклонения от ТЗ §2.2): ТЗ не оговаривает исключение
+    sentinel для p̄_med; sentinel-позиции (raw sum < 0.5) — артефакты обрезки
+    (softmax-масса вне U128), их p не является модельным выходом, поэтому
+    медиана берётся по non-sentinel.
+    dtype: fp32 по умолчанию; fp64 — при fp32_reliable=False (ТЗ §6, E-37 review §2.7)."""
     T, K, D = Jdoc.shape
     sent_t = torch.as_tensor(sent, dtype=torch.bool)
     alive = ~sent_t
@@ -183,6 +208,10 @@ def k_metrics(Jdoc, Pdoc, sent, eps_cal, eps_grid):
     pbar = Pdoc[alive].median(dim=0).values if alive.any() else Pdoc.mean(dim=0)
     pbar = pbar / pbar.sum().clamp_min(1e-30)
     assert abs(float(pbar.sum()) - 1.0) < 1e-5, "pbar must be normalized"
+
+    Jdoc = Jdoc.to(dtype)
+    Pdoc = Pdoc.to(dtype)
+    pbar = pbar.to(dtype)
 
     PJ_per = p_apply(Jdoc, Pdoc)
     PJ_fix = p_apply(Jdoc, pbar.unsqueeze(0).expand(T, -1))
@@ -200,10 +229,11 @@ def k_metrics(Jdoc, Pdoc, sent, eps_cal, eps_grid):
         nrm2 = Sx.pow(2).sum(-1).clamp_min(1e-30)
         out[f"energy_top1_{name}"] = (Sx[:, 0] ** 2 / nrm2).numpy()
         out[f"energy_top8_{name}"] = (Sx[:, :8].pow(2).sum(-1) / nrm2).numpy()
-        # rank по порогам (relative: σ_i/σ_1 > eps)
+        # rank по порогам (relative: σ_i/σ_1 > eps); теги выводятся из значений
         s1 = Sx[:, 0].clamp_min(1e-300)
         out[f"rank_{name}_cal"] = ((Sx / s1.unsqueeze(1)) > eps_cal).sum(-1).numpy()
-        for e, tag in zip(eps_grid, ("1e4", "1e5", "1e6")):
+        for e in eps_grid:
+            tag = f"1e{int(round(-np.log10(e)))}"   # 1e-4 → "1e4"
             out[f"rank_{name}_{tag}"] = ((Sx / s1.unsqueeze(1)) > e).sum(-1).numpy()
         # dim ker = #{σ_i < eps_cal * σ_1}
         out[f"dimker_{name}"] = (K - (Sx / s1.unsqueeze(1) > eps_cal).sum(-1)).numpy()
@@ -218,11 +248,14 @@ def k_metrics(Jdoc, Pdoc, sent, eps_cal, eps_grid):
     out["frac_K_from_J_perP"] = (K_per.pow(2).sum((-1, -2)) / Jn2).numpy()
     out["frac_K_from_J_fixP"] = (K_fix.pow(2).sum((-1, -2)) / Jn2).numpy()
     out["sent_frac"] = float(sent_t.float().mean())
+    out["sent_per_pos"] = sent_t.numpy().tolist()   # per-position sentinel (для согласованного sent_frac, E-37 review §3.3.1)
     return out, pbar
 
 
 def null_shuffled(Jdoc, Pdoc, sent, n_shuf=16, seed=SEED):
     """Shuffled-J null: на каждый прогон — своя перестановка (баг-фикс: раньше одна al ×16).
+    n_shuf=16 (E-37 review §3.3.2): при n=4 IQR строился по 3 значениям — статистически пусто;
+    при n=16 IQR по 15 значениям, воспроизводимость null-IQR проверяема на повторных прогонах.
     Ограничение (зафиксировано): K = J − P·J сохраняет row-mean (1ᵀP(p)J=0),
     поэтому align_K1 у shuffled-J ≈ реального — нуль НЕ тестирует структурность
     align_K1; для неё — null_random_vector. Shuffled-J остаётся вторым нулём."""
@@ -239,9 +272,28 @@ def null_shuffled(Jdoc, Pdoc, sent, n_shuf=16, seed=SEED):
     return np.median(np.stack(vals), axis=0)
 
 
+def null_shuffled_rank(Jdoc, Pdoc, sent, eps_cal, n_shuf=16, seed=SEED):
+    """Shuffled-J null для rank_loss (ТЗ §2.2: baseline для align_K_1 И rank_loss;
+    E-37 review §2.2: раньше был только align). rank_K(shuffled) на том же eps_cal;
+    rank_loss = 128 − rank. Возвращает (rank [T], rank_loss [T])."""
+    T, K, D = Jdoc.shape
+    ranks = []
+    for i in range(n_shuf):
+        g = torch.Generator().manual_seed(seed + i)
+        al = torch.argsort(torch.rand(T, K, generator=g), dim=1)
+        Jsh = torch.gather(Jdoc, 1, al.unsqueeze(2).expand(T, K, D))
+        Ksh = Jsh - p_apply(Jsh, Pdoc)
+        Sx = torch.linalg.svdvals(Ksh)
+        s1 = Sx[:, 0].clamp_min(1e-300)
+        ranks.append(((Sx / s1.unsqueeze(1)) > eps_cal).sum(-1).numpy())
+    rank = np.median(np.stack(ranks), axis=0)
+    return rank, K - rank
+
+
 def null_random_vector(Jdoc, n_rep=16, seed=SEED):
     """ИСТИННЫЙ ноль для align_K1: w ~ S^{K-1} (случайный единичный), |<w, 1/√K>|
-    ~ sqrt(2/(πK)) ≈ 0.07 — baseline без SVD (row-mean-инвариантность не мешает)."""
+    ~ sqrt(2/(πK)) ≈ 0.07 — baseline без SVD (row-mean-инвариантность не мешает).
+    n_rep=16 (E-37 review §3.3.2): null-распределение строится из 16 реплик, не 4."""
     T, K, D = Jdoc.shape
     ones = torch.ones(K, device=Jdoc.device) / K ** 0.5
     vals = []
@@ -255,6 +307,11 @@ def null_random_vector(Jdoc, n_rep=16, seed=SEED):
 
 def null_random_p(Jdoc, Pdoc, sent, n_rep=16, seed=SEED):
     """Random-p null: p_t → случайное Дирихле.
+    E-37 review §2.8 (фиксация отклонения от ТЗ §2.2): ТЗ — «Дирихле с теми же
+    параметрами (или на p̄_med)». Параметр Дирихле у p_t (softmax-распределение)
+    не идентифицируем, поэтому берём Dirichlet(1) — единственная каноническая
+    параметризация «случайного» p на симплексе. Результат не зависит от выбора
+    (см. фиксацию в docstring: real ≪ random — сильный сигнал осмысленности).
     КОНТРПРИМЕР, не baseline: real p_t даёт align_Kp ≈ 0.03–0.19, random p — 0.63–0.78.
     P(p_t) убивает p_t-направление в top-векторе K, P(random) — нет.
     Значит real ≪ random — сильный сигнал осмысленности оператора (не «нет эффекта»)."""
@@ -273,9 +330,13 @@ def null_random_p(Jdoc, Pdoc, sent, n_rep=16, seed=SEED):
 
 # ---------------- B: u_g attribution ----------------
 
-def ug_attribution(Jdoc, Pdoc, sent, U, cats, eps_cal):
+def ug_attribution(Jdoc, Pdoc, sent, U, cats, eps_cal, sigma_tail=None):
     """u_g = J Jᵀ 1 / ‖·‖, u_g⊥ = u_g − <u_g,1/√K>1/√K, атрибуция по U128.
-    Per-position baseline: доля категорий в топ-128 по p_t (здесь весь набор = U128)."""
+    Per-position baseline: доля категорий в p_t (весь набор = U128).
+    Per-position шумовой порог (ТЗ §3, E-37 review §2.3): σ_noise_t — из хвоста
+    σ_i(J_t) (i >= TAIL_FROM) ТОЙ ЖЕ позиции; NOT глобальный A.0 σ_noise.
+    Сигнал — доля весов |α_i|², превышающая локальный шумовой пол: sig_share_t.
+    sigma_tail: [T, n_tail] (fp64 хвосты J_t) — если не передан, считается внутри."""
     T, K, D = Jdoc.shape
     sent_t = torch.as_tensor(sent, dtype=torch.bool)
     ones = torch.ones(K, device=Jdoc.device) / K ** 0.5
@@ -300,9 +361,20 @@ def ug_attribution(Jdoc, Pdoc, sent, U, cats, eps_cal):
     ent = -(a2n * a2n.clamp_min(1e-12).log()).sum(-1).numpy()
     # top-8 токенов по |α_i| (пер-позиционный)
     top8 = torch.topk(alpha.abs(), 8, dim=-1).indices.numpy()
-    # per-position baseline: доля категорий в топ по p_t
     pmax = Pdoc.max(-1).values.numpy()
     peaked = pmax > PEAK_PMAX
+    # per-position noise threshold (ТЗ §3): σ_noise_t из хвоста σ_i(J_t) ТОЙ позиции
+    if sigma_tail is None:
+        jt_s = torch.linalg.svdvals(Jdoc)          # [T, min(K,D)]
+        # хвост: последние min(TAIL_FROM, n_sv) значения (робастно к D < TAIL_FROM, selfcheck)
+        sigma_tail = jt_s[:, -min(TAIL_FROM, jt_s.shape[1]):].numpy()
+    tail = np.asarray(sigma_tail, dtype=float)
+    s1j = torch.linalg.svdvals(Jdoc)[:, 0].numpy()
+    rel_tail = tail / np.maximum(s1j[:, None], 1e-300)
+    sig_thr = 3.0 * np.percentile(rel_tail, 95, axis=1)          # [T] relative, per position
+    a2n_t = a2n.numpy()
+    thr_t = (sig_thr / max(K, 1)) ** 2                          # доля энергии порога (uniform-масштаб)
+    sig_share = (a2n_t > thr_t[:, None]).astype(float).sum(-1) / K  # доля «активных» весов
     # alive: non-sentinel AND non-peaked (фиксация доли исключённых — ТЗ §5.7, §3)
     alive_b = (~sent_t) & torch.as_tensor(~peaked, dtype=torch.bool, device=Jdoc.device)
     # baseline = cat share в p_t (весь набор U128, так что это глобально по p_t)
@@ -322,6 +394,8 @@ def ug_attribution(Jdoc, Pdoc, sent, U, cats, eps_cal):
         "pmax": pmax,
         "peaked": peaked,
         "alive": alive_b.numpy(),
+        "sigma_noise_rel_t": sig_thr,
+        "sig_share": sig_share,
     }
 
 
@@ -373,6 +447,8 @@ def agg_positions(vals_per_doc, min_n=8):
                 "n_docs": len(meds)}
     stack = np.stack(meds)  # [n_docs, n]
     return {"med_per_sigma": [float(x) for x in np.median(stack, axis=0)],
+            "q25_per_sigma": [float(x) for x in np.percentile(stack, 25, axis=0)],
+            "q75_per_sigma": [float(x) for x in np.percentile(stack, 75, axis=0)],
             "n_docs": len(meds)}
 
 
@@ -453,23 +529,39 @@ def main():
     json.dump(_clean(ctype), open(f"{a.out_prefix}_C_L22_type.json", "w"), indent=2)
     print("C:", ctype["cache_full"], ctype["cache_linear"], "L22_full=", ctype["L22_is_full"])
 
+    # E-33r E-37 review §2.5: uniformity_0, align_u_top_ug, survive_frac, rank_K — из exp33r_gauge_anatomy.json
+    E33R = os.path.join(RESULTS, "exp33r_gauge_anatomy.json")
+    e33r = json.load(open(E33R)) if os.path.exists(E33R) else {}
+
     ck = load_layer(23)
     U, cats = build_categories(ck)
     docs = doc_ids(ck)
     n_docs = len(docs)
 
-    # A.0: калибровка (ОБЯЗАТЕЛЬНА)
-    cal = calibrate(ck, docs)
-    eps_cal = cal["rank_eps_calibrated"]
-    json.dump(_clean(cal), open(f"{a.out_prefix}_A0_calibration.json", "w"), indent=2)
-    print(f"A.0: RANK_EPS_calibrated={eps_cal:.3e} fp32_reliable={cal['fp32_reliable']} "
-          f"(fp32/fp64 p05={cal['top32_fp32_over_fp64_p05']:.4f})")
+    # A.0: калибровка — PЕР-СЛОЙ (E-37 review §2.1: шумовой пол и s1 у L6 и L23
+    # различаются на порядки; единый eps_cal из L23 смещает rank_*_cal на других слоях).
+    # Единый порог (ТЗ §5.8) сохранён как eps_cal_global (только для отчёта/сравнения).
+    per_layer = {}
+    calib = {}
+    for l in LAYERS:
+        ck_l = load_layer(l)
+        cal_l = calibrate(ck_l, docs)
+        calib[str(l)] = cal_l
+        print(f"A.0 L{l}: RANK_EPS_calibrated={cal_l['rank_eps_calibrated']:.3e} "
+              f"fp32_reliable={cal_l['fp32_reliable']} (p05={cal_l['top32_fp32_over_fp64_p05']:.4f}) "
+              f"pos_p95_p05/p95={cal_l['pos_p95_p05']:.1e}/{cal_l['pos_p95_p95']:.1e} "
+              f"tail_min/p99={cal_l['tail_fp64_min']:.1e}/{cal_l['tail_fp64_p99']:.1e}", flush=True)
+    json.dump(_clean({"per_layer": calib,
+                      "eps_cal_global_L23": calib["23"]["rank_eps_calibrated"]}),
+              open(f"{a.out_prefix}_A0_calibration.json", "w"), indent=2)
 
     # A.1 + B: полный прогон по всем слоям (append JSONL per doc — resumable)
     os.makedirs(RESULTS, exist_ok=True)
-    per_layer = {}
     for l in LAYERS:
         ck_l = load_layer(l)
+        eps_cal = calib[str(l)]["rank_eps_calibrated"]
+        fp64 = not calib[str(l)]["fp32_reliable"]
+        dt = torch.float64 if fp64 else torch.float32
         jp = f"{a.out_prefix}_L{l}_docs.jsonl"
         done_keys = set()
         if os.path.exists(jp):
@@ -484,11 +576,17 @@ def main():
             if (dom, si) in done_keys:
                 continue
             Jdoc, Pdoc, sent = load_doc(ck_l, dom, si)
-            m, pbar = k_metrics(Jdoc, Pdoc, sent, eps_cal, RANK_EPS_CANDIDATES)
-            # nulls на всех слоях (баг-фикс: раньше только L23); n=4 (дешёво, медиана по докам)
-            m["null_align_K1_shuf"] = null_shuffled(Jdoc, Pdoc, sent, n_shuf=4, seed=SEED + l)
-            m["null_align_K1_rndvec"] = null_random_vector(Jdoc, n_rep=4, seed=SEED + 1000 + l)
-            m["null_align_Kp_rndp"] = null_random_p(Jdoc, Pdoc, sent, n_rep=4, seed=SEED + 2000 + l)
+            Jdoc = Jdoc.to(dt)
+            Pdoc = Pdoc.to(dt)
+            m, pbar = k_metrics(Jdoc, Pdoc, sent, eps_cal, RANK_EPS_CANDIDATES, dtype=dt)
+            # nulls на всех слоях (баг-фикс: раньше только L23); n=16 (E-37 review §3.3.2)
+            m["null_align_K1_shuf"] = null_shuffled(Jdoc, Pdoc, sent, n_shuf=16, seed=SEED + l)
+            m["null_align_K1_rndvec"] = null_random_vector(Jdoc, n_rep=16, seed=SEED + 1000 + l)
+            m["null_align_Kp_rndp"] = null_random_p(Jdoc, Pdoc, sent, n_rep=16, seed=SEED + 2000 + l)
+            # null для rank_loss (ТЗ §2.2, E-37 review §2.2) — один вызов, обе метрики
+            _nr, _nrl = null_shuffled_rank(Jdoc, Pdoc, sent, eps_cal, n_shuf=16, seed=SEED + 3000 + l)
+            m["null_rank_shuf"] = _nr
+            m["null_rank_loss_shuf"] = _nrl
             b = ug_attribution(Jdoc, Pdoc, sent, U, cats, eps_cal)
             rec = {"dom": dom, "si": si, "m": _clean(m), "b": _clean(b), "pbar": _clean(pbar)}
             jl.write(json.dumps(rec) + "\n")   # ponytail: per-doc SVD-метрики ~50KB; спектр не хранится по 128 позициям
@@ -499,6 +597,7 @@ def main():
         print(f"  L{l} docs done ({a.out_prefix}_L{l}_docs.jsonl)", flush=True)
 
     # Агрегация из JSONL (median по позициям -> median по докам)
+    b_per_layer = {}
     for l in LAYERS:
         path = f"{a.out_prefix}_L{l}_docs.jsonl"
         if not os.path.exists(path):
@@ -506,10 +605,17 @@ def main():
         rows = [json.loads(x) for x in open(path) if x.strip()]
         mkeys = [k for k in rows[0]["m"] if isinstance(rows[0]["m"][k], list)]
         entry = {"n_docs": len(rows),
-                 "layer_type": ("full" if l in ctype["cache_full"] else "linear")}
-        # sent_frac — скаляр per doc (баг-фикс: раньше терялся при агрегации, ТЗ §5.7)
-        entry["sent_frac"] = float(np.median([r["m"]["sent_frac"] for r in rows])) if rows else None
+                 "layer_type": ("full" if l in ctype["cache_full"] else "linear"),
+                 "dtype": ("fp64" if not calib[str(l)]["fp32_reliable"] else "fp32"),
+                 "eps_cal": calib[str(l)]["rank_eps_calibrated"]}
+        # sent_frac — пер-позиционная сумма по всем документам (E-37 review §3.3.1:
+        # раньше медиана по докам; теперь согласован с excluded_frac — обе величины
+        # считаются по одним и тем же позициям: peaked_only_frac = excluded − sent_frac без смещения)
+        sent_all = [np.asarray(r["m"].get("sent_per_pos", [r["m"]["sent_frac"]] * 128)) for r in rows]
+        entry["sent_frac"] = float(np.mean([np.mean(s) for s in sent_all])) if rows else None
         for f in mkeys:
+            if f in ("sent_frac_per_doc", "sent_per_pos"):
+                continue
             entry[f] = agg_positions([r["m"][f] for r in rows])
         b_entry = {}
         # B — только по alive позициям (non-sentinel AND non-peaked, ТЗ §3: p_max>0.9 исключать)
@@ -518,26 +624,42 @@ def main():
             b_entry[f"base_{c}"] = agg_positions([np.asarray(r["b"]["base_share"][c])[r["b"]["alive"]] for r in rows])
         b_entry["perp_share"] = agg_positions([np.asarray(r["b"]["perp_share"])[r["b"]["alive"]] for r in rows])
         b_entry["entropy"] = agg_positions([np.asarray(r["b"]["entropy_ug_perp"])[r["b"]["alive"]] for r in rows])
+        # per-position шумовой порог и сигнатурный share (ТЗ §3, E-37 review §2.3)
+        b_entry["sigma_noise_rel_t"] = agg_positions([np.asarray(r["b"]["sigma_noise_rel_t"])[r["b"]["alive"]] for r in rows])
+        b_entry["sig_share"] = agg_positions([np.asarray(r["b"]["sig_share"])[r["b"]["alive"]] for r in rows])
         n_all = sum(len(r["b"]["alive"]) for r in rows)
         n_alive = sum(int(np.sum(r["b"]["alive"])) for r in rows)
         # excluded_frac = sentinel ∪ peaked; peaked_only_frac = excluded − sentinel
-        # (sentinel-доля = sent_frac, константа по слою: P128_RAW не зависит от слоя)
+        # (sentinel-доля = sent_frac — пер-позиционная сумма, согласована с excluded_frac)
         b_entry["excluded_frac"] = float(1 - n_alive / max(n_all, 1)) if rows else None
         b_entry["peaked_only_frac"] = float(b_entry["excluded_frac"] - entry["sent_frac"]) if rows else None
         entry["B"] = b_entry
-        per_layer[str(l)] = entry
+        b_per_layer[str(l)] = b_entry
+        po = b_entry["peaked_only_frac"]
+        ex = b_entry["excluded_frac"]
         print(f"  L{l} agg (B alive: cat_content={b_entry['cat_content'].get('med'):.3f} "
               f"whitespace={b_entry['cat_whitespace'].get('med'):.3f} perp={b_entry['perp_share'].get('med'):.3f} "
-              f"excluded={b_entry['excluded_frac']:.3f} peaked_only={b_entry['peaked_only_frac']:.3f}) "
+              f"excluded={'n/a' if ex is None else format(ex, '.3f')} peaked_only={'n/a' if po is None else format(po, '.3f')}) "
               f"sent_frac={entry['sent_frac']:.3f}", flush=True)
 
     json.dump(_clean(per_layer), open(f"{a.out_prefix}_A1_K_anatomy.json", "w"), indent=2)
     print(f"A.1 saved → {a.out_prefix}_A1_K_anatomy.json")
+    # E-37 review §2.6: B — отдельный артефакт (ТЗ §7: results/exp37_B_ug_attribution.json)
+    json.dump(_clean(b_per_layer), open(f"{a.out_prefix}_B_ug_attribution.json", "w"), indent=2)
+    print(f"B saved → {a.out_prefix}_B_ug_attribution.json")
 
-    # C: явное сравнение 18/19/22/23 (ТЗ §4 шаг 2 — раньше только чтение config.json)
+    # C: явное сравнение 18/19/22/23 (ТЗ §4 шаг 2 — E-37 review §2.5: + E-33r метрики
+    # uniformity_0, align_u_top_ug, survive_frac, rank_K и depth_gain из exp33r_gauge_anatomy.json)
     cmp_keys = ("align_K1_perP", "align_Kp_perP", "energy_top1_perP", "energy_top8_perP",
                 "rank_perP_cal", "dimker_perP", "frac_K_from_J_perP")
-    cmp = {"layers": {}, "note": "L22=GDN vs L23=full; L19=full (контрольный); локальная аномалия vs общий GDN-vs-full"}
+    cmp = {"layers": {}, "note": "L22=GDN vs L23=full; L19=full (контрольный); локальная аномалия vs общий GDN-vs-full. "
+                                 "E-33r метрики — из exp33r_gauge_anatomy.json (refit 2026-10-11, нормированный p0)"}
+    # depth_gain из E-33r: пары, где слой — правая часть
+    depth_gain_by_layer = {}
+    for pair, v in (e33r.get("depth", {}) or {}).items():
+        if isinstance(v, dict) and "depth_gain" in v:
+            a_, b_ = str(pair).split("-")
+            depth_gain_by_layer[b_] = v["depth_gain"]
     for l in (18, 19, 22, 23):
         e = per_layer.get(str(l))
         if not e:
@@ -549,6 +671,12 @@ def main():
         row["B_cat_syntactic"] = (e["B"]["cat_whitespace"]["med"] + e["B"]["cat_punctuation"]["med"]
                                    + e["B"]["cat_newline"]["med"])
         row["B_perp_share"] = e["B"]["perp_share"]["med"]
+        # E-33r метрики (TЗ §4 шаг 2)
+        e33l = (e33r.get("layers", {}) or {}).get(str(l), {})
+        for k in ("uniformity_0", "align_ug", "survive_frac", "rank_K"):
+            v = e33l.get(k)
+            row[f"e33r_{k}"] = v.get("med") if isinstance(v, dict) else v
+        row["e33r_depth_gain"] = depth_gain_by_layer.get(str(l))
         cmp["layers"][str(l)] = row
     json.dump(_clean(cmp), open(f"{a.out_prefix}_C_L22_comparison.json", "w"), indent=2)
     print(f"C saved → {a.out_prefix}_C_L22_comparison.json")
