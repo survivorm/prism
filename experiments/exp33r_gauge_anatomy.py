@@ -20,7 +20,7 @@ results/exp33_gauge_holonomy.json.
 Исходный E-33 закрыт как тривиальный: u_g ≈ uniform, P(p)·1 = 0.
 
 Самодиагностика: --selfcheck (синтетика rank-1: uniformity_0 = <u, 1/√K>²,
-kill_frac = uniformity_0 при p = uniform; Δ_SVD_gf = Δ_SVD_raw при p = uniform).
+survive_frac = √(1-uf)/K, Δ_SVD_gf = Δ_SVD_raw при p = uniform).
 
 Использование:
     .venv/bin/python experiments/exp33r_gauge_anatomy.py --selfcheck
@@ -32,6 +32,7 @@ import argparse
 import gc
 import json
 import os
+import time
 
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
@@ -86,6 +87,9 @@ def load_H(ck, dom, si):
 
 # ---------------- math (vectorized over positions) ----------------
 
+ALPHAS = (0.0, 0.25, 0.5, 0.75, 1.0)          # E-33r.2 E: доз-красивая J_a = (1-α)J + α·PJ
+
+
 def p_apply(J, p):
     """P(p)·J per position: [T,K,D] = J∘p[:,None,:] − (Jᵀp)[:,None,:]∘p[:,None,:].
     w[t,d] = Σ_k p[t,k]·J[t,k,d]."""
@@ -93,7 +97,13 @@ def p_apply(J, p):
     return J * p.unsqueeze(2) - w.unsqueeze(1) * p.unsqueeze(2)
 
 
-def batch_metrics(Jdoc, Pdoc, sent, r=R_MAIN, diag=False):
+def pair_p0(Pdoc, dt):
+    """[T-dt, K] = (p_t + p_{t+dt})/2, normalized (E-33r.2 A: non-degenerate pair p0)."""
+    p = 0.5 * (Pdoc[:-dt] + Pdoc[dt:])
+    return p / p.sum(-1, keepdim=True).clamp_min(1e-30)
+
+
+def batch_metrics(Jdoc, Pdoc, sent, r=R_MAIN, diag=False, p0_method='fix'):
     """One doc, one layer: SVD of J, PJ, K_t (+ PJ_fp for E-33r.2 diagnostics).
     Returns dict of per-position numpy arrays [S] (NaN where degenerate)."""
     T, K, D = Jdoc.shape
@@ -105,15 +115,22 @@ def batch_metrics(Jdoc, Pdoc, sent, r=R_MAIN, diag=False):
     Kt = Jdoc - PJ
     S4, s4, Vh4 = torch.linalg.svd(Kt, full_matrices=False)     # «убитое»
     if diag:
-        # E-33r.2 Diagnostic A: fixed p0 = НОРМИРОВАННАЯ медиана p_t по non-sentinel t
-        # (до фикса 2026-07-07 медиана была ненормированной: Σ ≈ 0.006 → P ≈ diag,
-        # не gauge-оператор; см. results/exp33r_gauge_anatomy.json meta.refit_note)
-        alive = ~torch.as_tensor(sent)
-        p0 = Pdoc[alive].median(dim=0).values if alive.any() else Pdoc.mean(dim=0)
-        p0 = p0 / p0.sum().clamp_min(1e-30)
-        assert abs(float(p0.sum()) - 1.0) < 1e-5, "p0 must be normalized"
-        Sfp, sfp, Vhfp = torch.linalg.svd(p_apply(Jdoc, p0.unsqueeze(0).expand(T, -1)),
-                                          full_matrices=False)
+        # E-33r.2 Diagnostic A: fixed p0; 'fix' = argmax_t H(p_t) по non-sentinel t (ТЗ),
+        # 'median' — legacy (до фикса 2026-07-07 медиана была ненормированной:
+        # Σ ≈ 0.006 → P ≈ diag, не gauge-оператор; см. meta.refit_note),
+        # 'pair_mean' — p0_t = norm(p_t + p_{t+dt})/2 per pair (заменяет A; не вырожден).
+        if p0_method != 'pair_mean':
+            alive = ~torch.as_tensor(sent)
+            if p0_method == 'median':
+                p0 = Pdoc[alive].median(dim=0).values if alive.any() else Pdoc.mean(dim=0)
+            else:
+                Pal = Pdoc[alive] if alive.any() else Pdoc
+                ent = -(Pal * torch.log(Pal.clamp_min(1e-30))).sum(1)
+                p0 = Pal[int(ent.argmax())]
+            p0 = p0 / p0.sum().clamp_min(1e-30)
+            assert abs(float(p0.sum()) - 1.0) < 1e-5, "p0 must be normalized"
+            Sfp, sfp, Vhfp = torch.linalg.svd(p_apply(Jdoc, p0.unsqueeze(0).expand(T, -1)),
+                                              full_matrices=False)
     s1n = s1 / s1[:, :1].clamp_min(1e-30)
     s3n = s3 / s3[:, :1].clamp_min(1e-30)
     s4n = s4 / s4[:, :1].clamp_min(1e-30)
@@ -142,7 +159,7 @@ def batch_metrics(Jdoc, Pdoc, sent, r=R_MAIN, diag=False):
     align_K1 = (uKtop * one).sum(-1).abs()
     vtop_raw = Vh1[:, 0, :].contiguous()               # [T, D]
     vtop_gf = Vh3[:, 0, :].contiguous()                # [T, D]
-    # E-33r.2 F: top-16 bases for per-r depth coherence (no extra SVD in the depth leg)
+    # E-33r.2 F-depth: top-16 bases for per-r depth coherence (no extra SVD in the depth leg)
     vt16_raw = Vh1[:, :min(16, K), :].contiguous()     # [T, min(16,K), D]
     vt16_gf = Vh3[:, :min(16, K), :].contiguous()
     out = {
@@ -192,7 +209,7 @@ def batch_metrics(Jdoc, Pdoc, sent, r=R_MAIN, diag=False):
         out[f'dgf_{dt}'] = np.where(mask & ~flat_gf, out[f'dgf_{dt}'], np.nan)
         out[f'gain_{dt}'] = np.where(mask & ~flat_raw & ~flat_gf,
                                      out[f'draw_{dt}'] - out[f'dgf_{dt}'], np.nan)
-        if diag:
+        if diag and p0_method != 'pair_mean':
             # E-33r.2 A: fixed-P transport; D: Omega = ||U_gf^T U_raw||_F^2 / r
             Mfp = Vhfp[:-dt, :r] @ Vhfp[dt:, :r].transpose(-1, -2)
             svf = torch.linalg.svdvals(Mfp).clamp(max=1.0 - 1e-12)
@@ -212,6 +229,24 @@ def batch_metrics(Jdoc, Pdoc, sent, r=R_MAIN, diag=False):
                 flatfp = (sfp[:-dt, rt - 1] / sfp[:-dt, 0].clamp_min(1e-30) < FLAT_REL).numpy()
                 out[f'dgp_{dt}_r{rt}'] = np.where(mask & ~flatfp,
                                                   torch.acos(svfp).max(-1).values.numpy(), np.nan)
+        elif diag and p0_method == 'pair_mean':
+            # A (pair-mean, reviewer's semantics): same p0 на обоих концах пары,
+            # p0_t = norm((p_t + p_{t+dt})/2); тестирует P как оператор реалистичной силы
+            # без вариации p_t (ср.: gf = полная вариация, fixed-P = вырожденный оператор)
+            p0a = pair_p0(Pdoc, dt)                      # [T-dt, K]: (p_t, p_{t+dt})
+            n = T - dt                                   # same-p0: пара (t, t+dt) валидна для t ≤ T-dt-1
+            if n <= 0:
+                continue
+            PJa = p_apply(Jdoc[:n], p0a[:n])
+            PJb = p_apply(Jdoc[dt:dt + n], p0a[:n])      # same p0 на обоих концах
+            sfa, sa, Vha = torch.linalg.svd(PJa, full_matrices=False)
+            sfb, sb, Vhb = torch.linalg.svd(PJb, full_matrices=False)
+            Mfp = Vha[:, :r] @ Vhb[:, :r].transpose(-1, -2)
+            svf = torch.linalg.svdvals(Mfp).clamp(max=1.0 - 1e-12)
+            flat_fp = ((sa[:, r - 1] / sa[:, 0].clamp_min(1e-30) < FLAT_REL) |
+                       (sb[:, r - 1] / sb[:, 0].clamp_min(1e-30) < FLAT_REL)).numpy()
+            out[f'dgp_{dt}'] = np.where(mask[:n] & ~flat_fp,
+                                        torch.acos(svf).max(-1).values.numpy(), np.nan)
     if diag:
         # E-33r.2 C: r-sweep (B uses dgf[rt][1]); E: fixed-p at r in {16, 32}
         dg = {'dgf': {}, 'draw': {}, 'dgp': {}}
@@ -229,7 +264,7 @@ def batch_metrics(Jdoc, Pdoc, sent, r=R_MAIN, diag=False):
                 svg = torch.linalg.svdvals(Wa.transpose(-1, -2) @ Wb).clamp(max=1.0 - 1e-12)
                 fg = (s3[:-dt, rt - 1] / s3[:-dt, 0].clamp_min(1e-30) < FLAT_REL).numpy()
                 dgg[dt] = np.where(mr_ & ~fg, torch.acos(svg).max(-1).values.numpy(), np.nan)
-                if rt in (16, 32):
+                if rt in (16, 32) and p0_method != 'pair_mean':
                     Vfa = Vhfp[:-dt, :rt].transpose(-1, -2); Vfb = Vhfp[dt:, :rt].transpose(-1, -2)
                     svf2 = torch.linalg.svdvals(Vfa.transpose(-1, -2) @ Vfb).clamp(max=1.0 - 1e-12)
                     ff = (sfp[:-dt, rt - 1] / sfp[:-dt, 0].clamp_min(1e-30) < FLAT_REL).numpy()
@@ -238,6 +273,29 @@ def batch_metrics(Jdoc, Pdoc, sent, r=R_MAIN, diag=False):
             dg['dgf'][rt] = dgg
             dg['dgp'][rt] = dgp_
         out['diag'] = dg
+
+        # E-33r.2 E: доз-красивая. J_α = (1−α)J + α·PJ; Δ_SVD_α = angle(v_α(t+1), v_α(t))
+        # (ТЗ-стандарт: пара двух α-фильтрованных пространств; α=0 ≡ raw (draw_1),
+        # α=1 ≡ gf (dgf_1)).
+        ma1 = ~(sent[:-1] | sent[1:])
+        out['E_alpha'] = {}
+        VhA = {0.0: Vh1, 1.0: Vh3}
+        for a_ in ALPHAS:
+            if a_ not in VhA and a_ not in (0.0, 1.0):
+                Ja_ = (1.0 - a_) * Jdoc + a_ * PJ
+                VhA[a_] = torch.linalg.svd(Ja_, full_matrices=False)[2]
+            Va_ = VhA[a_][:-1, :r].transpose(-1, -2)
+            Vb_ = VhA[a_][1:, :r].transpose(-1, -2)
+            Ma_ = Va_.transpose(-1, -2) @ Vb_
+            sva = torch.linalg.svdvals(Ma_).clamp(max=1.0 - 1e-12)
+            out['E_alpha'][a_] = np.where(ma1, torch.acos(sva).max(-1).values.numpy(), np.nan)
+        out['E_alpha'] = {a_: out['E_alpha'].get(a_) for a_ in ALPHAS}
+
+        # E-33r.2 B: σ16/σ17 — eigengap на 16/17 у J и PJ
+        # (отсутствует → структура в топ-модах, Davis–Kahan)
+        if K >= 17:
+            out['B_snr_raw'] = (s1[:, 15] / s1[:, 16].clamp_min(1e-30)).numpy()
+            out['B_snr_gf'] = (s3[:, 15] / s3[:, 16].clamp_min(1e-30)).numpy()
     return out
 
 
@@ -304,6 +362,107 @@ def agg_positions(vals_per_doc, min_n=8):
             'n_docs': len(meds)}
 
 
+def aggregate_layer(rows, l, a, ds_l, dS23):
+    entry = {}
+    if not rows:
+        return entry
+    fields_pos = ['uniformity_0', 'gauge_share', 'gauge_share_exact',
+                  'align_ug', 'align_p', 'survive_frac', 'kill_frac',
+                  'kill_frac_check', 'rank_raw', 'rank_gf', 'rank_K', 'align_K1']
+    for k in range(1, 9):
+        fields_pos.append(f'sig_ratio_{k}')
+    entry['n_docs'] = len(rows)
+    entry['sent_frac_med'] = agg_positions([np.array([r['sent_frac']]) for r in rows], min_n=1) or {}
+    for f in fields_pos:
+        entry[f] = agg_positions([r[f] for r in rows])
+    entry['sK_top4'] = [agg_positions([np.ravel(r['sK_top4'][:, j]) for r in rows])
+                        for j in range(4)]
+    entry['delta'] = {}
+    for dt in DELTA_GRID:
+        entry['delta'][str(dt)] = {
+            'raw': agg_positions([r[f'draw_{dt}'] for r in rows]),
+            'gf': agg_positions([r[f'dgf_{dt}'] for r in rows]),
+            'gain': agg_positions([r[f'gain_{dt}'] for r in rows])}
+    if a.diag and rows and all('diag' in r_ for r_ in rows):
+        rts = [rt for rt in DIAG_R if rt in rows[0]['diag']['dgf']]
+        entry['diag'] = {
+            'C_raw': {str(rt): {str(dt): agg_positions([r_['diag']['draw'][rt][dt] for r_ in rows])
+                                for dt in DELTA_GRID} for rt in rts},
+            'C_gf': {str(rt): {str(dt): agg_positions([r_['diag']['dgf'][rt][dt] for r_ in rows])
+                               for dt in DELTA_GRID} for rt in rts},
+            'C_gain': {str(rt): {str(dt): agg_positions([np.nan_to_num(
+                                   np.asarray(r_['diag']['draw'][rt][dt], float) -
+                                   np.asarray(r_['diag']['dgf'][rt][dt], float),
+                                   nan=np.nan) for r_ in rows])
+                                 for dt in DELTA_GRID} for rt in rts},
+            'E_fixed_p': {str(rt): {str(dt): agg_positions([r_['diag']['dgp'][rt][dt] for r_ in rows])
+                                    for dt in DELTA_GRID} for rt in rts if rt in (16, 32)
+                           and all(r_['diag']['dgp'].get(rt) for r_ in rows)},
+            'E_fixed_p_r': {str(rt): {str(dt): agg_positions([r_[f'dgp_{dt}_r{rt}'] for r_ in rows])
+                                      for dt in DELTA_GRID
+                                      if all(f'dgp_{dt}_r{rt}' in r_ for r_ in rows)}
+                            for rt in (1, 2, 8, 16)
+                            if all(f'dgp_1_r{rt}' in r_ for r_ in rows)},
+        }
+        if a.p0_method == 'pair_mean' and all(f'dgp_{dt}' in r_ for r_ in rows for dt in DELTA_GRID):
+            # pair_mean: top-level out[f'dgp_{dt}'] (same-p0 на обоих концах пары) — в JSON
+            entry['diag']['A_pair_mean'] = {str(dt): agg_positions([r_[f'dgp_{dt}'] for r_ in rows])
+                                            for dt in DELTA_GRID}
+        if all(f'omega_{dt}' in rows[0] for dt in DELTA_GRID):
+            entry['diag']['D_omega'] = {str(dt): agg_positions([r_[f'omega_{dt}'] for r_ in rows])
+                                        for dt in DELTA_GRID}
+            entry['diag']['D_omega_by_r'] = {str(rt): {str(dt): agg_positions([r_[f'omega_{dt}_r{rt}'] for r_ in rows])
+                                                       for dt in DELTA_GRID}
+                                             for rt in (1, 2, 8, 16)}
+        bres = {}   # B: per-doc Spearman(Δ_gf(1, r), d_S), per r (per-layer d_S)
+        for rt in rts:
+            sps = []
+            for m_, ds in zip(rows, ds_l):
+                dg1 = np.asarray(m_['diag']['dgf'][rt][1], dtype=float)
+                msk = np.isfinite(dg1) & np.isfinite(ds)
+                if msk.sum() >= 8:
+                    sps.append(spearman(dg1[msk], ds[msk]))
+            bres[str(rt)] = {'med': float(np.median(sps)), 'n': len(sps)} if sps else None
+        entry['diag']['B_rho_by_r'] = bres
+    # slice 6: correlations
+    if l == 23 and dS23:
+        sp_gf, sp_raw = [], []
+        for m, ds in zip(rows, dS23):
+            dg = np.asarray(m['dgf_1'], dtype=float)
+            dr = np.asarray(m['draw_1'], dtype=float)
+            msk = np.isfinite(dg) & np.isfinite(ds)
+            if msk.sum() >= 8:
+                sp_gf.append(spearman(dg[msk], ds[msk]))
+                sp_raw.append(spearman(dr[msk], ds[msk]))
+        entry['corr_with_dS'] = {'gf_d1': {'med': float(np.median(sp_gf)), 'n': len(sp_gf)} if sp_gf else None,
+                                 'raw_d1': {'med': float(np.median(sp_raw)), 'n': len(sp_raw)} if sp_raw else None}
+    # gain vs gauge_share_exact (per-doc Spearman, pooled)
+    sp_ge, sp_kg = [], []
+    for m in rows:
+        gain1 = np.asarray(m['gain_1'], dtype=float)            # pair (t, t+1): [S-1]
+        gse = np.asarray(m['gauge_share_exact'], dtype=float)[:-1]  # per-position → t
+        kf = np.asarray(m['kill_frac'], dtype=float)[:-1]
+        msk = np.isfinite(gain1) & np.isfinite(gse) & np.isfinite(kf)
+        if msk.sum() >= 8:
+            sp_ge.append(spearman(gain1[msk], gse[msk]))
+            sp_kg.append(spearman(kf[msk], gse[msk]))
+    entry['corr_gain_gauge_share'] = {'med': float(np.median(sp_ge)), 'n': len(sp_ge)} if sp_ge else None
+    entry['corr_kill_gauge_share'] = {'med': float(np.median(sp_kg)), 'n': len(sp_kg)} if sp_kg else None
+    # E-33r.2 B: ratio = sig_gf/sig_raw, mean over i<r, per r
+    for rt in (1, 2, 4, 8, 16, 32):
+        if f'ratio_{rt}' in rows[0]:
+            entry[f'ratio_{rt}'] = agg_positions([r_[f'ratio_{rt}'] for r_ in rows])
+    # E-33r.2 B: σ16/σ17 (diag-only)
+    if 'B_snr_raw' in rows[0]:
+        entry['B_snr_raw'] = agg_positions([r_['B_snr_raw'] for r_ in rows])
+        entry['B_snr_gf'] = agg_positions([r_['B_snr_gf'] for r_ in rows])
+    # E-33r.2 E: доз-красивая, Δ=1, r=16, α-зависимый референс (ТЗ-стандарт)
+    if 'E_alpha' in rows[0]:
+        entry['E_alpha_curve'] = {str(a_): agg_positions([r_['E_alpha'][a_] for r_ in rows])
+                                  for a_ in ALPHAS if all(r_['E_alpha'].get(a_) is not None for r_ in rows)}
+    return entry
+
+
 def main():
     a = argparse.ArgumentParser()
     a.add_argument('--ckpt-dir', default='/data/prism_kernels/exp27b/results')
@@ -312,6 +471,8 @@ def main():
     a.add_argument('--r', type=int, default=R_MAIN)
     a.add_argument('--diag', action='store_true',
                    help='E-33r.2 diagnostics A/C/D/B (+E, F) on L23')
+    a.add_argument('--p0-method', default='median', choices=['fix', 'median', 'pair_mean'],
+                   help='fix: p0 = argmax_t H(p_t) (ТЗ); median: legacy')
     a.add_argument('--sample-cap', type=int, default=0)
     a.add_argument('--selfcheck', action='store_true')
     a = a.parse_args()
@@ -321,133 +482,54 @@ def main():
     E28._pin_p_cores()
     np.random.seed(SEED)
     layers = [int(x) for x in a.layers.split(',')]
-    torch_layers = {}
-    docs = None
-    for l in layers:
-        torch_layers[l] = load_layer(a.ckpt_dir, l)
-        if docs is None:
-            ck = torch_layers[l]
-            domains = sorted({k[0] for k in ck['JR']})
-            docs = [(d, si) for d in domains for si in range(ck['n_samples'])]
+    # One layer in memory at a time (5 layers × 32 docs × 4096 × 128 × 1024 f32
+    # = 33 GB resident; peak with per_doc accumulation hit 36 GB + and OOM'd).
+    ck0 = load_layer(a.ckpt_dir, layers[0])
+    domains = sorted({k[0] for k in ck0['JR']})
+    docs = [(d, si) for d in domains for si in range(ck0['n_samples'])]
+    n_samples = ck0['n_samples']
+    S = ck0['S']
+    del ck0
     if a.sample_cap:
         docs = docs[:a.sample_cap]
-    S = torch_layers[layers[0]]['S']
-    K = torch_layers[layers[0]]['K']
 
-    per_doc = {l: [] for l in layers}          # list of batch_metrics dicts
-    dS23 = []
-    for i, (dom, si) in enumerate(docs):
-        for l in layers:
-            ck = torch_layers[l]
-            if ck['n_samples'] != torch_layers[layers[0]]['n_samples']:
-                raise RuntimeError('n_samples differs across layers')
-            Jdoc, Pdoc, sent = load_doc(ck, dom, si)
-            m = batch_metrics(Jdoc, Pdoc, sent, r=a.r, diag=a.diag and l == 23)
-            m['sent_frac'] = float(sent.mean())
-            per_doc[l].append(m)
-            del Jdoc, Pdoc
-            if l == 23:
-                dS23.append(dS_of_H(load_H(ck, dom, si)).numpy())
-        print(f'doc {i+1}/{len(docs)} {dom}/{si}', flush=True)
-
-    # ---------------- per-layer aggregation ----------------
     layer_out = {}
+    dS23 = []
+    depth_keep = {}   # l -> [{vtop_raw, vtop_gf, vt16_raw, vt16_gf}] for the depth leg
     for l in layers:
-        rows = per_doc[l]
-        if not rows:
-            continue
-        fields_pos = ['uniformity_0', 'gauge_share', 'gauge_share_exact',
-                      'align_ug', 'align_p', 'survive_frac', 'kill_frac',
-                      'kill_frac_check', 'rank_raw', 'rank_gf', 'rank_K', 'align_K1']
-        for k in range(1, 9):
-            fields_pos.append(f'sig_ratio_{k}')
-        entry = {'n_docs': len(rows),
-                 'sent_frac_med': agg_positions([np.array([r['sent_frac']]) for r in rows], min_n=1) or {}}
-        for f in fields_pos:
-            entry[f] = agg_positions([r[f] for r in rows])
-        entry['sK_top4'] = [agg_positions([np.ravel(r['sK_top4'][:, j]) for r in rows])
-                            for j in range(4)]
-        entry['delta'] = {}
-        for dt in DELTA_GRID:
-            entry['delta'][str(dt)] = {
-                'raw': agg_positions([r[f'draw_{dt}'] for r in rows]),
-                'gf': agg_positions([r[f'dgf_{dt}'] for r in rows]),
-                'gain': agg_positions([r[f'gain_{dt}'] for r in rows])}
-        if a.diag and rows and all('diag' in r_ for r_ in rows):
-            rts = [rt for rt in DIAG_R if rt in rows[0]['diag']['dgf']]
-            entry['diag'] = {
-                'C_raw': {str(rt): {str(dt): agg_positions([r_['diag']['draw'][rt][dt] for r_ in rows])
-                                    for dt in DELTA_GRID} for rt in rts},
-                'C_gf': {str(rt): {str(dt): agg_positions([r_['diag']['dgf'][rt][dt] for r_ in rows])
-                                   for dt in DELTA_GRID} for rt in rts},
-                'C_gain': {str(rt): {str(dt): agg_positions([np.nan_to_num(
-                                       np.asarray(r_['diag']['draw'][rt][dt], float) -
-                                       np.asarray(r_['diag']['dgf'][rt][dt], float),
-                                       nan=np.nan) for r_ in rows])
-                                     for dt in DELTA_GRID} for rt in rts},
-                'E_fixed_p': {str(rt): {str(dt): agg_positions([r_['diag']['dgp'][rt][dt] for r_ in rows])
-                                        for dt in DELTA_GRID} for rt in rts if rt in (16, 32)},
-                'E_fixed_p_r': {str(rt): {str(dt): agg_positions([r_[f'dgp_{dt}_r{rt}'] for r_ in rows])
-                                          for dt in DELTA_GRID} for rt in (1, 2, 8, 16)},
-                'D_omega': {str(dt): agg_positions([r_[f'omega_{dt}'] for r_ in rows])
-                            for dt in DELTA_GRID},
-                'D_omega_by_r': {str(rt): {str(dt): agg_positions([r_[f'omega_{dt}_r{rt}'] for r_ in rows])
-                                           for dt in DELTA_GRID}
-                                 for rt in (1, 2, 8, 16)},
-            }
-            bres = {}   # B: per-doc Spearman(Δ_gf(1, r), d_S), per r
-            for rt in rts:
-                sps = []
-                for m_, ds in zip(rows, dS23):
-                    dg1 = np.asarray(m_['diag']['dgf'][rt][1], dtype=float)
-                    msk = np.isfinite(dg1) & np.isfinite(ds)
-                    if msk.sum() >= 8:
-                        sps.append(spearman(dg1[msk], ds[msk]))
-                bres[str(rt)] = {'med': float(np.median(sps)), 'n': len(sps)} if sps else None
-            entry['diag']['B_rho_by_r'] = bres
-        # slice 6: correlations
-        if l == 23 and dS23:
-            # per-doc: Spearman(Δ_gf(1), d_S) — pooled over docs (Δ_gf(1) [T-1] vs d_S [T-1])
-            rows23 = per_doc[23]
-            sp_gf, sp_raw = [], []
-            for m, ds in zip(rows23, dS23):
-                dg = np.asarray(m['dgf_1'], dtype=float)
-                dr = np.asarray(m['draw_1'], dtype=float)
-                msk = np.isfinite(dg) & np.isfinite(ds)
-                if msk.sum() >= 8:
-                    sp_gf.append(spearman(dg[msk], ds[msk]))
-                    sp_raw.append(spearman(dr[msk], ds[msk]))
-            entry['corr_with_dS'] = {'gf_d1': {'med': float(np.median(sp_gf)), 'n': len(sp_gf)} if sp_gf else None,
-                                     'raw_d1': {'med': float(np.median(sp_raw)), 'n': len(sp_raw)} if sp_raw else None}
-        # gain vs gauge_share_exact (per-doc Spearman, pooled)
-        sp_ge, sp_kg = [], []
-        for m in rows:
-            gain1 = np.asarray(m['gain_1'], dtype=float)            # pair (t, t+1): [S-1]
-            gse = np.asarray(m['gauge_share_exact'], dtype=float)[:-1]  # per-position → t
-            kf = np.asarray(m['kill_frac'], dtype=float)[:-1]
-            msk = np.isfinite(gain1) & np.isfinite(gse) & np.isfinite(kf)
-            if msk.sum() >= 8:
-                sp_ge.append(spearman(gain1[msk], gse[msk]))
-                sp_kg.append(spearman(kf[msk], gse[msk]))
-        entry['corr_gain_gauge_share'] = {'med': float(np.median(sp_ge)), 'n': len(sp_ge)} if sp_ge else None
-        entry['corr_kill_gauge_share'] = {'med': float(np.median(sp_kg)), 'n': len(sp_kg)} if sp_kg else None
-        # E-33r.2 B: ratio = sig_gf/sig_raw, mean over i<r, per r
-        for rt in (1, 2, 4, 8, 16, 32):
-            if f'ratio_{rt}' in rows[0]:
-                entry[f'ratio_{rt}'] = agg_positions([r_[f'ratio_{rt}'] for r_ in rows])
-        layer_out[str(l)] = entry
+        t0 = time.time()
+        ck = load_layer(a.ckpt_dir, l)
+        if ck['n_samples'] != n_samples:
+            raise RuntimeError('n_samples differs across layers')
+        rows, ds_l = [], []
+        for i, (dom, si) in enumerate(docs):
+            Jdoc, Pdoc, sent = load_doc(ck, dom, si)
+            m = batch_metrics(Jdoc, Pdoc, sent, r=a.r, diag=a.diag, p0_method=a.p0_method)
+            m['sent_frac'] = float(sent.mean())
+            rows.append(m)
+            del Jdoc, Pdoc
+            ds_l.append(dS_of_H(load_H(ck, dom, si)).numpy())
+            print(f'layer {l} doc {i+1}/{len(docs)} {dom}/{si}', flush=True)
+        if l == 23:
+            dS23 = ds_l
+        layer_out[str(l)] = aggregate_layer(rows, l, a, ds_l, dS23)
+        depth_keep[l] = [{k_: r_[k_] for k_ in ('vtop_raw', 'vtop_gf', 'vt16_raw', 'vt16_gf')}
+                         for r_ in rows]
+        del ck, rows, ds_l
+        gc.collect()
+        print(f'layer {l} done: {time.time()-t0:.0f}s', flush=True)
 
     # ---------------- depth coherence (raw vs gf) ----------------
     depth_out = {}
     rng = np.random.default_rng(SEED + 99)
     # Coherence — not a pair metric, so no sentinel mask (endpoints apply to pairs only).
     for (la, lb) in DEPTH_PAIRS:
-        if la not in per_doc or lb not in per_doc:
+        if la not in depth_keep or lb not in depth_keep:
             continue
         res_raw, res_gf = [], []
-        for i in range(min(len(per_doc[la]), len(per_doc[lb]))):
-            va = per_doc[la][i]['vtop_raw']; vb = per_doc[lb][i]['vtop_raw']
-            wga = per_doc[la][i]['vtop_gf']; wgb = per_doc[lb][i]['vtop_gf']
+        for i in range(min(len(depth_keep[la]), len(depth_keep[lb]))):
+            va = depth_keep[la][i]['vtop_raw']; vb = depth_keep[lb][i]['vtop_raw']
+            wga = depth_keep[la][i]['vtop_gf']; wgb = depth_keep[lb][i]['vtop_gf']
             rr = depth_leg(va, vb, np.zeros(S, dtype=bool), rng)
             rg = depth_leg(wga, wgb, np.zeros(S, dtype=bool), rng)
             if rr:
@@ -464,26 +546,22 @@ def main():
             'depth_gain': (float(np.median([x['cos_real'] for x in res_gf]) -
                                   np.median([x['cos_real'] for x in res_raw]))
                            if res_gf and res_raw else None),
-            # E-33r.2 F: per-r subspace overlap Ω = ‖U_gfᵀU_raw‖²_F/r, r ∈ {1,4,16}
+            # E-33r.2 F-depth: per-r subspace overlap Ω = ‖U_gfᵀU_raw‖²_F/r, r ∈ {1,4,16}
             'by_r': {},
             'note': 'coherence, NOT T^h transport (no D_l in cache)'}
         for rt in (1, 4, 16):
             ov_raw, ov_gf = [], []
-            for i in range(len(per_doc[la])):
-                a_r = per_doc[la][i]['vt16_raw'][:, :rt, :]
-                b_r = per_doc[lb][i]['vt16_raw'][:, :rt, :]
-                a_g = per_doc[la][i]['vt16_gf'][:, :rt, :]
-                b_g = per_doc[lb][i]['vt16_gf'][:, :rt, :]
+            for i in range(len(depth_keep[la])):
+                a_r = depth_keep[la][i]['vt16_raw'][:, :rt, :]
+                b_r = depth_keep[lb][i]['vt16_raw'][:, :rt, :]
+                a_g = depth_keep[la][i]['vt16_gf'][:, :rt, :]
+                b_g = depth_keep[lb][i]['vt16_gf'][:, :rt, :]
                 ov_raw.append(float(np.nanmedian(((a_r @ b_r.transpose(0, 2, 1)) ** 2).sum(-1).sum(-1) / rt)))
                 ov_gf.append(float(np.nanmedian(((a_g @ b_g.transpose(0, 2, 1)) ** 2).sum(-1).sum(-1) / rt)))
             if ov_raw:
                 depth_out[f'{la}-{lb}']['by_r'][str(rt)] = {
                     'raw': float(np.median(ov_raw)), 'gf': float(np.median(ov_gf)),
                     'gain': float(np.median(ov_gf) - np.median(ov_raw))}
-
-    # E-33r.2 F: depth coherence gf on L12-L18, L18-L22 (from the depth leg)
-    F_depth = {f'{la}-{lb}': (depth_out.get(f'{la}-{lb}') or {}).get('gf', {}).get('med_cos')
-               for la, lb in ((12, 18), (18, 22))}
 
     # ---------------- negative control (original E-33) ----------------
     neg = None
@@ -542,10 +620,11 @@ def main():
                  'pool_offsets': 'not needed — all per-position',
                  'depth': 'coherence, not transport (no D_l in cache)',
                  'e34_protocol': 'per-doc median/IQR -> median of 32 docs',
-                 'e33r2_diag': bool(a.diag)},
+                 'e33r2_diag': bool(a.diag), 'p0_method': a.p0_method,
+                 'alphas': list(ALPHAS),
+                 'E_alpha_ref': 'α-параметризованный референс; α=0 ≡ draw_1, α=1 ≡ dgf_1'},
         'layers': layer_out,
         'depth': depth_out,
-        'F_depth_gf': F_depth,
         'negative_control': neg,
         'verdict': verdict,
         'verdict_gains': {str(l): g for l, g in gains.items()},
@@ -650,6 +729,33 @@ def selfcheck():
     J2r = torch.randn(TT, K, D)
     m2r = batch_metrics(J2r, pup2.unsqueeze(0), np.zeros(TT, dtype=bool), r=2)
     assert np.nanmax(np.abs(m2r['draw_1'] - m2r['dgf_1'])) > 1e-3, 'test 4 would be dead'
+
+    # (5d) pair_p0: normalized pair mean
+    Pd = torch.tensor([[0.5, 0.5], [1.0, 0.0]], dtype=float)
+    pp = pair_p0(Pd, 1)
+    # (0.75, 0.25) unnormalized -> normalized: [0.75, 0.25] (sum = 1.0, first = 0.75)
+    assert abs(float(pp.sum()) - 1.0) < 1e-6 and abs(float(pp[0, 0]) - 0.75) < 1e-6
+    # (5a) selfcheck (a): p_t ≡ p (constant) → fixed-P == gf bitwise
+    Jc = torch.randn(TT, K, D)
+    pc = torch.rand(K); pc = pc / pc.sum()
+    mc = batch_metrics(Jc, pc.unsqueeze(0).expand(TT, -1), np.zeros(TT, dtype=bool),
+                       r=2, diag=True, p0_method='fix')
+    dg1 = np.asarray(mc['diag']['dgf'][1][1], float)
+    dp1 = np.asarray(mc['dgp_1_r1'], float)
+    msk = np.isfinite(dg1) & np.isfinite(dp1)
+    assert msk.sum() > 10
+    assert np.nanmax(np.abs(dg1[msk] - dp1[msk])) < 1e-6, 'fixP != gf'
+    # (5b) selfcheck (b): α=0 ≡ raw (draw_1); α=1 ≡ gf (dgf_1) — ТЗ-стандарт
+    d0 = np.asarray(mc['E_alpha'][0.0], float)
+    dr1 = np.asarray(mc['draw_1'], float)
+    msk = np.isfinite(d0) & np.isfinite(dr1)
+    assert np.nanmax(np.abs(d0[msk] - dr1[msk])) < 1e-6, 'alpha=0 != raw'
+    d1a = np.asarray(mc['E_alpha'][1.0], float)
+    dgf1 = np.asarray(mc['dgf_1'], float)
+    msk = np.isfinite(d1a) & np.isfinite(dgf1)
+    assert np.nanmax(np.abs(d1a[msk] - dgf1[msk])) < 1e-6, 'alpha=1 != dgf_1'
+    # (5c) B: σ16/σ17 finite при K ≥ 17 (K=8 → поле не создаётся, проверим отсутствие)
+    assert 'B_snr_raw' not in mc, 'B_snr at K=8'
 
     # (5) sentinel endpoints: sent[t]=True removes (t, t+1)
     Js = torch.randn(6, K, D)

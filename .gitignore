@@ -40,3 +40,13 @@ _auto_chain/exp27_v9/
 results/*.json
 
 results/exp27_jcache.pt
+
+# Model weights + caches (never in git — ship via Kaggle datasets)
+.hf_hub/
+_auto_chain/
+results/targets/
+results/exp17/
+*.pt
+*.safetensors
+*.bin
+*.ckpt
