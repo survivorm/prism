@@ -432,22 +432,23 @@ def _pooled_ols(cache, keys):
     return ols_hc3(x, y, rng=np.random.default_rng(99), n_perm=PERM_N)
 
 
-def main(results_dir=None):
+def main(results_dir=None, layers=None, cache=None, model=None,
+         doc_cap=None, out=None, selfcheck=False):
     global S, D, NEPS, EPS_REL  # selfcheck temporarily changes globals
-    import argparse
+    # NOTE: no argparse here — the Kaggle runner cell calls main(**kwargs)
+    # and Kaggle's sys.argv contains IPython flags that would crash
+    # parse_args() (SystemExit: 2). CLI-only parsing lives in main_cli(),
+    # invoked only by the __main__ block (stripped by build_kernel).
+    layers = list(layers) if layers else list(LAYERS)
     results_dir = results_dir or os.path.join(os.path.dirname(os.getcwd()),
                                               'results')
     if not os.path.isdir(results_dir):
         results_dir = 'results'
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--out', default=os.path.join(results_dir,
-                                                  'exp32r3_layer_profile.json'))
-    ap.add_argument('--layers', type=int, nargs='+', default=list(LAYERS))
-    ap.add_argument('--cache', default=None, help='E-27b dense cache dir')
-    ap.add_argument('--model', default=None, help='decoder-tail model dir')
-    ap.add_argument('--doc-cap', type=int, default=None)
-    ap.add_argument('--selfcheck', action='store_true')
-    a = ap.parse_args()
+    if out is None:
+        out = os.path.join(results_dir, 'exp32r3_layer_profile.json')
+    import types
+    a = types.SimpleNamespace(out=out, layers=layers, cache=cache, model=model,
+                              doc_cap=doc_cap, selfcheck=selfcheck)
 
     # cache/model resolution: args -> /kaggle/input (kernel sources) ->
     # /kaggle/working -> local paths
@@ -840,9 +841,23 @@ def main(results_dir=None):
     print(f'WROTE {a.out}  total {time.time() - t0:.0f}s', flush=True)
 
 
+def main_cli():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--out', default=None)
+    ap.add_argument('--layers', type=int, nargs='+', default=list(LAYERS))
+    ap.add_argument('--cache', default=None, help='E-27b dense cache dir')
+    ap.add_argument('--model', default=None, help='decoder-tail model dir')
+    ap.add_argument('--doc-cap', type=int, default=None)
+    ap.add_argument('--selfcheck', action='store_true')
+    a = ap.parse_args()
+    main(out=a.out, layers=a.layers, cache=a.cache, model=a.model,
+         doc_cap=a.doc_cap, selfcheck=a.selfcheck)
+
+
 if __name__ == '__main__':
     try:
-        main()
+        main_cli()
     except Exception:
         traceback.print_exc()
         sys.exit(1)
