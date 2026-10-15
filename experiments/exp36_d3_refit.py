@@ -53,6 +53,7 @@ def doc_d3_norm(Jdoc, Pdoc, sent, r, dt=1):
 
 
 def main():
+    no_md = "--no-md" in sys.argv
     t0 = time.time()
     res = json.load(open(JSON))
     docs = res["meta"]["n_docs"]
@@ -135,6 +136,9 @@ def main():
     print(f"done in {time.time()-t0:.0f}s; JSON updated")
 
     # --- MD: перегенерировать только D3-секции ---
+    if no_md:
+        print("MD skipped (--no-md)")
+        return
     md = open("results/exp36_gauge_anatomy.md").read().split("\n")
     out = []
     skip = False

@@ -452,21 +452,38 @@ def main(results_dir=None, layers=None, cache=None, model=None,
 
     # cache/model resolution: args -> /kaggle/input (kernel sources) ->
     # /kaggle/working -> local paths
-    cache_dir = a.cache
-    if cache_dir is None and os.path.isdir('/kaggle/input'):
-        for slug in sorted(os.listdir('/kaggle/input')):
-            p = os.path.join('/kaggle/input', slug, 'results')
-            if os.path.isfile(os.path.join(p, f'exp27b_jcache_L{LAYERS[0]}.pt')):
-                cache_dir = p
-                print(f'cache from kernel source: {p}', flush=True)
-                break
-    if cache_dir is None:
-        for cand in ('/kaggle/working/results',
-                     os.path.expanduser('~/work/prism/results'),
-                     '/data/prism_kernels/exp27b/results'):
-            if os.path.isfile(os.path.join(cand, f'exp27b_jcache_L{LAYERS[0]}.pt')):
-                cache_dir = cand
-                break
+    # cache resolution: per-layer file map. Sources may be SPLIT across dirs
+    # (Kaggle datasets are capped at 10 GB, so the 13 GB jcache ships as two
+    # datasets: a = L6/L12/L18, b = L19/L22/L23) — scan every
+    # /kaggle/input/*/results/ and the local candidates, take the first hit
+    # per layer.
+    if a.cache:  # explicit single dir
+        cache_paths = {l: os.path.join(a.cache, f'exp27b_jcache_L{l}.pt')
+                       for l in LAYERS}
+        cache_dirs = [a.cache]
+    else:
+        cache_paths, cache_dirs = {}, []
+        cands = []
+        if os.path.isdir('/kaggle/input'):
+            for slug in sorted(os.listdir('/kaggle/input')):
+                p = os.path.join('/kaggle/input', slug, 'results')
+                if os.path.isdir(p):
+                    cands.append(p)
+        cands += ['/kaggle/working/results',
+                  os.path.expanduser('~/work/prism/results'),
+                  '/data/prism_kernels/exp27b/results']
+        for l in LAYERS:
+            for p in cands:
+                fp = os.path.join(p, f'exp27b_jcache_L{l}.pt')
+                if os.path.isfile(fp):
+                    cache_paths[l] = fp
+                    if p not in cache_dirs:
+                        cache_dirs.append(p)
+                    print(f'cache L{l} <- {fp}', flush=True)
+                    break
+            if l not in cache_paths:
+                print(f'[FAIL] no E-27b jcache for L{l} in {cands}')
+                return
     model_dir = a.model
     if model_dir is None and os.path.isdir('/kaggle/input'):
         for slug in sorted(os.listdir('/kaggle/input')):
@@ -484,7 +501,7 @@ def main(results_dir=None, layers=None, cache=None, model=None,
                 break
         if model_dir is None:
             model_dir = MODEL  # HF download
-    print(f'cache: {cache_dir}', flush=True)
+    print(f'cache: {sorted(set(cache_dirs))}', flush=True)
     print(f'model: {model_dir}', flush=True)
 
     if a.selfcheck:
@@ -584,7 +601,7 @@ def main(results_dir=None, layers=None, cache=None, model=None,
         print('selfcheck OK', flush=True)
         return
 
-    if cache_dir is None:
+    if not cache_paths:
         print('[FAIL] no E-27b dense cache found; pass --cache')
         return
 
@@ -593,7 +610,7 @@ def main(results_dir=None, layers=None, cache=None, model=None,
     # --- cache load + L19 sanity assert (review point 1) ---
     ck = {}
     for l in a.layers:
-        p = os.path.join(cache_dir, f'exp27b_jcache_L{l}.pt')
+        p = cache_paths[l]
         ck[l] = torch.load(p, map_location='cpu', weights_only=False)
         docs_l = {(k[0], k[1]) for k in ck[l]['JR'].keys()}
         ts_l = {k[2] for k in ck[l]['JR'].keys()}
@@ -786,7 +803,7 @@ def main(results_dir=None, layers=None, cache=None, model=None,
                            'T=128 all layers, GPU, float32 dz / float64 fit, '
                            'new quad_frac metric)'),
             'model': model_dir,
-            'cache': cache_dir,
+            'cache': sorted(set(cache_dirs)),
             'layers': list(a.layers),
             'n_docs': len(docs),
             'T': {str(l): T_FULL for l in a.layers},
