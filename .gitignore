@@ -50,3 +50,5 @@ results/exp17/
 *.safetensors
 *.bin
 *.ckpt
+*.gguf
+kaggle_kernel/.hf_cache/
