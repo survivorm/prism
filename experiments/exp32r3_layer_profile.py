@@ -449,8 +449,16 @@ def main(results_dir=None):
     ap.add_argument('--selfcheck', action='store_true')
     a = ap.parse_args()
 
-    # cache/model resolution: args -> /kaggle/working -> /data/prism_kernels
+    # cache/model resolution: args -> /kaggle/input (kernel sources) ->
+    # /kaggle/working -> local paths
     cache_dir = a.cache
+    if cache_dir is None and os.path.isdir('/kaggle/input'):
+        for slug in sorted(os.listdir('/kaggle/input')):
+            p = os.path.join('/kaggle/input', slug, 'results')
+            if os.path.isfile(os.path.join(p, f'exp27b_jcache_L{LAYERS[0]}.pt')):
+                cache_dir = p
+                print(f'cache from kernel source: {p}', flush=True)
+                break
     if cache_dir is None:
         for cand in ('/kaggle/working/results',
                      os.path.expanduser('~/work/prism/results'),
@@ -459,6 +467,13 @@ def main(results_dir=None):
                 cache_dir = cand
                 break
     model_dir = a.model
+    if model_dir is None and os.path.isdir('/kaggle/input'):
+        for slug in sorted(os.listdir('/kaggle/input')):
+            p = os.path.join('/kaggle/input', slug, 'qwen35-08b')
+            if os.path.isdir(p):
+                model_dir = p
+                print(f'model from kernel source: {p}', flush=True)
+                break
     if model_dir is None:
         for cand in (os.path.join(
             '/kaggle/working', 'qwen35-08b'),
@@ -629,12 +644,33 @@ def main(results_dir=None):
 
     per_doc_layer = {}
     cache = {}
+    # --- checkpoint (self-sourced kernel: prev /kaggle/working is mounted
+    # read-only at /kaggle/input/<slug>/ — resume from there if present) ---
+    ckpt_path = os.path.join(results_dir, 'exp32r3_checkpoint.pt')
+    for cand in ([ckpt_path] + [
+            os.path.join('/kaggle/input', s, 'results', 'exp32r3_checkpoint.pt')
+            for s in sorted(os.listdir('/kaggle/input'))] if os.path.isdir('/kaggle/input') else []):
+        if os.path.isfile(cand):
+            c = torch.load(cand, map_location='cpu', weights_only=False)
+            per_doc_layer = c.get('per_doc_layer', {})
+            cache = c.get('cache', {})
+            print(f'checkpoint {cand}: {len(per_doc_layer)} (doc,layer) pairs resumed',
+                  flush=True)
+            break
+
+    def save_ckpt():
+        torch.save({'per_doc_layer': per_doc_layer, 'cache': cache}, ckpt_path)
+
     first = True
     for li, l in enumerate(a.layers):
         for d in docs:
+            key = f'{l}|{d[0]}/{d[1]}'
+            if key in per_doc_layer:
+                continue
             t1 = time.time()
-            per_doc_layer[f'{l}|{d[0]}/{d[1]}'], cache[f'{l}|{d[0]}/{d[1]}'] = \
+            per_doc_layer[key], cache[key] = \
                 doc_layer_metrics(forward, ck[l], d, T_FULL)
+            save_ckpt()  # per-pair checkpoint: T4 wipe at any point is safe
             if first:
                 try:
                     import psutil
@@ -660,6 +696,11 @@ def main(results_dir=None):
     boot_rng = np.random.default_rng(12345)
     for l in a.layers:
         keys = [f'{l}|{d[0]}/{d[1]}' for d in docs]
+        missing = [k for k in keys if k not in per_doc_layer]
+        if missing:
+            sys.exit(f'L{l}: {len(missing)} (doc,layer) pairs missing from '
+                     f'checkpoint (e.g. --doc-cap smaller than the run). '
+                     f'Re-run with the original --doc-cap or delete the checkpoint.')
         V = [per_doc_layer[k] for k in keys]
         sl = _agg([v['s_l_median'] for v in V])
         sr = _agg([v['slope_ratio_median'] for v in V])
