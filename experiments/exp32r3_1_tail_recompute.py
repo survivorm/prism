@@ -14,11 +14,14 @@ L23. Consequences (docs/Exp32r_errors.md follow-up 2026-10-17):
   3. Cross-checks rho(nb, d3) compared tail-Hessian vs full-chain-J.
      Fix: compute rho(nb, d3_tail) as well (tail-vs-tail).
 
-Expectation: a_vs_ESG_cos_tail = cos(median a1, N(median ESG_tail)) ≈ 1
-on EVERY layer (chain rule of the readout itself; single-point L6: +1.5%).
-Everything else is byte-identical to E-32r.3 (pipeline, seed, aggregation);
-output -> results/exp32r3_1_tail_recompute.json. CPU forward is fine
-(decoder-tail matmul, ~5 min total on 12 threads).
+Expectation: a_vs_ESG_cos_tail (injection direction = JR full-chain,
+forward = tail) is NOT a fit control (variant A, reviewer 2026-10-17):
+it measures the JR-vs-Jtail row misalignment — ~1 at L23 (JR == Jtail,
+E-35 identity; single-point L6: +1.5%) and rising with depth, < 1 on
+early layers = the desync signature. s_l_tail and d3_tail are the
+tail-consistent versions of the depth metrics; id_cos_JR_Jtail is the
+desync guard. Everything else is byte-identical to E-32r.3 (pipeline,
+seed, aggregation); output -> results/exp32r3_1_tail_recompute.json.
 
 --- original E-32r.3 docstring below (pipeline description) ---
 
@@ -417,7 +420,11 @@ def doc_layer_metrics(forward, ck, dom_si, T, Jtail=None):
 
     # --- OLS+HC3: nb(t) ~ alpha*|dp(t)| + beta, valid pairs ---
     tidx = np.where(vp)[0]
-    ols = ols_hc3(dp[tidx], nb[tidx]) if len(tidx) >= 5 else None
+    # full PERM_N for real runs (n_valid_pairs >= 16); smoke runs (tiny T)
+    # are permutation-limited so a 32x6 synthetic end-to-end stays cheap
+    ols = ols_hc3(dp[tidx], nb[tidx],
+                  n_perm=(PERM_N if len(tidx) >= 16 else 20)) \
+        if len(tidx) >= 5 else None
 
     # --- 4 cross-checks (TЗ): rho(nb, dSVD_raw/fixP/gf/r=1, |dp|) ---
     def spearman(x, y):
@@ -812,16 +819,50 @@ def main(results_dir=None, layers=None, cache=None, model=None,
 
     per_doc_layer = {}
     cache = {}
-    # --- checkpoint (self-sourced kernel: prev /kaggle/working is mounted
-    # read-only at /kaggle/input/<slug>/ — resume from there if present) ---
+    # --- checkpoint resume. v5+ writes exp32r3_1_checkpoint.pt to
+    # /kaggle/working/results; it lands in the kernel output, gets re-shipped
+    # as a dataset, and is picked up here by the input walk below. ---
     ckpt_path = os.path.join(results_dir, 'exp32r3_1_checkpoint.pt')
-    for cand in ([ckpt_path] + [
-            os.path.join('/kaggle/input', s, 'results', 'exp32r3_checkpoint.pt')
-            for s in sorted(os.listdir('/kaggle/input'))] if os.path.isdir('/kaggle/input') else []):
+    ckpt_cands = [ckpt_path]
+    if os.path.isdir('/kaggle/input'):
+        # v5 wrote exp32r3_1_checkpoint.pt to /kaggle/working (saved to the
+        # kernel output; re-shipped as a dataset for v6+). Walk the input
+        # tree (mount layout changed, see above) for BOTH names — the
+        # E-32r.3 fallback used the older filename.
+        _ckpts = []
+
+        def _ckw(d, depth):
+            try:
+                entries = sorted(os.listdir(d))
+            except OSError:
+                return
+            for e in entries:
+                if e in ('exp32r3_1_checkpoint.pt', 'exp32r3_checkpoint.pt'):
+                    _ckpts.append(os.path.join(d, e))
+            if depth > 0:
+                for e in entries:
+                    p = os.path.join(d, e)
+                    if os.path.isdir(p):
+                        _ckw(p, depth - 1)
+
+        _ckw('/kaggle/input', 7)
+        # newest first (mtime, then size): the full-run checkpoint wins over
+        # a stale partial one shipped at a shallower path
+        _ckpts.sort(key=lambda p: (os.path.getmtime(p), os.path.getsize(p)),
+                    reverse=True)
+        ckpt_cands += _ckpts
+    for cand in ckpt_cands:
         if os.path.isfile(cand):
             c = torch.load(cand, map_location='cpu', weights_only=False)
             per_doc_layer = c.get('per_doc_layer', {})
             cache = c.get('cache', {})
+            # schema check (v6, reviewer 2026-10-17): an E-32r.3 checkpoint
+            # lacks the tail fields -> would crash in aggregation. Recompute.
+            if per_doc_layer and 's_l_tail_median' not in next(
+                    iter(per_doc_layer.values())):
+                print('[WARN] old-schema checkpoint (no tail fields), '
+                      'recomputing from scratch', flush=True)
+                per_doc_layer, cache = {}, {}
             print(f'checkpoint {cand}: {len(per_doc_layer)} (doc,layer) pairs resumed',
                   flush=True)
             break
@@ -861,6 +902,53 @@ def main(results_dir=None, layers=None, cache=None, model=None,
         del Jt  # free 4.3 GB before the next layer
     del ck
 
+    meta = {
+        'experiment': ('E-32r.3.1 (tail-J consistency recompute of E-32r.3; '
+                       'adds s_l_tail, d3_by_r_tail, a_vs_ESG_cos_tail, '
+                       'id_cos_JR_Jtail, cross_checks_tail; everything else '
+                       'byte-identical to E-32r.3)'),
+        'model': model_dir,
+        'cache': sorted(set(cache_dirs)),
+        'layers': list(a.layers),
+        'n_docs': len(docs),
+        'T': {str(l): T_FULL for l in a.layers},
+        'eps_rel': [float(e) for e in EPS_REL],
+        'eps_canon': EPS_CANON,
+        'fit': 'dz = a*e + b*e^2 + c*e^3 (no const), eps absolute in h',
+        's_l': 'eps_canon * ||off(b_t)||_F / ||off(ESG_raw_t)||_F (RAW norm)',
+        's_l_tail': ('same as s_l with the denominator from J_tail = '
+                     'analytic_J(W_U, g, h) (decoder-tail Jacobian)'),
+        'slope_ratio': ('E-32r.2 formula UNCHANGED: median of '
+                        '|dz(e0)|/e0 / (|dz(e1)|/e1); 1.0 = linear regime'),
+        'quad_frac': ('NEW (no E-32r.2 counterpart): (s1-s2)/|s2|, '
+                      's1=||a1||, s2=||a1+2*(eps0*||h_t||)*a2||; '
+                      '0 = quadratic term negligible at eps0'),
+        'a_vs_ESG_cos': ('FIT-QUALITY sanity check (chain rule a1 = J e, '
+                         'exact for any J): ~1 expected on every layer '
+                         'with small resid_frac; NOT a depth metric'),
+        'a_vs_ESG_cos_tail': ('(A) semantics (reviewer 2026-10-17): injection '
+                              'direction = JR (full-chain), forward = tail -> '
+                              'measures the JR-vs-Jtail row misalignment, NOT '
+                              'fit quality; ~1 at L23 (E-35 identity), rising '
+                              'with depth'),
+        'id_cos_JR_Jtail': ('Frobenius cos(JR, J_tail) per position, median '
+                            'over docs — the desync guard'),
+        'aggregation': 'E-34: per-doc median -> median/IQR over docs',
+        'sentinel': 'P128_RAW.sum < 0.5, endpoints-only valid pairs; '
+                    'sentinel_frac = share raw rows, nb_median over ~sent',
+        'p0': 'canonical t0 position, NORMALIZED to sum 1',
+        'd3': 'top-r right singular direction angle (cos-sim, exp33r)',
+        'd3_fixP_note': ('diagnostics only on mid layers (TЗ §9: '
+                         'J = M_K*P_u exact only at L23)'),
+        'bootstrap': f'{BOOT_N} iterations over docs (seed=12345)',
+        'device': DEVICE,
+    }
+    aggregate(per_doc_layer, cache, docs, a.layers, a.out, meta)
+
+
+def aggregate(per_doc_layer, cache, docs, layers, out, meta):
+    """Layer aggregation + verdicts + JSON write (extracted for
+    end-to-end testing, reviewer 2026-10-17)."""
     # --- aggregation E-34: per-doc median -> median/IQR over docs ---
     def _agg(vals):
         vals = np.array([v for v in vals if v is not None])
@@ -871,7 +959,7 @@ def main(results_dir=None, layers=None, cache=None, model=None,
 
     layers_out = {}
     boot_rng = np.random.default_rng(12345)
-    for l in a.layers:
+    for l in layers:
         keys = [f'{l}|{d[0]}/{d[1]}' for d in docs]
         missing = [k for k in keys if k not in per_doc_layer]
         if missing:
@@ -895,6 +983,14 @@ def main(results_dir=None, layers=None, cache=None, model=None,
         alphas = np.array([v['ols']['alpha'] for v in V
                            if v['ols'] and v['ols']['alpha'] is not None])
 
+    # --- E-32r.3.1 tail aggregation (v6 fix, reviewer 2026-10-17: these
+    # keys are read by the verdicts and must exist in layers_out) ---
+        sl_tail_arr = np.array([v['s_l_tail_median'] for v in V
+                                if v['s_l_tail_median'] is not None])
+        aev_tail = _agg([v['a_vs_ESG_cos_tail'] for v in V
+                         if v['a_vs_ESG_cos_tail'] is not None])
+        idcos = _agg([v['id_cos_JR_Jtail_median'] for v in V
+                      if v['id_cos_JR_Jtail_median'] is not None])
         def _boot(arr, stat='median'):
             idx = boot_rng.integers(0, len(arr), (BOOT_N, len(arr)))
             s = np.median(arr[idx], axis=1) if stat == 'median' \
@@ -904,6 +1000,20 @@ def main(results_dir=None, layers=None, cache=None, model=None,
         d3b = {'fixP': {r: _boot(d3fix[r]) for r in R_SWEEP},
                'raw': {r: _boot(d3raw[r]) for r in R_SWEEP},
                'gf': {r: _boot(d3gf[r]) for r in R_SWEEP}}
+        # tail d3 aggregation (v6): same shape as d3_by_r_out, from d3_by_r_tail
+        d3_by_r_tail_out = None
+        if V[0].get('d3_by_r_tail') is not None:
+            d3_by_r_tail_out = {}
+            for m in ('raw', 'gf', 'fixP'):
+                d3_by_r_tail_out[m] = {}
+                for r in R_SWEEP:
+                    arr = np.array(
+                        [v['d3_by_r_tail'][m][str(r)][0] for v in V])
+                    d3_by_r_tail_out[m][str(r)] = {
+                        'median': float(np.median(arr)),
+                        'iqr': [float(np.percentile(arr, 25)),
+                                float(np.percentile(arr, 75))],
+                        'boot_ci': _boot(arr)}
 
         d3_by_r_out = {}
         for m in ('raw', 'gf', 'fixP'):
@@ -920,6 +1030,13 @@ def main(results_dir=None, layers=None, cache=None, model=None,
         layers_out[str(l)] = {
             's_l': {'median': sl[0], 'iqr': sl[1], 'boot_ci': _boot(sl_arr)},
             'a_vs_ESG_cos': _agg([v['a_vs_ESG_cos'] for v in V]),
+            's_l_tail': ({'median': float(np.median(sl_tail_arr)),
+                          'iqr': [float(np.percentile(sl_tail_arr, 25)),
+                                  float(np.percentile(sl_tail_arr, 75))],
+                          'boot_ci': _boot(sl_tail_arr)}
+                         if len(sl_tail_arr) else None),
+            'a_vs_ESG_cos_tail': aev_tail,
+            'id_cos_JR_Jtail': idcos,
             'slope_ratio': {'median': sr[0], 'iqr': sr[1]},
             'quad_frac': {'median': qf[0], 'iqr': qf[1]},
             'A1_median': _agg([v['A1_median'] for v in V]),
@@ -964,69 +1081,51 @@ def main(results_dir=None, layers=None, cache=None, model=None,
               f'd_b={np.median(db) if len(db) else None}', flush=True)
 
     report = {
-        'meta': {
-            'experiment': ('E-32r.3 (layer profile; supersedes E-32r.2 on '
-                           'shared layers: normalized p0, L19 added, '
-                           'T=128 all layers, GPU, float32 dz / float64 fit, '
-                           'new quad_frac metric)'),
-            'model': model_dir,
-            'cache': sorted(set(cache_dirs)),
-            'layers': list(a.layers),
-            'n_docs': len(docs),
-            'T': {str(l): T_FULL for l in a.layers},
-            'eps_rel': [float(e) for e in EPS_REL],
-            'eps_canon': EPS_CANON,
-            'fit': 'dz = a*e + b*e^2 + c*e^3 (no const), eps absolute in h',
-            's_l': 'eps_canon * ||off(b_t)||_F / ||off(ESG_raw_t)||_F (RAW norm)',
-            'slope_ratio': ('E-32r.2 formula UNCHANGED: median of '
-                            '|dz(e0)|/e0 / (|dz(e1)|/e1); 1.0 = linear regime'),
-            'quad_frac': ('NEW (no E-32r.2 counterpart): (s1-s2)/|s2|, '
-                          's1=||a1||, s2=||a1+2*(eps0*||h_t||)*a2||; '
-                          '0 = quadratic term negligible at eps0'),
-            'a_vs_ESG_cos': ('FIT-QUALITY sanity check (chain rule a1 = J e, '
-                             'exact for any J): ~1 expected on every layer '
-                             'with small resid_frac; NOT a depth metric'),
-            'aggregation': 'E-34: per-doc median -> median/IQR over docs',
-            'sentinel': 'P128_RAW.sum < 0.5, endpoints-only valid pairs; '
-                        'sentinel_frac = share raw rows, nb_median over ~sent',
-            'p0': 'canonical t0 position, NORMALIZED to sum 1',
-            'd3': 'top-r right singular direction angle (cos-sim, exp33r)',
-            'd3_fixP_note': ('diagnostics only on mid layers (TЗ §9: '
-                             'J = M_K*P_u exact only at L23)'),
-            'bootstrap': f'{BOOT_N} iterations over docs (seed=12345)',
-            'device': DEVICE,
-        },
+        'meta': meta,
         'layers': layers_out,
         'verdicts': {},
         'per_doc': {k: v for k, v in per_doc_layer.items()},
     }
     # --- verdicts ---
-    sl_med = [layers_out[str(l)]['s_l']['median'] for l in a.layers]
+    sl_med = [layers_out[str(l)]['s_l']['median'] for l in layers]
     lin = {}
-    for l in a.layers:
+    for l in layers:
         vals = [layers_out[str(l)]['resid_frac_by_eps'][
             f'{int(round(EPS_REL[e] * 100))}pct']['median'] for e in range(NEPS)]
         lin[str(l)] = bool(np.median(vals).max() < 0.01)
     s_ok = all(v is not None and v < 0.3 for v in sl_med)
     # E-32r.3.1 tail verdicts
     sl_tail_med = [layers_out[str(l)]['s_l_tail']['median']
-                   for l in a.layers
+                   for l in layers
                    if layers_out[str(l)]['s_l_tail'] is not None]
-    aev = {str(l): layers_out[str(l)]['a_vs_ESG_cos_tail'] for l in a.layers}
-    aev_min = min(v for v in aev.values() if v is not None)
+    aev = {str(l): layers_out[str(l)]['a_vs_ESG_cos_tail'] for l in layers}
+    aev_min = min(v[0] for v in aev.values() if v is not None)
+    # (A) semantics (reviewer 2026-10-17): the injection direction is
+    # Jn = JR/||JR|| (FULL-CHAIN), the forward is the TAIL. So
+    # a_vs_ESG_cos_tail is NOT a fit control — it is the residual of the
+    # JR-vs-Jtail misalignment per direction: ~1 at L23 (JR == Jtail,
+    # E-35 identity) and < 1 on early layers proportional to the row
+    # misalignment. Pipeline check = L23 only.
+    aev_L23 = aev.get('23')[0] if aev.get('23') is not None else None
     report['verdicts'] = {
         's_l_lt_0.3_all_layers': bool(s_ok),
-        's_l_medians': {str(l): sl_med[i] for i, l in enumerate(a.layers)},
+        's_l_medians': {str(l): sl_med[i] for i, l in enumerate(layers)},
         's_l_tail_medians': {str(l): layers_out[str(l)]['s_l_tail']['median']
-                             for l in a.layers
+                             for l in layers
                              if layers_out[str(l)]['s_l_tail'] is not None},
         's_l_tail_lt_0.3_all_layers': bool(sl_tail_med
                                            and all(v < 0.3 for v in sl_tail_med)),
         'a_vs_ESG_cos_tail_min': aev_min,
-        'a_vs_ESG_cos_tail_gt_0.99_all_layers': bool(aev
-                                                     and all(
-                                                         v is not None and v > 0.99
-                                                         for v in aev.values())),
+        'a_vs_ESG_cos_tail_L23': aev_L23,
+        'a_vs_ESG_cos_tail_L23_gt_0.99': (aev_L23 is not None
+                                          and aev_L23 > 0.99),
+        'a_vs_ESG_cos_tail_note': ('(A) semantics: injection direction = '
+                                   'JR (full-chain), forward = tail -> '
+                                   'a_vs_ESG_cos_tail measures the '
+                                   'JR-vs-Jtail row misalignment, NOT fit '
+                                   'quality; expected ~1 at L23 (E-35) and '
+                                   'rising with depth; early layers < 1 is '
+                                   'the desync signature, not a failure'),
         'resid_frac_lt_1pct_per_layer': lin,
         'linear_verdict': bool(s_ok and all(lin.values())),
         'depth_metrics': 's_l(l), d3_raw(1,l), d3_gf(1,l) — profile over '
@@ -1034,11 +1133,12 @@ def main(results_dir=None, layers=None, cache=None, model=None,
         'note': ('A/B/C resolved via d3 sweep + stratification + cross-checks '
                  '(see layers.*)'),
     }
-    os.makedirs(os.path.dirname(a.out) or '.', exist_ok=True)
-    with open(a.out, 'w', encoding='utf-8') as f:
+    os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
+    with open(out, 'w', encoding='utf-8') as f:
         json.dump(_clean(report), f, indent=1, ensure_ascii=False,
                   allow_nan=False)
-    print(f'WROTE {a.out}  total {time.time() - t0:.0f}s', flush=True)
+
+    print(f'WROTE {out}', flush=True)
 
 
 def main_cli():
