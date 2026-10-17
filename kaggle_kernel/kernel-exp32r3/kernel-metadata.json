@@ -9,6 +9,7 @@
  "title": "Prism: exp32r31-tail-recompute",
  "dataset_sources": [
   "voroninmichael/prism-exp27b-jcache-jca",
-  "voroninmichael/prism-exp27b-jcache-jcb"
+  "voroninmichael/prism-exp27b-jcache-jcb",
+  "voroninmichael/prism-exp32r31-ckpt-v5"
  ]
 }
