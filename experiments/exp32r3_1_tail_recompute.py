@@ -542,9 +542,58 @@ def main(results_dir=None, layers=None, cache=None, model=None,
         cache_paths, cache_dirs = {}, []
         cands = []
         if os.path.isdir('/kaggle/input'):
+            # Kaggle changed the dataset mount layout: used to be flat
+            # /kaggle/input/<slug>/results, now /kaggle/input/datasets/
+            # <owner>/<slug>/ (and the .pt may sit at the slug root, not in
+            # a 'results' subdir). Walk the whole input tree, depth-limited,
+            # and take the first dir that actually holds the jcache files.
+            _found = set()
+
+            def _walk(d, depth):
+                try:
+                    entries = sorted(os.listdir(d))
+                except OSError:
+                    return
+                if any(e.startswith('exp27b_jcache_L') and e.endswith('.pt')
+                       for e in entries):
+                    _found.add(d)
+                    return
+                if depth <= 0:
+                    return
+                for e in entries:
+                    p = os.path.join(d, e)
+                    if os.path.isdir(p):
+                        _walk(p, depth - 1)
+
+            # input(7)->datasets(6)->owner(5)->slug(4)->results(3)->file
+            _walk('/kaggle/input', 7)
+            cands = sorted(_found)
+            # diagnostics: print the input tree so a silent mount-missing
+            # is visible in the log (v4 failed with an empty candidate list)
+            _diag = []
+
+            def _diagwalk(d, depth):
+                try:
+                    entries = sorted(os.listdir(d))
+                except OSError:
+                    _diag.append(f'{d}: <unreadable>')
+                    return
+                if depth <= 0:
+                    _diag.append(f'{d}: [{len(entries)}] {entries[:6]}')
+                    return
+                _diag.append(f'{d}: [{len(entries)}]')
+                for e in entries:
+                    p = os.path.join(d, e)
+                    if os.path.isdir(p):
+                        _diagwalk(p, depth - 1)
+
+            if os.path.isdir('/kaggle/input'):
+                _diagwalk('/kaggle/input', 4)
+            print('kaggle input tree: ' + ' || '.join(_diag[:40]), flush=True)
+            # also keep the conventional explicit candidates
             for slug in sorted(os.listdir('/kaggle/input')):
                 p = os.path.join('/kaggle/input', slug, 'results')
-                if os.path.isdir(p):
+                if os.path.isdir(p) and p not in cands:
                     cands.append(p)
         cands += ['/kaggle/working/results',
                   os.path.expanduser('~/work/prism/results'),
@@ -563,12 +612,30 @@ def main(results_dir=None, layers=None, cache=None, model=None,
                 return
     model_dir = a.model
     if model_dir is None and os.path.isdir('/kaggle/input'):
-        for slug in sorted(os.listdir('/kaggle/input')):
-            p = os.path.join('/kaggle/input', slug, 'qwen35-08b')
-            if os.path.isdir(p):
-                model_dir = p
-                print(f'model from kernel source: {p}', flush=True)
-                break
+        # walk the input tree for a qwen35-08b dir (mount layout changed,
+        # see the cache walk above)
+        _mdir = set()
+
+        def _mw(d, depth):
+            try:
+                entries = sorted(os.listdir(d))
+            except OSError:
+                return
+            if 'qwen35-08b' in entries and os.path.isdir(
+                    os.path.join(d, 'qwen35-08b')):
+                _mdir.add(os.path.join(d, 'qwen35-08b'))
+                return
+            if depth <= 0:
+                return
+            for e in entries:
+                p = os.path.join(d, e)
+                if os.path.isdir(p):
+                    _mw(p, depth - 1)
+
+        _mw('/kaggle/input', 7)
+        if _mdir:
+            model_dir = sorted(_mdir)[0]
+            print(f'model from kernel source: {model_dir}', flush=True)
     if model_dir is None:
         for cand in (os.path.join(
             '/kaggle/working', 'qwen35-08b'),
@@ -976,7 +1043,7 @@ def main(results_dir=None, layers=None, cache=None, model=None,
 
 def main_cli():
     import argparse
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(prog='exp32r3_1')
     ap.add_argument('--out', default=None)
     ap.add_argument('--layers', type=int, nargs='+', default=list(LAYERS))
     ap.add_argument('--cache', default=None, help='E-27b dense cache dir')
@@ -988,7 +1055,16 @@ def main_cli():
          doc_cap=a.doc_cap, selfcheck=a.selfcheck)
 
 
-if __name__ == '__main__':
+# Kaggle runner cell (cell 9) introspects this name — keep the alias.
+main_32r3layerprofile = main
+
+
+# NOTE: papermill/Kaggle compiles the cells into colab_kernel_launcher.py
+# and runs it with launcher args (-f ..., --HistoryManager...) — the
+# original auto-run would then parse sys.argv and die with SystemExit(2).
+# Guard: auto-run only for a direct CLI invocation (cell 9 calls
+# main_32r3layerprofile(**kwargs) explicitly on Kaggle).
+if __name__ == '__main__' and 'colab_kernel_launcher' not in (sys.argv[0] or ''):
     try:
         main_cli()
     except Exception:
