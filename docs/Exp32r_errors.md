@@ -65,11 +65,27 @@ s_l = eps_canon · ||h|| · ||offdiag(a2)|| / ||offdiag(ESG_cached)||
 `kaggle_kernel/kernel-exp32r3/` (cell 8 перегенерирована).
 
 **Запущен:** Kaggle T4, kernel
-`voroninmichael/prism-exp32r31-tail-recompute` (v1),
-datasets jca+jcb, ~3 ч (E-32r.3 шёл 2.6 ч; J_tail: ~8 с/позиц нет —
-~8 с/слой CPU, 6 слоёв = 50 с суммарно на T4-хосте).
+`voroninmichael/prism-exp32r31-tail-recompute` (v5),
+datasets jca+jcb, ~5 ч (E-32r.3 шёл 2.6 ч = 19090 s; J_tail:
+~8 с/слой, 6 слоёв = ~50 с суммарно).
 Оутпут: `results/exp32r3_1_tail_recompute.json` (+ checkpoint
 `results/exp32r3_1_checkpoint.pt`).
+Монитор: `logs/exp32r3_1_status.log` (статусы, финальный лог
+`logs/exp32r3_1_final.json`).
+
+**Баги v1–v4 (все пойманы и исправлены до v5):**
+- v1: `SystemExit(2)` — `if __name__ == '__main__'` в инлайне papermill
+  парсил argv лаунчера (`-f /tmp/... --HistoryManager...`). Фикс: guard
+  `'colab_kernel_launcher' not in sys.argv[0]`.
+- v2: `NameError main_32r3layerprofile` — cell 9 интроспектит это имя;
+  в новом файле main переименован. Фикс: алиас
+  `main_32r3layerprofile = main`.
+- v3/v4: `[FAIL] no E-27b jcache` — Kaggle сменил layout датасетов:
+  было `/kaggle/input/<slug>/results`, стало `/kaggle/input/datasets/
+  <owner>/<slug>/...`; плоский listdir не находил. Фикс: рекурсивный
+  обход (глубина 7 — в v4 был баг `depth > 4: return`, обрывавший на
+  4 уровнях при 4 уровнях пути) + печать дерева input в лог (диагностика
+  молчаливого провала).
 
 **Что добавлено (без изменений остального пайплайна, seed 12345):**
 - `s_l_tail` — тот же числитель, знаменатель из
