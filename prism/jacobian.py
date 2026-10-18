@@ -18,6 +18,7 @@ def compute_jacobian_for_tokens(
     attention_mask: torch.Tensor,
     token_set: list[int],
     prefix_cache=None,
+    h_override: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Compute Jacobian of logits w.r.t. hidden state at layer_idx.
 
@@ -27,9 +28,25 @@ def compute_jacobian_for_tokens(
         input_ids: [1, S] token IDs.
         attention_mask: [1, S] attention mask.
         token_set: list of token IDs to compute gradients for.
+        prefix_cache: optional pre-computed prefix cache (K/V for positions 0..S-2).
+        h_override: if given, used as the hidden state of the last position at
+            layer_idx INSTEAD of extracting it from a full forward. The prefix
+            cache is still built from input_ids[:, :-1] (context unchanged); the
+            caller is responsible for h_override being consistent with
+            input_ids (e.g. h_override from the same sequence). Shapes: [1, 1, D],
+            [1, D] or [D]. Device must match input_ids.device (no auto-move).
+            dtype is cast to the model dtype. The tensor is cloned and detached
+            (fresh leaf; the caller's tensor is never mutated).
 
     Returns:
         J: [K, D] Jacobian matrix (K = len(token_set), unnormalized).
+
+    Interaction with compute_hidden_jacobian:
+        compute_jacobian_for_tokens takes `h_override`; compute_hidden_jacobian
+        takes `h`. Both mean "use this h instead of computing it from the
+        forward", but the names differ for historical reasons (compute_hidden_
+        jacobian already had `h`). With h_override=None the behavior is
+        bit-identical to pre-v6.0.
     """
     model.eval()
     S = input_ids.shape[1]
@@ -43,10 +60,11 @@ def compute_jacobian_for_tokens(
         )
     if prefix_cache is None:
         prefix_cache = _run_prefix_pass(model, input_ids, attention_mask)
-    h = _extract_hidden_state(model, input_ids, attention_mask, layer_idx)
-    # Match model dtype to avoid mismatch in decoder (fp16 models on GPU)
-    model_dtype = next(model.parameters()).dtype
-    h = h.to(model_dtype).detach().requires_grad_(True)
+    if h_override is None:
+        h = _extract_hidden_state(model, input_ids, attention_mask, layer_idx)
+        h = h.to(next(model.parameters()).dtype).detach().requires_grad_(True)
+    else:
+        h = _normalize_h_override(h_override, model, input_ids)
     # Re-enable grad: the decoder forward must build a graph over the leaf
     # h AND the row loop below must run autograd.grad with grad mode ON,
     # even when the caller is inside torch.no_grad() (e.g. eval loops in
@@ -56,6 +74,56 @@ def compute_jacobian_for_tokens(
         logits = _run_decoder_pass(model, prefix_cache, h, S, layer_idx)
         J = _compute_jacobian_rows(logits, h, token_set)
     return J
+
+
+def _normalize_h_override(
+    h_override: torch.Tensor, model, input_ids: torch.Tensor
+) -> torch.Tensor:
+    """Validate + normalize h_override to a detached [1, 1, D] leaf.
+
+    Checks (in order, before any compute): shape reducible to [1, 1, D],
+    D == model hidden_size, device == input_ids.device. dtype is cast to the
+    model dtype. The tensor is cloned+detached (fresh leaf; caller's tensor
+    never mutated, no parasitic CopyBackwards nodes).
+    """
+    if h_override.dim() not in (1, 2, 3) or h_override.numel() == 0:
+        raise ValueError(
+            f"h_override: shape {tuple(h_override.shape)} is not reducible "
+            "to [1, 1, D] (accepted: [D], [1, D], [1, 1, D])"
+        )
+    if any(s != 1 for s in h_override.shape[:-1]):
+        raise ValueError(
+            f"h_override: shape {tuple(h_override.shape)} is not reducible "
+            "to [1, 1, D] (accepted: [D], [1, D], [1, 1, D])"
+        )
+    h = h_override.reshape(1, 1, -1)
+    # D lookup: flat CausalLM has config.hidden_size; the multimodal wrapper
+    # (Qwen3_5ForConditionalGeneration) exposes it on config.text_config only
+    # (the outer config is a heterogeneity spec without hidden_size).
+    D_expected = None
+    cfg = model.config
+    for cand in (getattr(cfg, "text_config", None), cfg):
+        if cand is not None and hasattr(cand, "hidden_size"):
+            D_expected = cand.hidden_size
+            break
+    if D_expected is None:
+        raise ValueError(
+            "h_override: cannot resolve model hidden_size "
+            "(neither config nor config.text_config has it)"
+        )
+    D = h.shape[-1]
+    if D != D_expected:
+        raise ValueError(
+            f"h_override: D={D} does not match model hidden_size={D_expected}"
+        )
+    if h.device != input_ids.device:
+        raise ValueError(
+            f"h_override: device {h.device} does not match "
+            f"input_ids.device {input_ids.device} (no auto-move)"
+        )
+    model_dtype = next(model.parameters()).dtype
+    h = h.to(model_dtype)
+    return h.detach().clone().requires_grad_(True)
 
 
 def _run_prefix_pass(
@@ -440,9 +508,23 @@ def compute_hidden_jacobian(
 
     Args:
         create_graph: if True, J_norm has grad_fn.
-                      h is kept connected to model params (no detach). Full forward pass.
+            - If h is None: h is extracted from a full forward and stays
+              connected to model params (full gradient flow, as before).
+            - If h is given: h is used AS-IS instead of the forward (the
+              forward is skipped). A ready leaf h (requires_grad=True,
+              grad_fn=None) is used IN PLACE — its .grad receives the
+              backpropagated derivative d J_norm/d h. J_norm still depends
+              on the decoder WEIGHTS between layer_idx and the final norm
+              (the decode pass), so gradients also reach those params; only
+              the params of layers <= layer_idx / embeddings are excluded.
                       Costs ~D backward passes per sample.
         verbose: print progress during J_norm computation.
+        h: pre-computed hidden state at layer_idx (reuse from a prior forward,
+            e.g. KL-forward in exp17). Respected in BOTH create_graph paths
+            (v6.0 bug-fix: the create_graph=True path previously ignored it
+            and unconditionally re-extracted h from a full forward). Not
+            renamed to h_override for backward compatibility; the asymmetry
+            with compute_jacobian_for_tokens(h_override=...) is intentional.
     """
     model.eval()
     n_layers = _n_layers(model)
@@ -453,26 +535,38 @@ def compute_hidden_jacobian(
         # Build prefix cache FIRST — before any forward involving hooks.
         prefix_cache = _run_prefix_pass(model, input_ids, attention_mask)
 
-        # Full forward to get h at layer_idx — connected to all model params + hooks
-        with torch.enable_grad():
-            outputs = model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                output_hidden_states=True,
-                use_cache=False,
-            )
-        assert outputs.hidden_states is not None  # requested
-        h = outputs.hidden_states[layer_idx + 1][:, -1:, :]  # [1, 1, D], connected!
+        if h is None:
+            # Full forward to get h at layer_idx — connected to all model params + hooks
+            with torch.enable_grad():
+                outputs = model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    output_hidden_states=True,
+                    use_cache=False,
+                )
+            assert outputs.hidden_states is not None  # requested
+            h = outputs.hidden_states[layer_idx + 1][:, -1:, :]  # [1, 1, D], connected!
+        # Normalize [1, D] / [D] -> [1, 1, D]; keep any existing grad graph intact.
+        h = h.reshape(1, 1, -1) if h.dim() in (1, 2) else h
         model_dtype = next(model.parameters()).dtype
         assert h is not None  # narrowed: param was Tensor|None
         h = h.to(model_dtype)  # preserve grad graph
         if h.grad_fn is None:
-            # Fully frozen graph: no trainable path reaches this layer
-            # (e.g. linear_attention pair with no LoRA patch, or a
-            # no_grad caller). Make h a leaf so the decoder pass below
-            # still yields a differentiable h_norm; J_norm values are
-            # identical to the connected case.
-            h = h.detach().requires_grad_(True)
+            if h.requires_grad:
+                # Caller passed a ready leaf that already requires grad
+                # (e.g. a representation-holonomy h_leaf). Use it IN PLACE:
+                # detach() would create a NEW leaf and the caller's tensor
+                # would never receive .grad. It is already a leaf (grad_fn
+                # None), so no graph surgery is needed.
+                pass
+            else:
+                # Fully frozen graph: no trainable path reaches this layer
+                # (e.g. linear_attention pair with no LoRA patch, or a
+                # no_grad caller), OR a disconnected h was passed in. Make h
+                # a leaf so the decoder pass below still yields a
+                # differentiable h_norm; J_norm values are identical to the
+                # connected case.
+                h = h.detach().requires_grad_(True)
 
         if layer_idx == n_layers - 1:
             with torch.enable_grad():
