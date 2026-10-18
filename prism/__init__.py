@@ -43,6 +43,26 @@ from .diagnostics import (
 )
 from .layer_selection import select_pairs, classify_pair
 from .cache_io import find_targets_dir
+from .cache import (
+    SVDCache,
+    MetricCache,
+    bootstrap_ci,
+    bootstrap_ci_paired,
+    deterministic_mode,
+    iter_position_pairs,
+)
+from .spectral import (
+    top_r_svd,
+    spectrum_from_gramian,
+    eigengap,
+    entropy_effective_rank,
+    stable_rank,
+    participation_ratio,
+    snr_top1_vs_rest,
+    snr_e14,
+    gauge_share,
+    gauge_share_top1,
+)
 
 __all__ = [
     "jacobian_gap",
@@ -67,4 +87,20 @@ __all__ = [
     "select_pairs",
     "classify_pair",
     "find_targets_dir",
+    "SVDCache",
+    "MetricCache",
+    "bootstrap_ci",
+    "bootstrap_ci_paired",
+    "deterministic_mode",
+    "iter_position_pairs",
+    "top_r_svd",
+    "spectrum_from_gramian",
+    "eigengap",
+    "entropy_effective_rank",
+    "stable_rank",
+    "participation_ratio",
+    "snr_top1_vs_rest",
+    "snr_e14",
+    "gauge_share",
+    "gauge_share_top1",
 ]
