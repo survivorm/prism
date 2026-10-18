@@ -8,6 +8,12 @@ Pooling semantics (paper v4.0, §6 vs §15 E-0.1):
   near-orthogonal): different samples almost-orthogonal J's average to noise.
   Aggregate across samples ONLY at the scalar-metric level (lambda, PR, SNR,
   r_eff), never at the matrix level. Use `compute_esg_per_sample`.
+
+**Cross-positional Gramian (`cross_positional_gramian`).** `Δ_U(t, t') = J_t J_{t'}^T`
+— token correlations between positions. For `t = t'` it coincides with the
+per-position ESG. Used in `E-ε` (spectral Goodhart) and as the baseline for
+`E-T2'` (holonomy). Do not confuse with `compute_esg`, which pools along a
+trajectory.
 """
 
 import torch
@@ -76,6 +82,34 @@ def compute_esg_per_sample(
         eigenvalues.append(ev)
         eigenvectors.append(evec)
     return eigenvalues, eigenvectors
+
+
+def cross_positional_gramian(
+    J_t: torch.Tensor,
+    J_tp: torch.Tensor,
+) -> torch.Tensor:
+    """Cross-positional Gramian Δ_U(t, t') = J_t @ J_tp.T.
+
+    Args:
+        J_t:  [K, D] gauge-free Jacobian at position t.
+        J_tp: [K, D] gauge-free Jacobian at position t'.
+
+    Returns:
+        [K, K] Gramian (symmetric iff t == t').
+
+    Note:
+        - NOT a pooling operation: each call uses exactly two positions.
+          See module docstring for intra-trajectory pooling (compute_esg)
+          and cross-sample pooling validity (E-0.1).
+        - When t == t', result equals the inner-product part of
+          compute_esg([J_t]) for N=1: compute_esg([J_t])[0][0] ==
+          eigenvalue_0(Δ_U(t, t)). Checked in selfcheck.
+        - Caller must ensure J_t, J_tp come from the same model / edit /
+          token_set; the function does not check semantic compatibility,
+          only shape / device / dtype (via _validate).
+    """
+    _validate([J_t, J_tp])
+    return J_t.float() @ J_tp.float().T
 
 
 def _build_gramian(jacobians: list[torch.Tensor]) -> torch.Tensor:
