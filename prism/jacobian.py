@@ -122,8 +122,10 @@ def _normalize_h_override(
             f"input_ids.device {input_ids.device} (no auto-move)"
         )
     model_dtype = next(model.parameters()).dtype
-    h = h.to(model_dtype)
-    return h.detach().clone().requires_grad_(True)
+    # clone first, then cast: detach/clone act on the caller's values before
+    # any cast, and `to(same dtype)` is a no-op, so the typical fp32 case
+    # allocates exactly once (audit docs/changed_review.md, item 3).
+    return h.detach().clone().to(model_dtype).requires_grad_(True)
 
 
 def _run_prefix_pass(

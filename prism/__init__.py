@@ -26,6 +26,16 @@ from .calibration import (
     get_layer_types,
     build_global_token_set,
 )
+# NOTE (audit docs/changed_review.md, 2026-07-18): prism.calibration imports
+# `datasets` at module level, so `import prism` REQUIRES `datasets` to be
+# installed (pre-v6.0 __init__ was docstring-only and had no such dependency).
+# Deliberately NOT wrapped in try/except and NOT made a lazy import:
+# `load_calibration_data` is a core entry point of the public API, and a
+# silent absence would surface as a confusing NameError deep in a
+# long-running experiment. If `datasets` is missing, `import prism` fails
+# with a clear ModuleNotFoundError at install/import time. To use the rest
+# of the package without it: `pip install datasets` (it is small).
+
 from .diagnostics import (
     run_layer_diagnostics,
     run_identity_test,
