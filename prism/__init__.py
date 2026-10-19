@@ -64,6 +64,22 @@ from .spectral import (
     gauge_share,
     gauge_share_top1,
 )
+from .holonomy import (
+    procrustes_align,
+    holonomy_accumulate,
+    holonomy_along_path,
+    holonomy_along_2d_loop,
+)
+from .interventions import (
+    EditSpec,
+    make_base,
+    make_readout_pull,
+    make_random_ortho,
+    make_random_matched,
+    make_tail_only,
+    apply_edit,
+    apply_edit_and_cache,
+)
 
 __all__ = [
     "jacobian_gap",
@@ -105,4 +121,16 @@ __all__ = [
     "snr_e14_parts",
     "gauge_share",
     "gauge_share_top1",
+    "procrustes_align",
+    "holonomy_accumulate",
+    "holonomy_along_path",
+    "holonomy_along_2d_loop",
+    "EditSpec",
+    "make_base",
+    "make_readout_pull",
+    "make_random_ortho",
+    "make_random_matched",
+    "make_tail_only",
+    "apply_edit",
+    "apply_edit_and_cache",
 ]
