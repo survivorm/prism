@@ -48,6 +48,8 @@ import time
 import numpy as np
 import torch
 
+from prism.holonomy import procrustes_align  # TZ part 2: single-pair Procrustes (O(r) polar factor)
+
 LAYERS = [6, 12, 18, 19, 22, 23]
 R_MAIN = 16
 R_SWEEP = [8, 16, 32]
@@ -97,18 +99,13 @@ def haar_subspace(D, r, device, generator=None):
     return Q[:, :r]
 
 
-def procrustes(Va, Vb):
-    """Polar factor of Va^T Vb: argmin_{R in O(r)} ||Vb - Va R||_F.
-    No det-fix: with sign-gauged bases M = Va^T Vb is a reflection (det -1)
-    and the SO(r) projection flips a column, breaking H = I for identical
-    subspaces. Metrics use O(r), so the polar factor in O(r) is correct."""
-    M = Va.t() @ Vb
-    U, _, Wt = torch.linalg.svd(M, full_matrices=False)
-    return U @ Wt
-
-
 def procrustes_batch(M):
-    """Polar factor per batch element. M [T,r,r] -> [T,r,r]."""
+    """Polar factor per batch element. M [T,r,r] -> [T,r,r].
+
+    Local batched performance primitive (one batched SVD for the whole
+    [T,r,r] stack). prism.holonomy's public API has no batched variant
+    (TZ part 2 §3.8); the single-pair case uses procrustes_align (import
+    above) — NOT duplicated here."""
     U, _, Wt = torch.linalg.svd(M, full_matrices=False)
     return U @ Wt
 
@@ -157,9 +154,9 @@ def rand_baseline(D, r, B, seed):
     d_r = [principal_angles_max(R[i], R[i + 1]) for i in range(len(R) - 1)]
     k_r = []
     for i in range(len(R) - 2):
-        R01 = procrustes(R[i], R[i + 1])
-        R12 = procrustes(R[i + 1], R[i + 2])
-        R02 = procrustes(R[i], R[i + 2])
+        R01, _ = procrustes_align(R[i], R[i + 1])
+        R12, _ = procrustes_align(R[i + 1], R[i + 2])
+        R02, _ = procrustes_align(R[i], R[i + 2])
         H = R01 @ R12 @ R02.t()
         k_r.append(float((H - torch.eye(r)).norm()))
     return float(np.mean(d_r)), float(np.mean(k_r))
