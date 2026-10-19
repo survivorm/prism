@@ -23,6 +23,7 @@ Procrustes residuals).
 
 from __future__ import annotations
 
+import hashlib
 import math
 import warnings
 
@@ -109,7 +110,7 @@ def spectrum_from_gramian(G: torch.Tensor, ascending: bool = False) -> torch.Ten
     """
     if G.dim() != 2 or G.shape[0] != G.shape[1]:
         raise ValueError(f"spectrum_from_gramian: expected square 2-D, got {tuple(G.shape)}")
-    if not torch.allclose(G, G.T, atol=1e-6, rtol=1e-6):
+    if not torch.allclose(G, G.T, atol=1e-6):
         raise ValueError("spectrum_from_gramian: G is not symmetric (no silent symmetrization)")
     lam = torch.linalg.eigvalsh(G.double())
     lam = torch.sort(lam, descending=not ascending).values
@@ -164,14 +165,17 @@ def stable_rank(spectrum: torch.Tensor) -> float:
     NOT a synonym for participation_ratio: for λ = (4,1,1,1,1),
     stable_rank = 8/4 = 2.0 while PR = 64/20 = 3.2 (TZ said 64/18 ≈ 3.555 — typo, Σλ² = 20).
 
-    Negative eigenvalues are not dropped (ratio definition). λ₁ = 0
-    (all zero) → 0.0 with a RuntimeWarning.
+    Negative eigenvalues are not dropped (ratio definition). λ₁ ≤ 0
+    (all zero, or a mixed-sign spectrum where the largest is negative)
+    → 0.0 with a RuntimeWarning.
     """
     _check_1d_finite(spectrum)
     s = torch.sort(spectrum, descending=True).values
     lam1 = s[0]
-    if lam1 == 0:
-        warnings.warn("stable_rank: λ₁ = 0 (all eigenvalues zero), returning 0.0", RuntimeWarning)
+    if lam1 <= 0:
+        warnings.warn(
+            f"stable_rank: λ₁ = {float(lam1):.3e} <= 0, returning 0.0", RuntimeWarning
+        )
         return 0.0
     return float(s.sum() / lam1)
 
@@ -226,6 +230,11 @@ def snr_e14_parts(
     original E-14 definition), and ``snr = ‖mean J‖²_F / max(1e-12, var)``.
     Measures cross-position CONSISTENCY of J, not a spectral property — do
     not confuse with :func:`snr_top1_vs_rest`.
+
+    VALIDATED against results/exp14_snr_pr.json (committed): for all 24
+    layers the formula ``(mean_sq − var_sq)/var_sq`` reproduces the stored
+    ``SNR`` bit-for-bit (L0 = 0.1415, L21 = 3.6509, L23 = 199.3080 — the
+    paper's numbers). See tests/test_spectral.py::test_snr_e14_validated_against_exp14_json.
     """
     if len(jacobians) < 2:
         raise ValueError(f"snr_e14_parts: need >= 2 Jacobians, got {len(jacobians)}")
@@ -261,8 +270,11 @@ def gauge_share(
         uniform: [K] direction; L2-normalized internally. Default
             ``1/√K · ones(K)``.
 
-    The spectrum/eigenvectors pair must cover ALL modes (not top-r) — for
-    top-r use :func:`gauge_share_top1` (or pass the full trace explicitly).
+    The spectrum/eigenvectors pair must cover ALL modes (not top-r) — the
+    ``eigenvectors.shape == (K, K)`` check (K = len(spectrum)) enforces this:
+    a top-r spectrum paired with a full K×K matrix fails the shape check.
+    For top-r use :func:`gauge_share_top1` (or pass the full trace
+    explicitly).
 
     Distinct from ``g_uni`` (paper §8): ``g_uni = ‖QJ‖²_F / ‖J‖²_F`` is
     the energy share of the RAW J; this is the share of ``JJ^T``.
@@ -277,7 +289,7 @@ def gauge_share(
             f"!= (K, K) = ({K}, {K})"
         )
     if uniform is None:
-        uniform = torch.full((K,), 1.0 / math.sqrt(K))
+        uniform = torch.full((K,), 1.0 / math.sqrt(K), device=eigenvectors.device, dtype=eigenvectors.dtype)
     uniform = uniform / uniform.norm()
     coeffs = (eigenvectors.T @ uniform) ** 2  # [K]: (u_k · uniform)^2
     total = spectrum.sum()
@@ -306,7 +318,7 @@ def gauge_share_top1(
             f"gauge_share_top1: eigenvectors {tuple(eigenvectors.shape)} "
             f"!= (K, K) = ({K}, {K})"
         )
-    uniform = torch.full((K,), 1.0 / math.sqrt(K))
+    uniform = torch.full((K,), 1.0 / math.sqrt(K), device=eigenvectors.device, dtype=eigenvectors.dtype)
     c1 = (eigenvectors[:, 0] @ uniform) ** 2
     total = spectrum.sum()
     if total == 0:

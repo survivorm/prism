@@ -23,6 +23,7 @@ from prism.spectral import (
     gauge_share_top1,
     participation_ratio,
     snr_e14,
+    snr_e14_parts,
     snr_top1_vs_rest,
     stable_rank,
     spectrum_from_gramian,
@@ -226,3 +227,88 @@ def test_nan_handling():
             fn(torch.tensor([1.0, float("nan"), 2.0]))
     with pytest.raises(ValueError, match="non-finite"):
         gauge_share(torch.tensor([1.0, float("inf")]), torch.eye(2))
+
+
+# ---------------------------------------------------------------------------
+# Review new_code_1_review.md: P0 (device), P1 (E-14 validation), stable_rank
+# ---------------------------------------------------------------------------
+
+
+def test_gauge_share_device_follows_eigenvectors():
+    """Review P0: uniform must be created on eigenvectors' device/dtype.
+
+    CPU always works; CUDA is exercised when available (skipped otherwise) —
+    before the fix this raised RuntimeError: expected scalar type / device
+    mismatch in the matrix product.
+    """
+    lam = torch.rand(8) + 0.5
+    Q, _ = torch.linalg.qr(torch.randn(8, 8))
+    ref = gauge_share(lam, Q)
+    got_cpu = gauge_share(lam, Q)
+    assert got_cpu == pytest.approx(ref)
+    # custom uniform: device+dtype must match eigenvectors
+    u = torch.ones(8, dtype=Q.dtype)
+    assert gauge_share(lam, Q, uniform=u) == pytest.approx(ref)
+    if torch.cuda.is_available():
+        Q_c, lam_c = Q.cuda(), lam.cuda()
+        got_gpu = gauge_share(lam_c, Q_c)
+        assert got_gpu == pytest.approx(ref)
+        assert gauge_share_top1(lam_c, Q_c) == pytest.approx(gauge_share_top1(lam, Q))
+    # float64 eigenvectors (dtype propagation of the default uniform)
+    Q_d, lam_d = Q.double(), lam.double()
+    assert gauge_share(lam_d, Q_d) == pytest.approx(gauge_share(lam, Q), abs=1e-6)  # fp32 vs fp64 QR rounding
+
+
+def test_snr_e14_validated_against_exp14_json():
+    """Review P1: formula validated against committed E-14 results.
+
+    results/exp14_snr_pr.json stores (SNR, mean_sq, var_sq) per layer from
+    the ORIGINAL exp14 run. Two checks:
+    (a) the stored SNR equals (mean_sq - var_sq)/max(1e-12, var_sq) in
+        float64 — bit-for-bit (rel < 1e-9) for ALL 24 layers, including the
+        paper's numbers L0=0.1415, L21=3.6509, L23=199.3080;
+    (b) snr_e14_parts on reconstructed Jacobians reproduces the same
+        intermediates/SNR (rel < 1e-5 — the stored mean_sq/var_sq are
+        float32-rounded, so this is a float32-precision check).
+    """
+    import json
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "results" / "exp14_snr_pr.json"
+    if not path.is_file():
+        pytest.skip("results/exp14_snr_pr.json not in this checkout")
+    d = json.load(open(path))
+    for layer, r in d.items():
+        # (a) bit-level formula check on the stored intermediates
+        ref_snr = (r["mean_sq"] - r["var_sq"]) / max(1e-12, r["var_sq"])
+        assert ref_snr == pytest.approx(r["SNR"], rel=1e-9), f"layer {layer}"
+        # (b) function round-trip on reconstructed J
+        snr, mean_sq, var = snr_e14_parts(_placeholder_js(r["mean_sq"], r["var_sq"]))
+        assert mean_sq == pytest.approx(r["mean_sq"], rel=1e-5), f"layer {layer}"
+        assert var == pytest.approx(r["var_sq"], rel=1e-5), f"layer {layer}"
+        assert snr == pytest.approx(r["SNR"], rel=1e-5), f"layer {layer}"
+
+
+def _placeholder_js(mean_sq: float, var: float) -> list[torch.Tensor]:
+    """Two 1-D-row Jacobians with exactly the given (mean_sq, var) intermediates.
+
+    J0 = a·u, J1 = b·u, u = ones(1, 1):
+        mean_sq = (a²+b²)/2,  signal = ((a+b)/2)²,  var = (a-b)²/4.
+    Solving:  a = √(mean_sq − var) + √var,  b = √(mean_sq − var) − √var,
+    which gives snr = (mean_sq − var)/var — the exact E-14 identity.
+    """
+    sq = math.sqrt(max(mean_sq - var, 1e-12))
+    sv = math.sqrt(max(var, 0.0))
+    u = torch.ones(1, 1)
+    return [(sq + sv) * u, (sq - sv) * u]
+
+
+def test_stable_rank_negative_lam1():
+    """Review P3: lam1 < 0 (mixed-sign spectrum) → 0.0 + warning, not a
+    huge negative value."""
+    with pytest.warns(RuntimeWarning, match="<= 0"):
+        assert stable_rank(torch.tensor([-1.0, -0.5])) == 0.0
+    with pytest.warns(RuntimeWarning, match="<= 0"):
+        assert stable_rank(torch.tensor([-1e-9, 0.0])) == 0.0
+    # positives still work
+    assert stable_rank(torch.tensor([4.0, 1.0, 1.0, 1.0, 1.0])) == pytest.approx(2.0)
