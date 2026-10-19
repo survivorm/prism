@@ -1,113 +1,92 @@
-## Подтверждение диагноза
+## Баги (код не запустится как есть)
 
-Деsync реален, причина установлена корректно. Профиль `matrix cos(JR, J_tail)`: 0.095 → 1.0000 точно объясняет монотонность `a_vs_ESG_cos`. E-35 «охранял» только L23 по построению — на остальных слоях неявно предполагалось `JR = d logits/d h_l` через tail, а это неверно.
+### 1. `d3_by_r_tail_out` — NameError, hard crash на первом слое
 
-Однако деsync **шире, чем `a_vs_ESG_cos`**. Три следствия, которые стоит явно учесть.
-
-### 1. `s_l` — тоже смешанная метрика, не только `a_vs_ESG_cos`
-
+```python
+layers_out[str(l)] = {
+    ...
+    'd3_by_r_tail': d3_by_r_tail_out or None,   # ← undefined
+    ...
+}
 ```
-s_l = eps_canon · ||h|| · ||offdiag(a2)|| / ||offdiag(ESG_cached)||
+
+`d3_by_r_tail_out` нигде не определён. Агрегация считает только `d3_by_r_out` (из `d3_by_r`), но не `*_tail` из `d3_by_r_tail`. Упадёт на L6, до любой записи JSON.
+
+### 2–4. `s_l_tail`, `a_vs_ESG_cos_tail`, `id_cos_JR_Jtail` — KeyError в verdicts
+
+В `layers_out[str(l)]` **нет** ключей `s_l_tail`, `a_vs_ESG_cos_tail`, `id_cos_JR_Jtail`. Но verdicts читают:
+```python
+sl_tail_med = [layers_out[str(l)]['s_l_tail']['median'] ...]  # KeyError
+aev = {str(l): layers_out[str(l)]['a_vs_ESG_cos_tail'] ...}    # KeyError
 ```
 
-- числитель `||offdiag(a2)||` — **из фита** (tail-only);
-- знаменатель `||offdiag(ESG_cached)||` — **из кэша JR** (full-chain).
+Причина: в цикле агрегации не считаются `_agg([v['s_l_tail_median'] ...])`, `_agg([v['a_vs_ESG_cos_tail'] ...])`, `_agg([v['id_cos_JR_Jtail_median'] ...])`. Всё это есть в `per_doc_layer`, но до layer-level не доходит.
 
-На L23 они совпадают (matrix cos = 1) и `s_l` чистый. На L6–L22 `s_l` нормирует tail-гессиан на full-chain-якобиан. Это не делает `s_l` бессмысленным, но:
-
-- `s_l(L6) = 0.0026` может быть **занижен** относительно «истинного tail-`s_l`», если `‖ESG_cached‖ ≫ ‖ESG_tail‖` на L6;
-- если `‖ESG_cached‖/‖ESG_tail‖` меняется с глубиной — `s_l`-профиль смешивает две зависимости.
-
-То, что профиль `s_l` гладкий (0.0026 → 0.073) при matrix cos, меняющемся в 10×, намекает, что либо отношение норм примерно константа, либо `s_l` в основном определяется числителем. **Это надо проверить, а не предполагать.**
-
-Быстрый фикс — заменить в знаменателе `ESG_cached` на `ESG_tail = J_tail J_tailᵀ`, где `J_tail = analytic_J(W_U, g, H[l])` (та же функция, что уже используется для E-35; на 128×1024 — миллисекунды). Тогда `s_l`, `a_vs_ESG_cos`, `slope_ratio`, `quad_frac`, `resid_frac`, `frac_c_sig` становятся **последовательно tail-only**, и `a_vs_ESG_cos` обязан быть ≈1 на всех слоях.
-
-### 2. `d3_*` — валидны, но интерпретация меняется
-
-`d3_raw/gf/fixP` считаются из кэша `JR` — это корректно как **свойства full-chain Jacobian**. Профиль 1.39 → 0.16 остаётся валидным, но формулировка «gauge-структура существует только на L23» должна стать «full-chain Jacobian `∂logits/∂h_l` имеет стабильную top-1 right только на L23». Про tail-якобиан этот прогон не говорит ничего.
-
-### 3. Кросс-чеки `ρ(nb, d3)` сравнивают разные объекты
-
-- `nb` — из фита, **tail**-гессиан;
-- `d3` — из кэша, **full-chain**-якобиан.
-
-`ρ ≈ 0` на всех слоях означает «tail-гессиан не коррелирует с full-chain-структурой», а не «tail-гессиан не коррелирует с tail-структурой». Вердикт (C) в текущем виде — это (C) в более слабой формулировке. Для чистого A/B/C нужно пересчитать `d3` из tail-якобиана (опять же `analytic_J(W_U, g, H[l])`) и пересмотреть 4 корреляции.
+**Фикс одним блоком** после существующих `d3fix/d3raw/d3gf`:
+```python
+sl_tail_arr = np.array([v['s_l_tail_median'] for v in V if v['s_l_tail_median'] is not None])
+aev_tail = _agg([v['a_vs_ESG_cos_tail'] for v in V if v['a_vs_ESG_cos_tail'] is not None])
+idcos = _agg([v['id_cos_JR_Jtail_median'] for v in V if v['id_cos_JR_Jtail_median'] is not None])
+d3_by_r_tail_out = None
+if V[0].get('d3_by_r_tail') is not None:
+    d3_by_r_tail_out = {}
+    for m in ('raw', 'gf', 'fixP'):
+        d3_by_r_tail_out[m] = {}
+        for r in R_SWEEP:
+            arr = np.array([v['d3_by_r_tail'][m][str(r)][0] for v in V])
+            d3_by_r_tail_out[m][str(r)] = {'median': float(np.median(arr)),
+                                            'iqr': [float(np.percentile(arr,25)), float(np.percentile(arr,75))],
+                                            'boot_ci': _boot(arr)}
+```
+и добавить в `layers_out[str(l)]`:
+```python
+'s_l_tail': ({'median': float(np.median(sl_tail_arr)),
+              'iqr': [float(np.percentile(sl_tail_arr,25)), float(np.percentile(sl_tail_arr,75))],
+              'boot_ci': _boot(sl_tail_arr)} if len(sl_tail_arr) else None),
+'a_vs_ESG_cos_tail': aev_tail,
+'id_cos_JR_Jtail': idcos,
+```
 
 ---
 
-## Что делать
+## Концептуальная проблема: `a_vs_ESG_cos_tail ≈ 1` не гарантировано
 
-**Минимальный фикс (E-32r.3.1, ~30 минут):**
-1. Добавить в `doc_layer_metrics` вычисление `J_tail[t] = analytic_J(W_U, g, H[t])` (уже есть для E-35, инкапсулировать).
-2. Считать `ESG_tail[t]` и использовать в `s_l`-знаменателе.
-3. Пересчитать `d3_*` из `J_tail` (дополнительно к кэшному — сохранить оба).
-4. Пересчитать 4 корреляции с `d3_tail` и `d3_cache`.
-5. Ожидание: `a_vs_ESG_cos ≈ 1` на всех слоях; `s_l` слегка сдвинется (проверить, не уходит ли L6 за 0.3); (C) сохранится или сменится.
+Docstring: «Expectation: `a_vs_ESG_cos_tail ≈ 1` on EVERY layer (chain rule of the readout itself)». С текущим кодом это **не следует**.
 
-**Полный фикс (E-32r.4):** заменить forward на полный (h_l → L(l+1)..23 → tail), тогда `J_fit = J_full` и всё сходится без замены знаменателя. Дороже (полный residual chain на каждый (док, слой)), но тогда `a1`, `b`, `d3` — все про **настоящий** readout модели, а не про tail. Это то, что, вероятно, подразумевал ТЗ.
+- Инъекция `Jn = JR / ||JR||` (строка `Jn = JR / ...` в `doc_layer_metrics`) — **full-chain** направление.
+- Forward — **tail**.
+- Значит `a1[i,j] = J_tail[j] · JR[i] / ||JR[i]||` — **не** `N(ESG_tail)_ij = J_tail[j] · J_tail[i] / ||J_tail[i]||`, если только `JR[i] ∦ J_tail[i]`.
 
-**До фикса:** §18 правильно помечает `a_vs_ESG_cos` как desync-профиль. Стоит добавить туда же:
-- `s_l` on L6–L22 — **mixed normalization**, требует пересчёта;
-- вердикт (C) — **в формулировке «tail-Hessian vs full-chain-Jacobian»**, не ослаблять без пересчёта.
+При matrix cos = 0.095 на L6 в среднем строки не параллельны. Единичный +1.5% в (t=62, i=j=0) означает, что **эта конкретная** строка почти параллельна — но не более. По 128×128 это усреднится.
+
+**Следствия:**
+- С fix’ом знаменателя и без fix’а инъекции `a_vs_ESG_cos_tail` на L6–L18 будет **< 1** (может быть, 0.6–0.9, но не 0.998).
+- Verdict `a_vs_ESG_cos_tail_gt_0.99_all_layers` будет **False** — и это правильный результат (он показывает, что инъекция не tail-согласована), но он **не** «подтвердит chain rule».
+
+**Два чистых варианта:**
+
+**(A) Оставить JR-инъекцию.** Переименовать ожидание: «a_vs_ESG_cos_tail — не fit-контроль, а residual of JR-vs-Jtail misalignment». Убрать `gt_0.99_all_layers` из verdicts (иначе False).
+
+**(B) Переключить инъекцию на `Jtail[i] / ||Jtail[i]||`.** Тогда `a1 = N(ESG_tail)` тождественно, и `a_vs_ESG_cos_tail ≈ 0.998` на всех слоях — как обещает docstring. Плата: pipeline перестаёт совпадать с E-32r.2/E-32r.3 по направлению инъекции (delta for `s_l`, `slope_ratio`, `quad_frac` тоже поменяются), нарушается comparability.
+
+Для текущей задачи (показать, что `a_vs_ESG_cos` — desync, а не физика) достаточно **(A)**. Но docstring и verdicts надо привести к (A), а не к ожиданию (B).
 
 ---
 
-## Что **не** пострадало
+## Не-баг, но стоит поправить перед прогоном
 
-- Профиль `d3_raw/gf/fixP` — как свойство full-chain Jacobian, валиден.
-- `quad_frac` — tail-only, валиден.
-- `resid_frac`, `frac_c_sig`, `slope_ratio` — tail-only, валидны.
-- Общий вывод «линейный режим на всех 6 слоях» — вероятно валиден, но подтвердить после пересчёта `s_l` (риск: L6 мог бы подрасти выше 0.3, если знаменатель переоценён).
+**Resume hazard.** `exp32r3_checkpoint.pt` (от E-32r.3) читается как fallback. Если он найдётся (старая раскладка `/kaggle/input/<slug>/results/`), его `per_doc_layer` не имеет tail-полей → после фикса NameError упадёт на `v['s_l_tail_median']` в агрегации. Либо удалить fallback (пусть пересчитывает с нуля), либо добавить проверку схемы:
+```python
+if per_doc_layer and 's_l_tail_median' not in next(iter(per_doc_layer.values())):
+    print('[WARN] old-schema checkpoint, recomputing'); per_doc_layer = {}; cache = {}
+```
 
-Один практический совет: bound-тест из «Follow-up» (median-совместимость) сам по себе корректен и не зависит от desync. Но его вывод «профиль не артефакт медианы» следует читать как «профиль не артефакт аггрегации», а не «профиль физический» — физическую природу (`chain rule нарушается`) отозвали правильно; остаётся техническая природа (два разных J).## E-32r.3.1 — tail-J consistency recompute (запущен, 2026-10-17)
+**`id_cos` агрегация.** `id_cos_JR_Jtail_median` в `per_doc_layer` есть, в `layers_out` не попадает. Стоит добавить (п.2 выше), это ключевой desync-guard.
 
-**Код:** `experiments/exp32r3_1_tail_recompute.py` (копия E-32r.3 + J_tail),
-`kaggle_kernel/kernel-exp32r3/` (cell 8 перегенерирована).
+**`_agg` на `d3_by_r_tail`.** `v['d3_by_r_tail'][m][str(r)][0]` — `[0]` это median, упаковка `[median, [p25, p75]]` — ок, но если `d3_by_r_tail` None в части документов (старый resume), `_agg` не сработает — `if V[0].get('d3_by_r_tail') is not None` обязателен (в п.2 есть).
 
-**Запущен:** Kaggle T4, kernel
-`voroninmichael/prism-exp32r31-tail-recompute` (v5),
-datasets jca+jcb, ~5 ч (E-32r.3 шёл 2.6 ч = 19090 s; J_tail:
-~8 с/слой, 6 слоёв = ~50 с суммарно).
-Оутпут: `results/exp32r3_1_tail_recompute.json` (+ checkpoint
-`results/exp32r3_1_checkpoint.pt`).
-Монитор: `logs/exp32r3_1_status.log` (статусы, финальный лог
-`logs/exp32r3_1_final.json`).
+---
 
-**Баги v1–v4 (все пойманы и исправлены до v5):**
-- v1: `SystemExit(2)` — `if __name__ == '__main__'` в инлайне papermill
-  парсил argv лаунчера (`-f /tmp/... --HistoryManager...`). Фикс: guard
-  `'colab_kernel_launcher' not in sys.argv[0]`.
-- v2: `NameError main_32r3layerprofile` — cell 9 интроспектит это имя;
-  в новом файле main переименован. Фикс: алиас
-  `main_32r3layerprofile = main`.
-- v3/v4: `[FAIL] no E-27b jcache` — Kaggle сменил layout датасетов:
-  было `/kaggle/input/<slug>/results`, стало `/kaggle/input/datasets/
-  <owner>/<slug>/...`; плоский listdir не находил. Фикс: рекурсивный
-  обход (глубина 7 — в v4 был баг `depth > 4: return`, обрывавший на
-  4 уровнях при 4 уровнях пути) + печать дерева input в лог (диагностика
-  молчаливого провала).
+## Итог
 
-**Что добавлено (без изменений остального пайплайна, seed 12345):**
-- `s_l_tail` — тот же числитель, знаменатель из
-  `J_tail = analytic_J(W_U, g, H)` (decoder-tail J, функция E-35);
-- `d3_by_r_tail` — d3 raw/gf/fixP из J_tail (те же r, p0, стратификация);
-- `cross_checks_tail` — rho(nb, d3_tail);
-- `a_vs_ESG_cos_tail` = cos(median a1, N(median ESG_tail)) —
-  **ожидание ≈1 на ВСЕХ слоях** (chain rule собственного readout;
-  одиночная точка L6: +1.5%);
-- `id_cos_JR_Jtail` — медианный матричный cos(JR, J_tail) на слой
-  (ожидаемо 0.095/0.20/0.54/0.58/0.76/1.0000).
-
-**Ожидание по вердиктам:**
-- `a_vs_ESG_cos_tail > 0.99` на всех слоях (метрика = фит-качество);
-- `s_l_tail` на L6: проверить < 0.3 (было 0.349 с mixed-знаменателем);
-- `rho(nb, d3_tail)` на ранних слоях: проверить, сохраняется ли.
-
-**Память (урок, 2026-10-17):** первая CPU-попытка на локальной машине
-(62 GB) OOM-нула: J_tail = 4.3 GB/слой (4096x128x1024 float64), все 6
-слоёв сразу = 26 GB + кэши. Исправлено: J_tail считается **послойно**
-и освобождается после слоя. Вторая ошибка той же попытки: оценка
-времени «~5 мин» была сделана по бенчмарку J_tail (out=128), а forward
-— out=151936 (1185x больше); реальный CPU-время ~44 ч. Отменено,
-перенесено на T4. **Процесс:** перед запуском — free/load и оценка
-FLOP именно по целевой операции, не по похожей.
+Прогон в текущем виде не стартует: 4 hard crashes (NameError + 3 KeyError). После их фикса — запустится, но `a_vs_ESG_cos_tail` на L6–L18 будет **не** ≈ 1 (инъекция всё ещё JR-направлена). Это не bug, а несоответствие docstring ожиданию; либо понижать порог в verdicts, либо менять инъекцию на Jtail (теряя comparability с E-32r.2).

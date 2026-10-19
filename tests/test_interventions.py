@@ -296,17 +296,35 @@ def test_apply_edit_shape_check():
 def test_apply_edit_and_cache_roundtrip(tmp_path):
     model = _tiny_model()
     edit = make_tail_only(_ref(), _basis(), TS)
-    samples = [_sample(model, S=6), _sample(model, S=7)]
+    samples = [_sample(model, S=6), _sample(model, S=6)]
+    model.train()  # must be restored to train after the call (review #3)
     info = apply_edit_and_cache(model, edit, samples, layers=[3],
                                 cache_dir=str(tmp_path))
     h_path = str(tmp_path / "tail_only" / "L03" / "doc0000_h.pt")
     p_path = str(tmp_path / "tail_only" / "L03" / "doc0000_p.pt")
+    meta_path = str(tmp_path / "tail_only" / "L03" / "doc0000_meta.json")
     assert os.path.exists(h_path)
     h = torch.load(h_path, weights_only=False)["h"]
     p = torch.load(p_path, weights_only=False)["p"]
     assert h.shape == (6, D_S) and h.dtype == torch.float32
     assert p.shape == (6, K) and p.dtype == torch.float32
-    assert info["S"] == 7 and info["K"] == K and info["n_docs"] == 2
+    # review #1: p_t must be re-normalized on the token_set (sum ≈ 1 per row)
+    assert torch.allclose(p.sum(dim=-1), torch.ones(6), atol=1e-5)
+    # review #2: meta carries model_dtype
+    import json
+    meta = json.load(open(meta_path))
+    assert "model_dtype" in meta
+    assert info["S"] == 6 and info["K"] == K and info["n_docs"] == 2
+    assert model.training  # training mode restored
+
+
+def test_apply_edit_and_cache_mixed_S_raises(tmp_path):
+    model = _tiny_model()
+    edit = make_tail_only(_ref(), _basis(), TS)
+    samples = [_sample(model, S=6), _sample(model, S=7)]
+    with pytest.raises(ValueError, match="same S"):
+        apply_edit_and_cache(model, edit, samples, layers=[3],
+                             cache_dir=str(tmp_path))
 
 
 def test_apply_edit_and_cache_restores_model(tmp_path):

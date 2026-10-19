@@ -1,0 +1,9 @@
+cache: ['/data/prism_kernels/exp27b/results']
+model: /home/survivor/.cache/huggingface/hub/models--Qwen--Qwen3.5-0.8B/snapshots/2fc06364715b967f1860aea9cf38778875588b17
+L19: P128_RAW filled from L6 (identical across layers)
+docs: 32, layers: [6, 12, 18, 19, 22, 23], eps: 16 pts, T=128 all layers, device=cpu
+/home/survivor/.local/lib/python3.12/site-packages/fla/utils/_device.py:100: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<05:10,  1.03it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 321.03it/s]
+E-35 identity cos = 1.000000
+L6: J_tail computed for 4096 positions (7s)

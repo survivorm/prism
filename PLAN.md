@@ -1,42 +1,27 @@
-# PLAN — E-33r.2: диагностика «почему gf стабильнее raw»
+# План: ТЗ `docs/new_math.md` → `docs/paper.md` (2026-10-07)
 
 ## Запрос (фиксация)
-docs/Exp33r2_errors.md (ревью 2026-10-08): A (fix-p0 вместо median), E ( TZ-формула с RAW-референсом),
-F (cross-P, не self-overlap), B (разделить E_alpha и B_snr), CLI --diagnostics/--alpha-sweep.
+Внести из `docs/new_math.md` только отсутствующее в `paper.md`.
+Границы (не менять): экспериментальные данные, цифры; только формулы, таблицы, терминология.
 
-## DONE
-- [x] A: p0 = pair-mean (p_t + p_{t+Δ})/2 на пару — argmax-H и median обе деградативны (канонические p0 не существуют)
-- [x] E: J_a = (1−α)J + α·PJ, референс v_raw(t) (α=0 ≡ raw, α=1 = angle(v_gf(t+1), v_raw(t)), НЕ dgf_1)
-- [x] F: by_r — cross-P overlap Ω_raw/Ω_gf/Δ = ‖U_gf(t+Δ)ᵀU_raw(t+Δ)‖²_F/r, s ∈ {t−Δ..t+Δ}∖{t,t+Δ}, |s−t| ≤ 4
-- [x] B: E_alpha отдельно; B_snr_raw/B_snr_gf (σ16/σ17) только в diag-блоке
-- [x] CLI: --diagnostics (алиас --diag), --alpha-sweep
-- [x] OOM-фикс: 1 слой в памяти (33GB → ~6GB), aggregate_layer вынесен, depth via depth_keep
-- [x] selfcheck OK (2026-10-08): p_apply, P kills uniform, rank-1, Ω=r/D check, sentinel, fix-p0, E_alpha
-- [x] full 32-doc run завершён (pair-mean, diag, α-sweep), JSON в results/exp33r_gauge_anatomy.json
-- [x] meta: e33r2_refit_note (история median→argmax-H→pair-mean), A_F_note, p0_method='pair_mean'
-
-## DOING
-- [x] strict-refit (p0='fix', c diag) 10.14 10:18 → results/exp33r_gauge_anatomy_strict.json
-      (E_alpha(fix): 0.289/0.289/0.309/0.849/1.565 — переход тоже α 0.5→0.75; D_omega/E_fixed_p на месте;
-       A_fp НЕ агрегирован: batch_metrics пишет A только для pair_mean — не блокирует, добавить по требованию)
-- [x] правки из docs/Exp33r2_errors.md: n = T−dt, docstring survive_frac, отступ 5b; selfcheck OK
-- [x] pair-mean full run 10.14 20:26 → 10.15 00:16 → results/exp33r_gauge_anatomy.json (pair_mean, diag, α-sweep)
-
-## ДОП (результаты, L23 medians)
-- A_pair_mean = 0.256/0.248/0.251/0.256 (Δ=1/4/8/16) — структурированный, ≈ raw (0.289), далёк от случайного 1.5665 → P-as-filter отвергнут
-- E_alpha (pair-mean): 0.2892/0.2890/0.3124/1.1895/1.5665 — резкий переход α ∈ (0.5, 0.75): структуру убивает только сильный фильтр
-- C_gain(r16) ≈ −1.27 (все Δ); C_gf ≈ 1.5665 ≈ случайный (1.5673); B_snr raw/gf 1.035/1.13; B_rho 0.17–0.36
-- verdict_gains: L6 −0.004 / L12 −0.009 / L18 −0.038 / L22 −0.091 / L23 −1.270 — мягкий градиент, скачок на L23
-- корреляции gain↔gs_exact 0.017, kill↔gs_exact 0.236 — слабые
-- Итог: лист L23 живёт в gauge-компоненте (α-зависимый), механизм = per-position вариация p_t (пороговый эффект)
-
-## NEXT
-- [x] отчёт пользователю (10.15)
-- [ ] по требованию: A_fp (fix-p) агрегация в batch_metrics + дописать в docs/Exp33r2.md (pair-mean, TZ-формула E, cross-P F)
-- E-33r.2 закрыт. Дальше по PLAN: E-32 (Hessian) — когда укажешь.
+## DONE / DOING / NEXT
+- [x] Прочитать `docs/new_math.md` (374 строки)
+- [x] Прочитать `docs/paper.md` (текущая карта, 2026-10-07 15:00)
+- [x] **§2 символы** — УЖЕ НА МЕСТЕ (таблица `E_K, K_t, ρ_*, ρ(r), Δ_SVD, d_S, M_K, Δ_gain, g_uni, r_eff, κ_rΔ, sentinel` на L110-128; блок v6.0 добавлен)
+- [x] **§8.4 объект E_K** — УЖЕ НА МЕСТЕ (L341 «Объекты и их условия (v6.0)» — канонический объект E_K + оговорка P не идемпотентен)
+- [x] **§20 строки E-34/E-30/E-33r/E-35** — УЖЕ НА МЕСТЕ (L1542-1553: E-33r, E-35, E-34, E-30b, L22)
+- [x] **§22 порядок запуска** — УЖЕ АКТУАЛЕН (L1660-1672: E-34/E-35/E-31/E-30/E-32/E-33 — все выполнены, статусы свежие)
+- [x] **B.1 строки** — УЖЕ НА МЕСТЕ (L1750-1759: E-34, E-30, E-30b, E-31, E-32r.2/3/3.1/tail, E-33r, E-33r.2, E-35)
+- [x] **Глоссарий: ρ, ρ_null, ρ_gf/ρ_top1, C(Δpos), gauge-free level** — УЖЕ НА МЕСТЕ (L1700-1709; J_rand уже с Qᵀ — опечатка исправлена)
+- [ ] **§8: E_K-определение (блок), таблица объектов + иерархия уровней, таблица терминов (v6.0: linearity, effective, level 1/2/3, null model, mode, top-r, sentinel, leaf)** — вставить после L343 (до «Терминология»/лист-строки)
+- [ ] **§20: строка «Null-модель E-34»** (per-Q E_Q[ρ], 16 Q; опровергнутая формула (S2−S1²)/2 и точная (K·S2−S1²)/(K+2); исправление J_rand = Qᵀ·diag(√ESG_ii)) — после строки E-34 (L1551)
+- [ ] **Приложение D «Формулы E-34»**: A.1 null-модель (опровергнутая/точная формула, K=2-контрпример, числовой null в коде), A.2 J_rand (Qᵀ vs diag·Q — опечатка), A.3 порядок P·ESG·P, A.4 off²-факторизация, A.5 уровни 1/2/3 и условия (E_K, effective, linearity) — новый раздел после Приложения C
+- [ ] Финальная проверка: grep по 14 терминам ТЗ
 
 ## Границы (не менять)
-- exp28/exp34/exp30/exp27.5/exp35/exp31 скрипты, calibration.py, кэш exp27b — не трогать
-- docs/Exp33.md — не менять (только Exp33r2.md)
-- paper.md — только по явному указанию
-- pair-mean JSON — не перезаписывать до завершения strict-refit
+- экспериментальные данные, цифры в paper.md
+- структура paper.md (только точечные вставки)
+
+## Примечания
+- «§8.5/8.6/8.11» в ТЗ — это логические блоки, которые в paper.md §8 плоский (без подзаголовков); вставка после L341-343
+- Приложение A уже = Глоссарий (не «Формулы») → формулы E-34 идут новым Приложением D, без переименования

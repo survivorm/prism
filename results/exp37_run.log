@@ -1,0 +1,43 @@
+C: [19, 23] [6, 12, 18, 22] L22_full= False
+A.0: RANK_EPS_calibrated=4.168e-01 fp32_reliable=True (fp32/fp64 p05=1.0000)
+  L6 doc 4/32
+  L6 doc 8/32
+  L6 doc 12/32
+  L6 doc 16/32
+  L6 doc 20/32
+  L6 doc 24/32
+  L6 doc 28/32
+  L6 doc 32/32
+  L6 docs done (results/exp37_L6_docs.jsonl)
+  L12 doc 4/32
+  L12 doc 8/32
+  L12 doc 12/32
+  L12 doc 16/32
+  L12 doc 20/32
+  L12 doc 24/32
+  L12 doc 28/32
+  L12 doc 32/32
+  L12 docs done (results/exp37_L12_docs.jsonl)
+  L18 doc 4/32
+  L18 doc 8/32
+  L18 doc 12/32
+  L18 doc 16/32
+  L18 doc 20/32
+  L18 doc 24/32
+  L18 doc 28/32
+  L18 doc 32/32
+  L18 docs done (results/exp37_L18_docs.jsonl)
+Traceback (most recent call last):
+  File "/home/survivor/work/prism/experiments/exp37_p_sensitivity.py", line 475, in <module>
+    main()
+    ~~~~^^
+  File "/home/survivor/work/prism/experiments/exp37_p_sensitivity.py", line 432, in main
+    Jdoc, Pdoc, sent = load_doc(ck_l, dom, si)
+                       ~~~~~~~~^^^^^^^^^^^^^^^
+  File "/home/survivor/work/prism/experiments/exp37_p_sensitivity.py", line 64, in load_doc
+    return E33R.load_doc(ck, dom, si)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/survivor/work/prism/experiments/exp33r_gauge_anatomy.py", line 77, in load_doc
+    PRaw = torch.stack([ck["P128_RAW"][(dom, si, t)] for t in range(S)]).float()
+                        ~~^^^^^^^^^^^^
+KeyError: 'P128_RAW'
