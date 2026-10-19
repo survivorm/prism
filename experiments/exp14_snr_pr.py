@@ -27,20 +27,7 @@ from prism.calibration import (
 )
 from prism.esg import compute_esg
 from prism.jacobian import compute_jacobian_for_tokens
-
-
-def _participation_ratio(eigenvalues):
-    """PR = (sum lambda)^2 / sum lambda^2, effective rank in [1, K]."""
-    s = eigenvalues.sum()
-    return (s * s / eigenvalues.pow(2).sum()).item()
-
-
-def _snr_sample(jacobians):
-    """SNR = ||mean J||_F^2 / max(eps, mean||J||^2_F - ||mean J||^2_F)."""
-    M = torch.stack(jacobians).mean(dim=0)
-    mean_sq = sum(J.pow(2).sum().item() for J in jacobians) / len(jacobians)
-    var = mean_sq - M.pow(2).sum().item()
-    return M.pow(2).sum().item() / max(1e-12, var), mean_sq, var
+from prism.spectral import participation_ratio, snr_e14_parts
 
 
 def _snr_leave_one_out(jacobians):
@@ -179,11 +166,11 @@ def main(
 
         # ESG spectrum
         ev, eig = compute_esg(js, n_components=n_components)
-        pr = _participation_ratio(ev)
+        pr = participation_ratio(ev)
         gauge_share_proxy = ev[0].item() / ev.sum().item()
         gauge_share_exact = _gauge_share_exact(eig, ev, len(token_set), device=ev.device)
         unif = _uniformity(eig, len(token_set), device=ev.device)
-        snr, mean_sq, var_sq = _snr_sample(js) if len(js) > 1 else (1e30, 0.0, 0.0)
+        snr, mean_sq, var_sq = snr_e14_parts(js) if len(js) > 1 else (1e30, 0.0, 0.0)
         snr_loo = _snr_leave_one_out(js) if len(js) > 2 else []
         trace = ev.sum().item()
 

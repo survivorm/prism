@@ -37,6 +37,7 @@ __all__ = [
     "participation_ratio",
     "snr_top1_vs_rest",
     "snr_e14",
+    "snr_e14_parts",
     "gauge_share",
     "gauge_share_top1",
 ]
@@ -214,21 +215,31 @@ def snr_top1_vs_rest(spectrum: torch.Tensor) -> float:
     return float(lam1 / rest)
 
 
-def snr_e14(jacobians: list[torch.Tensor]) -> float:
-    """Original E-14 sample-based SNR (experiments/exp14_snr_pr.py::``_snr_sample``).
+def snr_e14_parts(
+    jacobians: list[torch.Tensor],
+) -> tuple[float, float, float]:
+    """Original E-14 sample-based SNR with intermediates
+    (experiments/exp14_snr_pr.py::``_snr_sample`` — MOVED here, not copied).
 
-    SNR = ‖mean J‖²_F / max(1e-12, mean‖J‖²_F − ‖mean J‖²_F) over the N
-    per-position Jacobians of ONE trajectory. Measures cross-position
-    CONSISTENCY of J, not a spectral property — do not confuse with
-    :func:`snr_top1_vs_rest`. Moved here (not copied) from exp14.
+    Returns ``(snr, mean_sq, var)`` where
+    ``mean_sq = mean‖J‖²_F``, ``var = mean‖J‖²_F − ‖mean J‖²_F`` (per the
+    original E-14 definition), and ``snr = ‖mean J‖²_F / max(1e-12, var)``.
+    Measures cross-position CONSISTENCY of J, not a spectral property — do
+    not confuse with :func:`snr_top1_vs_rest`.
     """
     if len(jacobians) < 2:
-        raise ValueError(f"snr_e14: need >= 2 Jacobians, got {len(jacobians)}")
+        raise ValueError(f"snr_e14_parts: need >= 2 Jacobians, got {len(jacobians)}")
     J = torch.stack([j.float() for j in jacobians])
     M = J.mean(dim=0)
     signal = M.pow(2).sum().item()
-    noise = (J.pow(2).sum(dim=(1, 2)).mean().item() - signal)
-    return float(signal / max(1e-12, noise))
+    mean_sq = J.pow(2).sum(dim=(1, 2)).mean().item()
+    var = mean_sq - signal
+    return float(signal / max(1e-12, var)), float(mean_sq), float(var)
+
+
+def snr_e14(jacobians: list[torch.Tensor]) -> float:
+    """Original E-14 sample-based SNR, scalar form (``snr_e14_parts()[0]``)."""
+    return snr_e14_parts(jacobians)[0]
 
 
 def gauge_share(
