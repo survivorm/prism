@@ -94,6 +94,15 @@ from .topology import (
     project_to_subspace,
     project_to_pca_subspace,
 )
+from .pipeline import (
+    ExperimentSpec,
+    OutputArtifacts,
+    run_spec,
+    run_many,
+    validate_spec,
+    load_artifacts,
+    default_output_subdir,
+)
 
 __all__ = [
     "jacobian_gap",
@@ -155,4 +164,11 @@ __all__ = [
     "zigzag_persistence",
     "project_to_subspace",
     "project_to_pca_subspace",
+    "ExperimentSpec",
+    "OutputArtifacts",
+    "run_spec",
+    "run_many",
+    "validate_spec",
+    "load_artifacts",
+    "default_output_subdir",
 ]
