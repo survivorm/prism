@@ -1,0 +1,73 @@
+/home/survivor/.local/lib/python3.12/site-packages/fla/utils/_device.py:100: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  44%|████▍     | 142/320 [00:00<00:00, 1360.02it/s]Loading weights:  87%|████████▋ | 279/320 [00:00<00:00, 1360.80it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1400.79it/s]
+  L18 chat/0: n_valid=67 sp_full=-0.283 sp_tail=-0.174
+  L18 chat/1: n_valid=59 sp_full=-0.260 sp_tail=-0.113
+  L18 chat/2: n_valid=57 sp_full=-0.300 sp_tail=-0.086
+  L18 chat/3: n_valid=56 sp_full=-0.464 sp_tail=0.068
+  L18 chat/4: n_valid=51 sp_full=-0.133 sp_tail=-0.071
+  L18 chat/5: n_valid=55 sp_full=-0.185 sp_tail=0.023
+  L18 chat/6: n_valid=56 sp_full=-0.288 sp_tail=-0.217
+  L18 chat/7: n_valid=65 sp_full=-0.211 sp_tail=0.032
+  L18 code/0: n_valid=89 sp_full=-0.291 sp_tail=-0.121
+  L18 code/1: n_valid=58 sp_full=-0.405 sp_tail=-0.095
+  L18 code/2: n_valid=67 sp_full=-0.269 sp_tail=-0.142
+  L18 code/3: n_valid=59 sp_full=-0.320 sp_tail=0.041
+  L18 code/4: n_valid=44 sp_full=-0.141 sp_tail=-0.113
+  L18 code/5: n_valid=74 sp_full=-0.489 sp_tail=-0.072
+  L18 code/6: n_valid=77 sp_full=-0.309 sp_tail=-0.191
+  L18 code/7: n_valid=74 sp_full=-0.320 sp_tail=-0.221
+  L18 math/0: n_valid=74 sp_full=-0.377 sp_tail=-0.169
+  L18 math/1: n_valid=83 sp_full=-0.304 sp_tail=-0.229
+  L18 math/2: n_valid=54 sp_full=-0.347 sp_tail=-0.136
+  L18 math/3: n_valid=77 sp_full=-0.098 sp_tail=-0.096
+  L18 math/4: n_valid=52 sp_full=-0.291 sp_tail=-0.105
+  L18 math/5: n_valid=66 sp_full=-0.513 sp_tail=-0.200
+  L18 math/6: n_valid=76 sp_full=-0.193 sp_tail=-0.019
+  L18 math/7: n_valid=69 sp_full=-0.178 sp_tail=-0.276
+  L18 wiki/0: n_valid=67 sp_full=-0.260 sp_tail=0.113
+  L18 wiki/1: n_valid=56 sp_full=-0.359 sp_tail=-0.027
+  L18 wiki/2: n_valid=52 sp_full=-0.275 sp_tail=0.102
+  L18 wiki/3: n_valid=30 sp_full=-0.175 sp_tail=-0.014
+  L18 wiki/4: n_valid=64 sp_full=-0.258 sp_tail=0.015
+  L18 wiki/5: n_valid=63 sp_full=-0.355 sp_tail=-0.136
+  L18 wiki/6: n_valid=59 sp_full=-0.401 sp_tail=-0.239
+  L18 wiki/7: n_valid=69 sp_full=-0.272 sp_tail=-0.060
+L18 full: T2_independence sp=-0.594 overlap=0 tail_b=0.027 top5=[2, 3, 5, 1, 4]
+L18 tail: T2_independence sp=-0.225 overlap=0 tail_b=0.018 top5=[2, 1, 3, 5, 4]
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  36%|███▌      | 114/320 [00:00<00:00, 1104.50it/s]Loading weights:  74%|███████▍  | 238/320 [00:00<00:00, 1182.82it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1221.98it/s]
+  L22 chat/0: n_valid=67 sp_full=-0.162 sp_tail=-0.159
+  L22 chat/1: n_valid=59 sp_full=-0.117 sp_tail=0.029
+  L22 chat/2: n_valid=57 sp_full=-0.274 sp_tail=-0.031
+  L22 chat/3: n_valid=56 sp_full=-0.348 sp_tail=0.033
+  L22 chat/4: n_valid=51 sp_full=-0.097 sp_tail=-0.042
+  L22 chat/5: n_valid=55 sp_full=-0.212 sp_tail=-0.081
+  L22 chat/6: n_valid=56 sp_full=-0.297 sp_tail=-0.154
+  L22 chat/7: n_valid=65 sp_full=-0.196 sp_tail=0.082
+  L22 code/0: n_valid=89 sp_full=-0.102 sp_tail=-0.065
+  L22 code/1: n_valid=58 sp_full=-0.311 sp_tail=-0.199
+  L22 code/2: n_valid=67 sp_full=-0.216 sp_tail=-0.220
+  L22 code/3: n_valid=59 sp_full=-0.171 sp_tail=-0.163
+  L22 code/4: n_valid=44 sp_full=-0.172 sp_tail=0.024
+  L22 code/5: n_valid=74 sp_full=-0.278 sp_tail=-0.238
+  L22 code/6: n_valid=77 sp_full=-0.203 sp_tail=-0.174
+  L22 code/7: n_valid=74 sp_full=-0.195 sp_tail=-0.262
+  L22 math/0: n_valid=74 sp_full=-0.184 sp_tail=-0.094
+  L22 math/1: n_valid=83 sp_full=-0.106 sp_tail=-0.156
+  L22 math/2: n_valid=54 sp_full=-0.177 sp_tail=-0.102
+  L22 math/3: n_valid=77 sp_full=-0.166 sp_tail=-0.074
+  L22 math/4: n_valid=52 sp_full=-0.326 sp_tail=-0.036
+  L22 math/5: n_valid=66 sp_full=-0.136 sp_tail=-0.176
+  L22 math/6: n_valid=76 sp_full=-0.235 sp_tail=0.115
+  L22 math/7: n_valid=69 sp_full=-0.180 sp_tail=-0.170
+  L22 wiki/0: n_valid=67 sp_full=-0.133 sp_tail=0.142
+  L22 wiki/1: n_valid=56 sp_full=-0.232 sp_tail=-0.109
+  L22 wiki/2: n_valid=52 sp_full=-0.225 sp_tail=0.087
+  L22 wiki/3: n_valid=30 sp_full=-0.179 sp_tail=-0.111
+  L22 wiki/4: n_valid=64 sp_full=-0.281 sp_tail=0.109
+  L22 wiki/5: n_valid=63 sp_full=-0.165 sp_tail=0.016
+  L22 wiki/6: n_valid=59 sp_full=-0.106 sp_tail=-0.258
+  L22 wiki/7: n_valid=69 sp_full=-0.086 sp_tail=0.021
+L22 full: T2_independence sp=-0.405 overlap=0 tail_b=0.025 top5=[2, 3, 5, 4, 6]
+L22 tail: T2_independence sp=-0.160 overlap=0 tail_b=0.015 top5=[2, 3, 1, 5, 4]
+saved results/exp32tail_hessian_modes.json in 428s

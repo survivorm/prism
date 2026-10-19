@@ -1,0 +1,65 @@
+C: [19, 23] [6, 12, 18, 22] L22_full= False
+A.0: RANK_EPS_calibrated=4.168e-01 fp32_reliable=True (fp32/fp64 p05=1.0000)
+  L6 doc 4/32
+  L6 doc 8/32
+  L6 doc 12/32
+  L6 doc 16/32
+  L6 doc 20/32
+  L6 doc 24/32
+  L6 doc 28/32
+  L6 doc 32/32
+  L6 docs done (results/exp37_L6_docs.jsonl)
+  L12 doc 4/32
+  L12 doc 8/32
+  L12 doc 12/32
+  L12 doc 16/32
+  L12 doc 20/32
+  L12 doc 24/32
+  L12 doc 28/32
+  L12 doc 32/32
+  L12 docs done (results/exp37_L12_docs.jsonl)
+  L18 doc 4/32
+  L18 doc 8/32
+  L18 doc 12/32
+  L18 doc 16/32
+  L18 doc 20/32
+  L18 doc 24/32
+  L18 doc 28/32
+  L18 doc 32/32
+  L18 docs done (results/exp37_L18_docs.jsonl)
+  L19 doc 4/32
+  L19 doc 8/32
+  L19 doc 12/32
+  L19 doc 16/32
+  L19 doc 20/32
+  L19 doc 24/32
+  L19 doc 28/32
+  L19 doc 32/32
+  L19 docs done (results/exp37_L19_docs.jsonl)
+  L22 doc 4/32
+  L22 doc 8/32
+  L22 doc 12/32
+  L22 doc 16/32
+  L22 doc 20/32
+  L22 doc 24/32
+  L22 doc 28/32
+  L22 doc 32/32
+  L22 docs done (results/exp37_L22_docs.jsonl)
+  L23 doc 4/32
+  L23 doc 8/32
+  L23 doc 12/32
+  L23 doc 16/32
+  L23 doc 20/32
+  L23 doc 24/32
+  L23 doc 28/32
+  L23 doc 32/32
+  L23 docs done (results/exp37_L23_docs.jsonl)
+  L6 agg (B alive: cat_content=0.892 whitespace=0.004 perp=0.198 peaked_frac=0.655) sent_frac=0.504
+  L12 agg (B alive: cat_content=0.900 whitespace=0.005 perp=0.137 peaked_frac=0.655) sent_frac=0.504
+  L18 agg (B alive: cat_content=0.926 whitespace=0.005 perp=0.086 peaked_frac=0.655) sent_frac=0.504
+  L19 agg (B alive: cat_content=0.918 whitespace=0.008 perp=0.087 peaked_frac=0.194) sent_frac=0.000
+  L22 agg (B alive: cat_content=0.935 whitespace=0.004 perp=0.115 peaked_frac=0.655) sent_frac=0.504
+  L23 agg (B alive: cat_content=0.653 whitespace=0.103 perp=0.165 peaked_frac=0.655) sent_frac=0.504
+A.1 saved → results/exp37_A1_K_anatomy.json
+C saved → results/exp37_C_L22_comparison.json
+done.

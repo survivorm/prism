@@ -1,0 +1,29 @@
+C: [19, 23] [6, 12, 18, 22] L22_full= False
+A.0 L6: RANK_EPS_calibrated=1.577e-01 fp32_reliable=True (p05=1.0000) pos_p95_p05/p95=1.8e+00/4.4e+00 tail_min/p99=1.7e-01/4.8e+00
+A.0 L12: RANK_EPS_calibrated=2.362e-01 fp32_reliable=True (p05=1.0000) pos_p95_p05/p95=3.5e+00/6.8e+00 tail_min/p99=2.7e-01/7.6e+00
+A.0 L18: RANK_EPS_calibrated=4.308e-01 fp32_reliable=True (p05=1.0000) pos_p95_p05/p95=5.2e+00/8.6e+00 tail_min/p99=4.6e-01/9.9e+00
+A.0 L19: RANK_EPS_calibrated=4.538e-01 fp32_reliable=True (p05=1.0000) pos_p95_p05/p95=5.0e+00/8.4e+00 tail_min/p99=4.4e-01/9.3e+00
+A.0 L22: RANK_EPS_calibrated=4.528e-01 fp32_reliable=True (p05=1.0000) pos_p95_p05/p95=4.9e+00/7.6e+00 tail_min/p99=7.4e-01/7.8e+00
+A.0 L23: RANK_EPS_calibrated=4.168e-01 fp32_reliable=True (p05=1.0000) pos_p95_p05/p95=4.4e-01/5.2e-01 tail_min/p99=1.3e-01/5.2e-01
+  L6 resume: 32/32 already done
+  L6 docs done (results/exp37r_L6_docs.jsonl)
+  L12 resume: 32/32 already done
+  L12 docs done (results/exp37r_L12_docs.jsonl)
+  L18 resume: 32/32 already done
+  L18 docs done (results/exp37r_L18_docs.jsonl)
+  L19 resume: 32/32 already done
+  L19 docs done (results/exp37r_L19_docs.jsonl)
+  L22 resume: 32/32 already done
+  L22 docs done (results/exp37r_L22_docs.jsonl)
+  L23 resume: 32/32 already done
+  L23 docs done (results/exp37r_L23_docs.jsonl)
+  L6 agg (B alive: cat_content=0.892 whitespace=0.004 perp=0.198 excluded=0.655 peaked_only=0.148) sent_frac=0.507
+  L12 agg (B alive: cat_content=0.900 whitespace=0.005 perp=0.137 excluded=0.655 peaked_only=0.148) sent_frac=0.507
+  L18 agg (B alive: cat_content=0.926 whitespace=0.005 perp=0.086 excluded=0.655 peaked_only=0.148) sent_frac=0.507
+  L19 agg (B alive: cat_content=0.918 whitespace=0.008 perp=0.087 excluded=0.194 peaked_only=0.194) sent_frac=0.000
+  L22 agg (B alive: cat_content=0.935 whitespace=0.004 perp=0.115 excluded=0.655 peaked_only=0.148) sent_frac=0.507
+  L23 agg (B alive: cat_content=0.653 whitespace=0.103 perp=0.165 excluded=0.655 peaked_only=0.148) sent_frac=0.507
+A.1 saved → results/exp37r_A1_K_anatomy.json
+B saved → results/exp37r_B_ug_attribution.json
+C saved → results/exp37r_C_L22_comparison.json
+done.

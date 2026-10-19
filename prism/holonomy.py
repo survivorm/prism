@@ -53,7 +53,7 @@ def _check_loop_basis(b1: torch.Tensor, b2: torch.Tensor, tol: float = 1e-4) -> 
     """
     n1, n2 = torch.norm(b1).item(), torch.norm(b2).item()
     dot = torch.dot(b1, b2).abs().item()
-    if abs(n1 - 1.0) > 1e-3 or abs(n2 - 1.0) > 1e-3:
+    if abs(n1 - 1.0) > tol or abs(n2 - 1.0) > tol:
         raise ValueError(f"loop basis not unit: ‖b1‖={n1:.6f}, ‖b2‖={n2:.6f}")
     if dot >= tol:
         raise ValueError(f"loop basis not orthogonal: |b1·b2| = {dot:.3e} (tol {tol:.0e})")

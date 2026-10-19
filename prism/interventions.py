@@ -155,8 +155,8 @@ def make_readout_pull(
       - cos — per-row F.cosine_similarity,
       - KL — over the token_set distributions (p_base computed ONCE up
         front, never re-normalized per step),
-      - p_edit = softmax(lm_head(h_t)[:, :, token_set]) over the last
-        position's logits, averaged over positions.
+      - p_edit = softmax(lm_head(h_t)[:, token_set]) at the last position
+        (E-16a protocol: last-position token_set distribution).
 
     Determinism: torch.manual_seed(seed); torch.use_deterministic_
     algorithms is NOT enabled (Adam on GDN models may raise).
@@ -170,7 +170,8 @@ def make_readout_pull(
         (TZ §4.3: pass top_r_basis to fill it in-place; the experiment
         can also use dataclasses.replace later).
 
-    The model is left exactly as found (weights, requires_grad).
+    The model is left exactly as found (weights, requires_grad, training
+    mode).
 
     Errors:
         ValueError: target_J_p.shape != (K, D_S); n_steps < 1; lr ≤ 0.
@@ -191,19 +192,22 @@ def make_readout_pull(
     global _APPLY_EDIT_ACTIVE
     if _APPLY_EDIT_ACTIVE:
         raise RuntimeError("make_readout_pull: nested model edit in progress")
-    _APPLY_EDIT_ACTIVE = True
+
     torch.manual_seed(seed)
+    was_training = model.training
     model.eval()
 
     W0 = weight[ts].detach().clone()
     rg_was = weight.requires_grad
     weight.requires_grad_(True)
-    params = [weight]  # gradient masked below: only token_set rows update
-    ts_mask = torch.zeros(weight.shape[0], dtype=torch.bool, device=weight.device)
-    ts_mask[ts] = True
+    _APPLY_EDIT_ACTIVE = True  # AFTER the setup that can raise below
     delta_W: torch.Tensor | None = None
 
     try:
+        params = [weight]  # gradient masked below: only token_set rows update
+        ts_mask = torch.zeros(weight.shape[0], dtype=torch.bool, device=weight.device)
+        ts_mask[ts] = True
+
         # p_base: once, under no_grad, over the K-subset (E-16 gauge).
         with torch.no_grad():
             out = model(input_ids=input_ids, attention_mask=attention_mask, use_cache=False)
@@ -249,6 +253,7 @@ def make_readout_pull(
         # weight[ts].copy_ would be a no-op (advanced indexing → copy).
         weight.data.index_copy_(0, ts, W0)
         weight.requires_grad_(rg_was)
+        model.train(was_training)
         _APPLY_EDIT_ACTIVE = False
 
     assert delta_W is not None  # n_steps ≥ 1 guarantees one capture
@@ -275,7 +280,9 @@ def make_readout_pull(
 def _tensor_fingerprint(t: torch.Tensor) -> str:
     """Deterministic 16-hex fingerprint (sum + abs-max) for meta."""
     t = t.detach().double()
-    return f"{t.sum().item():.9f}:{t.abs().max().item():.9f}"
+    s = int(t.sum().item() * 1e9) & 0xFFFFFFFF
+    m = int(t.abs().max().item() * 1e9) & 0xFFFFFFFF
+    return f"{s:08x}{m:08x}"
 
 
 def make_random_ortho(
@@ -450,6 +457,20 @@ def _check_ref_and_basis(delta_W_ref: torch.Tensor, top_r_basis: torch.Tensor,
     _validate_orthonormal_columns(top_r_basis)
 
 
+def _validate_edit_spec(edit: EditSpec, D_S: int) -> None:
+    """TZ §4.4: check target_layer and delta_W.shape against the model."""
+    if edit.target_layer != "lm_head":
+        raise NotImplementedError(
+            f"only target_layer='lm_head' supported, got {edit.target_layer!r}"
+        )
+    if edit.delta_W is not None and \
+            edit.delta_W.shape != (len(edit.token_set), D_S):
+        raise ValueError(
+            f"delta_W shape {tuple(edit.delta_W.shape)} != "
+            f"({len(edit.token_set)}, {D_S})"
+        )
+
+
 @contextlib.contextmanager
 def apply_edit(model, edit: EditSpec) -> Iterator[None]:
     """Apply edit in-place, restore in finally (TZ §4.3).
@@ -465,10 +486,6 @@ def apply_edit(model, edit: EditSpec) -> Iterator[None]:
         ValueError: delta_W shape != (len(token_set), D_S).
     """
     global _APPLY_EDIT_ACTIVE
-    if edit.target_layer != "lm_head":
-        raise NotImplementedError(
-            f"only target_layer='lm_head' supported, got {edit.target_layer!r}"
-        )
     if _APPLY_EDIT_ACTIVE:
         raise RuntimeError(
             "apply_edit is not re-entrant: one edit at a time "
@@ -476,16 +493,9 @@ def apply_edit(model, edit: EditSpec) -> Iterator[None]:
         )
 
     weight = _resolve_lm_head_weight(model)
+    _validate_edit_spec(edit, weight.shape[1])
     ts = torch.tensor(edit.token_set, device=weight.device)
-    if edit.delta_W is not None:
-        if edit.delta_W.shape != (len(edit.token_set), weight.shape[1]):
-            raise ValueError(
-                f"delta_W shape {tuple(edit.delta_W.shape)} != "
-                f"({len(edit.token_set)}, {weight.shape[1]})"
-            )
-        delta = edit.delta_W.to(weight)
-    else:
-        delta = None
+    delta = edit.delta_W.to(weight) if edit.delta_W is not None else None
 
     W_orig = weight[ts].detach().clone()
     rg_was = weight.requires_grad
@@ -538,23 +548,34 @@ def apply_edit_and_cache(
 
     overwrite=False: existing files are kept, but their meta is checked
     for consistency (edit/layer/doc/S/D_S/K) — mismatch → RuntimeError.
+    Partial cache (some of h/p/meta missing): existing files are kept,
+    missing ones are written, meta is checked if present.
     overwrite=True: atomic (tmp + os.replace) rewrite.
 
     Returns:
         {"root", "edit", "n_docs", "layers", "S", "D_S", "K", "files"}.
 
     Errors:
-        ValueError: empty samples; layer index out of [0, n_layers).
+        ValueError: empty samples; layer index out of [0, n_layers);
+            samples with differing S.
         RuntimeError: read-only cache_dir with overwrite=True (Kaggle
             FUSE) — explicit, not silent.
     """
     if not samples:
         raise ValueError("samples is empty")
+    S = samples[0]["input_ids"].shape[1]
+    for sample in samples:
+        if sample["input_ids"].shape[1] != S:
+            raise ValueError(
+                f"all samples must have the same S, expected {S}, got "
+                f"{sample['input_ids'].shape[1]}"
+            )
     n_layers = _n_layers(model)
     for L in layers:
         if not (isinstance(L, int) and 0 <= L < n_layers):
             raise ValueError(f"layer {L} out of range [0, {n_layers})")
 
+    was_training = model.training
     model.eval()
     weight = _resolve_lm_head_weight(model)
     K = len(edit.token_set)
@@ -563,51 +584,11 @@ def apply_edit_and_cache(
     edit_root = os.path.join(cache_dir, edit.name)
 
     files: list[str] = []
-    with apply_edit(model, edit):
-        for doc_idx, sample in enumerate(samples):
-            with torch.no_grad():
-                out = model(**sample, output_hidden_states=True, use_cache=False)
-            h_states = out.hidden_states
-            p_full = F.softmax(out.logits.float(), dim=-1)  # [1, S, V]
-            S = sample["input_ids"].shape[1]
-            for L in layers:
-                h_t = h_states[L][0].float()                # [S, D_S] float32
-                p_t = p_full[0][:, ts]                       # [S, K] float32
-                layer_dir = os.path.join(edit_root, f"L{L:02d}")
-                meta = {
-                    "edit": edit.name,
-                    "layer": L,
-                    "doc": doc_idx,
-                    "S": S,
-                    "D_S": D_S,
-                    "K": K,
-                    "torch": torch.__version__,
-                    "transformers": _transformers_version(),
-                    "seed": edit.seed,
-                }
-                h_path = os.path.join(layer_dir, f"doc{doc_idx:04d}_h.pt")
-                p_path = os.path.join(layer_dir, f"doc{doc_idx:04d}_p.pt")
-                meta_path = os.path.join(layer_dir, f"doc{doc_idx:04d}_meta.json")
-
-                if not overwrite:
-                    if os.path.exists(h_path) and os.path.exists(p_path) \
-                            and os.path.exists(meta_path):
-                        _check_meta_consistency(meta_path, meta)
-                        files.extend([h_path, p_path, meta_path])
-                        continue
-                try:
-                    _atomic_torch_save({"h": h_t, "meta": meta}, h_path)
-                    _atomic_torch_save({"p": p_t, "meta": meta}, p_path)
-                    _atomic_torch_save_text(
-                        json.dumps(meta, indent=2, sort_keys=True), meta_path
-                    )
-                except OSError as e:
-                    raise RuntimeError(
-                        f"cannot write cache to {cache_dir!r} (read-only / Kaggle "
-                        f"FUSE?): {e}. The existing cache is incomplete "
-                        f"(overwrite={overwrite}); use a writable dir."
-                    ) from e
-                files.extend([h_path, p_path, meta_path])
+    try:
+        _cache_edit(model, edit, samples, layers, ts, S, D_S, K, edit_root,
+                    overwrite, files, cache_dir)
+    finally:
+        model.train(was_training)
 
     return {
         "root": cache_dir,
@@ -619,6 +600,62 @@ def apply_edit_and_cache(
         "K": K,
         "files": files,
     }
+
+
+def _cache_edit(model, edit, samples, layers, ts, S, D_S, K, edit_root,
+                overwrite, files, cache_dir) -> None:
+    with apply_edit(model, edit):
+        for doc_idx, sample in enumerate(samples):
+            with torch.no_grad():
+                out = model(**sample, output_hidden_states=True, use_cache=False)
+            h_states = out.hidden_states
+            # p_t = softmax over the token_set (re-normalized on K) — the
+            # p_S distribution of paper.md §4; required for gauge-free
+            # P(p) = diag(p) − pp^T (P(p)·1 = 0 iff Σp = 1).
+            p_t = F.softmax(out.logits[0][:, ts].float(), dim=-1)  # [S, K]
+            for L in layers:
+                h_t = h_states[L][0].float()                # [S, D_S] float32
+                layer_dir = os.path.join(edit_root, f"L{L:02d}")
+                meta = {
+                    "edit": edit.name,
+                    "layer": L,
+                    "doc": doc_idx,
+                    "S": S,
+                    "D_S": D_S,
+                    "K": K,
+                    "model_dtype": str(model.dtype),
+                    "torch": torch.__version__,
+                    "transformers": _transformers_version(),
+                    "seed": edit.seed,
+                }
+                h_path = os.path.join(layer_dir, f"doc{doc_idx:04d}_h.pt")
+                p_path = os.path.join(layer_dir, f"doc{doc_idx:04d}_p.pt")
+                meta_path = os.path.join(layer_dir, f"doc{doc_idx:04d}_meta.json")
+
+                if not overwrite:
+                    if os.path.exists(meta_path):
+                        _check_meta_consistency(meta_path, meta)
+                    if os.path.exists(h_path) and os.path.exists(p_path) \
+                            and os.path.exists(meta_path):
+                        files.extend([h_path, p_path, meta_path])
+                        continue
+                try:
+                    # overwrite=False: keep existing files, write missing ones.
+                    if overwrite or not os.path.exists(h_path):
+                        _atomic_torch_save({"h": h_t, "meta": meta}, h_path)
+                    if overwrite or not os.path.exists(p_path):
+                        _atomic_torch_save({"p": p_t, "meta": meta}, p_path)
+                    if overwrite or not os.path.exists(meta_path):
+                        _atomic_torch_save_text(
+                            json.dumps(meta, indent=2, sort_keys=True), meta_path
+                        )
+                except OSError as e:
+                    raise RuntimeError(
+                        f"cannot write cache to {cache_dir!r} (read-only / Kaggle "
+                        f"FUSE?): {e}. The existing cache is incomplete "
+                        f"(overwrite={overwrite}); use a writable dir."
+                    ) from e
+                files.extend([h_path, p_path, meta_path])
 
 
 def _atomic_torch_save_text(text: str, final_path: str) -> None:

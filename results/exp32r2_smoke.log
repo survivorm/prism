@@ -1,0 +1,11 @@
+docs: 2, layers: [23, 18], eps: 16 pts
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<01:25,  3.72it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1124.54it/s]
+E-35 identity cos = 1.000000
+  L23 ('chat', 0): 38.3s
+  L23 ('chat', 1): 40.7s
+  L18 ('chat', 0): 43.2s
+  L18 ('chat', 1): 42.9s
+L23: s_l=0.0687 slope=0.0777 d3r1 raw/gf/fixP = 1.407/0.000/1.538 d_b=None
+L18: s_l=0.0015 slope=0.0008 d3r1 raw/gf/fixP = 0.200/0.000/0.737 d_b=None
+WROTE results/exp32r2_smoke.json  total 170s
