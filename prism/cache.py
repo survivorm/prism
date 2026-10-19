@@ -14,6 +14,7 @@ threads/processes. No parallel writes are supported.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
@@ -122,14 +123,16 @@ class SVDCache:
     def key(self, edit: str, layer: int, doc: int, pos: int) -> str:
         """SHA-256 of the request identifier (used for the in-memory LRU)."""
         s = f"{edit}|L{layer}|d{doc}|p{pos}|r{self.r}|{self.dtype}|v{self.version}"
-        import hashlib
-
         return hashlib.sha256(s.encode()).hexdigest()
 
     def _path(self, edit: str, layer: int, doc: int, pos: int) -> str:
+        # dtype is part of the path: TZ §2.3 lists it in the key, so two
+        # caches with the same (r, version) but different dtypes must not
+        # share a file (review new_code_1_review.md P2.4 — TZ typo resolved
+        # in favor of the key).
         return os.path.join(
             self.root, edit, f"L{layer:02d}",
-            f"d{doc:04d}_p{pos:04d}_r{self.r}_{self.version}.pt",
+            f"d{doc:04d}_p{pos:04d}_r{self.r}_{self.dtype}_{self.version}.pt",
         )
 
     # -- API ---------------------------------------------------------------
@@ -260,13 +263,18 @@ def _json_load_value(v: object) -> float:
 class MetricCache:
     """Disk cache of scalar metrics keyed by (metric, edit, layer, doc).
 
-    JSON files ``{root}/{metric}/{edit}/L{layer:02d}.json`` (human-readable,
-    git-mergeable; scalars are small — .pt would be overengineering).
-    ``nan``/``inf`` are stored as the strings "nan"/"inf"/"-inf".
-    ``doc=None`` addresses the per-layer aggregate (key
-    ``__layer_aggregate__``), which bulk_get/bulk_put do NOT include.
-    No in-memory cache (files are small; a cache would complicate
-    consistency under parallel writes).
+    JSON files ``{root}/{metric}/{version}/{edit}/L{layer:02d}.json``
+    (human-readable, git-mergeable; scalars are small — .pt would be
+    overengineering). ``nan``/``inf`` are stored as the strings
+    "nan"/"inf"/"-inf". Document keys are zero-padded (``doc_{N:04d}``) so
+    that git diffs stay stable. ``doc=None`` addresses the per-layer
+    aggregate (key ``__layer_aggregate__``), which bulk_get/bulk_put do
+    NOT include. No in-memory cache (files are small; a cache would
+    complicate consistency under parallel writes).
+
+    Version semantics: a change of ``version`` produces a NEW file
+    (``{version}/`` in the path); old files remain untouched. A given
+    root is therefore monoversion by construction.
     """
 
     def __init__(self, root: str, version: str = "v1"):
@@ -275,7 +283,12 @@ class MetricCache:
         _ensure_root(root)
 
     def _path(self, metric: str, edit: str, layer: int) -> str:
-        return os.path.join(self.root, metric, edit, f"L{layer:02d}.json")
+        # version is part of the path: TZ §2.3 says "version in the key;
+        # version change -> new file" (review new_code_1_review.md P2.4 —
+        # TZ typo resolved in favor of the key: without this, a version
+        # change would mix v1/v2 documents under a single meta). A root
+        # must therefore be used by exactly one version; see class docstring.
+        return os.path.join(self.root, metric, self.version, edit, f"L{layer:02d}.json")
 
     def _load(self, metric: str, edit: str, layer: int) -> dict:
         path = self._path(metric, edit, layer)
@@ -315,11 +328,12 @@ class MetricCache:
 
     def has(self, metric: str, edit: str, layer: int, doc: int | None = None) -> bool:
         data = self._load(metric, edit, layer)
-        return ("__layer_aggregate__" if doc is None else f"doc_{doc}") in data
+        key = "__layer_aggregate__" if doc is None else f"doc_{int(doc):04d}"
+        return key in data
 
     def get(self, metric: str, edit: str, layer: int, doc: int | None = None) -> float | None:
         data = self._load(metric, edit, layer)
-        key = "__layer_aggregate__" if doc is None else f"doc_{doc}"
+        key = "__layer_aggregate__" if doc is None else f"doc_{int(doc):04d}"
         if key not in data:
             return None
         return _json_load_value(data[key])
@@ -333,7 +347,7 @@ class MetricCache:
         value: float,
     ) -> None:
         value = self._check_value(value)
-        key = "__layer_aggregate__" if doc is None else f"doc_{doc}"
+        key = "__layer_aggregate__" if doc is None else f"doc_{int(doc):04d}"
         data = self._load(metric, edit, layer)
         data[key] = _json_dump_value(value)
         self._save(metric, edit, layer, data)
@@ -356,7 +370,7 @@ class MetricCache:
     ) -> None:
         data = self._load(metric, edit, layer)
         for doc, value in values.items():
-            data[f"doc_{doc}"] = _json_dump_value(self._check_value(value))
+            data[f"doc_{int(doc):04d}"] = _json_dump_value(self._check_value(value))
         self._save(metric, edit, layer, data)
 
 

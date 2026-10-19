@@ -73,6 +73,22 @@ def test_svd_r_mismatch(tmp_path):
     assert not c8.has("base", 6, 0, 0)  # r=8 file absent
 
 
+def test_svd_dtype_mismatch(tmp_path):
+    """Review P2.4: dtype is in the path → float32/float64 caches are
+    disjoint (has()==False for the other dtype; no file overwriting)."""
+    c32 = SVDCache(str(tmp_path), r=4, dtype=torch.float32)
+    c64 = SVDCache(str(tmp_path), r=4, dtype=torch.float64)
+    c32.put("base", 6, 0, 0, *_make_svd(r=4, dtype=torch.float32))
+    c64.put("base", 6, 0, 0, *_make_svd(r=4, dtype=torch.float64))
+    assert c32.has("base", 6, 0, 0) and c64.has("base", 6, 0, 0)
+    # two separate files on disk
+    files = list((tmp_path / "base" / "L06").glob("*.pt"))
+    assert len(files) == 2
+    # loaded dtype matches the cache
+    U, S, V = c64.get("base", 6, 0, 0)
+    assert U.dtype == torch.float64
+
+
 def test_svd_validation(tmp_path):
     """TZ §2.6.5: unsorted S → ValueError; non-orthonormal U → ValueError."""
     c = SVDCache(str(tmp_path), r=4)
@@ -104,7 +120,7 @@ def test_svd_atomicity(tmp_path, monkeypatch):
         c.put("base", 6, 0, 0, U, S, V)
     monkeypatch.undo()  # restore torch.save BEFORE the recovery put
     d = tmp_path / "base" / "L06"
-    assert not (d / "d0000_p0000_r4_v1.pt").exists()
+    assert not any(f.name.startswith("d0000_p0000_r4_") and f.suffix == ".pt" for f in d.iterdir())
     # tmp cleaned up, no torn final file
     assert not list(d.glob("*.tmp.*"))
     # next put works
@@ -187,6 +203,30 @@ def test_metric_corrupt_json_raises(tmp_path):
         f.write("{broken json")
     with pytest.raises(RuntimeError, match="failed to load"):
         m.get("eigengap", "base", 6, 0)
+
+
+def test_metric_version_separate_files(tmp_path):
+    """Review P2.4: version change → NEW file, no mixed-version data."""
+    m1 = MetricCache(str(tmp_path), version="v1")
+    m2 = MetricCache(str(tmp_path), version="v2")
+    m1.put("eigengap", "base", 6, 0, 1.0)
+    m2.put("eigengap", "base", 6, 0, 2.0)
+    # separate files on disk
+    assert (tmp_path / "eigengap" / "v1" / "base" / "L06.json").is_file()
+    assert (tmp_path / "eigengap" / "v2" / "base" / "L06.json").is_file()
+    assert m1.get("eigengap", "base", 6, 0) == 1.0
+    assert m2.get("eigengap", "base", 6, 0) == 2.0
+    # v2 does NOT see v1's documents (no mixing)
+    assert m2.get("eigengap", "base", 6, 1) is None
+
+
+def test_metric_doc_keys_zero_padded(tmp_path):
+    """Review P3.8: doc_{N:04d} for stable git diffs."""
+    m = MetricCache(str(tmp_path))
+    m.bulk_put("eigengap", "base", 6, {0: 0.0, 2: 2.0, 10: 10.0})
+    raw = open(m._path("eigengap", "base", 6)).read()
+    assert '"doc_0002"' in raw and '"doc_0010"' in raw and '"doc_0000"' in raw
+    assert m.bulk_get("eigengap", "base", 6) == {0: 0.0, 2: 2.0, 10: 10.0}
 
 
 # ---------------------------------------------------------------------------

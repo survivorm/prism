@@ -60,6 +60,7 @@ from .spectral import (
     participation_ratio,
     snr_top1_vs_rest,
     snr_e14,
+    snr_e14_parts,
     gauge_share,
     gauge_share_top1,
 )
@@ -101,6 +102,7 @@ __all__ = [
     "participation_ratio",
     "snr_top1_vs_rest",
     "snr_e14",
+    "snr_e14_parts",
     "gauge_share",
     "gauge_share_top1",
 ]
