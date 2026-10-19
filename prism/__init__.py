@@ -80,6 +80,20 @@ from .interventions import (
     apply_edit,
     apply_edit_and_cache,
 )
+from .noise import (
+    calibrate_noise_floor,
+    validate_signal,
+)
+from .permutation import (
+    permutation_max_statistic,
+    generate_null,
+    cluster_based_permutation,
+)
+from .topology import (
+    zigzag_persistence,
+    project_to_subspace,
+    project_to_pca_subspace,
+)
 
 __all__ = [
     "jacobian_gap",
@@ -133,4 +147,12 @@ __all__ = [
     "make_tail_only",
     "apply_edit",
     "apply_edit_and_cache",
+    "calibrate_noise_floor",
+    "validate_signal",
+    "permutation_max_statistic",
+    "generate_null",
+    "cluster_based_permutation",
+    "zigzag_persistence",
+    "project_to_subspace",
+    "project_to_pca_subspace",
 ]
