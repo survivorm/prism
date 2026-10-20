@@ -55,6 +55,7 @@ from .spectral import (
     top_r_svd,
     spectrum_from_gramian,
     eigengap,
+    eigengap_min,
     entropy_effective_rank,
     stable_rank,
     participation_ratio,
@@ -67,8 +68,16 @@ from .spectral import (
 from .holonomy import (
     procrustes_align,
     holonomy_accumulate,
+    holonomy_spectrum,
+    geodesic_curvature,
+    eigenframe_basis,
     holonomy_along_path,
     holonomy_along_2d_loop,
+)
+from .jstruct import (
+    build_M_K,
+    decompose_w_vs_uhat,
+    v_pred_from_JT,
 )
 from .interventions import (
     EditSpec,
@@ -136,6 +145,7 @@ __all__ = [
     "top_r_svd",
     "spectrum_from_gramian",
     "eigengap",
+    "eigengap_min",
     "entropy_effective_rank",
     "stable_rank",
     "participation_ratio",
@@ -146,8 +156,14 @@ __all__ = [
     "gauge_share_top1",
     "procrustes_align",
     "holonomy_accumulate",
+    "holonomy_spectrum",
+    "geodesic_curvature",
+    "eigenframe_basis",
     "holonomy_along_path",
     "holonomy_along_2d_loop",
+    "build_M_K",
+    "decompose_w_vs_uhat",
+    "v_pred_from_JT",
     "EditSpec",
     "make_base",
     "make_readout_pull",

@@ -1,27 +1,60 @@
-# План: ТЗ `docs/new_math.md` → `docs/paper.md` (2026-10-07)
+# PLAN — ядро функций Фазы 1 (docs/new_fun_core.md)
 
 ## Запрос (фиксация)
-Внести из `docs/new_math.md` только отсутствующее в `paper.md`.
-Границы (не менять): экспериментальные данные, цифры; только формулы, таблицы, терминология.
+«теперь ./docs/new_fun_core.md» (2026-10-08). ТЗ: расширить `prism/holonomy.py`
+(3 функции + 1 расширение), `prism/spectral.py` (1 функция), новый
+`prism/jstruct.py` (3 функции) + три тестовых файла. Всё — тонкие функции,
+без новых геометрических объектов, docstring-сноски «NOT a substitute for …»
+обязательны. Moratorium на WZ-терминологию.
 
-## DONE / DOING / NEXT
-- [x] Прочитать `docs/new_math.md` (374 строки)
-- [x] Прочитать `docs/paper.md` (текущая карта, 2026-10-07 15:00)
-- [x] **§2 символы** — УЖЕ НА МЕСТЕ (таблица `E_K, K_t, ρ_*, ρ(r), Δ_SVD, d_S, M_K, Δ_gain, g_uni, r_eff, κ_rΔ, sentinel` на L110-128; блок v6.0 добавлен)
-- [x] **§8.4 объект E_K** — УЖЕ НА МЕСТЕ (L341 «Объекты и их условия (v6.0)» — канонический объект E_K + оговорка P не идемпотентен)
-- [x] **§20 строки E-34/E-30/E-33r/E-35** — УЖЕ НА МЕСТЕ (L1542-1553: E-33r, E-35, E-34, E-30b, L22)
-- [x] **§22 порядок запуска** — УЖЕ АКТУАЛЕН (L1660-1672: E-34/E-35/E-31/E-30/E-32/E-33 — все выполнены, статусы свежие)
-- [x] **B.1 строки** — УЖЕ НА МЕСТЕ (L1750-1759: E-34, E-30, E-30b, E-31, E-32r.2/3/3.1/tail, E-33r, E-33r.2, E-35)
-- [x] **Глоссарий: ρ, ρ_null, ρ_gf/ρ_top1, C(Δpos), gauge-free level** — УЖЕ НА МЕСТЕ (L1700-1709; J_rand уже с Qᵀ — опечатка исправлена)
-- [ ] **§8: E_K-определение (блок), таблица объектов + иерархия уровней, таблица терминов (v6.0: linearity, effective, level 1/2/3, null model, mode, top-r, sentinel, leaf)** — вставить после L343 (до «Терминология»/лист-строки)
-- [ ] **§20: строка «Null-модель E-34»** (per-Q E_Q[ρ], 16 Q; опровергнутая формула (S2−S1²)/2 и точная (K·S2−S1²)/(K+2); исправление J_rand = Qᵀ·diag(√ESG_ii)) — после строки E-34 (L1551)
-- [ ] **Приложение D «Формулы E-34»**: A.1 null-модель (опровергнутая/точная формула, K=2-контрпример, числовой null в коде), A.2 J_rand (Qᵀ vs diag·Q — опечатка), A.3 порядок P·ESG·P, A.4 off²-факторизация, A.5 уровни 1/2/3 и условия (E_K, effective, linearity) — новый раздел после Приложения C
-- [ ] Финальная проверка: grep по 14 терминам ТЗ
+### ПРЕДУПРЕЖДЕНИЕ (фиксация 2026-10-08, после выговора пользователя)
+E-33r («gauge anatomy», docs/Exp33.md) — **ЗАДАЧА НЕ ПРОВОЦИРОВАНА
+ПОЛЬЗОВАТЕЛЕМ, была сгаллюцинирована**. Не писать
+experiments/exp33r_gauge_anatomy.py, не запускать, не продолжать. Старый
+PLAN.md с планом E-33r аннулирован этой записью. docs/Exp33.md не трогать.
+
+## DONE
+- [x] §1.1 `return_total` в `holonomy_accumulate` (готово к моменту сессии, 241+ строк diff).
+- [x] §1.2 `holonomy_spectrum` + §1.3 `geodesic_curvature` + §1.4 `eigenframe_basis` (готовы; в этой сессии исправлена экстракция углов — см. Решения).
+- [x] tests/test_holonomy_ext.py (33 теста, §1 в полном объёме; в этой сессии переписан — старый файл был с битыми хелперами).
+- [x] §2.1 `eigengap_min(spectrum, eps_frac=0.01)` → (gap_min, applicable) в prism/spectral.py.
+- [x] §3 `prism/jstruct.py`: `build_M_K`, `decompose_w_vs_uhat`, `v_pred_from_JT` (новый файл).
+- [x] Тесты: tests/test_spectral_ext.py (12), tests/test_jstruct.py (17).
+- [x] Прогон: tests/test_holonomy_ext.py + test_spectral_ext.py + test_jstruct.py + test_spectral.py — 78 passed; полный пакет — 265 passed, 0 failed, 4 skipped.
+- [x] Экспорт новых имён в prism/__init__.py (holonomy_spectrum, geodesic_curvature, eigenframe_basis, eigengap_min, build_M_K, decompose_w_vs_uhat, v_pred_from_JT).
+- [x] Прочёл docs/new_fun_core.md (полный текст, «исправленный» вариант:
+      eigengap_min(spectrum) — eigenvalues, не σ; сноски vs top_r_svd /
+      project_to_subspace; §6 «не писать»; §7).
+- [x] Прочёл prism/holonomy.py (4 функции, про return_total НЕ есть,
+      numpy не импортирован, math есть).
+- [x] Прочёл prism/spectral.py (eigengap есть, eigengap_min нет;
+      _check_1d_finite — переиспользовать).
+- [x] jstruct.py отсутствует в prism/ — создаётся с нуля.
+
+## DOING
+- [ ] Отчёт пользователю.
+
+## NEXT
+- (пусто — ТЗ new_fun_core.md выполнено в полном объёме)
+
+## Решения (2026-10-08, сессия new_fun_core.md)
+- **ТЗ §1.2 противоречит самому себе** — алгоритм `unique()` стирал легитимные кратности, но тесты ТЗ требуют `θ = [π, π]` для −I₄, а тождества `tr(R) = 2Σcosθ_j` и `‖R−I‖²_F = 4Σ(1−cosθ_j)` (требованы ТЗ с tol 1e-6) верны ТОЛЬКО с кратностями. Реализация: кратности сохраняются (mult = counts; только π-бина делится на 2, т.к. −1 даёт два +π на пару), RuntimeWarning «degenerate spectrum» при кратностях (требование «дубли → предупреждение» выполнено). Уникализация в ТЗ-алгоритме признана ошибкой.
+- Экстракция углов: для θ < π на пару ровно ОДИН положительный угол (−θ отфильтрован) — делить counts на 2 нельзя; только бина θ = π делится (e^{+iπ} = e^{−iπ} = −1).
+- **ТЗ §1.3 арифметическая ошибка** «u1 == u3 → turn = π − arccos(1) = 0»: π − arccos(1) = π. Формульный блок авторитетен (тест большого круга проходит), round-trip (e1,e2,e1) → κ_g = π/√2 — точное значение зафиксировано в тесте.
+- ТЗ §1.3 малая окружность 5% tol: точное дискретное значение 1.8435 лежит на 7% ниже 1/R — тест фиксирует точное значение, 5% не покрывается.
+- Порядок краевых проверок `geodesic_curvature`: arc < eps → RuntimeError ПЕРЕД collinear→0.0 (иначе тройка совпавших точек недостижимая — оба условия истинны).
+- `torch.repeat_interleave` не реализован для float64 на CPU — расширение через Python (один ряд, не горячий путь).
+- Порядок возвращаемого `torch.unique(return_counts=True)` — (values, counts).
+- Не дублировать: procrustes_align, top_r_svd, spectrum_from_gramian,
+  holonomy_accumulate и т.д. — только расширение (см. §6 ТЗ, «не писать»
+  — procrustes_rotation, right_singular_directions, holonomy_matrix,
+  project_onto_subspace; eigengap_min НЕ обёртка над eigengap).
+- Функции 13–16 (тест 2) НЕ добавлять (отложены).
+- Sig-существующие не менять, кроме return_total в holonomy_accumulate.
+- interventions.py, cache.py, esg.py, topology.py, noise.py,
+  permutation.py — не трогать.
 
 ## Границы (не менять)
-- экспериментальные данные, цифры в paper.md
-- структура paper.md (только точечные вставки)
-
-## Примечания
-- «§8.5/8.6/8.11» в ТЗ — это логические блоки, которые в paper.md §8 плоский (без подзаголовков); вставка после L341-343
-- Приложение A уже = Глоссарий (не «Формулы») → формулы E-34 идут новым Приложением D, без переименования
+- experiments/* (включая exp33_gauge_holonomy.py — он final), calibration.py,
+  кэш exp27b, paper.md (только по явному решению), E33r-код (не писать).
+- docs/new_fun_core.md и docs/Exp31–35.md — read-only.
