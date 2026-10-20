@@ -487,8 +487,11 @@ def run_many(
 ) -> list[OutputArtifacts]:
     """Sequential batch of run_spec (TZ §3.5).
 
-    An exception in one spec ABORTS the batch (not swallowed); wrap in
-    try/except for partial batches.
+    Convenience batch wrapper — it adds NO new logic: each spec goes
+    through the identical run_spec path (validate, cache-key, meta,
+    seeds). The only added behavior is that an exception in one spec
+    ABORTS the remaining batch (not swallowed); wrap in try/except for
+    partial batches.
     """
     out = []
     for spec in specs:
