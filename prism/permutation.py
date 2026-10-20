@@ -71,6 +71,10 @@ def permutation_max_statistic(
     max over layers is what absorbs inter-layer correlation; no
     independence assumption.
 
+    TZ selfcheck §6.6.3 is self-contradictory (asserts "all null maxes
+    below max_obs" AND "k = 100, p = 1.0"); the formula above gives
+    k = 0, p = 1/(B+1) in that case. The formula is followed.
+
     ``observed`` should be the same statistic that ``metric_fn`` returns
     in generate_null (e.g. per-layer median(edit − base) across docs).
 
