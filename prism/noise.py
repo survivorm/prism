@@ -157,6 +157,10 @@ def validate_signal(
             nothing happens (signal ~ 0 in a deterministic system; not
             a bug, but not a "significant effect" either).
 
+    TZ selfcheck §5.6.6 expects "no_floor" for signal = 42.0 + 1e-9,
+    which contradicts the explicit rule above (1e-9 > 1e-10); the rule
+    is followed, so 42.0 + 1e-9 → "significant".
+
     Args:
         signal: observed scalar (e.g. κ_U or ε_gap).
         floor: dict from calibrate_noise_floor.
