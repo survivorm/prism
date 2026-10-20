@@ -128,7 +128,12 @@ def zigzag_persistence(
         if maxdim == 1:
             # gtda returns H0+H1 combined when maxdim allows; split by
             # persistence convention: H0 features are those born at 0.
-            # Robust split: first column == 0 => H0.
+            # HEURISTIC split (docs/changed_review.md, 2026-10): for zigzag
+            # the first column may be a time index rather than a
+            # filtration radius, so some H0 features can be born != 0 (and
+            # some H1 at 0). The gtda API gives no explicit H0/H1
+            # separation; treat dgms[0]/dgms[1] as "born-at-0" /
+            # "born-at-other", NOT as guaranteed H0/H1.
             h0 = dgm[np.asarray(dgm, dtype=float)[:, 0] == 0.0]
             h1 = dgm[np.asarray(dgm, dtype=float)[:, 0] != 0.0]
             dgms = [np.asarray(h0, dtype=float), np.asarray(h1, dtype=float)]
@@ -178,7 +183,7 @@ def project_to_subspace(h: np.ndarray, basis: np.ndarray) -> np.ndarray:
     d = h.shape[-1]
     rows_ok = basis.shape[1] == d
     cols_ok = basis.shape[0] == d
-    if rows_ok and cols_ok and basis.shape[0] == basis.shape[1]:
+    if rows_ok and cols_ok:  # square basis: compatible both ways
         raise ValueError(
             f"basis shape {basis.shape} is square and compatible both ways; "
             f"pass an explicit [r, D] or [D, r] basis"
