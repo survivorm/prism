@@ -33,7 +33,9 @@ def _check_finite(name: str, arr: np.ndarray) -> None:
         )
 
 
-def _check_common(observed: np.ndarray, null_samples: np.ndarray, alpha: float) -> None:
+def _check_common(
+    observed: np.ndarray, null_samples: np.ndarray, alpha: float
+) -> tuple[np.ndarray, np.ndarray]:
     observed = np.asarray(observed, dtype=float)
     null_samples = np.asarray(null_samples, dtype=float)
     if observed.ndim != 1:
@@ -57,6 +59,10 @@ def _check_common(observed: np.ndarray, null_samples: np.ndarray, alpha: float) 
         raise ValueError(f"alpha must be in (0, 1), got {alpha}")
     _check_finite("observed", observed)
     _check_finite("null_samples", null_samples)
+    # Return the CONVERTED arrays: rebinding parameters alone would not
+    # propagate to the callers, and cluster_based_permutation needs array
+    # semantics (fancy indexing) — a list input must not TypeError there.
+    return observed, null_samples
 
 
 def permutation_max_statistic(
@@ -86,7 +92,7 @@ def permutation_max_statistic(
         ValueError: shape mismatch, B < 100, alpha outside (0, 1),
             NaN/Inf in inputs.
     """
-    _check_common(observed, null_samples, alpha)
+    observed, null_samples = _check_common(observed, null_samples, alpha)
 
     max_obs = float(np.max(np.abs(observed)))
     max_null = np.max(np.abs(null_samples), axis=1)  # [B]
@@ -157,8 +163,18 @@ def generate_null(
     for b in range(n_permutations):
         signs = _paired_permutation_indices(n_docs, rng)
         # signs True: keep (base, edit); False: swap within the pair.
-        base_perm = np.where(signs, base_values, edit_values)
-        edit_perm = np.where(signs, edit_values, base_values)
+        # 2-D ([n_docs, n_layers]): broadcast along ROWS — the per-doc coin
+        # flip must swap the whole document row, not per column. (The bare
+        # np.where(signs, ...) broadcasts signs left-padded to (1, n_docs),
+        # which errors when n_docs != n_layers and silently swaps COLUMNS —
+        # breaking the paired structure — when they are equal.)
+        if base_values.ndim == 1:
+            base_perm = np.where(signs, base_values, edit_values)
+            edit_perm = np.where(signs, edit_values, base_values)
+        else:
+            s = signs[:, None]  # [n_docs, 1]
+            base_perm = np.where(s, base_values, edit_values)
+            edit_perm = np.where(s, edit_values, base_values)
         stat = np.asarray(metric_fn(base_perm, edit_perm), dtype=float)
         if stat.ndim != 1 or stat.size == 0:
             raise ValueError(
@@ -222,7 +238,7 @@ def cluster_based_permutation(
     """
     if threshold <= 0:
         raise ValueError(f"threshold must be > 0, got {threshold}")
-    _check_common(observed, null_samples, alpha)
+    observed, null_samples = _check_common(observed, null_samples, alpha)
 
     obs_clusters = _find_clusters(observed, threshold)
 

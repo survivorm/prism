@@ -105,6 +105,42 @@ def test_generate_null_shape_mismatch():
                       n_permutations=100)
 
 
+# --- 2-D input [n_docs, n_layers] (TZ §6.3 documented use case) --------------------
+# Regression: np.where(signs, base, edit) with 1-D signs broadcast left-padded
+# to (1, n_docs) — errors when n_docs != n_layers, and SILENTLY swaps columns
+# (not document rows) when n_docs == n_layers. The per-doc coin flip must
+# swap whole rows so that a document's value flips identically across layers.
+
+def test_generate_null_2d_non_square():
+    # n_docs=10, n_layers=3 — the broadcasting error case.
+    rng = np.random.default_rng(0)
+    base = rng.normal(0, 1, (10, 3))
+    edit = base + 0.5
+    fn = lambda b, e: np.median(e - b, axis=0)  # [n_layers], TZ §6.3 example
+    null = generate_null(base, edit, fn, n_permutations=100, seed=0)
+    assert null.shape == (100, 3)
+    # each doc contributes +0.5 (kept) or -0.5 (swapped); median of 10 such
+    # values is in {-0.5, 0, +0.5} (even count -> middle two averaged), and
+    # IDENTICAL across layers (row-level flips)
+    assert set(np.unique(null).round(10).tolist()).issubset({-0.5, 0.0, 0.5})
+    assert np.allclose(null, null[:, :1]), "all layers must share the row-flipped median"
+
+
+def test_generate_null_2d_square_rows_not_columns():
+    # n_docs == n_layers == 4: the silent column-swap case.
+    # doc i has value (i+1) in every layer; base = 0.
+    base = np.zeros((4, 4))
+    edit = np.arange(1.0, 5.0)[:, None] * np.ones((1, 4))
+    fn = lambda b, e: np.median(e - b, axis=0)  # [4] per-layer medians
+    null = generate_null(base, edit, fn, n_permutations=200, seed=0)
+    # correct (row) semantics: a document flip changes ALL its layers by the
+    # same sign -> per-layer medians of one null row are always equal.
+    # The old column-swap bug let per-layer medians differ within a row.
+    assert np.allclose(null, null[:, :1])
+    # and both flip states must occur across the run (median can be + or -)
+    assert np.any(null[:, 0] > 0) and np.any(null[:, 0] < 0)
+
+
 # --- 6.6.8: n_docs < 2 ------------------------------------------------------------
 
 def test_generate_null_too_few_docs():
@@ -194,3 +230,9 @@ def test_cluster_validation():
     # 2-D observed is rejected
     with pytest.raises(ValueError, match="flat"):
         permutation_max_statistic(observed[None, :], null)
+    # list inputs are converted, not a TypeError from fancy indexing
+    # (docs/changed_review.md #2: _check_common must propagate arrays)
+    res = cluster_based_permutation(observed.tolist(), null, threshold=2.0)
+    assert len(res["clusters"]) == 1
+    res2 = permutation_max_statistic(observed.tolist(), null)
+    assert res2["n_layers"] == 6
