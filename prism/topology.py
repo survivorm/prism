@@ -209,6 +209,14 @@ def project_to_pca_subspace(
     [n_components, D] (rows, orthonormal). Signs of components may differ
     between numpy versions — do not rely on them.
 
+    Deliberately NOT built on ``spectral.top_r_svd`` (consolidate.md §2.2):
+    ``top_r_svd`` is torch-only, and this module is numpy-only by design
+    (projections must work on plain ndarrays without torch). Calling it
+    would force a hard torch import into a numpy module — a regression.
+    The math is identical (center + truncated SVD + float32 + the same
+    sign-caveat), so the SVD call appearing twice is nominal, not a
+    semantic duplicate.
+
     Errors:
         ValueError: N < 2, n_components > min(N, D).
     """
