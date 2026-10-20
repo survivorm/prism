@@ -17,13 +17,18 @@ Related: paper.md §8.6, §8.7.
 from __future__ import annotations
 
 import math
+import warnings
 from typing import Callable, Sequence
 
+import numpy as np
 import torch
 
 __all__ = [
     "procrustes_align",
     "holonomy_accumulate",
+    "holonomy_spectrum",
+    "geodesic_curvature",
+    "eigenframe_basis",
     "holonomy_along_path",
     "holonomy_along_2d_loop",
 ]
@@ -120,7 +125,8 @@ def procrustes_align(
 def holonomy_accumulate(
     U_list: Sequence[torch.Tensor],
     closed_loop: bool = True,
-) -> tuple[float, list[float]]:
+    return_total: bool = False,
+) -> tuple[float, list[float]] | tuple[float, list[float], torch.Tensor]:
     """Accumulate Procrustes rotation along a (closed) cycle (TZ §3.3).
 
     Args:
@@ -129,13 +135,19 @@ def holonomy_accumulate(
             holonomy); False — open path: R_total = R_{0,1} ... R_{N-2,N-1}
             (measures accumulated parallel transport, not holonomy in the
             strict sense).
+        return_total: False (default, backward-compatible) — return
+            (kappa, per_step_residuals). True — additionally return
+            R_total [r, r] float64 (the accumulated product, already
+            computed internally) for spectral analysis (see
+            :func:`holonomy_spectrum`), i.e. (kappa, per_step, R_total).
 
     Returns:
-        (kappa, per_step_residuals): kappa = ‖R_total − I_r‖_F as a
-        Python float; per_step_residuals — the residual_sq of each step
-        in cycle order (len = N−1 open, N closed). Diagnostic: large
+        (kappa, per_step_residuals[, R_total]): kappa = ‖R_total − I_r‖_F
+        as a Python float; per_step_residuals — the residual_sq of each
+        step in cycle order (len = N−1 open, N closed). Diagnostic: large
         kappa with all small per-step residuals → composition problem;
-        small kappa with one large per-step → one bad step.
+        small kappa with one large per-step → one bad step. R_total is
+        the float64 [r, r] product (only when return_total=True).
 
     Semantics: R_{i,i+1} satisfies U_{i+1} ≈ U_i @ R_{i,i+1} (left
     multiplication in cycle order: R_total = R_{0,1} @ R_{1,2} @ ...).
@@ -177,7 +189,252 @@ def holonomy_accumulate(
         per_step.append(res)
 
     kappa = torch.norm(R_total - torch.eye(r, dtype=torch.float64), p="fro").item()
+    if return_total:
+        return kappa, per_step, R_total
     return kappa, per_step
+
+
+def holonomy_spectrum(
+    U_list: Sequence[torch.Tensor],
+    closed_loop: bool = True,
+) -> tuple[np.ndarray, torch.Tensor]:
+    """Spectral angles of R_total; convenience wrapper over
+    ``holonomy_accumulate(..., return_total=True)``.
+
+    NOT a substitute for the scalar κ (``holonomy_accumulate()[0]``):
+    κ collapses R_total to one number; this returns the full angle set
+    used in paper [M-2] / §6.
+
+    Args:
+        U_list: list of [K, r] orthonormal, len ≥ 2 (see
+            :func:`holonomy_accumulate`).
+        closed_loop: see :func:`holonomy_accumulate`.
+
+    Returns:
+        (theta, R_total): theta — np.ndarray [r//2] of rotation angles
+        in (0, π], sorted ascending (one per conjugate pair
+        {e^{iθ}, e^{−iθ}} of R_total; +1-axes dropped; odd r leaves a
+        trivial +1 axis); R_total — [r, r] float64.
+
+    Uses ``torch.linalg.eigvals`` (complex) — ``spectrum_from_gramian`` /
+    ``eigvalsh`` CANNOT be used: R_total is orthogonal, not symmetric.
+
+    Warnings:
+        RuntimeWarning: odd r (trivial +1 axis); eigenvalues off the
+        unit circle (|λ| < 1 − 1e-6); duplicate angles (degenerate
+        spectrum, basis ambiguity).
+
+    Errors:
+        RuntimeError: R_total not orthogonal (‖R^T R − I‖_F > 1e-4).
+    """
+    _, _, R_total = holonomy_accumulate(U_list, closed_loop=closed_loop,
+                                        return_total=True)
+    r = R_total.shape[0]
+    orth_err = torch.norm(R_total.T @ R_total - torch.eye(r, dtype=torch.float64),
+                          p="fro").item()
+    if orth_err > 1e-4:
+        raise RuntimeError(
+            f"holonomy_spectrum: R_total not orthogonal: "
+            f"‖R^T R − I‖_F = {orth_err:.3e} (tol 1e-4)"
+        )
+
+    eigvals = torch.linalg.eigvals(R_total)
+    if torch.any(eigvals.abs() < 1 - 1e-6):
+        off = float((1.0 - eigvals.abs()).max().item())
+        warnings.warn(
+            f"holonomy_spectrum: eigenvalue off the unit circle by {off:.2e} "
+            "(numerical instability)",
+            RuntimeWarning,
+        )
+
+    # One angle per conjugate pair {e^{iθ}, e^{-iθ}}: for θ < π the pair
+    # contributes exactly ONE positive angle (+θ; −θ is filtered out), so
+    # mult = counts. At θ = π both eigenvalues are −1 and both angles are
+    # +π — counts is doubled there, so halve only the π bin (−I₄ → θ =
+    # [π, π], not [π, π, π, π]).
+    angles = torch.angle(eigvals)  # (-π, π]
+    positive = angles[angles > 1e-6]
+    rounded = positive.round(decimals=8)
+    uniques, counts = torch.unique(rounded, return_counts=True)
+    pi_mask = uniques > math.pi - 1e-6
+    mult = torch.where(pi_mask, counts // 2, counts)
+    # mult 0: a π-pair split across the ±π boundary (one side negative) —
+    # numerical noise; treat as one pair
+    if (mult == 0).any():
+        warnings.warn(
+            "holonomy_spectrum: a conjugate pair split across the ±π "
+            "boundary (numerical noise) — merged into one",
+            RuntimeWarning,
+        )
+        mult = mult.clamp(min=1)
+    # mult > 1: the same angle appears in several pairs — the spectrum is
+    # degenerate and the basis inside that block is ambiguous, but the
+    # angle set (with multiplicities) is well-defined and REQUIRED for
+    # tr(R) = 2 Σ_j cos θ_j — keep the multiplicity
+    if (mult > 1).any():
+        warnings.warn(
+            "holonomy_spectrum: degenerate spectrum (repeated angles) — "
+            "basis is ambiguous inside the degenerate block; multiplicities "
+            "kept",
+            RuntimeWarning,
+        )
+    # repeat_interleave is unimplemented for float64 on CPU — expand in Python
+    expanded_vals = [float(u) for u, m in zip(uniques.tolist(), mult.tolist())
+                     for _ in range(int(m))]
+    expanded = torch.tensor(sorted(expanded_vals), dtype=torch.float64)
+    expected = r // 2
+    if r % 2 == 1:
+        warnings.warn(
+            f"holonomy_spectrum: odd r = {r}, trivial +1 axis present",
+            RuntimeWarning,
+        )
+    elif expanded.numel() != expected:
+        if positive.numel() == 0:
+            # R_total ≈ I: all angles are +1 — report r//2 zeros
+            expanded = torch.zeros(expected, dtype=torch.float64)
+        else:
+            warnings.warn(
+                f"holonomy_spectrum: expected {expected} angle pairs, "
+                f"got {expanded.numel()}",
+                RuntimeWarning,
+            )
+    return expanded.numpy().astype(np.float64), R_total
+
+
+def geodesic_curvature(
+    u1: torch.Tensor, u2: torch.Tensor, u3: torch.Tensor,
+    eps: float = 1e-8,
+) -> float:
+    """Discrete geodesic curvature κ_g ∈ R≥0 at u2, from three unit vectors.
+
+    Local Abelian invariant of the û_t curve on S^{D-1} (lemma [M-3],
+    corrected formulation) — for comparison with κ (holonomy). NOT the
+    triangle-inequality defect.
+
+    Args:
+        u1, u2, u3: [D] unit vectors (‖·‖ = 1, checked).
+        eps: collinearity tolerance for the tangent norms.
+
+    Returns:
+        turn / arc, where turn = π − arccos(<t1, t3>/(‖t1‖‖t3‖)) is the
+        exterior angle between the tangents at u2 (toward u1 / u3) and
+        arc = (‖u1 − u2‖ + ‖u3 − u2‖) / 2 (chord lengths ≈ geodesic
+        lengths for small steps). Collinear (degenerate) triple → 0.0.
+
+    Errors:
+        ValueError: non-unit input (index and value reported), D < 2.
+        RuntimeError: all three points coincide (arc < eps).
+    """
+    for i, u in enumerate((u1, u2, u3)):
+        u = u.reshape(-1)
+        n = torch.norm(u).item()
+        if abs(n - 1.0) > 1e-4:
+            raise ValueError(
+                f"geodesic_curvature: u{i + 1} not unit: ‖u‖ = {n:.6f}"
+            )
+        if u.shape[0] < 2:
+            raise ValueError(
+                f"geodesic_curvature: D < 2 (got D = {u.shape[0]}) — "
+                "cannot build tangents"
+            )
+    u1, u2, u3 = u1.reshape(-1), u2.reshape(-1), u3.reshape(-1)
+
+    arc = (torch.norm(u1 - u2).item() + torch.norm(u3 - u2).item()) / 2
+    if arc < eps:
+        raise RuntimeError(
+            "geodesic_curvature: all three points coincide (arc < eps) — "
+            "not informative"
+        )
+
+    t1 = u1 - torch.dot(u1, u2) * u2   # tangent at u2, toward u1
+    t3 = u3 - torch.dot(u3, u2) * u2   # tangent at u2, toward u3
+    n1, n3 = float(torch.norm(t1)), float(torch.norm(t3))
+    if n1 < eps or n3 < eps:
+        return 0.0                      # u1 or u3 collinear with u2
+    cos_turn = float(torch.clip(torch.dot(t1, t3) / (n1 * n3), -1.0, 1.0))
+    turn = math.pi - math.acos(cos_turn)
+    return turn / arc
+
+
+def eigenframe_basis(
+    M_K: torch.Tensor,   # [K, D]
+    uhat: torch.Tensor,  # [D] unit
+) -> torch.Tensor:
+    """Canonical basis B [D, D-1] orthonormal, B^T uhat = 0, ordered by
+    decreasing eigenvalue of P_⊥ M_K^T M_K P_⊥.
+
+    This is a CONVENTION per [M-5]; the basis is data-determined up to
+    permutation and sign, but the decomposition of H_{012} using it is
+    fixed once chosen.
+
+    NOT a substitute for spectral.top_r_svd: the operator is the symmetric
+    P_⊥ M_K^T M_K P_⊥ (D×D, in uhat^⊥), NOT J (general K×D). top_r_svd
+    returns right singular vectors of J; this returns eigenvectors of the
+    gauge-projected M_K Gramian. Consumers needing right singular vectors
+    of J must call top_r_svd directly.
+
+    Warnings:
+        RuntimeWarning: the trivial û-axis is not isolated (|λ_min| >
+        1e-8, M_K^T M_K non-degenerate on û) — the smallest-λ vector is
+        dropped anyway; degenerate eigenvalues (basis ambiguity inside
+        a degenerate block).
+
+    Errors:
+        ValueError: uhat not unit, M_K.shape[1] != D, D < 2.
+    """
+    if M_K.dim() != 2:
+        raise ValueError(f"eigenframe_basis: M_K must be 2-D, got {M_K.dim()}-D")
+    uhat = uhat.reshape(-1)
+    K, D = M_K.shape
+    if uhat.shape[0] != D:
+        raise ValueError(
+            f"eigenframe_basis: M_K.shape[1] = {D} != uhat dim = {uhat.shape[0]}"
+        )
+    if D < 2:
+        raise ValueError(f"eigenframe_basis: D < 2 (got D = {D})")
+    n = torch.norm(uhat).item()
+    if abs(n - 1.0) > 1e-4:
+        raise ValueError(f"eigenframe_basis: uhat not unit: ‖uhat‖ = {n:.6f}")
+
+    A = M_K.T @ M_K                              # [D, D] symmetric PSD
+    Au = A @ uhat
+    A_proj = A - torch.outer(uhat, Au) - torch.outer(Au, uhat) \
+        + torch.dot(uhat, Au) * torch.outer(uhat, uhat)   # P_⊥ A P_⊥
+
+    eigvals, eigvecs = torch.linalg.eigh(A_proj)   # ascending
+    mask = eigvals.abs() > 1e-8
+    if mask.sum() == D:
+        # no ~0 eigenvalue: trivial û-axis not isolated — drop the smallest
+        warnings.warn(
+            "eigenframe_basis: trivial û-axis not isolated "
+            "(|λ_min| > 1e-8, M_K^T M_K non-degenerate on û) — "
+            "dropping the smallest-λ vector",
+            RuntimeWarning,
+        )
+        eigvals_pos, eigvecs_pos = eigvals[1:], eigvecs[:, 1:]
+    else:
+        eigvals_pos, eigvecs_pos = eigvals[mask], eigvecs[:, mask]
+    # degenerate spectrum check (consecutive gaps below 1e-8 of the scale)
+    if eigvals_pos.numel() > 1:
+        scale = eigvals_pos.max().abs()
+        if scale > 0 and ((eigvals_pos[1:] - eigvals_pos[:-1]).abs() < 1e-8 * scale).any():
+            warnings.warn(
+                "eigenframe_basis: degenerate eigenvalues — basis is "
+                "ambiguous inside the degenerate block",
+                RuntimeWarning,
+            )
+    order = torch.argsort(eigvals_pos, descending=True)
+    if eigvals_pos.numel() == 0:
+        # fully degenerate (e.g. M_K = 0): no non-trivial axis — return [D, 0]
+        warnings.warn(
+            "eigenframe_basis: spectrum fully degenerate — returning an "
+            "empty basis [D, 0]",
+            RuntimeWarning,
+        )
+        return eigvecs[:, :0].contiguous()
+    B = eigvecs_pos[:, order]
+    B = B / B.norm(dim=0, keepdim=True)
+    return B.contiguous()
 
 
 def holonomy_along_path(

@@ -32,6 +32,7 @@ __all__ = [
     "top_r_svd",
     "spectrum_from_gramian",
     "eigengap",
+    "eigengap_min",
     "entropy_effective_rank",
     "stable_rank",
     "participation_ratio",
@@ -133,6 +134,60 @@ def eigengap(spectrum: torch.Tensor) -> float:
         raise ValueError(f"eigengap: need K >= 2, got {spectrum.numel()}")
     s = torch.sort(spectrum, descending=True).values
     return float(s[0] - s[1])
+
+
+def eigengap_min(
+    spectrum: torch.Tensor,      # [k] eigenvalues (NOT singular values), descending not required
+    eps_frac: float = 0.01,      # threshold fraction of λ_1 = max(spectrum)
+) -> tuple[float, bool]:
+    """Pre-flight [M-4]: min consecutive eigenvalue gap inside top-k.
+
+    Returns (gap_min, applicable), applicable = gap_min >= eps_frac * spectrum[0]
+    (after sorting descending; so spectrum[0] is λ_1 = max).
+
+    NOT min(eigengap(...)): eigengap returns only the FIRST gap λ₁−λ₂;
+    this returns the MINIMUM over ALL consecutive gaps λ_i − λ_{i+1}.
+    Same input convention as eigengap/stable_rank/participation_ratio
+    (eigenvalues, i.e. σ²), so it can follow spectrum_from_gramian
+    directly without a manual sqrt(). Do NOT pass singular values here.
+
+    The ``>=`` (not ``>``) is deliberate: an exact equality
+    ``gap_min == threshold`` is classified as applicable (boundary =
+    "acceptable, not degenerate", per [M-4]).
+
+    Args:
+        spectrum: [k] eigenvalues (≥ 0), any order, k ≥ 2.
+        eps_frac: threshold as a fraction of λ_1; must lie in (0, 1).
+
+    Returns:
+        (gap_min, applicable) as Python (float, bool).
+
+    Warnings:
+        RuntimeWarning: spectrum all zero → returns (0.0, False).
+
+    Errors:
+        ValueError: k < 2, NaN/Inf (index reported), negative eigenvalue
+            (index reported), eps_frac outside (0, 1).
+    """
+    _check_1d_finite(spectrum, "spectrum")
+    if spectrum.numel() < 2:
+        raise ValueError(f"eigengap_min: need k >= 2, got {spectrum.numel()}")
+    neg = torch.nonzero(spectrum < 0, as_tuple=False).flatten()
+    if neg.numel() > 0:
+        raise ValueError(
+            f"eigengap_min: negative eigenvalue at index {int(neg[0])} "
+            f"(spectrum must be PSD eigenvalues)"
+        )
+    if not (0.0 < eps_frac < 1.0):
+        raise ValueError(f"eigengap_min: eps_frac must be in (0, 1), got {eps_frac}")
+    s = torch.sort(spectrum, descending=True).values
+    if s[0] == 0:
+        warnings.warn("eigengap_min: all eigenvalues are zero", RuntimeWarning)
+        return 0.0, False
+    gaps = s[:-1] - s[1:]
+    gap_min = float(gaps.min())
+    threshold = float(eps_frac * s[0])
+    return gap_min, gap_min >= threshold
 
 
 def entropy_effective_rank(spectrum: torch.Tensor) -> float:
