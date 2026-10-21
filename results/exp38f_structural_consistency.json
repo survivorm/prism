@@ -1,0 +1,40 @@
+{
+ "params": {
+  "seed": 0,
+  "B": 1000,
+  "layer": 23,
+  "N_docs": 32,
+  "S": 128,
+  "J": "raw (M-1 derived for raw J)",
+  "cache": "exp27b_jcache_L23.pt"
+ },
+ "metrics": {
+  "cos_vg_vpred": {
+   "median": 0.004438688745722175
+  },
+  "cos_ug_uniform": {
+   "median": 0.22817692160606384
+  },
+  "dcos": {
+   "median": -0.22365894564427435,
+   "ci": [
+    -0.22431657887063922,
+    -0.2230597056914121
+   ],
+   "mean": -0.2256732525760583
+  },
+  "profile_dc_per_docblock": [
+   -0.2230412398930639,
+   -0.23092712322250009,
+   -0.22350449301302433,
+   -0.21993645979091525
+  ]
+ },
+ "outcomes": {
+  "verdict": "lemma_broken",
+  "gate": "pass"
+ },
+ "meta": {
+  "note": "|cos| used (sign(v_g) non-unique, LAPACK); cos(v_g,v_pred) \u2248 cos(u_g,1/\u221aK) is full agreement; cos \u2248 1 is EXCESS (anomaly), not agreement"
+ }
+}

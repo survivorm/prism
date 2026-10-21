@@ -445,10 +445,13 @@ def holonomy_along_path(
     """Holonomy of a family of subspaces along a 1-D parameter (TZ §3.3).
 
     Args:
-        path_fn: θ → (U_r, V_r), U_r: [K, r], V_r: [r, D_S]. ALL model
-            logic (weight setup, forward, SVD, top-r selection) lives in
-            path_fn — this function does not know about models and does
-            not cache.
+        path_fn: θ → (U_r, V_r), U_r: [K, r], V_r: [r, D_S] (the
+            ``top_r_svd`` convention: rows of V_r are the right singular
+            vectors). ALL model logic (weight setup, forward, SVD, top-r
+            selection) lives in path_fn — this function does not know about
+            models and does not cache. V_r is transposed internally to the
+            [D_S, r] orthonormal-column basis required by procrustes_align;
+            callers pass V_r exactly as top_r_svd returns it.
         thetas: sequence of θ, len ≥ 2. With closed_loop=True the last
             θ must NOT duplicate the first (holonomy_accumulate adds the
             closing step R_{N-1,0} itself; a duplicate would just add a
@@ -488,7 +491,7 @@ def holonomy_along_path(
                 f"got {type(out).__name__}"
             )
         U_list.append(out[0])
-        V_list.append(out[1])
+        V_list.append(out[1].T)  # [r, D_S] -> [D_S, r] orthonormal columns
 
     kappa_U, per_U = holonomy_accumulate(U_list, closed_loop=closed_loop)
     kappa_V, per_V = holonomy_accumulate(V_list, closed_loop=closed_loop)
@@ -526,7 +529,9 @@ def holonomy_along_2d_loop(
             return degenerate subspaces).
         n_theta: loop discretization, ≥ 4 (a 3-point 'loop' is a
             triangle — crude; 16 recommended).
-        measure_fn: h → (U_r, V_r). All model logic lives there.
+        measure_fn: h → (U_r, V_r), V_r: [r, D] (top_r_svd convention;
+            transposed internally to [D, r] for procrustes_align). All model
+            logic lives there.
 
     Returns:
         dict: kappa_U, kappa_V, per_step_U, per_step_V, h_perturbed
@@ -564,7 +569,7 @@ def holonomy_along_2d_loop(
                 f"measure_fn must return (U_r, V_r) tensors, got {type(out).__name__}"
             )
         U_list.append(out[0])
-        V_list.append(out[1])
+        V_list.append(out[1].T)  # [r, D] -> [D, r] orthonormal columns
         h_perturbed.append(h)
 
     kappa_U, per_U = holonomy_accumulate(U_list, closed_loop=True)

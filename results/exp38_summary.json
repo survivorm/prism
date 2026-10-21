@@ -1,0 +1,124 @@
+{
+ "generated": "2026-07-16",
+ "protocol": "docs/E38.md",
+ "model": "Qwen/Qwen3.5-0.8B",
+ "cache": "kaggle_kernel/results/exp27b_jcache_L{l}.pt (32 docs, S=128, 4 domains x 8)",
+ "experiments": {
+  "a": {
+   "file": "results/exp38a_uhat_dynamics.json",
+   "outcomes": {
+    "per_layer": {
+     "6": "mixed",
+     "12": "edges_typical",
+     "18": "edges_typical",
+     "19": "edges_typical",
+     "22": "edges_typical",
+     "23": "edges_typical"
+    },
+    "aggregate": "edges_typical",
+    "counts": {
+     "mixed": 1,
+     "edges_typical": 5
+    }
+   },
+   "size_bytes": 17194,
+   "aggregate": "edges_typical"
+  },
+  "b": {
+   "file": "results/exp38b_position_audit.json",
+   "outcomes": {
+    "per_layer": {
+     "6": "no_artifact",
+     "12": "edge_contamination",
+     "18": "edge_contamination",
+     "19": "edge_contamination",
+     "22": "l22_position_sensitive",
+     "23": "no_artifact"
+    },
+    "aggregate": "see per_layer"
+   },
+   "size_bytes": 23427,
+   "per_layer": {
+    "6": "no_artifact",
+    "12": "edge_contamination",
+    "18": "edge_contamination",
+    "19": "edge_contamination",
+    "22": "l22_position_sensitive",
+    "23": "no_artifact"
+   }
+  },
+  "c": {
+   "file": "results/exp38c_degeneracy_preflight.json",
+   "outcomes": {
+    "aggregate": "near_degeneracy",
+    "near_degeneracy_layers": [
+     "18",
+     "22"
+    ]
+   },
+   "size_bytes": 7134,
+   "aggregate": "near_degeneracy"
+  },
+  "d": {
+   "file": "results/exp38d_holonomy_spectrum.json",
+   "outcomes": {
+    "per_layer": {
+     "6": "non_abelian_candidate,partial",
+     "12": "non_abelian_candidate,partial",
+     "18": "non_abelian_candidate,third_mechanism",
+     "19": "non_abelian_candidate,third_mechanism",
+     "22": "non_abelian_candidate,third_mechanism",
+     "23": "consistency_FAIL,effectively_abelian,partial"
+    }
+   },
+   "size_bytes": 7451,
+   "per_layer": {
+    "6": "non_abelian_candidate,partial",
+    "12": "non_abelian_candidate,partial",
+    "18": "non_abelian_candidate,third_mechanism",
+    "19": "non_abelian_candidate,third_mechanism",
+    "22": "non_abelian_candidate,third_mechanism",
+    "23": "consistency_FAIL,effectively_abelian,partial"
+   }
+  },
+  "e": {
+   "file": "results/exp38e_MK_diagnostic.json",
+   "outcomes": {
+    "gate": "mixed",
+    "consistency": "consistency_redflag",
+    "gate_failed": false
+   },
+   "size_bytes": 2313,
+   "gate": "mixed"
+  },
+  "f": {
+   "file": "results/exp38f_structural_consistency.json",
+   "outcomes": {
+    "verdict": "lemma_broken",
+    "gate": "pass"
+   },
+   "size_bytes": 824,
+   "verdict": "lemma_broken"
+  },
+  "g": {
+   "file": "results/exp38g_jlens_link.json",
+   "outcomes": {
+    "verdict": "jlens_not_tail_modes,lens_validity_suspect"
+   },
+   "size_bytes": 2076,
+   "verdict": "jlens_not_tail_modes,lens_validity_suspect"
+  }
+ },
+ "blocked": {
+  "h": "E-16 ΔW(s) tensors not in repo (kaggle TPU run; only scalar curve in results/exp16_readout_pull.json) — per docs/E38.md §367",
+  "i": "same as h"
+ },
+ "key_findings": [
+  "E-38f: lemma M-1 BROKEN (Δcos = -0.224, CI tight): cos(v_g, v_pred)≈0 — gauge is NOT the M_K-projection of the uniform direction; consistent with E-38e consistency_redflag ((√D/r)|β|/σ_g=0.216, β/‖Jᵀu‖=4.08)",
+  "E-38d: L23 effectively Abelian (κ=0.0162 vs E-28 0.018, 9.8% rel); L18/L22 show non-abelian-candidate spectra (spread up to π) with low ρ(tr H, Ω) (0.23-0.36) — no spherical-geometry coupling",
+  "E-38c: near_degeneracy at L18/L22 (min gap ratio ~0.08-0.09 < 1) — non-Abelian formalism applicable",
+  "E-38a: edges_typical aggregate (4/6 layers); no special head/tail behavior of û_t",
+  "E-38b: position audit — L23 clean (C_b x1.04); L12/L18/L19 show C_b edge contamination (>1.5x); L22 PR position-sensitive (body CI excludes 4.6)",
+  "E-38g: J-Lens (0.8B, Hindi) ρ(S, frac_tail) = -0.93 → J-Space ≠ tail modes; lens validity SUSPECT (author-flagged unvalidated) — sidebar, not external validation"
+ ]
+}
