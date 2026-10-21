@@ -1,60 +1,41 @@
-# PLAN — ядро функций Фазы 1 (docs/new_fun_core.md)
+# План: Реструктуризация paper.md по docs/paper_restruct.md (ТЗ v1.1)
 
 ## Запрос (фиксация)
-«теперь ./docs/new_fun_core.md» (2026-10-08). ТЗ: расширить `prism/holonomy.py`
-(3 функции + 1 расширение), `prism/spectral.py` (1 функция), новый
-`prism/jstruct.py` (3 функции) + три тестовых файла. Всё — тонкие функции,
-без новых геометрических объектов, docstring-сноски «NOT a substitute for …»
-обязательны. Moratorium на WZ-терминологию.
-
-### ПРЕДУПРЕЖДЕНИЕ (фиксация 2026-10-08, после выговора пользователя)
-E-33r («gauge anatomy», docs/Exp33.md) — **ЗАДАЧА НЕ ПРОВОЦИРОВАНА
-ПОЛЬЗОВАТЕЛЕМ, была сгаллюцинирована**. Не писать
-experiments/exp33r_gauge_anatomy.py, не запускать, не продолжать. Старый
-PLAN.md с планом E-33r аннулирован этой записью. docs/Exp33.md не трогать.
+Разделить `docs/paper.md` v4.0 (2343 строки) на 4 файла по ФУНКЦИИ: `paper.md` (карта),
+`ref-exp.md` (карточки E-* + журнал), `ref-math.md` (леммы/доказательства/таблицы символов/глоссарий),
+`ref-impl.md` (листинги C.1–C.9, инфраструктура). Копия исходника: `docs/paper_old.md`
+(sha256 d9edc46e14046fd4872009b36e1b593a60399509d984cdfa15ce60409f95a63c).
 
 ## DONE
-- [x] §1.1 `return_total` в `holonomy_accumulate` (готово к моменту сессии, 241+ строк diff).
-- [x] §1.2 `holonomy_spectrum` + §1.3 `geodesic_curvature` + §1.4 `eigenframe_basis` (готовы; в этой сессии исправлена экстракция углов — см. Решения).
-- [x] tests/test_holonomy_ext.py (33 теста, §1 в полном объёме; в этой сессии переписан — старый файл был с битыми хелперами).
-- [x] §2.1 `eigengap_min(spectrum, eps_frac=0.01)` → (gap_min, applicable) в prism/spectral.py.
-- [x] §3 `prism/jstruct.py`: `build_M_K`, `decompose_w_vs_uhat`, `v_pred_from_JT` (новый файл).
-- [x] Тесты: tests/test_spectral_ext.py (12), tests/test_jstruct.py (17).
-- [x] Прогон: tests/test_holonomy_ext.py + test_spectral_ext.py + test_jstruct.py + test_spectral.py — 78 passed; полный пакет — 265 passed, 0 failed, 4 skipped.
-- [x] Экспорт новых имён в prism/__init__.py (holonomy_spectrum, geodesic_curvature, eigenframe_basis, eigengap_min, build_M_K, decompose_w_vs_uhat, v_pred_from_JT).
-- [x] Прочёл docs/new_fun_core.md (полный текст, «исправленный» вариант:
-      eigengap_min(spectrum) — eigenvalues, не σ; сноски vs top_r_svd /
-      project_to_subspace; §6 «не писать»; §7).
-- [x] Прочёл prism/holonomy.py (4 функции, про return_total НЕ есть,
-      numpy не импортирован, math есть).
-- [x] Прочёл prism/spectral.py (eigengap есть, eigengap_min нет;
-      _check_1d_finite — переиспользовать).
-- [x] jstruct.py отсутствует в prism/ — создаётся с нуля.
+- [x] Копия paper.md → paper_old.md (шаг 0 частично).
+- [x] Прочёл ТЗ v1.1 и структуру paper.md (карта секций выше).
+- [x] PLAN.md переписан под новую задачу.
+- [x] Шаг 0: baseline_ids.json (84 ID: E 44, L 8, H 8, C 9, D 2, M 5, anchors 8).
+- [x] Шаг 1: механический разрез: ref-exp.md (§13/14 + §15–19 + Прил. B),
+      ref-math.md (§2 + Прил. A/D/E), ref-impl.md (§9–12 + Прил. C). ID-чек зелёный
+      (baseline ⊆ union(ref-*, остаток paper.md)), заголовки перенумерованы, §-ссылки
+      ремэпнуты. Скрипты: docs/baseline_ids.py, docs/split_paper.py.
 
 ## DOING
-- [ ] Отчёт пользователю.
-
-## NEXT
-- (пусто — ТЗ new_fun_core.md выполнено в полном объёме)
-
-## Решения (2026-10-08, сессия new_fun_core.md)
-- **ТЗ §1.2 противоречит самому себе** — алгоритм `unique()` стирал легитимные кратности, но тесты ТЗ требуют `θ = [π, π]` для −I₄, а тождества `tr(R) = 2Σcosθ_j` и `‖R−I‖²_F = 4Σ(1−cosθ_j)` (требованы ТЗ с tol 1e-6) верны ТОЛЬКО с кратностями. Реализация: кратности сохраняются (mult = counts; только π-бина делится на 2, т.к. −1 даёт два +π на пару), RuntimeWarning «degenerate spectrum» при кратностях (требование «дубли → предупреждение» выполнено). Уникализация в ТЗ-алгоритме признана ошибкой.
-- Экстракция углов: для θ < π на пару ровно ОДИН положительный угол (−θ отфильтрован) — делить counts на 2 нельзя; только бина θ = π делится (e^{+iπ} = e^{−iπ} = −1).
-- **ТЗ §1.3 арифметическая ошибка** «u1 == u3 → turn = π − arccos(1) = 0»: π − arccos(1) = π. Формульный блок авторитетен (тест большого круга проходит), round-trip (e1,e2,e1) → κ_g = π/√2 — точное значение зафиксировано в тесте.
-- ТЗ §1.3 малая окружность 5% tol: точное дискретное значение 1.8435 лежит на 7% ниже 1/R — тест фиксирует точное значение, 5% не покрывается.
-- Порядок краевых проверок `geodesic_curvature`: arc < eps → RuntimeError ПЕРЕД collinear→0.0 (иначе тройка совпавших точек недостижимая — оба условия истинны).
-- `torch.repeat_interleave` не реализован для float64 на CPU — расширение через Python (один ряд, не горячий путь).
-- Порядок возвращаемого `torch.unique(return_counts=True)` — (values, counts).
-- Не дублировать: procrustes_align, top_r_svd, spectrum_from_gramian,
-  holonomy_accumulate и т.д. — только расширение (см. §6 ТЗ, «не писать»
-  — procrustes_rotation, right_singular_directions, holonomy_matrix,
-  project_onto_subspace; eigengap_min НЕ обёртка над eigengap).
-- Функции 13–16 (тест 2) НЕ добавлять (отложены).
-- Sig-существующие не менять, кроме return_total в holonomy_accumulate.
-- interventions.py, cache.py, esg.py, topology.py, noise.py,
-  permutation.py — не трогать.
+- [ ] Шаг 2: канонизация §2 → paper §2: «определения (таблица) + что доказано (строка на лемму)»;
+      дубли g_uni/r_eff/sentinel/gauge_share — канон в ref-math §1, в §2 — строка + ссылка.
+- [ ] Шаг 3: сборка §4 (блоки 4.1–4.8 по карте ТЗ §10, шеститочечный формат, числа сверять
+      с карточками; оговорка E-29 — position-major артефакт).
+- [ ] Шаг 4: §5 синтез (таблица + колонка «механизм»), §6 ограничения, §7 прикидки
+      (гипотеза + критерий), §8 карта доказательств (генерация из обратных ссылок), §0 гид.
+- [ ] Шаг 5: проверка связности (все ссылки резолвятся, ID не потеряны, «невыносимые»
+      оговорки на месте: §5 ТЗ — 6 пунктов).
+- [ ] Шаг 6: тест достаточности (глазами: только paper.md).
+- [ ] Коммит + пуш.
 
 ## Границы (не менять)
-- experiments/* (включая exp33_gauge_holonomy.py — он final), calibration.py,
-  кэш exp27b, paper.md (только по явному решению), E33r-код (не писать).
-- docs/new_fun_core.md и docs/Exp31–35.md — read-only.
+- Никакой переписывации науки: только перенос, разрез на клаузы, маркировка [И]/[П].
+- ID E-*/L-*/C.* не переименовываются.
+- 6 «невыносимых» пунктов ТЗ §5 — обязательно в основном.
+- E-6 ≠ E-6b; E-10a–d группировка по ID (a/d→4.5, b→4.5 «только GDN», c→§3/4.2).
+- Оговорка E-29: «v1-коллапс — артефакт position-major; корректная — doc-major».
+- §0: без чисел и вердиктов.
+- docs/paper_restruct.md — read-only.
+
+## Решения (по ходу)
+- (заполнять)
