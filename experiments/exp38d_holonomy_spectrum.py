@@ -74,6 +74,7 @@ def main():
         omega_all = np.zeros((n_triples, N))
         degenerate = np.zeros((n_triples, N), dtype=bool)
         trivial = np.zeros((n_triples, N), dtype=bool)
+        idiff_max = 0.0
         for t in range(n_triples):
             for i in range(N):
                 V0 = top_r_svd(J[i, t], R)[2].T.contiguous()
@@ -97,6 +98,19 @@ def main():
                 # theta storage: zero-pad for length (does not affect
                 # theta_max / degenerate detection)
                 theta_all[t, i, :len(th)] = th
+                # Exact identity for ANY orthogonal (normal) H, summed over
+                # ALL r eigenvalues:  ||H - I||_F^2 = sum_j 2 (1 - cos
+                # ang_j).  (The naive 4*sum(1-cos theta) over the r//2
+                # reported angles OVER-COUNTS a lone -1 reflection axis,
+                # which can appear because a Procrustes step is the polar
+                # factor with no det-fix and may be a reflection: the axis
+                # contributes 4, the reported pi angle implies 8.)  Computed
+                # here from the SAME float64 Htot as kappa_all -> exact.
+                ang_all = np.angle(
+                    torch.linalg.eigvals(Htot).numpy())
+                idiff_max = max(idiff_max, abs(
+                    kappa_all[t, i] ** 2
+                    - float((2.0 * (1.0 - np.cos(ang_all))).sum())))
                 omega_all[t, i] = geodesic_curvature(u[i, t], u[i, t + 1],
                                                      u[i, t + 2])
                 if step_res > DEGEN_RES_FRAC:
@@ -115,11 +129,6 @@ def main():
         rho_med = float(np.median(rho)) if rho else float("nan")
         theta_flat = theta_all[~degenerate]
         spread = float(np.nanmax(theta_flat) - np.nanmin(theta_flat))
-        # exact identity check on a sample of non-degenerate triples
-        sample = np.argwhere(~degenerate)
-        idx = sample[:: max(1, len(sample) // 200)][:200]
-        idiff = max(abs(kappa_all[a, b] ** 2 - 4.0 * (1.0 - np.cos(
-            theta_all[a, b])).sum()) for a, b in idx) if len(idx) else 0.0
         per_layer[str(l)] = {
             "kappa_median": float(np.median(kappa_all)),
             "kappa_ci": list(np.percentile(kappa_all, [2.5, 97.5])),
@@ -131,7 +140,7 @@ def main():
                                            1.0, np.pi])[0]],
                 "spread_max_minus_min": spread},
             "trH_vs_omega": {"rho_median": rho_med, "n_positions": len(rho)},
-            "identity_check_max_absdiff": float(idiff),
+            "identity_check_max_absdiff": float(idiff_max),
             "degenerate_frac": float(degenerate.mean()),
             "trivial_frac": float(trivial.mean()),
             "profile_kappa": [float(np.median(kappa_all[t]))
