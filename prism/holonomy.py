@@ -252,6 +252,13 @@ def holonomy_spectrum(
     # mult = counts. At θ = π both eigenvalues are −1 and both angles are
     # +π — counts is doubled there, so halve only the π bin (−I₄ → θ =
     # [π, π], not [π, π, π, π]).
+    # A LONE real -1 eigenvalue (reflection axis; det R_total = -1, possible
+    # because a Procrustes step may be a reflection) also lands in the pi
+    # bin and is reported as a pi angle - the standard convention. It is NOT
+    # a 2D rotation block: it contributes 4 to ||R-I||_F^2, while the
+    # reported pi angle implies 8 in the 4*sum(1-cos theta) identity.
+    # Exact identities must sum over ALL r eigenvalues:
+    #   ||R-I||_F^2 = sum_j 2 (1 - cos ang_j).
     angles = torch.angle(eigvals)  # (-π, π]
     positive = angles[angles > 1e-6]
     rounded = positive.round(decimals=8)

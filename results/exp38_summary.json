@@ -66,19 +66,27 @@
      "6": "non_abelian_candidate,partial",
      "12": "non_abelian_candidate,partial",
      "18": "non_abelian_candidate,third_mechanism",
-     "19": "non_abelian_candidate,third_mechanism",
+     "19": "non_abelian_candidate,partial",
      "22": "non_abelian_candidate,third_mechanism",
      "23": "consistency_FAIL,effectively_abelian,partial"
     }
    },
-   "size_bytes": 7451,
+   "size_bytes": 7433,
    "per_layer": {
     "6": "non_abelian_candidate,partial",
     "12": "non_abelian_candidate,partial",
     "18": "non_abelian_candidate,third_mechanism",
-    "19": "non_abelian_candidate,third_mechanism",
+    "19": "non_abelian_candidate,partial",
     "22": "non_abelian_candidate,third_mechanism",
     "23": "consistency_FAIL,effectively_abelian,partial"
+   },
+   "idiff": {
+    "6": 4.4073158989021977e-07,
+    "12": 3.9192285683498085e-07,
+    "18": 2.9621210995145475e-07,
+    "19": 2.6945060227490103e-07,
+    "22": 2.8534097840093864e-07,
+    "23": 7.637902940324515e-11
    }
   },
   "e": {
@@ -110,15 +118,15 @@
   }
  },
  "blocked": {
-  "h": "E-16 ΔW(s) tensors not in repo (kaggle TPU run; only scalar curve in results/exp16_readout_pull.json) — per docs/E38.md §367",
+  "h": "E-16 ΔW(s) tensors not in repo (kaggle TPU run; only scalar curve in results/exp16_readout_pull.json)",
   "i": "same as h"
  },
  "key_findings": [
-  "E-38f: lemma M-1 BROKEN (Δcos = -0.224, CI tight): cos(v_g, v_pred)≈0 — gauge is NOT the M_K-projection of the uniform direction; consistent with E-38e consistency_redflag ((√D/r)|β|/σ_g=0.216, β/‖Jᵀu‖=4.08)",
-  "E-38d: L23 effectively Abelian (κ=0.0162 vs E-28 0.018, 9.8% rel); L18/L22 show non-abelian-candidate spectra (spread up to π) with low ρ(tr H, Ω) (0.23-0.36) — no spherical-geometry coupling",
+  "E-38f: lemma M-1 BROKEN (Δcos = -0.224, CI [-0.2243, -0.2231]): cos(v_g, v_pred)=0.0044 ≈ 0 — gauge is NOT the M_K-projection of the uniform direction; consistent with E-38e consistency_redflag ((√D/r)|β|/σ_g=0.216≠1, β/‖Jᵀu‖=4.08≠1)",
+  "E-38d: L23 effectively Abelian (κ=0.0162 vs E-28 0.018, 9.8% rel, tol 1e-3 FAIL); L6/L18/L22 non-abelian-candidate (spread up to π); ρ(tr H, Ω)=0.24–0.48 (max L6 0.48) — spherical geometry (ρ>0.7) NOT confirmed; identity check max 4.4e-07",
   "E-38c: near_degeneracy at L18/L22 (min gap ratio ~0.08-0.09 < 1) — non-Abelian formalism applicable",
-  "E-38a: edges_typical aggregate (4/6 layers); no special head/tail behavior of û_t",
-  "E-38b: position audit — L23 clean (C_b x1.04); L12/L18/L19 show C_b edge contamination (>1.5x); L22 PR position-sensitive (body CI excludes 4.6)",
-  "E-38g: J-Lens (0.8B, Hindi) ρ(S, frac_tail) = -0.93 → J-Space ≠ tail modes; lens validity SUSPECT (author-flagged unvalidated) — sidebar, not external validation"
+  "E-38a: edges_typical aggregate (5/6 layers; L6 mixed)",
+  "E-38b: L23 clean (C_b x1.04); L12/L18/L19 edge contamination; L22 PR position-sensitive",
+  "E-38g: J-Lens (0.8B, Hindi) ρ(S, frac_tail) = -0.93 → J-Space ≠ tail modes; lens validity SUSPECT (σ1=5.7, ‖J−I‖=18) — sidebar, not external validation"
  ]
 }
