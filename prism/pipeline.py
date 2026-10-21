@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import time
 import uuid
 from collections.abc import Callable, Mapping, Sequence
@@ -69,7 +70,9 @@ def _json_safe(obj: Any) -> Any:
         return _json_safe(obj.item())
     if isinstance(obj, Mapping):
         return {str(k): _json_safe(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple, set)):
+    if isinstance(obj, set):  # deterministic order (to_key stability)
+        return [_json_safe(v) for v in sorted(obj, key=repr)]
+    if isinstance(obj, (list, tuple)):
         return [_json_safe(v) for v in obj]
     return f"<unserializable: {type(obj).__name__}>"
 
@@ -276,7 +279,7 @@ def _now_iso() -> str:
 
 def _detect_env() -> dict:
     env = {
-        "python": __import__("sys").version.split()[0],
+        "python": sys.version.split()[0],
         "torch": torch.__version__,
         "numpy": np.__version__,
         "transformers": "unknown",
@@ -438,6 +441,9 @@ def run_spec(
         "error": None,
         "reused": False,
     }
+    # Write BEFORE exp_fn so a crash/Ctrl-C leaves on-disk diagnostics
+    # (docstring contract; SIGKILL/OOM still leave nothing).
+    _write_json_atomic(meta_path, meta)
     if verbose:
         print(f"[run_spec] experiment={spec.experiment} key={spec_key} "
               f"path={output_path}")
@@ -530,6 +536,7 @@ def load_artifacts(path: str) -> OutputArtifacts:
     if not os.path.exists(results_path):
         meta["results_available"] = False
     spec = _spec_from_meta(meta)
+    validate_spec(spec)  # hand-edited/stale meta → catch, don't return bad spec
     return OutputArtifacts(
         spec=spec, results=results, meta=meta, path=meta_path,
         spec_key=str(meta.get("spec_key", spec.to_key())), reused=True,
