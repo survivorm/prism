@@ -1,5 +1,5 @@
 {
- "generated": "2026-07-16",
+ "generated": "2026-07-22",
  "protocol": "docs/E38.md",
  "model": "Qwen/Qwen3.5-0.8B",
  "cache": "kaggle_kernel/results/exp27b_jcache_L{l}.pt (32 docs, S=128, 4 domains x 8)",
@@ -21,7 +21,7 @@
      "edges_typical": 5
     }
    },
-   "size_bytes": 17194,
+   "size_bytes": 37749,
    "aggregate": "edges_typical"
   },
   "b": {
@@ -56,7 +56,7 @@
      "22"
     ]
    },
-   "size_bytes": 7134,
+   "size_bytes": 25055,
    "aggregate": "near_degeneracy"
   },
   "d": {
@@ -68,17 +68,17 @@
      "18": "non_abelian_candidate,third_mechanism",
      "19": "non_abelian_candidate,partial",
      "22": "non_abelian_candidate,third_mechanism",
-     "23": "consistency_FAIL,effectively_abelian,partial"
+     "23": "consistency_pass,effectively_abelian,partial"
     }
    },
-   "size_bytes": 7433,
+   "size_bytes": 985710,
    "per_layer": {
     "6": "non_abelian_candidate,partial",
     "12": "non_abelian_candidate,partial",
     "18": "non_abelian_candidate,third_mechanism",
     "19": "non_abelian_candidate,partial",
     "22": "non_abelian_candidate,third_mechanism",
-    "23": "consistency_FAIL,effectively_abelian,partial"
+    "23": "consistency_pass,effectively_abelian,partial"
    },
    "idiff": {
     "6": 4.4073158989021977e-07,
@@ -87,7 +87,8 @@
     "19": 2.6945060227490103e-07,
     "22": 2.8534097840093864e-07,
     "23": 7.637902940324515e-11
-   }
+   },
+   "H_012_doc0_saved_L23": true
   },
   "e": {
    "file": "results/exp38e_MK_diagnostic.json",
@@ -111,10 +112,17 @@
   "g": {
    "file": "results/exp38g_jlens_link.json",
    "outcomes": {
-    "verdict": "jlens_not_tail_modes,lens_validity_suspect"
+    "verdict": "tails_disjoint,lens_validity_suspect"
    },
-   "size_bytes": 2076,
-   "verdict": "jlens_not_tail_modes,lens_validity_suspect"
+   "size_bytes": 4561,
+   "verdict": "tails_disjoint,lens_validity_suspect",
+   "primary_overlap": 0.059651183585325875,
+   "overlap_ci": [
+    0.0593866154551506,
+    0.05985600749651591
+   ],
+   "rho_our": -0.03986792711957517,
+   "rho_lens": -0.9269908212781541
   }
  },
  "blocked": {
@@ -122,11 +130,11 @@
   "i": "same as h"
  },
  "key_findings": [
+  "E-38g (rewritten per docs/E38_fixes.md part-2 §1, options (a)+(b)): PRIMARY subspace overlap of our per-position tail (bottom 10% of 128 σ of J_t) inside the lens tail (bottom 10% of 1024 σ of J_lens,22) = 0.0597 [0.0594, 0.0599] → tails_disjoint: NO subspace symmetry with the Hindi J-Lens. SECONDARY: rho_our (our basis) = -0.04, rho_lens (lens-internal, the metric the old version mislabeled as the TZ question) = -0.93. Lens validity gate SUSPECT (σ1=5.72, ‖J−I‖_F=17.95) — sidebar, not external validation (Hindi-fit lens, English docs).",
   "E-38f: lemma M-1 BROKEN (Δcos = -0.224, CI [-0.2243, -0.2231]): cos(v_g, v_pred)=0.0044 ≈ 0 — gauge is NOT the M_K-projection of the uniform direction; consistent with E-38e consistency_redflag ((√D/r)|β|/σ_g=0.216≠1, β/‖Jᵀu‖=4.08≠1)",
-  "E-38d: L23 effectively Abelian (κ=0.0162 vs E-28 0.018, 9.8% rel, tol 1e-3 FAIL); L6/L18/L22 non-abelian-candidate (spread up to π); ρ(tr H, Ω)=0.24–0.48 (max L6 0.48) — spherical geometry (ρ>0.7) NOT confirmed; identity check max 4.4e-07",
-  "E-38c: near_degeneracy at L18/L22 (min gap ratio ~0.08-0.09 < 1) — non-Abelian formalism applicable",
-  "E-38a: edges_typical aggregate (5/6 layers; L6 mixed)",
-  "E-38b: L23 clean (C_b x1.04); L12/L18/L19 edge contamination; L22 PR position-sensitive",
-  "E-38g: J-Lens (0.8B, Hindi) ρ(S, frac_tail) = -0.93 → J-Space ≠ tail modes; lens validity SUSPECT (σ1=5.7, ‖J−I‖=18) — sidebar, not external validation"
+  "E-38d: L23 effectively Abelian (κ=0.0162 vs E-28 0.018, diagnostic consistency_pass at 5e-3 tol; 1e-3 tol fails — cited 0.018 rounding); L6/L18/L22 non-abelian-candidate (spread up to π); ρ(tr H, Ω)=0.24–0.48 — spherical geometry (ρ>0.7) NOT confirmed; identity check max 4.4e-07; full H_012 saved for L23 doc 0 (future κ_fiber)",
+  "E-38c: near_degeneracy at L18/L22 (min gap ratio ~0.08-0.09 < 1) — non-Abelian formalism applicable; s1sq_profile recorded",
+  "E-38a: edges_typical aggregate (5/6 layers; L6 mixed); per-doc ratio distributions recorded (all-docs vs subset check)",
+  "E-38b: L23 clean (C_b x1.04); L12/L18/L19 edge contamination; L22 PR position-sensitive (computed pos0 baseline, paper 4.6 = min-over-positions cross-ref only); align_K1 on u_g convention (max over modes)"
  ]
 }

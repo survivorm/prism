@@ -8,7 +8,10 @@
   "tail_frac": 0.1,
   "lens": "Utkarsh736/qwen3.5-0.8b-hindi-jacobian-lens",
   "lens_sha256": "7918b892fcac8b1947ed960597ea7784bcdb9d66400c26b1e733488fdd46fe7c",
-  "cache": "exp27b_jcache_L22.pt"
+  "cache": "exp27b_jcache_L22.pt",
+  "r_our": 12,
+  "r_lens": 102,
+  "J_our": "raw per-position [K=128, D=1024] (E-28 convention)"
  },
  "lens_validity": {
   "sigma1": 5.721141338348389,
@@ -18,67 +21,127 @@
   "valid": false
  },
  "metrics": {
-  "rho_S_frac_tail": {
-   "median": -0.9264328877494963,
+  "primary_overlap_our_tail_in_lens_tail": {
+   "median": 0.059651183585325875,
    "ci": [
-    -0.9349163385826771,
-    -0.9115489379234571
+    0.0593866154551506,
+    0.05985600749651591
+   ],
+   "profile_every_8": [
+    0.06267491728067398,
+    0.060304611921310425,
+    0.06196155895789464,
+    0.06158265968163808,
+    0.061539215346177414,
+    0.05999268591403961,
+    0.0586023951570193,
+    0.061403257151444755,
+    0.06014124552408854,
+    0.06114964932203293,
+    0.060269715885321304,
+    0.05985759198665619,
+    0.060607098042964935,
+    0.05680187791585922,
+    0.05578223367532094,
+    0.058201792339483895
+   ]
+  },
+  "rho_our_S_frac_tail": {
+   "median": -0.03986792711957517,
+   "ci": [
+    -0.11805301226881522,
+    0.008537813587255081
    ],
    "per_doc": [
-    -0.9255287493133124,
-    -0.959308047976561,
-    -0.9343755722395165,
-    -0.932624519318806,
-    -0.9031827961911739,
-    -0.8812087987548066,
-    -0.9267476194836111,
-    -0.9372882713788683,
-    -0.9392338857352133,
-    -0.9115489379234571,
-    -0.9622321919062442,
-    -0.9105532411646219,
-    -0.9193886193004943,
-    -0.8968652719282182,
-    -0.9261181560153816,
-    -0.8948567112250502,
-    -0.9435314045046693,
-    -0.8937923457242264,
-    -0.9371623786852225,
-    -0.9288935176707562,
-    -0.9655855154733566,
-    -0.9292826405420253,
-    -0.8948223768540559,
-    -0.9156633400476103,
-    -0.8946735945797473,
-    -0.915096822926204,
-    -0.9013115729719829,
-    -0.9354571049258377,
-    -0.9498088720014649,
-    -0.9481150430324117,
-    -0.8627483519501922,
-    -0.9720632668009521
+    -0.02913843618384911,
+    0.06438266800952205,
+    -0.28376785387291703,
+    0.03522706464017579,
+    -0.09236518036989562,
+    0.022363120307635962,
+    -0.049836339498260385,
+    -0.16795802050906428,
+    0.12268242995788317,
+    -0.4087850210584142,
+    0.31588193554294086,
+    -0.022712186412744917,
+    0.3127746749679545,
+    0.011147225782823659,
+    -0.12295710492583774,
+    -0.17444721662699136,
+    -0.038340047610327777,
+    -0.1131489196117927,
+    0.005928401391686503,
+    0.017121406335835927,
+    0.08213926020875296,
+    -0.12754646584874565,
+    -0.04139580662882256,
+    -0.030094076176524445,
+    -0.1795973722761399,
+    -0.12078831715802966,
+    -0.04298091008972715,
+    -0.22993728254898368,
+    0.015376075810291153,
+    -0.1547221204907526,
+    0.012823887566379782,
+    -0.331687190990661
    ]
   },
-  "S_entropy": {
-   "median": 5.744044780731201,
-   "range": [
-    4.633725643157959,
-    6.221065521240234
+  "rho_lens_S_frac_tail": {
+   "median": -0.9269908212781541,
+   "ci": [
+    -0.9355829976194835,
+    -0.9115718275041201
+   ],
+   "per_doc": [
+    -0.9268048434352683,
+    -0.9596571140816699,
+    -0.9334256546420069,
+    -0.9348390862479398,
+    -0.9038008148690717,
+    -0.8806995055850576,
+    -0.92717679912104,
+    -0.9385529207104926,
+    -0.9426158212781541,
+    -0.9115718275041201,
+    -0.9628444881889763,
+    -0.9102957333821643,
+    -0.9202069218091924,
+    -0.8960755813953487,
+    -0.9258091466764329,
+    -0.8957722944515656,
+    -0.9434284013916864,
+    -0.8940956326680095,
+    -0.93754005676616,
+    -0.9288134041384362,
+    -0.9644410364402123,
+    -0.9283384453396814,
+    -0.8960011902581945,
+    -0.9160295733382163,
+    -0.8956235121772568,
+    -0.9150052646035525,
+    -0.9059295458707196,
+    -0.9363269089910272,
+    -0.9503925563083684,
+    -0.9482180461453946,
+    -0.8644021241530854,
+    -0.9722635506317525
    ]
   },
-  "frac_tail": {
-   "median": 0.3002288043498993,
-   "range": [
-    0.09014537185430527,
-    0.6158348917961121
-   ]
+  "S_our_entropy": {
+   "median": 6.095826625823975
+  },
+  "frac_tail_our": {
+   "median": 0.9793699085712433
   }
  },
  "outcomes": {
-  "verdict": "jlens_not_tail_modes,lens_validity_suspect"
+  "verdict": "tails_disjoint,lens_validity_suspect"
  },
  "meta": {
-  "note": "Lens fit on HINDI (finewiki@hi), docs English \u2014 structural test (sparsity vs tail energy), not token readout. Author flags lens 'experimental/unvalidated'; validity gate = bounded spectrum of J_22. Per TZ: do NOT substitute 9B results (different D).",
-  "tail": "bottom 10% of \u03c3 (k > 921)"
+  "what_this_test_is": "PRIMARY (b): direct subspace check \u2014 per-position tail subspace of OUR J_t (bottom 10% of its 128 \u03c3, right singular vectors, R^1024) vs tail subspace of the LENS J_22 (bottom 10% of 1024 \u03c3): overlap = \u2016V_our_tail^T V_lens_tail\u2016_F\u00b2/r_our. This is the TZ's 'symmetry with Anthropic' claim. SECONDARY (a): dual sparsity/tail correlation in both bases (rho_our vs rho_lens; the old version reported only the lens-internal rho_lens, which is NOT the TZ question). docs/E38_fixes.md part-2 \u00a71.",
+  "note": "Lens fit on HINDI (finewiki@hi), docs English. Lens J_22 is a position-averaged [1024,1024] Jacobian; our J_t is per-position [128,1024]. Both act on the same h_t \u2208 R^1024 at L22 \u2014 the right-singular comparison is well-defined there. Author flags the lens 'experimental/unvalidated'; validity gate = bounded spectrum of J_22. Per TZ: do NOT substitute 9B results (different D).",
+  "basis_completion": "our 128 right singular vectors completed to a full R^1024 basis by scipy.linalg.null_space (896 deterministic LAPACK null vectors), so S_our(t) is over the same 1024-mode p_k as rho_lens.",
+  "tail": "bottom 10% of each spectrum: our modes 116..128 (of 128), lens modes 922..1024 (of 1024)."
  }
 }

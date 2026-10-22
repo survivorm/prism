@@ -9,16 +9,21 @@ sufficiently small minimum consecutive eigenvalue gap.
 Per (layer, t, doc):
     sv(J_t) -> sigma_1 >= ... >= sigma_16
     spectrum = sigma^2 (eigenvalues of J J^T)
-    (gap_min, applicable) = eigengap_min(spectrum, eps_frac)
-    threshold = eps_frac * sigma_1^2, applicable = gap_min >= threshold
+    (gap_min, well_separated) = eigengap_min(spectrum, eps_frac)
+    threshold = eps_frac * sigma_1^2, well_separated = gap_min >= threshold
 
 eps_frac = 0.01 (convention; sensitivity sweep {0.005, 0.01, 0.02}).
 L23 (lm_head) is trivial by construction — preflight is only informative
 for internal layers L18/L22; all 6 layers are computed and recorded.
 Layers are NOT averaged (per-TZ).
 
-Per layer: fraction_applicable = median_t (mean_doc applicable);
+Per layer: fraction_well_separated = median_t (mean_doc well_separated);
           min_t_gap_min = min_t (median_doc gap_min).
+
+Note (docs/E38_fixes.md §1.1): well_separated = "gap big" = the non-Abelian
+formalism is NOT applicable at that (t, doc). The pre-registered verdicts
+below are driven by min_t_gap_min_over_threshold (direct comparison), so the
+rename is semantic honesty only — it does not change any outcome.
 
 Pre-registered outcomes:
     non_abelian_not_applicable — min_t_gap_min >= threshold on ALL layers
@@ -56,7 +61,7 @@ def main():
         J = ck["J"]                     # [N, S, K, D]
         N, Ss, Kk, Dd = J.shape
         del ck
-        # accumulate per (t, doc): gap_min (main eps), applicable (per sweep eps)
+        # accumulate per (t, doc): gap_min (main eps), well_separated (per sweep eps)
         gap_min_td = np.zeros((Ss, N))          # main eps
         appl_td = {e: np.zeros((Ss, N), dtype=bool) for e in EPS_SWEEP}
         s1sq = np.zeros((Ss, N))                # sigma_1^2
@@ -75,20 +80,23 @@ def main():
         gap_t_med = np.median(gap_min_td, axis=1)
         ref_threshold = EPS_MAIN * float(np.median(s1sq))
         per_layer[str(l)] = {
-            "fraction_applicable": {
+            "fraction_well_separated": {
                 e: float(np.median(appl_td[e].mean(axis=1))) for e in EPS_SWEEP},
             "min_t_gap_min": float(gap_t_med.min()),
             "ref_threshold": ref_threshold,
             "min_t_gap_min_over_threshold": float(gap_t_med.min() / ref_threshold),
             "argmin_t": int(gap_t_med.argmin()),
             "s1sq_median": float(np.median(s1sq)),
+            # per-position profile of σ_1² (median over docs) — shows how
+            # the threshold scale varies with depth (docs/E38_fixes.md §5.3)
+            "s1sq_profile_t": [float(x) for x in np.median(s1sq, axis=1)],
             "profile_gap_min_t": [float(x) for x in gap_t_med[::4]],
             "informative": bool(l in (18, 22)),
         }
         r = per_layer[str(l)]
         del J
-        print(f"L{l}: fraction_applicable@0.01={r['fraction_applicable'][0.01]:.3f} "
-              f"(sweep {[r['fraction_applicable'][e] for e in EPS_SWEEP]}) | "
+        print(f"L{l}: fraction_well_separated@0.01={r['fraction_well_separated'][0.01]:.3f} "
+              f"(sweep {[r['fraction_well_separated'][e] for e in EPS_SWEEP]}) | "
               f"min_t_gap_min={r['min_t_gap_min']:.4f} thresh={ref_threshold:.4f} "
               f"ratio={r['min_t_gap_min_over_threshold']:.3f} informative={r['informative']}")
 
@@ -114,7 +122,10 @@ def main():
         "outcomes": verdicts,
         "meta": {"note": "L23 (lm_head) trivial by construction — preflight "
                          "informative only for L18/L22 (internal). Layers not "
-                         "averaged (per-TZ). applicable = gap_min >= eps_frac*sigma_1^2."},
+                         "averaged (per-TZ). well_separated = gap_min >= "
+                         "eps_frac*sigma_1^2 (i.e. near-degenerate NOT present; "
+                         "the non-Abelian formalism is applicable where this is "
+                         "False)"},
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     json.dump(out, open(OUT, "w"), indent=1, default=float)
