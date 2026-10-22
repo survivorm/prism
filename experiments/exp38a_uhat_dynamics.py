@@ -6,7 +6,10 @@ Post-process of the exp27b dense cache (kaggle_kernel/results/exp27b_jcache_L{l}
     û_t = h_t / ‖h_t‖₂ (inline, clamp_min 1e-12 — attention-sink guard)
     s(t) = ‖û_{t+1} − û_t‖₂,                      t = 0..S-2
     κ_g(t) = geodesic_curvature(û_{t-1}, û_t, û_{t+1}),  t = 1..S-2
-Segments: head=[0,16), body=[16,S-2), tail={S-2,S-1}. Anomaly if
+Segments: head=[0,16), body=[16,S-2), tail={S-2} (single position: s is
+[N, S-1] with indices 0..S-2 and kappa needs the triple (t-1, t, t+1), so
+position S-1 has neither s[S-1] nor kappa[S-1] — {S-2} is the only
+possible tail). Anomaly if
 |median(seg) − median(body)| / IQR(body) > 2.
 
 Pre-registered outcomes:
@@ -32,7 +35,7 @@ from prism.holonomy import geodesic_curvature  # noqa: E402
 
 SEED = 0
 HEAD_END = 16
-BODY_END = S - 2          # 126; tail = {126, 127}
+BODY_END = S - 2          # 126; tail = {126} (see docstring: S-1 undefined for s/kappa)
 T_ANOM = 2.0
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -72,16 +75,41 @@ def main():
 
         s_body = segs(s, HEAD_END, BODY_END)
         k_body = segs(kapp, HEAD_END, BODY_END)
+
+        def per_doc_ratio(v: np.ndarray, t_lo: int, t_hi: int,
+                          b_lo: int, b_hi: int, iqr_b: float) -> list:
+            """Per-doc anomaly ratio (docs/E38_fixes.md §5.1/§2.5): mixed
+            seg_stats conflates docs and positions; the per-doc ratio
+            distinguishes "edge special on all docs" from "on 5 of 32".
+            Denominator = IQR of the MIXED body (same as seg_stats, for
+            comparability); medians are per-doc over positions."""
+            med_seg = np.median(v[:, t_lo:t_hi], axis=1)
+            med_body = np.median(v[:, b_lo:b_hi], axis=1)
+            if iqr_b > 0:
+                return [float(abs(a - b) / iqr_b)
+                        for a, b in zip(med_seg, med_body)]
+            return [0.0] * v.shape[0]
+
+        iqr_s = float(np.percentile(s_body, 75) - np.percentile(s_body, 25))
+        iqr_k = float(np.percentile(k_body, 75) - np.percentile(k_body, 25))
         row = {
             "s": {
                 "head": seg_stats(segs(s, 0, HEAD_END), s_body),
                 "body": seg_stats(s_body, s_body),
                 "tail": seg_stats(segs(s, BODY_END, S - 1), s_body),
+                "per_doc_ratio_head": per_doc_ratio(s, 0, HEAD_END,
+                                                    HEAD_END, BODY_END, iqr_s),
+                "per_doc_ratio_tail": per_doc_ratio(s, BODY_END, S - 1,
+                                                    HEAD_END, BODY_END, iqr_s),
             },
             "kappa_g": {
                 "head": seg_stats(segs(kapp, 1, HEAD_END), k_body),
                 "body": seg_stats(k_body, k_body),
                 "tail": seg_stats(segs(kapp, BODY_END, S - 1), k_body),
+                "per_doc_ratio_head": per_doc_ratio(kapp, 1, HEAD_END,
+                                                    HEAD_END, BODY_END, iqr_k),
+                "per_doc_ratio_tail": per_doc_ratio(kapp, BODY_END, S - 1,
+                                                    HEAD_END, BODY_END, iqr_k),
             },
             "pos0": {
                 "median_s0": float(np.median(s[:, 0])),
@@ -97,7 +125,6 @@ def main():
         row["is_gdn"] = bool(l in (19, 22))
         per_layer[str(l)] = row
         del ck
-        hs = [r["anomalous"] for r in row["s"].values() if r is row["s"]["head"]]
         print(f"L{l}: s head={row['s']['head']['median']:.4f} "
               f"body={row['s']['body']['median']:.4f} "
               f"tail={row['s']['tail']['median']:.4f} | "
@@ -138,7 +165,7 @@ def main():
     out = {
         "params": {"seed": SEED, "S": S, "layers": list(LAYERS), "N_docs": 32,
                    "head": f"[0,{HEAD_END})", "body": f"[{HEAD_END},{BODY_END})",
-                   "tail": f"{{{BODY_END},{S - 1}}}", "anomaly_threshold": T_ANOM,
+                   "tail": f"{{{BODY_END}}}", "anomaly_threshold": T_ANOM,
                    "cache": "kaggle_kernel/results/exp27b_jcache_L{l}.pt"},
         "metrics": per_layer,
         "l18_vs_l19_gdn": l18_vs_l19,
@@ -147,7 +174,13 @@ def main():
         "meta": {"S": S, "note": "GDN chunk boundary at S=128 (E-27.6) may "
                                  "contaminate tail; recorded in params",
                  "pos0": "attention sink recorded separately (not excluded "
-                         "from segments per TZ)"},
+                         "from segments per TZ)",
+                 "per_doc_ratio": "anomaly_ratio in seg_stats uses the MIXED "
+                         "docs×positions body IQR (IQR-mixing, documented); "
+                         "per_doc_ratio_* gives the per-doc medians over "
+                         "positions with the same mixed denominator — "
+                         "distinguishes 'edge special on all docs' from a "
+                         "subset (docs/E38_fixes.md §5.1/§2.5)"},
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     json.dump(out, open(OUT, "w"), indent=1, default=float)
