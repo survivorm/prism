@@ -72,7 +72,7 @@ $$\bar{G}_l = \frac{1}{N} \sum_i J^{(i)} (J^{(i)})^T \quad (\text{усредне
 
 Спектральное разложение — стандартное (матрица симметричная, $K \times K$). Метрики: SNR, PR, gauge share — §paper §3.
 
-**Связь с P2/P3.** P2 реализован (Exp 17–19, §paper §9): лосс $\mathcal{L}_{p2} = \sum_l \alpha_l \cdot \mathcal{G}_{\text{gap}}(l)$ — bridge-лосс на matrix-free per-sample J-rows (chunked backward, HVP), оптимизирует LoRA r=4 на lm_head + o_proj(l_S). P3 (регуляризатор) — гипотеза, отложена: $\mathcal{L}_{p3} = \sum_l \beta_l \, \|J_S(l) - J_S^{\text{target}}(l)\|_F^2$.
+**Связь с P2/P3.** P2 реализован (Exp 17–19, §paper §6.2): лосс $\mathcal{L}_{p2} = \sum_l \alpha_l \cdot \mathcal{G}_{\text{gap}}(l)$ — bridge-лосс на matrix-free per-sample J-rows (chunked backward, HVP), оптимизирует LoRA r=4 на lm_head + o_proj(l_S). P3 (регуляризатор) — гипотеза, отложена: $\mathcal{L}_{p3} = \sum_l \beta_l \, \|J_S(l) - J_S^{\text{target}}(l)\|_F^2$.
 
 ---
 
