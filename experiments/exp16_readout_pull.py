@@ -55,6 +55,11 @@ def _eval_every(device: str) -> int:
     return 1 if str(device).startswith(("cuda", "xla")) else 10
 
 
+def _snap_every(device: str) -> int:
+    """Steps between ΔW snapshots (38h/38i need ΔW(s) at dose fractions)."""
+    return 10
+
+
 def main(
     small_model: str = "Qwen/Qwen3.5-0.8B",
     device: str = "auto",
@@ -283,7 +288,20 @@ def main(
     # The old trust-region buffer block is GONE on purpose: no cap, so
     # ‖ΔW‖ is a real, unbounded dose. (No allocator churn either: the
     # in-place sub() buffer existed only to apply the clamp.)
+    # ΔW SNAPSHOT GRID (added for E-38h/38i): the E-16 run edits lm_head
+    # in-place and previously published only the scalar dose curve — the
+    # ΔW(s) tensors that E-38h/38i need were never on disk. We snapshot
+    # the token-set slice ΔW(s) = (W_ed − W_orig)[token_set] (fp16, ~262 KB
+    # each) every `snap_every` steps into ONE file, plus W_orig[token_set].
+    # Offline, for any target fraction s (0.1/0.25/0.5/0.75/1.0 of final
+    # dose) we pick the snapshot with dose closest to s·dose_final. Dose is
+    # monotone along the run (verified on the v2 curve), so quantization
+    # with snap_every=10 is ≤ ~1% of final dose — well inside 38h/38i needs.
     optimizer = torch.optim.Adam([lm_head.weight], lr=lr)
+    snap_every = _snap_every(device)
+    snap_dir = os.path.join(results_dir, "exp16_deltas")
+    os.makedirs(snap_dir, exist_ok=True)
+    snapshots: dict[int, torch.Tensor] = {}
 
     curve: list[dict] = [
         {"step": 0, "dose": 0.0, **baseline}
@@ -293,7 +311,6 @@ def main(
     for step in range(steps):
         optimizer.zero_grad()
         total_loss_val = 0.0
-
         for si in range(min(n_samples, len(targets))):
             s = samples[si]
             ids = s["input_ids"].to(device)
@@ -343,6 +360,12 @@ def main(
                 f"({(time.time() - t0) / ((step + 1) // 5 + 1):.1f}s/eval-5)"
             )
 
+        if (step + 1) % snap_every == 0 or step + 1 == steps:
+            dW_snap = (
+                lm_head.weight.data - W_orig
+            )[token_set].to(torch.float16).cpu()
+            snapshots[step + 1] = dW_snap
+
         if (step + 1) % eval_every == 0 or step + 1 == steps:
             dose = (lm_head.weight.data - W_orig).norm().item()
             b = battery()
@@ -359,6 +382,26 @@ def main(
     gc.collect()
     if str(device).startswith(("cuda", "xla")):
         torch.cuda.empty_cache()
+
+    # -- Save ΔW snapshot file (E-38h/38i input) ----------------------------
+    # One file: {"W_orig": W_orig[token_set] fp16 [K,D], "snapshots":
+    # {step: ΔW[token_set] fp16 [K,D]}, "token_set": [...], "dose": {step: ‖ΔW‖}}.
+    # fp16 is exact enough: ΔW components are O(0.5), fp16 rel. eps ~1e-3.
+    snap_payload = {
+        "W_orig": W_orig[token_set].to(torch.float16).cpu(),
+        "snapshots": snapshots,
+        "token_set": list(token_set),
+        "step": steps,
+        "final_dose": float(
+            (lm_head.weight.data - W_orig).norm()
+        ),
+    }
+    snap_path = os.path.join(snap_dir, "exp16_dW_snapshots.pt")
+    torch.save(snap_payload, snap_path)
+    print(
+        f"Saved {snap_path}: {len(snapshots)} ΔW snapshots "
+        f"(final dose {snap_payload['final_dose']:.2f}) for E-38h/38i"
+    )
 
     # -- α* (the knee): largest step t with Δbridge ≥ knee_tol -------------
     # Δbridge(t) = bridge(t) − bridge(t − eval_every) on the same curve —
@@ -380,6 +423,7 @@ def main(
     # -- Save lm_head weights at knee + final for inference inspection -------
     # Save only ΔW in fp16 (311MB, downloadable) — NOT W/W_orig (3GB each).
     # ΔW applied to the 0.8B's own lm_head = the "edited" model for inference.
+    pt_paths: list[str] = []
     delta_W = (lm_head.weight.data - W_orig).cpu().half()
     pt_final = os.path.join(results_dir, "exp16_lm_head_final.pt")
     torch.save({

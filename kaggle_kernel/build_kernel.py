@@ -157,7 +157,10 @@ def build_kernel(
         # DaoAILab::_causal_conv1d_bwd_cpp' — harmful, not helpful. GDN chunk kernels
         # come from fla only; the conv1d fallback is reference-attention quality.
 
-        "!pip install -q -U transformers\n"
+        # Pin transformers: 5.20.0+ requires torch>=2.6 (disables the
+        # preinstalled torch 2.5.1+cu121 -> AutoModelForCausalLM ImportError).
+        # 5.15.1 matches the dev venv and supports torch 2.5 (exp16 v5, 10-23).
+        "!pip install -q transformers==5.15.1\n"
     )
 
     # Read exp file
