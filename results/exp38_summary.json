@@ -1,5 +1,5 @@
 {
- "generated": "2026-07-22",
+ "generated": "2026-10-23 (refresh: b/c/d reruns with E38_fixes2.md applied)",
  "protocol": "docs/E38.md",
  "model": "Qwen/Qwen3.5-0.8B",
  "cache": "kaggle_kernel/results/exp27b_jcache_L{l}.pt (32 docs, S=128, 4 domains x 8)",
@@ -21,7 +21,7 @@
      "edges_typical": 5
     }
    },
-   "size_bytes": 37749,
+   "size_bytes": 38868,
    "aggregate": "edges_typical"
   },
   "b": {
@@ -37,7 +37,7 @@
     },
     "aggregate": "see per_layer"
    },
-   "size_bytes": 23427,
+   "size_bytes": 31014,
    "per_layer": {
     "6": "no_artifact",
     "12": "edge_contamination",
@@ -54,9 +54,10 @@
     "near_degeneracy_layers": [
      "18",
      "22"
-    ]
+    ],
+    "l23_architectural": false
    },
-   "size_bytes": 25055,
+   "size_bytes": 45790,
    "aggregate": "near_degeneracy"
   },
   "d": {
@@ -71,7 +72,7 @@
      "23": "consistency_pass,effectively_abelian,partial"
     }
    },
-   "size_bytes": 985710,
+   "size_bytes": 990309,
    "per_layer": {
     "6": "non_abelian_candidate,partial",
     "12": "non_abelian_candidate,partial",
@@ -94,27 +95,30 @@
    "file": "results/exp38e_MK_diagnostic.json",
    "outcomes": {
     "gate": "mixed",
-    "consistency": "consistency_redflag",
+    "consistency": "consistency_consistent_with_E33r",
     "gate_failed": false
    },
-   "size_bytes": 2313,
+   "size_bytes": 3551,
    "gate": "mixed"
   },
   "f": {
    "file": "results/exp38f_structural_consistency.json",
    "outcomes": {
-    "verdict": "lemma_broken",
+    "verdict": "lemma_confirmed",
     "gate": "pass"
    },
-   "size_bytes": 824,
+   "size_bytes": 1290,
    "verdict": "lemma_broken"
   },
   "g": {
    "file": "results/exp38g_jlens_link.json",
    "outcomes": {
-    "verdict": "tails_disjoint,lens_validity_suspect"
+    "verdict": "at_random,lens_validity_suspect",
+    "rewritten_primary_outcome": "at_random,lens_validity_suspect",
+    "tz_preregistered_outcome": "jlens_not_tail_modes",
+    "outcome_note": "the TZ pre-registration was ρ-based (ρ>0.7 symmetric / ρ<0.3 not_tail_modes); the code rewrite makes the subspace OVERLAP primary (the old version measured only lens-internal consistency — not the TZ question). Both outcomes are reported; do not mix them in the paper (docs/E38_fixes.md part-8 HIGH-1/2)."
    },
-   "size_bytes": 4561,
+   "size_bytes": 5903,
    "verdict": "tails_disjoint,lens_validity_suspect",
    "primary_overlap": 0.059651183585325875,
    "overlap_ci": [
