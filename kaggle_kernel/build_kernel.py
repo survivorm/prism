@@ -78,6 +78,41 @@ def strip_prism_imports(code: str) -> str:
     return "\n".join(res)
 
 
+def strip_local_imports(code: str, names: list[str]) -> str:
+    """Drop `from <name> import ...` lines for inlined local helpers.
+
+    Same line-based discipline as strip_prism_imports (multi-line paren
+    blocks included). `names` = helper module basenames (e.g. ' _e38_cache').
+    """
+    out: list[str] = []
+    skip_depth = 0
+    for raw in code.split("\n"):
+        s = raw.strip()
+        if skip_depth > 0:
+            skip_depth += raw.count("(") - raw.count(")")
+            if skip_depth <= 0:
+                skip_depth = 0
+            continue
+        if any(s.startswith(f"from {n} import") for n in names):
+            if s.endswith("("):
+                skip_depth = raw.count("(") - raw.count(")")
+                if skip_depth < 0:
+                    skip_depth = 0
+            continue
+        out.append(raw)
+    res: list[str] = []
+    blank = 0
+    for ln in out:
+        if ln.strip() == "":
+            blank += 1
+            if blank <= 1:
+                res.append(ln)
+        else:
+            blank = 0
+            res.append(ln)
+    return "\n".join(res)
+
+
 def rename_main(code: str, new_name: str) -> str:
     code = re.sub(r"\bdef main\b", f"def {new_name}", code)
     code = re.sub(r"\bmain\s*\(", f"{new_name}(", code)
@@ -129,6 +164,8 @@ def build_kernel(
     kernel_sources: list[str] | None = None,
     dataset_sources: list[str] | None = None,
     runner_extra: str = "",
+    extra_modules: list[str] | None = None,
+    extra_local: list[str] | None = None,
 ):
     """Build kernel.ipynb and kernel-metadata.json for one experiment."""
     # Read deps from pyproject.toml
@@ -275,14 +312,24 @@ def build_kernel(
         "prism.calibration",
         "prism.cache_io",
         "prism.layer_selection",
-    ]:
+    ] + list(extra_modules or []):
         src = get_source(mod)
         src = strip_docstring(src)
+        cells.append(code_cell(src))
+
+    # Local experiment helpers (e.g. experiments/_e38_cache.py) — inlined the
+    # same way so the exp cell can use them without the repo on Kaggle.
+    for name in extra_local or []:
+        local_path = os.path.join(ROOT, "experiments", f"{name}.py")
+        with open(local_path) as f:
+            src = strip_docstring(f.read())
         cells.append(code_cell(src))
 
     # Experiment file
     src = strip_docstring(exp_src)
     src = strip_prism_imports(src)
+    if extra_local:
+        src = strip_local_imports(src, list(extra_local))
     src = strip_main_block(src)
     src = rename_main(src, main_name)
     cells.append(code_cell(src))
@@ -421,6 +468,14 @@ if __name__ == "__main__":
         default="",
         help="extra lines injected into the runner cell before the memory diagnostic",
     )
+    parser.add_argument(
+        "--extra-modules", default=[], nargs="*",
+        help="extra prism modules to inline, e.g. prism.spectral prism.holonomy",
+    )
+    parser.add_argument(
+        "--extra-local", default=[], nargs="*",
+        help="local experiment helpers to inline (basenames), e.g. _e38_cache",
+    )
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
     build_kernel(
@@ -431,4 +486,6 @@ if __name__ == "__main__":
         args.sources,
         args.datasets,
         runner_extra=args.runner_extra,
+        extra_modules=args.extra_modules,
+        extra_local=args.extra_local,
     )
