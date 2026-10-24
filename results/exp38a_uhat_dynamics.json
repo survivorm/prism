@@ -199,7 +199,9 @@
     "median_s0": 0.954269289970398,
     "median_kappa_t1": 1.9782069651867722,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 0.98391193151474
+    "median_pos0_norm_ratio": 0.9829997420310974,
+    "median_s_head_excl_pos0": 0.9123276472091675,
+    "kappa_nan_count": 0
    },
    "profile_S": [
     0.954269289970398,
@@ -452,7 +454,9 @@
     "median_s0": 0.9347681999206543,
     "median_kappa_t1": 2.0058910289660474,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 0.9867008328437805
+    "median_pos0_norm_ratio": 0.9860718250274658,
+    "median_s_head_excl_pos0": 0.8954611420631409,
+    "kappa_nan_count": 0
    },
    "profile_S": [
     0.9347681999206543,
@@ -705,7 +709,9 @@
     "median_s0": 0.9236807823181152,
     "median_kappa_t1": 2.0645150099297798,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 0.9684386849403381
+    "median_pos0_norm_ratio": 0.9670844078063965,
+    "median_s_head_excl_pos0": 0.904549241065979,
+    "kappa_nan_count": 0
    },
    "profile_S": [
     0.9236807823181152,
@@ -958,7 +964,9 @@
     "median_s0": 0.9069857597351074,
     "median_kappa_t1": 2.1239104866697147,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 1.0
+    "median_pos0_norm_ratio": 0.9994210600852966,
+    "median_s_head_excl_pos0": 0.8929516077041626,
+    "kappa_nan_count": 0
    },
    "profile_S": [
     0.9069857597351074,
@@ -1211,7 +1219,9 @@
     "median_s0": 0.886315107345581,
     "median_kappa_t1": 2.1657094584084695,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 0.9821739792823792
+    "median_pos0_norm_ratio": 0.9818784594535828,
+    "median_s_head_excl_pos0": 0.8610588908195496,
+    "kappa_nan_count": 0
    },
    "profile_S": [
     0.886315107345581,
@@ -1464,7 +1474,9 @@
     "median_s0": 0.8951576948165894,
     "median_kappa_t1": 2.0303390881699093,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 1.0070641040802002
+    "median_pos0_norm_ratio": 1.0070641040802002,
+    "median_s_head_excl_pos0": 0.8884900808334351,
+    "kappa_nan_count": 0
    },
    "profile_S": [
     0.8951576948165894,
@@ -1560,6 +1572,8 @@
   "S": 128,
   "note": "GDN chunk boundary at S=128 (E-27.6) may contaminate tail; recorded in params",
   "pos0": "attention sink recorded separately (not excluded from segments per TZ)",
+  "labels": "edges special requires BOTH edges anomalous AND ABOVE body (TZ (>>)); edges atypical = head anomalous downward; opposite directions and single-edge anomalies -> mixed (post-hoc extension, docs/E38_fixes.md \u00a71 MEDIUM); the dead 'edges_atypical_candidate' branch was removed (docs/E38_fixes2.md \u00a71)",
+  "tz_deviation": "tail = {S-2} single position, not the TZ's {S-2, S-1}: s has indices 0..S-2 and kappa_g 1..S-2, so position S-1 does not exist in those fields \u2014 TZ off-by-one, code is right (docs/E38_fixes.md \u00a71 MEDIUM); 'mixed' is a post-hoc label extension, not in the pre-registered set (same \u00a7)",
   "per_doc_ratio": "anomaly_ratio in seg_stats uses the MIXED docs\u00d7positions body IQR (IQR-mixing, documented); per_doc_ratio_* gives the per-doc medians over positions with the same mixed denominator \u2014 distinguishes 'edge special on all docs' from a subset (docs/E38_fixes.md \u00a75.1/\u00a72.5)"
  }
 }

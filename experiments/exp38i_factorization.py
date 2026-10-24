@@ -3,17 +3,22 @@
 Pre-registered (docs/E38.md): apply the E-16 readout-only ΔW snapshots
 and check the L23 factorization (E-35 lemma [M-1]) token-by-token on U128.
 
-Key structural fact (pre-flight, verified): the edit changes ONLY lm_head, so
-h_t, r_t, û_t, J_norm(t) are INVARIANT across steps; only W (hence J(s),
-M_K(s)) changes. The factorization is an EXACT identity for the last-layer
-readout Jacobian for ANY W (closed form == dense W @ J_norm), so the
-residual is structurally zero and the test measures:
-  (a) the numeric floor of the identity (fp16 snapshots -> fp64 algebra),
-  (b) the leaf drift: relative change of J rows / M_K rows per step.
-Pre-registered verdict rule: residual(s) <= 1e-6 for all s  =>  "factorization
-preserved under readout edit (leaf-protective: the edit cannot break the
-identity because h_t is invariant)".  A fitted-approximation factorization
-would show residual growth with s; we do not expect that.
+Key structural fact (pre-flight): the edit changes ONLY lm_head, so in an
+UNTIED model h_t, r_t, û_t, J_norm(t) would be INVARIANT across steps; only
+W (hence J(s), M_K(s)) changes. Qwen3.5-0.8B IS TIED (lm_head =
+embed_tokens), so in the REAL post-edit model h_t changes too (E38_fixes
+P1); here the identity and all drifts are computed on the CACHED h
+(original model) only — documented in meta.
+
+The factorization is an EXACT identity for the last-layer readout Jacobian
+for ANY W (closed form == dense W @ J_norm) — the residual is structurally
+zero for every W, so it verifies the algebraic identity on the edited W
+rows (numeric floor), NOT "preservation under edit" (E38_fixes P0, item 2:
+the old "preserved" verdict was tautological). The informative output is
+the LEAF DRIFT: relative change of J rows / M_K rows per step.
+Pre-registered verdict rule: residual(s) <= 1e-6 for all s  =>  "identity
+holds on edited W rows (residual at numeric floor; tautology by
+construction — drift metrics carry the information)".
 
 State subsample (pre-registered, same as E-38h, bracketing the E-16 knee
 knee_step=84): K_STEPS = [10, 20, 40, 80, 90, 100, 200, 400, 800, 1000].
@@ -58,7 +63,6 @@ def main():
     snaps_all, raw = load_snapshots()
     missing = [k for k in K_STEPS if k not in snaps_all]
     assert not missing, f"missing snapshot steps: {missing}"
-    W_orig256 = raw["W_orig"].to(torch.float64)
     ts256 = torch.tensor(raw["token_set"], dtype=torch.long)
     emb, gamma = load_model_tensors()
 
@@ -72,10 +76,11 @@ def main():
     shared_idx256 = torch.tensor(shared_idx256)
     shared_idxU = torch.tensor(shared_idxU)
 
-    states = {0: W_full}
+    states = {0: W_full.clone()}  # clone: shared reference, not mutated
     for k in K_STEPS:
         W_ed = W_full.clone()
-        dW_shared = snaps_all[k][shared_idx256] - W_orig256[shared_idx256]
+        # P0 fix (E38_fixes): snapshots[k] IS ΔW — do NOT subtract W_orig
+        dW_shared = snaps_all[k][shared_idx256]
         W_ed[shared_idxU] = W_ed[shared_idxU] + dW_shared
         states[k] = W_ed
 
@@ -94,20 +99,30 @@ def main():
             rel = (Ji - Ji0).norm(dim=1) / Ji0.norm(dim=1)
             jdr.append(rel.max().item())
         MK = W_ed * gamma[None, :]
+        # E38_fixes P1: 115 of 128 rows are edit-invariant (not in token_set),
+        # so max/median over ALL rows underreports — report shared-only too.
+        J_sh = torch.stack([(((Ji - Ji0).norm(dim=1) / Ji0.norm(dim=1))
+                             [shared_idxU])
+                            for Ji, Ji0 in zip(J, J0)])  # [16, 13]
+        MK_sh = ((MK - MK0).norm(dim=1) / MK0.norm(dim=1))[shared_idxU]
         out_states[s] = {
             "factorization_residual_max": max(res),
             "factorization_residual_mean": sum(res) / len(res),
             "J_rel_drift_max": max(jdr),
             "MK_rel_drift_max": float(
                 ((MK - MK0).norm(dim=1) / MK0.norm(dim=1)).max()),
-            "h_invariant": True,  # structural: edit touches only lm_head
+            "J_rel_drift_max_shared": float(J_sh.max()),
+            "J_rel_drift_median_shared": float(J_sh.median()),
+            "MK_rel_drift_max_shared": float(MK_sh.max()),
+            "MK_rel_drift_median_shared": float(MK_sh.median()),
         }
 
     resid_max_all = max(v["factorization_residual_max"]
                         for v in out_states.values())
-    verdict = ("factorization preserved under readout-only edits "
-               "(residual at numeric floor; h_t/û_t/J_norm invariant)"
-               if resid_max_all <= RESID_TOL
+    verdict = ("identity holds on edited W rows (residual at numeric floor; "
+               "tautological by construction — leaf drifts carry the "
+               "information; h_t invariance FALSE for tied model, cached h "
+               "used)" if resid_max_all <= RESID_TOL
                else "RESIDUAL GROWTH — inspect")
 
     out = {
@@ -125,7 +140,11 @@ def main():
         "identity": "J(t) = (sqrt(D)/r_t) M_K(I - û ûᵀ) — EXACT for any W "
                     "(E-35 [M-1]); verified dense vs closed form",
         "structural_fact": "readout-only edit leaves h_t, r_t, û_t, J_norm "
-                           "invariant; only W (=> J, M_K) changes",
+                           "invariant ONLY in an untied model; Qwen3.5-0.8B "
+                           "is TIED (lm_head = embed_tokens) => in the REAL "
+                           "post-edit model h_t changes; all values here are "
+                           "computed on the CACHED h (original model) only "
+                           "(E38_fixes P1)",
         "per_state": out_states,
         "verdict_rule": "max_s residual <= %.0e => preserved" % RESID_TOL,
         "verdict": verdict,
@@ -138,8 +157,8 @@ def main():
     print(f"OK -> {OUT}")
     for s, v in out_states.items():
         print(f"  s={s}: resid_max={v['factorization_residual_max']:.2e} "
-              f"J_drift_max={v['J_rel_drift_max']:.4f} "
-              f"MK_drift_max={v['MK_rel_drift_max']:.4f}")
+              f"J_drift_sh={v['J_rel_drift_max_shared']:.4f} "
+              f"MK_drift_sh={v['MK_rel_drift_max_shared']:.4f}")
     print("  verdict:", verdict)
 
 

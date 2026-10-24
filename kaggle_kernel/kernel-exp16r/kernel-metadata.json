@@ -8,7 +8,8 @@
   "id": "voroninmichael/prism-readout-pull",
   "title": "Prism: Readout Pull",
   "kernel_sources": [
-    "voroninmichael/exp16-stage-0-target-jacobian-cache"
+    "voroninmichael/exp16-stage-0-target-jacobian-cache",
+    "voroninmichael/prism-readout-pull"
   ],
   "dataset_sources": [
     "voroninmichael/prism-exp16-targets"

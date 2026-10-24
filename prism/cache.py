@@ -319,6 +319,9 @@ class MetricCache:
 
     @staticmethod
     def _check_value(value: object) -> float:
+        # Python float only on purpose: np.float64 passes (it subclasses
+        # float in CPython) but np.float32 does NOT — a silent-precision-loss
+        # guard against JSON serialization. Call .item() explicitly.
         if not isinstance(value, float):
             raise ValueError(
                 f"MetricCache.put: value must be a Python float "
@@ -393,6 +396,12 @@ def bootstrap_ci(
     percentile CI. NaN in values → ValueError (silently dropping them
     would hide bugs). For heavy-tailed metrics median (default) is the
     robust choice; ``mean`` is available via the ``statistic`` argument.
+
+    I.i.d. assumption: resampling treats ``values`` as independent draws.
+    Do NOT pass a flattened (doc x position) array without checking the
+    within-doc correlation (positions are correlated, E-31: C_F(1) up to
+    0.996) — the CI would be ~sqrt(n_positions) times too narrow. Use
+    per-doc statistics + ``bootstrap_ci_paired`` for such comparisons.
     """
     arr = np.asarray(values, dtype=np.float64)
     if arr.ndim != 1:

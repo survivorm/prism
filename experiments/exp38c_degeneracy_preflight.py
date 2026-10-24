@@ -75,7 +75,7 @@ def main():
     t0 = time.time()
     per_layer = {}
     for l in LAYERS:
-        ck = load_layer(l)
+        ck = load_layer(l, want=("J",))  # J only — P/H not needed (fixes2 §6)
         J = ck["J"]                     # [N, S, K, D]
         N, Ss, Kk, Dd = J.shape
         del ck

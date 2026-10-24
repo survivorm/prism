@@ -58,8 +58,21 @@ def load_u128():
 
 
 def load_snapshots():
+    """snapshots[k] IS the ΔW = (W_curr − W_orig)[token_set] (NOT W_curr) —
+    consumer must NOT subtract raw["W_orig"] again (E38_fixes P0)."""
     d = torch.load(_p(SNAPSHOTS), map_location="cpu", weights_only=True)
     snaps = {int(k): v.to(torch.float64) for k, v in d["snapshots"].items()}
+    # sanity: a double subtraction (W_curr − 2·W_orig) is O(‖W_orig‖) and
+    # anti-parallel to W_orig (cos ≈ −1); a correct ΔW slice is a small
+    # perturbation nearly orthogonal to W_orig (cos ≈ 0). Catch loudly.
+    Wo = d["W_orig"].to(torch.float64)
+    for k, s in snaps.items():
+        cos = float((s @ Wo.T).norm() / (s.norm() * Wo.norm()))
+        assert cos < 0.5, (
+            f"snapshot step {k}: cos(snap, W_orig)={cos:.3f} — "
+            "snapshots[k] is ΔW; do NOT subtract W_orig again "
+            "(double subtraction gives cos ≈ −1; a correct ΔW slice is "
+            "a small perturbation nearly orthogonal to W_orig, cos ≈ 0.07)")
     return snaps, d
 
 

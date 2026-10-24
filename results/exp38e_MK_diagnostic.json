@@ -16,44 +16,44 @@
    "sigma_g": 14.347064971923828,
    "w_norm": 12.897159576416016,
    "ratio_alpha_beta": {
-    "median_over_docs": 0.19503253698349,
+    "median_over_docs": 0.19582585245370865,
     "ci": [
-     0.14280843138694763,
-     0.23193322457373142
+     0.1432464174926281,
+     0.23219508603215216
     ],
     "per_doc": [
-     0.19416745007038116,
-     0.19926483929157257,
-     0.2041850984096527,
-     0.1440839022397995,
-     0.21584297716617584,
-     0.18283236026763916,
-     0.1720609962940216,
-     0.1674971729516983,
-     0.21354618668556213,
-     0.16748443245887756,
-     0.17946270108222961,
-     0.16397492587566376,
-     0.1926150619983673,
-     0.18175473809242249,
-     0.18282993137836456,
-     0.1771720051765442,
-     0.2230025827884674,
-     0.2054845094680786,
-     0.2236337810754776,
-     0.16952574253082275,
-     0.19589762389659882,
-     0.22036275267601013,
-     0.23133307695388794,
-     0.2026039958000183,
-     0.21372634172439575,
-     0.1384151428937912,
-     0.20488329231739044,
-     0.17819935083389282,
-     0.19684146344661713,
-     0.23400039970874786,
-     0.2181118130683899,
-     0.14776265621185303
+     0.19464591145515442,
+     0.19939474761486053,
+     0.2047947645187378,
+     0.14446935057640076,
+     0.21626120805740356,
+     0.1835806965827942,
+     0.17427974939346313,
+     0.1676497608423233,
+     0.2149849385023117,
+     0.16862958669662476,
+     0.1795351207256317,
+     0.16524794697761536,
+     0.19342832267284393,
+     0.18230491876602173,
+     0.18286645412445068,
+     0.17719757556915283,
+     0.22300946712493896,
+     0.2060205191373825,
+     0.22446805238723755,
+     0.17010758817195892,
+     0.19715014100074768,
+     0.2205120027065277,
+     0.2316615879535675,
+     0.20322352647781372,
+     0.21378590166568756,
+     0.13903409242630005,
+     0.20492969453334808,
+     0.17909123003482819,
+     0.19700579345226288,
+     0.23403269052505493,
+     0.21812018752098083,
+     0.15703393518924713
     ]
    },
    "alpha": {
@@ -66,23 +66,35 @@
    },
    "consistency_sigma_g": {
     "median_scaled_beta": 3.0957329273223877,
-    "over_sigma_g": 0.21577465534210205,
+    "over_sigma_g_OLD": 0.21577465534210205,
+    "over_sigma_g_OLD_note": "c\u00b7\u03b2/\u03c3_1(M_K) \u2248 c\u00b7cos \u2248 0.2\u20130.4 \u2014 the OLD normalization, kept for traceability; NOT \u2248 1 (false-positive source of the old redflag)",
+    "over_sigma_g_J": 0.8821238875389099,
+    "expected": 0.9,
     "tolerance": 0.15
    },
    "consistency_factorization": {
     "median_beta_over_JtU": 4.076811790466309,
-    "note": "\u03b2_t / \u2016J_t^T 1/\u221aK\u2016; = 1 under exact J = M_K(I \u2212 \u00fb \u00fb^T)"
+    "note": "\u03b2_t / \u2016J_t^T 1/\u221aK\u2016 = r_t/\u221aD (NOT 1) under exact J = M_K(I \u2212 \u00fb\u00fb^T): \u2016J^T(1/\u221aK)\u2016 = c\u00b7\u03b2 with c = \u221aD/r_t, so the ratio = 1/c. A value ~ 4 CONFIRMS the exact factorization (r_t \u2248 4\u00b7\u221aD), it is not a redflag (docs/E38_fixes.md part-6 \u00a71 HIGH-2)"
    },
-   "pos0_ratio": 0.17670029401779175
+   "pos0_ratio": 0.17670029401779175,
+   "pos0_degenerate_frac": 0.0,
+   "nan_frac": 0.0,
+   "j_uhat_resid_median": 4.5716916474702884e-08,
+   "j_uhat_resid_note": "median \u2016J\u00b7\u00fb\u2016/\u2016J\u2016: << 1 confirms \u00fb is the INPUT to L23 (projector kills it); ~ 1 would mean an off-by-one hidden-state convention (jacobian.py M-1)"
   }
  },
  "outcomes": {
   "gate": "mixed",
-  "consistency": "consistency_redflag",
+  "consistency": "consistency_consistent_with_E33r",
   "gate_failed": false
  },
  "meta": {
-  "note": "cos(u_g, 1/\u221aK) alignment factor recorded via the direct factorization cross-check (\u03b2 vs \u2016J^T 1/\u221aK\u2016) rather than an a-priori \u03c3_g\u00b7cos value \u2014 the alignment factor is \u2264 1 and unknown a priori",
-  "gate_rule": ">10 \u2192 E-38f skipped; <0.1 \u2192 gauge_blind_sep; else mixed \u2192 E-38f runs"
+  "note": "cos(u_g, 1/\u221aK) alignment factor recorded via the direct factorization cross-check (\u03b2 vs \u2016J^T 1/\u221aK\u2016 = c\u00b7\u03b2, ratio = r_t/\u221aD) and via \u03b2/\u03c3_1(M_K) \u2248 cos \u2014 the alignment factor is \u2264 1 and unknown a priori",
+  "consistency_semantics": "consistency_consistent_with_E33r means median \u03b2/\u03c3_1(M_K) \u2248 0.9 \u00b1 15% (\u2248 cos(u_g, 1/\u221aK)), NOT exact agreement \u2014 the old check (c\u00b7\u03b2 vs \u03c3_1(M_K), expected \u2248 1) was impossible by construction and its redflag was a false positive of the check",
+  "gate_rule": ">10 \u2192 E-38f skipped; <0.1 \u2192 gauge_blind_sep; else mixed \u2192 E-38f runs",
+  "token_set_range": [
+   0,
+   248046
+  ]
  }
 }

@@ -2,6 +2,12 @@
 
 Edit **only** `lm_head`: W' = W + ΔW(θ), one unclamped Adam run.
 
+CAVEAT (E38_fixes P1): Qwen3.5-0.8B has tie_word_embeddings=True, so
+`lm_head` IS `embed_tokens` — this edit also changes the input
+embeddings; "readout-only" is imprecise (forward changes through h_s
+as well). No un-tie performed; consumers (E-38h/38i) must treat
+"h_t invariant" as a cached-h approximation, not an identity.
+
 Why v2 (the v1 design was voided, results/voided/): v1 swept α as a
 one-sided trust-region cap (‖ΔW‖ ≤ α·‖W‖). At α ≥ 0.1 the cap never binds
 (the 100-step Adam trajectory stays at ‖ΔW‖/‖W‖ ≈ 4.5%), so α carried no
@@ -199,7 +205,7 @@ def main(
         ids = samples[si]["input_ids"]
         ok = (
             t.get("input_ids") is not None
-            and t["input_ids"].shape[0] == ids.shape[0]
+            and t["input_ids"].shape == ids.shape
             and bool((t["input_ids"].view(-1) == ids.view(-1)).all())
         )
         pairing_ok.append(ok)
@@ -335,11 +341,14 @@ def main(
             )
 
             if pairing_ok[si]:
-                # Fresh per-sample J_norm, differentiable through lm_head.
+                # Fresh per-sample J_norm. E38_fixes P1: detach h_s so the
+                # bridge path does NOT backprop through the whole
+                # transformer — the only trainable param is lm_head.weight
+                # and it is not on the h_s path; J_norm must be a constant.
                 h_s = out.hidden_states[last_layer + 1]
                 J_norm = compute_hidden_jacobian(
-                    mS, last_layer, ids, attn, h=h_s
-                )
+                    mS, last_layer, ids, attn, h=h_s.detach()
+                ).detach()
                 J_S = lm_head.weight[token_set] @ J_norm  # [K, D]
                 p_L = tgt["p"].to(device)
                 J_S_p = softmax_jacobian(J_S, p_L)
@@ -361,9 +370,11 @@ def main(
             )
 
         if (step + 1) % snap_every == 0 or step + 1 == steps:
+            # E38_fixes P2: slice BEFORE the difference — no [V,1024]
+            # intermediate tensor on GPU.
             dW_snap = (
-                lm_head.weight.data - W_orig
-            )[token_set].to(torch.float16).cpu()
+                lm_head.weight.data[token_set] - W_orig[token_set]
+            ).to(torch.float16).cpu()
             snapshots[step + 1] = dW_snap
 
         if (step + 1) % eval_every == 0 or step + 1 == steps:
@@ -388,8 +399,12 @@ def main(
     # {step: ΔW[token_set] fp16 [K,D]}, "token_set": [...], "dose": {step: ‖ΔW‖}}.
     # fp16 is exact enough: ΔW components are O(0.5), fp16 rel. eps ~1e-3.
     snap_payload = {
-        "W_orig": W_orig[token_set].to(torch.float16).cpu(),
+        # E38_fixes P1: fp32 (fp16 lost ~1e-3 rel precision, significant for
+        # E-38h SVD/Procrustes; 256*1024*4 = 1 MB)
+        "W_orig": W_orig[token_set].cpu(),
         "snapshots": snapshots,
+        "schema": "snapshots[step] = (lm_head.weight − W_orig)[token_set]; "
+                  "dW = snapshots[step] (NOT snapshots[step] − W_orig)",
         "token_set": list(token_set),
         "step": steps,
         "final_dose": float(
@@ -430,7 +445,9 @@ def main(
         "delta_W": delta_W,
         "step": steps,
         "bridge": curve[-1]["bridge"],
-        "dose": float(delta_W.float().norm()),
+        # E38_fixes P2: dose in fp32 (previously from the fp16 delta_W —
+        # ~1e-3 off from final_dose); fp32 is the canonical field.
+        "dose": float((lm_head.weight.data - W_orig).norm()),
     }, pt_final)
     pt_paths.append(pt_final)
     print(f"Saved {pt_final} (‖ΔW‖={delta_W.float().norm().item():.4f}, bridge={curve[-1]['bridge']:.4f})")
@@ -494,6 +511,19 @@ def main(
             "min_length": min_length,
             "targets_dir": targets_dir,
         },
+        "caveats": [
+            "E-38h/38i require steps >= 1000 (snapshots every 10); the CPU "
+            "default steps=40 is NOT sufficient (E38_fixes P2)",
+            "knee_step=84 (2026-10-24 run) is only reachable with "
+            "eval_every=1 (GPU); CPU eval_every=10 quantizes the knee to "
+            "multiples of 10 (E38_fixes P2)",
+            "Qwen3.5-0.8B has tie_word_embeddings=True: editing lm_head "
+            "edits embed_tokens too — 'readout-only' is imprecise, the "
+            "forward changes through the input embeddings as well "
+            "(E38_fixes P1; no un-tie performed, documented)",
+            "seed=42 vs seed=0 of other E-38: affects only the calibration "
+            "sample selection (E38_fixes 2.8)",
+        ],
     }
     path = os.path.join(results_dir, "exp16_readout_pull.json")
     with open(path, "w") as f:

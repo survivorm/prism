@@ -7,14 +7,14 @@ import torch
 from prism.spectral import eigengap_min
 
 
-def test_eigengap_min_basic_applicable():
+def test_eigengap_min_basic_well_separated():
     s = torch.tensor([100.0, 81.0, 64.0, 49.0])  # σ² for σ=[10,9,8,7]
     gap, ok = eigengap_min(s, eps_frac=0.01)
     assert gap == pytest.approx(15.0)
     assert ok is True  # threshold = 1.0, 15 >= 1
 
 
-def test_eigengap_min_large_eps_not_applicable():
+def test_eigengap_min_large_eps_not_well_separated():
     s = torch.tensor([100.0, 81.0, 64.0, 49.0])
     gap, ok = eigengap_min(s, eps_frac=0.2)
     assert gap == pytest.approx(15.0)
@@ -22,7 +22,7 @@ def test_eigengap_min_large_eps_not_applicable():
 
 
 def test_eigengap_min_boundary_ge_true():
-    # exact equality gap_min == threshold → applicable (the deliberate >=)
+    # exact equality gap_min == threshold → well_separated (the deliberate >=)
     s = torch.tensor([10.0, 9.0, 8.0])
     gap, ok = eigengap_min(s, eps_frac=0.1)
     assert gap == pytest.approx(1.0)
