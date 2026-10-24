@@ -121,6 +121,23 @@ def entropy_frac_tail(c2: torch.Tensor, tail_idx: int):
     return s, ft
 
 
+def _json_default(o):
+    """Strict JSON serializer (docs/E38_fixes2.md §6/§9): the old
+    `default=float` silently converted np.bool_ -> 1.0 and let bare NaN
+    literals through (invalid RFC-8259). Raise on np.bool_, convert
+    numpy numerics explicitly, NaN/Inf -> strings."""
+    if isinstance(o, np.bool_):
+        raise TypeError(f"unwrapped numpy bool_ in JSON: {o!r}")
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.floating):
+        o = float(o)
+    if isinstance(o, float) and not np.isfinite(o):
+        return "nan" if o != o else ("inf" if o > 0 else "-inf")
+    raise TypeError(
+        f"object of type {type(o).__name__} is not JSON serializable")
+
+
 def main():
     t0 = time.time()
 
@@ -337,7 +354,8 @@ def main():
         sha = hashlib.sha256(_lf.read()).hexdigest()
     out["params"]["lens_sha256"] = sha
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    json.dump(out, open(OUT, "w"), indent=1, default=float)
+    with open(OUT, "w") as f:
+        json.dump(out, f, indent=1, default=_json_default)
     print(f"overlap (our tail in lens tail) median={ov_med:.4f} CI={ov_ci}")
     print(f"rho_our median={rho_our_med:.4f} CI={rho_our_ci} | "
           f"rho_lens median={rho_lens_med:.4f} CI={rho_lens_ci}")

@@ -41,7 +41,7 @@ independent bootstraps. The flat body CI is kept for reporting ONLY
 under the name body_flat_iid_ci_do_not_use (flattened 3552 values are
 NOT i.i.d.; the i.i.d. CI is ~10x too narrow, docs/E38_fixes2.md P1-5).
 
-Degenerate docs: ‖J_t‖ < 1e-6 → NaN in C_b (excluded from medians,
+Degenerate docs: ‖J_t‖ < 1e-9 → NaN in C_b (excluded from medians,
 counted in meta.nan_count); PR on a degenerate J returns 0.0
 (participation_ratio convention).
 
@@ -108,7 +108,7 @@ def main():
             Jt = Jgf[:, t]                                  # [N, K, D]
             Jf = Jt.flatten(1, 2)                           # [N, K*D]
             nrm = Jf.norm(dim=1)                            # [N]
-            deg = nrm < 1e-6
+            deg = nrm < 1e-9  # MEDIUM-5: 1e-9, not the old 1e-6
             nan_count += int(deg.sum())
             cos_mat = (Jf @ Jf.T) / (nrm[:, None] * nrm[None, :]).clamp_min(1e-30)
             if deg.any():
@@ -272,7 +272,7 @@ def main():
                          "PR on sv(J_t)^2 per doc; L22 verdict: paired "
                          "bootstrap, per-doc body vs pos0 (the paper's 4.6 "
                          "is a min-over-positions cross-ref only); "
-                         "degenerate docs (‖J_t‖<1e-6) → NaN in C_b, counted "
+                         "degenerate docs (‖J_t‖<1e-9) → NaN in C_b, counted "
                          "per layer in nan_count"},
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

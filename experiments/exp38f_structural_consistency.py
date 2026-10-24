@@ -89,13 +89,15 @@ def main():
         print(f"E-38e gate: {g['outcomes']['gate']} -> "
               f"{'PASS (run)' if gate_ok else 'gate_failed (skip)'}")
     if not gate_ok:
-        json.dump({"params": {"seed": SEED, "gate": "gate_failed"},
-                   "outcomes": {"skipped": True},
-                   "meta": {"gate_file_missing": gate_file_missing,
-                            "note": "E-38e gate failed (|α|/|β| > 10) or "
-                                    "E-38e JSON absent (fail-closed): "
-                                    "E-38f uninformative, skipped per TZ"}},
-                  open(OUT, "w"), indent=1, default=_json_default)
+        os.makedirs(os.path.dirname(OUT), exist_ok=True)
+        with open(OUT, "w") as f:
+            json.dump({"params": {"seed": SEED, "gate": "gate_failed"},
+                       "outcomes": {"skipped": True},
+                       "meta": {"gate_file_missing": gate_file_missing,
+                                "note": "E-38e gate failed (|α|/|β| > 10) or "
+                                        "E-38e JSON absent (fail-closed): "
+                                        "E-38f uninformative, skipped per TZ"}},
+                      f, indent=1, default=_json_default)
         print("E-38f SKIPPED")
         return
 

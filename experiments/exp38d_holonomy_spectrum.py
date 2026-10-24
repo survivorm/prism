@@ -170,7 +170,12 @@ def main(results_dir="results", device="auto"):
     from scipy.stats import spearmanr
 
     def rho_at(trH, omega, degen_mask, n_triples, n_docs):
-        """rho_median (+ median p) over non-degenerate finite positions."""
+        """rho_median (+ median p) over non-degenerate finite positions.
+
+        trH/omega/degen_mask are [n_docs, n_triples] (doc=axis0, position=axis1).
+        At each fixed position t we correlate trH[:, t] against omega[:, t]
+        ACROSS the n_docs=32 documents (the per-position Spearman the TZ wants).
+        """
         rs, ps = [], []
         for t in range(0, n_triples, 4):
             m = (~degen_mask[t] & np.isfinite(omega[t])
@@ -204,19 +209,41 @@ def main(results_dir="results", device="auto"):
         n1, n3 = torch.norm(t1, dim=-1), torch.norm(t3, dim=-1)
         cos_turn = ((t1 * t3).sum(-1) / (n1 * n3).clamp_min(1e-12)).clamp(-1, 1)
         turn = np.pi - torch.acos(cos_turn)
-        deg_h = (norms[:, :-2].min(dim=-1).values < 1e-10)
+        # degenerate triple: any of the 3 unit vectors has ‖h‖ < 1e-10
+        # (norms is [N, S]; a triple (t, t+1, t+2) sees rows t..t+2)
+        deg_h = (torch.stack([norms[:, :-2], norms[:, 1:-1], norms[:, 2:]], dim=0)
+                 .min(dim=0).values < 1e-10)
         deg_arc = (arc < 1e-8) | (n1 < 1e-8) | (n3 < 1e-8)
         omega_all = torch.where(deg_h | deg_arc,
                                 torch.full_like(arc, float("nan")),
-                                turn / arc.clamp_min(1e-8)).numpy()
+                                turn / arc.clamp_min(1e-8)).numpy().T   # [T, N] (v1 layout)
         n_omega_skipped = int((deg_h | deg_arc).sum())
 
         per_layer[str(l)] = {}
+        # R=128 memory layout (T4 16 GB, ~14.6 GB usable):
+        #   J (raw fp32)  2.15 GB  +  Vt [N*S, D, R]  8.4 GB  +
+        #   3x step_res fp64  0.63 GB  +  degen_flat bool 21 MB
+        #   + R_01/R_12/R_20 [N*T, R, R] fp64  6.3 GB  +  Htot [N*T, R, R]
+        #   2.1 GB  ≈ 19.7 GB — OVER. So Vt is kept in the R=16 slice
+        #   only (2.1 GB, shared across the sweep) and each R >= 32 runs
+        #   on its own batched SVD of J; peak at R=128 ≈ 14.6 GB
+        #   (Htot is the last block before J is freed).
+        Jflat = J.reshape(N * Ss, Kk, Dd)          # [N*S, K, D] fp32
+        _, _, Vh = torch.linalg.svd(
+            Jflat.to(device, dtype=torch.float64), full_matrices=False)
+        del Jflat
+        Vt = Vh[:, :R_HEADLINE].to(J.dtype).contiguous().transpose(1, 2)  # [N*S, D, 16]
+        del Vh
         for R in R_VALUES:
-            Jflat = J.reshape(N * Ss, Kk, Dd).to(device, non_blocking=True)
-            _, _, V = top_r_svd(Jflat, R)              # [N*S, R, D]
-            del Jflat
-            Vt = V.transpose(1, 2).contiguous()        # [N*S, D, R]
+            if R == R_HEADLINE:
+                V = Vt          # [N*S, D, R], shared with the L23 npz block
+            else:
+                Jflat = J.reshape(N * Ss, Kk, Dd)
+                _, _, V = torch.linalg.svd(
+                    Jflat.to(device, dtype=torch.float64),
+                    full_matrices=False)
+                del Jflat
+                V = V[:, :R].to(J.dtype).contiguous().transpose(1, 2)
             # triple (t, t+1, t+2): index (i, t) -> flat i*S + t, t=0..S-3
             idx = torch.arange(N * n_triples, device=device)
             i_doc = idx // n_triples                   # flat doc index
@@ -224,13 +251,18 @@ def main(results_dir="results", device="auto"):
             f0 = i_doc * Ss + t_pos
             f1 = f0 + 1
             f2 = f0 + 2
-            V0, V1, V2 = Vt[f0], Vt[f1], Vt[f2]        # [N*T, D, R]
+            V0, V1, V2 = V[f0], V[f1], V[f2]           # [N*T, D, R]
+            if R != R_HEADLINE:
+                del V   # copies already made; frees ~2.1 GB (R=128)
+            # R01 (V0,V1) and R20 (V2,V0) first, then V0 is gone before
+            # R12 — peak = 2 of the 3 V-slices + 3 R-blocks.
             R01, res01 = _procrustes_batched(V0, V1)
-            R12, res12 = _procrustes_batched(V1, V2)
             R20, res20 = _procrustes_batched(V2, V0)
-            del Vt, V0, V1, V2, V
+            del V0
+            R12, res12 = _procrustes_batched(V1, V2)
+            del V1, V2
             step_res = torch.maximum(torch.maximum(res01, res12), res20)
-            degen = (step_res > DEGEN_RES_FRAC * 2 * R).numpy()
+            degen_flat = (step_res > DEGEN_RES_FRAC * 2 * R).numpy()
             # H = R01 @ R12 @ R20, cycle order (v1: R_total = I @ R01 @ R12
             # @ R20, holonomy_accumulate left-multiplication convention)
             B = R01.shape[0]
@@ -241,40 +273,47 @@ def main(results_dir="results", device="auto"):
             if device.startswith("cuda"):
                 torch.cuda.empty_cache()
 
-            kappa_all = np.linalg.norm(Htot - np.eye(R), axis=(1, 2))
-            trH_all = np.trace(Htot, axis1=1, axis2=2)
-            theta_all, n_ang = _spectrum_batched(torch.tensor(Htot))
-            max_theta = np.nanmax(theta_all[~degen], axis=1) if degen.any() \
-                else np.nanmax(theta_all, axis=1)   # P0-1: non-degenerate
+            # Layouts (match v1 exactly):
+            #   per-TRIPLE stats (kappa, theta, trivial, idiff): flat [B],
+            #     B = N*n_triples, index = i_doc*n_triples + t_pos (doc-major).
+            #   per-POSITION stats (rho, profile_kappa): [T, N] (v1 layout,
+            #     position=axis0, doc=axis1).
+            def _tn(flat):
+                return flat.reshape(N, n_triples).T
+            kappa_flat = np.linalg.norm(Htot - np.eye(R), axis=(1, 2))   # [B]
+            trH_all = _tn(np.trace(Htot, axis1=1, axis2=2))              # [T, N]
+            theta_flat = _spectrum_batched(torch.tensor(Htot))[0]        # [B, R//2]
+            max_theta = np.nanmax(theta_flat, axis=1)                    # [B]
+            degen_mask = _tn(degen_flat)                                 # [T, N]
             # exact identity: ||H−I||_F^2 = Σ_j 2(1−cos ang_j) over ALL r
             # eigenvalues (v1's M-2 check, kept per triple)
             angs = np.angle(np.linalg.eigvals(Htot))
-            idiff = (kappa_all ** 2
-                     - (2.0 * (1.0 - np.cos(angs))).sum(axis=1))
-            idiff_max = float(np.abs(idiff).max())
-            trivial = np.all(theta_all <= 1e-9, axis=1)
-            rho_med, p_med, n_rho_pos = rho_at(trH_all, omega_all, degen,
+            idiff_max = float(np.abs(kappa_flat ** 2
+                                     - (2.0 * (1.0 - np.cos(angs))).sum(axis=1)).max())
+            trivial = np.all(theta_flat <= 1e-9, axis=1)                 # [B]
+            rho_med, p_med, n_rho_pos = rho_at(trH_all, omega_all, degen_mask,
                                                n_triples, N)
             degen_sweep = {}
             for frac in (0.7, 0.9, 0.95):
-                msk = step_res.numpy() > frac * 2 * R
+                msk = _tn(step_res.numpy() > frac * 2 * R)
                 rm, pm, nm = rho_at(trH_all, omega_all, msk, n_triples, N)
                 degen_sweep[f"{frac}x2r"] = {"degenerate_frac": float(msk.mean()),
                                              "rho_median": rm, "n_positions": nm}
-            dmask = ~degen
-            theta_flat = theta_all[dmask]
-            spread = (float(np.nanmax(theta_flat) - np.nanmin(theta_flat))
-                      if theta_flat.size else float("nan"))
-            hist = np.histogram(theta_flat,
+            th_masked = theta_flat[~degen_flat]                          # [K, R//2]
+            th_vals = th_masked[np.isfinite(th_masked)]
+            spread = (float(np.nanmax(th_vals) - np.nanmin(th_vals))
+                      if th_vals.size else float("nan"))
+            hist = np.histogram(th_vals,
                                 bins=[0, 0.01, 0.05, 0.1, 0.5, 1.0, np.pi])[0]
+            kappa_tn = _tn(kappa_flat)                                   # [T, N]
             entry = {
-                "kappa_median": float(np.median(kappa_all)),
-                "kappa_ci": [float(x) for x in np.percentile(kappa_all, [2.5, 97.5])],
+                "kappa_median": float(np.median(kappa_flat)),
+                "kappa_ci": [float(x) for x in np.percentile(kappa_flat, [2.5, 97.5])],
                 "theta": {
-                    "median_per_j": [float(np.nanmedian(theta_all[:, j]))
+                    "median_per_j": [float(np.nanmedian(theta_flat[:, j]))
                                      for j in range(R // 2)],
                     "hist_8_angles": [float(c) for c in hist],
-                    "n_dropped_nan": int(theta_flat.size - hist.sum()),  # M-4
+                    "n_dropped_nan": int(th_masked.size - th_vals.size),  # M-4
                     "spread_max_minus_min": spread,
                     "max_theta": float(np.nanmax(max_theta)) if max_theta.size
                     else float("nan"),
@@ -282,11 +321,11 @@ def main(results_dir="results", device="auto"):
                 "trH_vs_omega": {"rho_median": rho_med, "n_positions": n_rho_pos,
                                  "p_med": p_med},
                 "identity_check_max_absdiff": idiff_max,
-                "degenerate_frac": float(degen.mean()),
+                "degenerate_frac": float(degen_flat.mean()),
                 "degen_sweep": degen_sweep,
                 "trivial_frac": float(trivial.mean()),
                 "n_omega_skipped": n_omega_skipped,
-                "profile_kappa": [float(np.median(kappa_all[t]))
+                "profile_kappa": [float(np.median(kappa_tn[t]))
                                   for t in range(0, n_triples, 8)],
             }
             per_layer[str(l)][str(R)] = entry
@@ -309,12 +348,11 @@ def main(results_dir="results", device="auto"):
                 "within_tol_1e-3": bool(abs_diff < 1e-3)}
         if l == 23:
             # P2 (docs/E38_fixes2.md): full H_012_doc0 as .npz (float64),
-            # not JSON.
-            Jt = J.reshape(N * Ss, Kk, Dd)
-            _, _, V16 = top_r_svd(Jt.to(device), R_HEADLINE)
-            Vt16 = V16.transpose(1, 2).contiguous()
-            f0 = Ss + torch.arange(n_triples)   # doc 0
-            V0 = Vt16[f0]; V1 = Vt16[f0 + 1]; V2 = Vt16[f0 + 2]
+            # not JSON. doc 0 = flat indices 0..Ss-1, so the triple
+            # (t, t+1, t+2) starts at f0 = t (the old v2 code used
+            # f0 = Ss + t — that is doc 1; the .npz was mislabeled).
+            f0 = torch.arange(n_triples, device=device)   # doc 0
+            V0 = Vt[f0]; V1 = Vt[f0 + 1]; V2 = Vt[f0 + 2]
             R01, _ = _procrustes_batched(V0, V1)
             R12, _ = _procrustes_batched(V1, V2)
             R20, _ = _procrustes_batched(V2, V0)
@@ -323,12 +361,12 @@ def main(results_dir="results", device="auto"):
             ).cpu().double()
             np.savez(os.path.join(out_dir, f"exp38d_H012_doc0_L{l}.npz"),
                      H012=H012.numpy())
-            del V16, Vt16, V0, V1, V2, R01, R12, R20
+            del V0, V1, V2, R01, R12, R20
             if device.startswith("cuda"):
                 torch.cuda.empty_cache()
 
         r = rh
-        del J, H
+        del J, H, Vt
         print(f"L{l} r={R_HEADLINE}: κ_med={r['kappa_median']:.5f} "
               f"maxθ={r['theta']['max_theta']:.5f} "
               f"ρ(trH,Ω)={r['trH_vs_omega']['rho_median']:.3f} "
