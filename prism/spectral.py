@@ -81,6 +81,12 @@ def top_r_svd(
     """
     if J.dim() != 2:
         raise ValueError(f"top_r_svd: expected 2-D J, got {J.dim()}-D")
+    if not torch.isfinite(J).all():
+        bad = int((~torch.isfinite(J)).nonzero(as_tuple=False).flatten()[0])
+        raise ValueError(
+            f"top_r_svd: J contains NaN/Inf (first at flat index {bad}); "
+            "refuse to propagate a corrupted cache silently"
+        )
     K, D = J.shape
     if not (1 <= r <= min(K, D)):
         raise ValueError(
@@ -142,8 +148,16 @@ def eigengap_min(
 ) -> tuple[float, bool]:
     """Pre-flight [M-4]: min consecutive eigenvalue gap inside top-k.
 
-    Returns (gap_min, applicable), applicable = gap_min >= eps_frac * spectrum[0]
-    (after sorting descending; so spectrum[0] is λ_1 = max).
+    Returns (gap_min, well_separated), well_separated = gap_min >= eps_frac
+    * spectrum[0] (after sorting descending; so spectrum[0] is λ_1 = max).
+
+    SEMANTICS (docs/E38_fixes.md §1.1): ``well_separated`` is a
+    mathematically neutral predicate — the spectrum is well separated
+    (no near-degenerate pair). It is NOT the [M-4] verdict: per [M-4]
+    ``min_t gap_min < ε`` (i.e. NOT well_separated) is when the non-Abelian
+    formalism is applicable. Callers decide the mapping; E-38c reports
+    ``fraction_well_separated`` and drives verdicts from
+    ``min_t_gap_min_over_threshold`` directly.
 
     NOT min(eigengap(...)): eigengap returns only the FIRST gap λ₁−λ₂;
     this returns the MINIMUM over ALL consecutive gaps λ_i − λ_{i+1}.
@@ -152,7 +166,7 @@ def eigengap_min(
     directly without a manual sqrt(). Do NOT pass singular values here.
 
     The ``>=`` (not ``>``) is deliberate: an exact equality
-    ``gap_min == threshold`` is classified as applicable (boundary =
+    ``gap_min == threshold`` is classified as well_separated (boundary =
     "acceptable, not degenerate", per [M-4]).
 
     Args:
@@ -160,7 +174,7 @@ def eigengap_min(
         eps_frac: threshold as a fraction of λ_1; must lie in (0, 1).
 
     Returns:
-        (gap_min, applicable) as Python (float, bool).
+        (gap_min, well_separated) as Python (float, bool).
 
     Warnings:
         RuntimeWarning: spectrum all zero → returns (0.0, False).
@@ -184,7 +198,11 @@ def eigengap_min(
     if s[0] == 0:
         warnings.warn("eigengap_min: all eigenvalues are zero", RuntimeWarning)
         return 0.0, False
-    gaps = s[:-1] - s[1:]
+    # Gaps computed in float64: in float32 (eps ≈ 1.2e-7) a gap near
+    # eps_frac * λ_1 with eps_frac ≤ 0.01 would sit at the precision floor
+    # (absolute error ~1e-7·λ_1). Same policy as spectrum_from_gramian,
+    # which already casts to double internally (API symmetry).
+    gaps = (s[:-1] - s[1:]).double()
     gap_min = float(gaps.min())
     threshold = float(eps_frac * s[0])
     return gap_min, gap_min >= threshold

@@ -247,30 +247,34 @@ def holonomy_spectrum(
             RuntimeWarning,
         )
 
-    # One angle per conjugate pair {e^{iθ}, e^{-iθ}}: for θ < π the pair
-    # contributes exactly ONE positive angle (+θ; −θ is filtered out), so
-    # mult = counts. At θ = π both eigenvalues are −1 and both angles are
-    # +π — counts is doubled there, so halve only the π bin (−I₄ → θ =
-    # [π, π], not [π, π, π, π]).
-    # A LONE real -1 eigenvalue (reflection axis; det R_total = -1, possible
-    # because a Procrustes step may be a reflection) also lands in the pi
-    # bin and is reported as a pi angle - the standard convention. It is NOT
-    # a 2D rotation block: it contributes 4 to ||R-I||_F^2, while the
-    # reported pi angle implies 8 in the 4*sum(1-cos theta) identity.
-    # Exact identities must sum over ALL r eigenvalues:
+    # One angle per conjugate pair {e^{iθ}, e^{-iθ}}: a 2D rotation
+    # block at θ contributes angles +θ and −θ (equal in magnitude);
+    # at θ = π both eigenvalues are −1 and the angles are ±π — the SIGN
+    # of the atan2 result depends on fp noise in the imaginary part
+    # (LAPACK), so the old `angles > 1e-6` filter silently dropped −π
+    # and could lose an entire π block (all−π pair → "R ≈ I").
+    # docs/E38_fixes.md §2 HIGH. Work with ABS values: every 2D block
+    # then contributes exactly 2 equal angles, so mult = counts // 2
+    # UNIFORMLY (no special π halving needed; conjugate pairs from real
+    # Schur blocks are bit-exact in |imag|, so abs is exact here).
+    # A LONE real -1 eigenvalue (reflection axis; det R_total = -1,
+    # possible because a Procrustes step may be a reflection) also lands
+    # in the π bin (counts = 1 → mult = 0) and is reported as a π angle
+    # — the standard convention. It is NOT a 2D rotation block: it
+    # contributes 4 to ||R-I||_F^2, while the reported π angle implies
+    # 8 in the 4*sum(1-cos theta) identity. Exact identities must sum
+    # over ALL r eigenvalues:
     #   ||R-I||_F^2 = sum_j 2 (1 - cos ang_j).
-    angles = torch.angle(eigvals)  # (-π, π]
+    angles = torch.angle(eigvals).abs()  # [0, π]
     positive = angles[angles > 1e-6]
     rounded = positive.round(decimals=8)
     uniques, counts = torch.unique(rounded, return_counts=True)
-    pi_mask = uniques > math.pi - 1e-6
-    mult = torch.where(pi_mask, counts // 2, counts)
-    # mult 0: a π-pair split across the ±π boundary (one side negative) —
-    # numerical noise; treat as one pair
+    mult = counts // 2
+    # mult 0: a lone −1 (reflection axis) — merge into one π angle.
     if (mult == 0).any():
         warnings.warn(
-            "holonomy_spectrum: a conjugate pair split across the ±π "
-            "boundary (numerical noise) — merged into one",
+            "holonomy_spectrum: lone -1 eigenvalue (reflection axis) — "
+            "reported as a π angle (standard convention)",
             RuntimeWarning,
         )
         mult = mult.clamp(min=1)

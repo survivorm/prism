@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """E-38b — Classical position audit: C_b, PR_modes, align_K1 on [16, S-2].
 
-Post-process exp27b dense cache (0 cost). Per (layer, t, doc):
+Post-process exp27b dense cache (post-processing cost ~0; the load cost
+is J+P only, ~2.1 GB/layer — H is NOT stacked, docs/E38_fixes2.md §6).
     C_b(t)      — cross-doc cosine of gauge-free J_t (Frobenius); per-doc
                   value = median over the other 31 docs, reported as the
                   median over docs.
@@ -87,8 +88,11 @@ def main():
     t0 = time.time()
     per_layer = {}
     for l in LAYERS:
-        ck = load_layer(l)
+        # J+P only — H is not needed here; skipping it halves the peak
+        # (docs/E38_fixes2.md §6, «H не грузить в exp38b»).
+        ck = load_layer(l, want=("J", "P"))
         Jraw, P = ck["J"], ck["P"]          # [N, S, K, D], [N, S, K]
+        del ck
         N = Jraw.shape[0]
         Jgf = gauge_free_J(Jraw, P)         # [N, S, K, D]
         del Jraw, ck
@@ -199,7 +203,7 @@ def main():
             "nan_count": nan_count,
         }
         r = per_layer[str(l)]
-        del Jgf
+        del Jgf  # ~2.1 GB; free it as soon as the block is written (P2-9)
         print(f"L{l}: C_b pos0={r['C_b']['pos0_median']:.4f} body={r['C_b']['body_median']:.4f} "
               f"x{r['C_b']['body_over_pos0']:.2f} | PR pos0={r['PR_modes']['pos0_median']:.3f} "
               f"body={r['PR_modes']['body_median']:.3f} | align pos0={r['align_K1']['pos0_median']:.3f} "
@@ -272,7 +276,15 @@ def main():
                          "per layer in nan_count"},
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    json.dump(out, open(OUT, "w"), indent=1, default=float)
+    # NaN in a per-doc aggregate (an all-NaN doc) must not emit the
+    # non-standard NaN literal (RFC-8259); fail loud on other non-JSON
+    # objects (same convention as exp38d/exp38a, docs/E38_fixes2.md).
+    def _json_default(o):
+        if isinstance(o, float) and not np.isfinite(o):
+            return "nan" if o != o else ("inf" if o > 0 else "-inf")
+        raise TypeError(f"object of type {type(o).__name__} is not JSON serializable")
+    with open(OUT, "w") as f:
+        json.dump(out, f, indent=1, default=_json_default)
     print(f"VERDICTS {verdicts}")
     print(f"JSON -> {OUT} ({os.path.getsize(OUT)} bytes) in {time.time() - t0:.1f}s")
 

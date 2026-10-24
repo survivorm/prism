@@ -6,8 +6,11 @@ tail_only. Plus `apply_edit` (context manager) and `apply_edit_and_cache`
 
 Key decisions (docs/new_functions_2.md §4.1):
 1. **delta_W is [K, D_S], applied only to `lm_head.weight[token_set]`**
-   — not [V, D_S]. ~1200× memory savings; semantics: J depends only on
-   the token_set rows.
+   — not [V, D_S]. ~1200× memory savings (storage of the DELTA only);
+   semantics: J depends only on the token_set rows. Note: the Adam state
+   in `edit_lm_head` is allocated on the FULL [V, D_S] weight (~2 GB
+   extra for 0.8B) — the savings apply to the persisted delta, not to
+   optimizer state (docs/E38_fixes.md §6).
 2. **EditSpec knows its token_set** — never recomputed at apply time.
 3. **apply_edit restores the model in `finally`** — even on exception.
 4. **apply_edit_and_cache caches only h_t and p_t, not J** — J is
@@ -160,6 +163,12 @@ def make_readout_pull(
 
     Determinism: torch.manual_seed(seed); torch.use_deterministic_
     algorithms is NOT enabled (Adam on GDN models may raise).
+
+    Memory note: ``params = [weight]`` — the Adam optimizer allocates full
+    [V, D_S] state (m + v), not just the [K, D_S] delta: gradient masking
+    keeps non-token_set rows frozen, but the state is still ~2 GB for
+    0.8B. The "~1200× savings" claim covers the persisted delta only
+    (docs/E38_fixes.md §6).
 
     Restoration: W0 = lm_head.weight[token_set].detach().clone() up
     front; copy_(W0) in finally; requires_grad saved/restored too.
@@ -670,7 +679,12 @@ def _atomic_torch_save_text(text: str, final_path: str) -> None:
 def _check_meta_consistency(meta_path: str, expected: dict) -> None:
     with open(meta_path) as f:
         existing = json.load(f)
-    for key in ("edit", "layer", "doc", "S", "D_S", "K"):
+    # dtype/torch/transformers are checked too (docs/E38_fixes.md §2): a
+    # silent dtype switch between runs (e.g. fp16 -> fp32) would otherwise
+    # mix stale and fresh cache files without any error, since
+    # overwrite=False only writes missing files.
+    for key in ("edit", "layer", "doc", "S", "D_S", "K",
+                "model_dtype", "torch", "transformers"):
         if existing.get(key) != expected[key]:
             raise RuntimeError(
                 f"cache meta mismatch for {meta_path}: {key} = "

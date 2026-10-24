@@ -62,7 +62,9 @@ def build_M_K(
         raise ValueError(f"build_M_K: non-finite g at index {bad}")
 
     ts = torch.tensor(token_set, device=W_lm.device, dtype=torch.long)
-    return W_lm[ts] * g.unsqueeze(0)
+    # Cast g to W_lm's dtype: an fp64 g would silently promote the result
+    # to fp64 (torch type promotion), surprising the caller (docs/E38_fixes.md §5).
+    return W_lm[ts] * g.to(W_lm.dtype).unsqueeze(0)
 
 
 def decompose_w_vs_uhat(
@@ -138,8 +140,8 @@ def v_pred_from_JT(
                 f"v_pred_from_JT: uniform shape {tuple(uniform.shape)} != (K,) = ({K},)"
             )
         n = uniform.norm()
-        if n == 0:
-            raise ValueError("v_pred_from_JT: uniform has zero norm")
+        if not (n > 0) or float(n) < 1e-30:
+            raise ValueError("v_pred_from_JT: uniform has (near-)zero norm")
         uniform = uniform / n
     x = J.T @ uniform
     nx = float(x.norm())

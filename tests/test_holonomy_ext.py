@@ -129,6 +129,31 @@ def test_spectrum_minus_identity():
     assert theta[1] == pytest.approx(math.pi, abs=1e-6)
 
 
+def test_spectrum_all_pi_pair_not_silently_lost():
+    # docs/E38_fixes.md §2 HIGH: an all-π pair (both eigenvalues -1) can
+    # land on the -π side of the ±π boundary (fp sign of imag part) and
+    # the old `angles > 1e-6` filter dropped it -> "R ≈ I". -I4 is the
+    # canonical all-π case.
+    theta, _ = holonomy_spectrum(_open_path_to(-torch.eye(4, dtype=torch.float64), K=4),
+                                 closed_loop=False)
+    assert theta.shape == (2,)
+    np.testing.assert_allclose(theta, math.pi, atol=1e-6)
+
+
+def test_spectrum_lone_minus_one_reflection_axis():
+    # rot(0.5) block + {+1, -1}: det = -1 (a Procrustes step may be a
+    # reflection) -> a LONE -1, reported as a π angle with a warning.
+    R = torch.block_diag(
+        _rot2(0.5),
+        torch.tensor([[1.0, 0.0], [0.0, -1.0]], dtype=torch.float64),
+    )
+    with pytest.warns(RuntimeWarning, match="lone -1 eigenvalue"):
+        theta, _ = holonomy_spectrum(_open_path_to(R, K=4), closed_loop=False)
+    assert theta.shape == (2,)
+    assert theta[0] == pytest.approx(0.5, abs=1e-6)
+    assert theta[1] == pytest.approx(math.pi, abs=1e-6)
+
+
 def test_spectrum_trace_and_frobenius_identities():
     th = 0.35
     R = torch.block_diag(_rot2(th), _rot2(2 * th))

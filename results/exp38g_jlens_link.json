@@ -14,48 +14,51 @@
   "J_our": "raw per-position [K=128, D=1024] (E-28 convention)"
  },
  "lens_validity": {
-  "sigma1": 5.721141338348389,
-  "sigma_median": 1.050498127937317,
+  "sigma1": 5.721133232116699,
+  "sigma_median": 1.050498366355896,
   "norm_J_minus_I": 17.95328712463379,
-  "s1_over_median": 5.446122354907965,
+  "s1_over_median": 5.446113402311041,
   "valid": false
  },
  "metrics": {
   "primary_overlap_our_tail_in_lens_tail": {
-   "median": 0.059651183585325875,
+   "median": 0.05959699427088101,
    "ci": [
-    0.0593866154551506,
-    0.05985600749651591
+    0.05871366461118062,
+    0.060409182061751686
    ],
+   "ci_note": "doc-level: per-doc median, bootstrap over 32 docs",
+   "random_baseline": 0.099609375,
+   "random_baseline_note": "E[overlap] = r_lens/D for two independent random subspaces; overlap ~ 0.1 is RANDOM INDEPENDENCE, not disjointness",
    "profile_every_8": [
-    0.06267491728067398,
-    0.060304611921310425,
-    0.06196155895789464,
-    0.06158265968163808,
-    0.061539215346177414,
-    0.05999268591403961,
-    0.0586023951570193,
-    0.061403257151444755,
-    0.06014124552408854,
-    0.06114964932203293,
-    0.060269715885321304,
-    0.05985759198665619,
-    0.060607098042964935,
-    0.05680187791585922,
-    0.05578223367532094,
-    0.058201792339483895
+    0.06267485270897548,
+    0.0603046069542567,
+    0.06196157385905583,
+    0.06158262987931569,
+    0.06153921037912369,
+    0.0599927082657814,
+    0.05860236783822377,
+    0.06140323728322983,
+    0.060141230622927346,
+    0.061149656772613525,
+    0.060269713401794434,
+    0.059857574601968125,
+    0.06060708810885747,
+    0.05680185308059057,
+    0.055782196422417954,
+    0.05820177495479584
    ]
   },
   "rho_our_S_frac_tail": {
-   "median": -0.03986792711957517,
+   "median": -0.04145875297564548,
    "ci": [
-    -0.11805301226881522,
+    -0.12002588887018653,
     0.008537813587255081
    ],
    "per_doc": [
-    -0.02913843618384911,
+    -0.029218549716169197,
     0.06438266800952205,
-    -0.28376785387291703,
+    -0.2836190715986083,
     0.03522706464017579,
     -0.09236518036989562,
     0.022363120307635962,
@@ -67,44 +70,47 @@
     -0.022712186412744917,
     0.3127746749679545,
     0.011147225782823659,
-    -0.12295710492583774,
-    -0.17444721662699136,
-    -0.038340047610327777,
-    -0.1131489196117927,
+    -0.12699711591283647,
+    -0.17427554477201976,
+    -0.04152169932246841,
+    -0.11305466182753658,
     0.005928401391686503,
     0.017121406335835927,
     0.08213926020875296,
     -0.12754646584874565,
     -0.04139580662882256,
-    -0.030094076176524445,
-    -0.1795973722761399,
+    -0.030085535624137558,
+    -0.17927431341907624,
     -0.12078831715802966,
     -0.04298091008972715,
-    -0.22993728254898368,
-    0.015376075810291153,
-    -0.1547221204907526,
-    0.012823887566379782,
-    -0.331687190990661
-   ]
+    -0.2304522981138985,
+    0.016214429898429628,
+    -0.1555575901849478,
+    0.012772386009888299,
+    -0.33160707745834095
+   ],
+   "completion_alt_random_qr": -0.16590081944698773,
+   "completion_sensitive": false,
+   "completion_note": "rho with a random-QR completion of V_our instead of scipy null_space; a difference > 0.2 means S_our reflects the arbitrary 896 null modes (MEDIUM-5), not the J-structure"
   },
   "rho_lens_S_frac_tail": {
-   "median": -0.9269908212781541,
+   "median": -0.9269965436733199,
    "ci": [
-    -0.9355829976194835,
+    -0.935651666361472,
     -0.9115718275041201
    ],
    "per_doc": [
-    -0.9268048434352683,
+    -0.9268162882255997,
     -0.9596571140816699,
     -0.9334256546420069,
     -0.9348390862479398,
     -0.9038008148690717,
-    -0.8806995055850576,
+    -0.8806651712140633,
     -0.92717679912104,
-    -0.9385529207104926,
+    -0.9384670847830067,
     -0.9426158212781541,
     -0.9115718275041201,
-    -0.9628444881889763,
+    -0.9627071507049991,
     -0.9102957333821643,
     -0.9202069218091924,
     -0.8960755813953487,
@@ -114,14 +120,14 @@
     -0.8940956326680095,
     -0.93754005676616,
     -0.9288134041384362,
-    -0.9644410364402123,
-    -0.9283384453396814,
+    -0.9644753708112066,
+    -0.9283155557590184,
     -0.8960011902581945,
     -0.9160295733382163,
     -0.8956235121772568,
     -0.9150052646035525,
-    -0.9059295458707196,
-    -0.9363269089910272,
+    -0.9057521516205822,
+    -0.9364642464750044,
     -0.9503925563083684,
     -0.9482180461453946,
     -0.8644021241530854,
@@ -129,19 +135,22 @@
    ]
   },
   "S_our_entropy": {
-   "median": 6.095826625823975
+   "median": 6.095827579498291
   },
   "frac_tail_our": {
-   "median": 0.9793699085712433
+   "median": 0.9793697893619537
   }
  },
  "outcomes": {
-  "verdict": "tails_disjoint,lens_validity_suspect"
+  "verdict": "at_random,lens_validity_suspect",
+  "rewritten_primary_outcome": "at_random,lens_validity_suspect",
+  "tz_preregistered_outcome": "jlens_not_tail_modes",
+  "outcome_note": "the TZ pre-registration was \u03c1-based (\u03c1>0.7 symmetric / \u03c1<0.3 not_tail_modes); the code rewrite makes the subspace OVERLAP primary (the old version measured only lens-internal consistency \u2014 not the TZ question). Both outcomes are reported; do not mix them in the paper (docs/E38_fixes.md part-8 HIGH-1/2)."
  },
  "meta": {
   "what_this_test_is": "PRIMARY (b): direct subspace check \u2014 per-position tail subspace of OUR J_t (bottom 10% of its 128 \u03c3, right singular vectors, R^1024) vs tail subspace of the LENS J_22 (bottom 10% of 1024 \u03c3): overlap = \u2016V_our_tail^T V_lens_tail\u2016_F\u00b2/r_our. This is the TZ's 'symmetry with Anthropic' claim. SECONDARY (a): dual sparsity/tail correlation in both bases (rho_our vs rho_lens; the old version reported only the lens-internal rho_lens, which is NOT the TZ question). docs/E38_fixes.md part-2 \u00a71.",
   "note": "Lens fit on HINDI (finewiki@hi), docs English. Lens J_22 is a position-averaged [1024,1024] Jacobian; our J_t is per-position [128,1024]. Both act on the same h_t \u2208 R^1024 at L22 \u2014 the right-singular comparison is well-defined there. Author flags the lens 'experimental/unvalidated'; validity gate = bounded spectrum of J_22. Per TZ: do NOT substitute 9B results (different D).",
-  "basis_completion": "our 128 right singular vectors completed to a full R^1024 basis by scipy.linalg.null_space (896 deterministic LAPACK null vectors), so S_our(t) is over the same 1024-mode p_k as rho_lens.",
+  "basis_completion": "our 128 right singular vectors completed to a full R^1024 basis by scipy.linalg.null_space (896 deterministic LAPACK null vectors), so S_our(t) is over the same 1024-mode p_k as rho_lens. The 896 null vectors are ARBITRARY (any ON completion works): S_our and rho_our are reported alongside a random-QR completion sensitivity (completion_alt_random_qr). A degenerate \u03c3 in the LENS also makes V_lens_tail arbitrary within the degenerate subspace \u2014 the validity gate flags suspect lenses, but does not catch degeneracy (MEDIUM-6).",
   "tail": "bottom 10% of each spectrum: our modes 116..128 (of 128), lens modes 922..1024 (of 1024)."
  }
 }

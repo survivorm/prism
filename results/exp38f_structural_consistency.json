@@ -10,31 +10,40 @@
  },
  "metrics": {
   "cos_vg_vpred": {
-   "median": 0.004438688745722175
+   "median": 0.9647100567817688
   },
   "cos_ug_uniform": {
-   "median": 0.22817692160606384
+   "median": 0.8623113930225372
   },
   "dcos": {
-   "median": -0.22365894564427435,
+   "median": 0.10253080725669861,
    "ci": [
-    -0.22431657887063922,
-    -0.2230597056914121
+    0.10147327780723572,
+    0.10320112109184265
    ],
-   "mean": -0.2256732525760583
+   "ci_note": "doc-level: per-doc median, bootstrap over 32 docs",
+   "mean": 0.10334718837111723,
+   "nan_count": 0,
+   "nan_frac": 0.0
   },
   "profile_dc_per_docblock": [
-   -0.2230412398930639,
-   -0.23092712322250009,
-   -0.22350449301302433,
-   -0.21993645979091525
+   0.10264676809310913,
+   0.10207223892211914,
+   0.1028272807598114,
+   0.10373780131340027
+  ],
+  "profile_docs": [
+   0,
+   8,
+   16,
+   24
   ]
  },
  "outcomes": {
-  "verdict": "lemma_broken",
+  "verdict": "lemma_confirmed",
   "gate": "pass"
  },
  "meta": {
-  "note": "|cos| used (sign(v_g) non-unique, LAPACK); cos(v_g,v_pred) \u2248 cos(u_g,1/\u221aK) is full agreement; cos \u2248 1 is EXCESS (anomaly), not agreement"
+  "note": "|cos| used (sign(v_g) non-unique, LAPACK); c_k = (U.T @ one)[k] = |u_k\u00b71/\u221aK| (the old (U @ one)[k] row-metric was a bug, part-7 \u00a71); lemma-compatible range \u0394cos \u2208 [0, 1\u2212c_g]: \u0394cos < \u22120.05 = broken (impossible exactly), \u0394cos \u2264 1\u2212c_g+0.05 = confirmed, above that = methodological_anomaly. dcos median is a NaN-excluding median (nanmedian); nan_count/nan_frac record the degenerate \u2016J^T u\u2016 \u2248 0 subset"
  }
 }

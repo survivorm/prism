@@ -12,8 +12,10 @@ Pre-registered (docs/E38.md §E-38h):
     ‖R12 R23 − R13‖_F / r over triples.
   - Per-channel Jacobian response: J(s) = (√D/r) M_K(s)(I−ûûᵀ) is exact at
     L23 (E-35), so ΔJ(s) = ΔJ_top(s) + ΔJ_tail(s) via the same channel
-    split applied to ΔW — computed EXACTLY from ΔW alone (h_t invariant
-    under a readout-only edit), no model forward.
+    split applied to ΔW — computed from ΔW alone. NOTE (E38_fixes P1):
+    "h_t invariant" is FALSE for tied Qwen3.5-0.8B (lm_head = embed_tokens),
+    so ΔJ = ΔW @ J_norm(cached h) is a linear-response approximation, not
+    an identity; no model forward.
 
 BLOCKED (honest, documented): the per-channel `bridge(s)` = 1 −
 jacobian_gap(J_L, J_S, E_L, E_S, p) needs J_L of the large target model,
@@ -57,8 +59,9 @@ def main():
     missing = [k for k in K_STEPS if k not in snaps_all]
     assert not missing, f"missing snapshot steps: {missing}"
     ks = list(K_STEPS)
-    W_orig = raw["W_orig"].to(torch.float64)
-    dW = {k: snaps_all[k] - W_orig for k in ks}
+    W_orig = raw["W_orig"].to(torch.float64)  # noqa: F841 (schema check only)
+    # P0 fix (E38_fixes): snapshots[k] IS ΔW — do NOT subtract W_orig again
+    dW = {k: snaps_all[k] for k in ks}
 
     # --- fixed reference projector: top-16 frame of ΔW at the smallest dose
     # (s=10). DEVIATION from TZ (documented): the TZ's two-sided projector
@@ -133,6 +136,16 @@ def main():
             "snapshots": "results/exp16_deltas/exp16_dW_snapshots.pt",
             "grid": "E-16 steps 10..1000 (step≈dose*100; knee_step=84)",
             "subsample": ks,
+            "schema": "snapshots[k] = ΔW = (W_curr − W_orig)[token_set]; "
+                      "dW = snapshots[k] (E38_fixes P0: previous run "
+                      "subtracted W_orig twice -> results of 2026-10-24 "
+                      "invalid)",
+            "tied_weights": "Qwen3.5-0.8B tie_word_embeddings=True: the "
+                            "'readout-only' E-16 edit also changes "
+                            "embed_tokens, so in the REAL model h_t changes "
+                            "with the edit; ΔJ = ΔW @ J_norm(cached h) is a "
+                            "linear-response approximation, not an identity "
+                            "(E38_fixes P1)",
             "projector": "two-sided top-16 FIXED at ΔW(s=10) (smallest dose). "
                          "DEVIATION from TZ: J23 projector (U128, 128 tokens) "
                          "cannot act on ΔW (E-16 256-token set; 13 shared) — "
