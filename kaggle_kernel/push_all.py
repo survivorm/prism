@@ -206,6 +206,25 @@ KERNELS = {
         # FULL: n_samples=8 x 4 domains x 128 t x 6 layers = 24,576 J (no smoke overrides).
         # ~3.3h T4 IF fla triton kernels work (v9: 0.48 s/J); ~90h at torch fallback — v10 FLA probe decides.
     },
+    "exp38d": {
+        "dir": "kernel-exp38d",
+        # Provisional id (never pushed): Kaggle derives the slug from the
+        # title. After the first successful push, verify the canonical slug
+        # (`kaggle kernels list`) and update here (re-push 409 otherwise).
+        "id": "voroninmichael/prism-exp38d-holonomy-spectrum",
+        "title": "Prism: exp38d-holonomy-spectrum",
+        "exp_file": "experiments/exp38d_holonomy_spectrum.py",
+        "sources": ["voroninmichael/prism-exp27b-dense-profile"],
+        "extra_modules": ["prism.spectral"],
+        "extra_local": ["_e38_cache"],
+        "note": "E-38d v2: vectorized holonomy matrix H_012 + spectrum, "
+                "R-sweep (16, 32, 64, 128). Reads the exp27b cache from the "
+                "producer kernel mount /kaggle/input/prism-exp27b-dense-profile/results/. "
+                "r=16 headline reproduces the local CPU run (1.1h) + the "
+                "r>16 sweep (~30-60 min T4). 38d is the ONLY 38-series "
+                "experiment needing Kaggle (38a/b/c/e/g/h/i run in seconds "
+                "on CPU — docs/E38_fixes2.md).",
+    },
     "exp19": {
         "dir": "kernel-exp19",
         "slug": "exp4-top-p-tokens",
@@ -254,6 +273,10 @@ def build(exp_name: str):
     ]
     cmd += ["--sources"] + meta_dict.get("sources", [])  # type: ignore[arg-type]
     cmd += ["--datasets"] + meta_dict.get("datasets", [])  # type: ignore[arg-type]
+    if meta_dict.get("extra_modules"):  # type: ignore[union-attr]
+        cmd += ["--extra-modules"] + list(meta_dict["extra_modules"])  # type: ignore[union-attr]
+    if meta_dict.get("extra_local"):  # type: ignore[union-attr]
+        cmd += ["--extra-local"] + list(meta_dict["extra_local"])  # type: ignore[union-attr]
     if "runner_extra" in meta_dict:
         re_ = meta_dict["runner_extra"]
         if isinstance(re_, (list, tuple)):
