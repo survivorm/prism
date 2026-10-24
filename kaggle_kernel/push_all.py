@@ -272,7 +272,10 @@ def build(exp_name: str):
         meta_dict["title"],  # type: ignore[index]
     ]
     cmd += ["--sources"] + meta_dict.get("sources", [])  # type: ignore[arg-type]
-    cmd += ["--datasets"] + meta_dict.get("datasets", [])  # type: ignore[arg-type]
+    if meta_dict.get("datasets"):  # type: ignore[arg-type]
+        cmd += ["--datasets"] + list(meta_dict["datasets"])  # type: ignore[arg-type]
+    # NB: an EMPTY --datasets flag (nargs="+") would swallow the NEXT flag
+    # as its value — build_kernel's argparse misparses everything after it.
     if meta_dict.get("extra_modules"):  # type: ignore[union-attr]
         cmd += ["--extra-modules"] + list(meta_dict["extra_modules"])  # type: ignore[union-attr]
     if meta_dict.get("extra_local"):  # type: ignore[union-attr]
