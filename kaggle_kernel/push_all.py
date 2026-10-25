@@ -215,11 +215,21 @@ KERNELS = {
         "title": "Prism: exp38d-holonomy-spectrum",
         "exp_file": "experiments/exp38d_holonomy_spectrum.py",
         "sources": ["voroninmichael/prism-exp27b-dense-profile"],
+        # The 13 GB producer outputs do NOT mount as kernel sources;
+        # the cache is published as two datasets (exp32r31 split):
+        # jca: L6/12/18, jcb: L19/22/23 (2026-10-25).
+        "datasets": [
+            "voroninmichael/prism-exp27b-jcache-jca",
+            "voroninmichael/prism-exp27b-jcache-jcb",
+        ],
         "extra_modules": ["prism.spectral"],
         "extra_local": ["_e38_cache"],
         "note": "E-38d v2: vectorized holonomy matrix H_012 + spectrum, "
                 "R-sweep (16, 32, 64, 128). Reads the exp27b cache from the "
-                "producer kernel mount /kaggle/input/prism-exp27b-dense-profile/results/. "
+                "two datasets voroninmichael/prism-exp27b-jcache-jca (L6/12/18) "
+                "and -jcb (L19/22/23) — the 13 GB kernel-source mount does not "
+                "attach. ONE fp32 SVD per layer, all R are slices of the same "
+                "decomposition (v5: the fp64-per-R version was killed at ~5.5h). "
                 "r=16 headline reproduces the local CPU run (1.1h) + the "
                 "r>16 sweep (~30-60 min T4). 38d is the ONLY 38-series "
                 "experiment needing Kaggle (38a/b/c/e/g/h/i run in seconds "
