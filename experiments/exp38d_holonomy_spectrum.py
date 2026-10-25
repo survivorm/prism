@@ -220,58 +220,75 @@ def main(results_dir="results", device="auto"):
         n_omega_skipped = int((deg_h | deg_arc).sum())
 
         per_layer[str(l)] = {}
-        # R=128 memory layout (T4 16 GB, ~14.6 GB usable):
-        #   J (raw fp32)  2.15 GB  +  Vt [N*S, D, R]  8.4 GB  +
-        #   3x step_res fp64  0.63 GB  +  degen_flat bool 21 MB
-        #   + R_01/R_12/R_20 [N*T, R, R] fp64  6.3 GB  +  Htot [N*T, R, R]
-        #   2.1 GB  ≈ 19.7 GB — OVER. So Vt is kept in the R=16 slice
-        #   only (2.1 GB, shared across the sweep) and each R >= 32 runs
-        #   on its own batched SVD of J; peak at R=128 ≈ 14.6 GB
-        #   (Htot is the last block before J is freed).
+        # Memory + speed layout (T4 16 GB):
+        # ONE fp32 SVD of J per layer (K=128 => full_matrices=False yields
+        # all 128 right-singular vectors), so every R in the sweep is a
+        # slice of the SAME decomposition — the sweep is strictly
+        # comparable (an earlier kernel version did a separate fp64 SVD
+        # per R: 4x4096 128x1024 fp64 SVDs per layer ≈ days on T4 fp64 —
+        # the kernel was killed at ~5.5 h). fp32 SVD on T4 ≈ 9 min/layer;
+        # Vh [N*S,128,D] = 2.15 GB.
+        # Per-R peak: Vh 2.15 + J 2.15 + V 2.15 (R=128) + 3 R-blocks fp64
+        # 1.59 GB + Htot fp64 0.53 GB ≈ 8.6 GB — comfortably under 16 GB.
+        # Procrustes stays fp64 (M [B,R,R] is tiny; T4 fp64 on 4032 small
+        # matrices is seconds). Numbers drift ~1e-6 vs the v1 fp64 SVDs
+        # (top-16 subspace is gap-protected; E-28 tol is 5e-3).
         Jflat = J.reshape(N * Ss, Kk, Dd)          # [N*S, K, D] fp32
         _, _, Vh = torch.linalg.svd(
-            Jflat.to(device, dtype=torch.float64), full_matrices=False)
+            Jflat.to(device, dtype=torch.float32), full_matrices=False)
         del Jflat
         Vt = Vh[:, :R_HEADLINE].to(J.dtype).contiguous().transpose(1, 2)  # [N*S, D, 16]
-        del Vh
         for R in R_VALUES:
             if R == R_HEADLINE:
                 V = Vt          # [N*S, D, R], shared with the L23 npz block
             else:
-                Jflat = J.reshape(N * Ss, Kk, Dd)
-                _, _, V = torch.linalg.svd(
-                    Jflat.to(device, dtype=torch.float64),
-                    full_matrices=False)
-                del Jflat
-                V = V[:, :R].to(J.dtype).contiguous().transpose(1, 2)
-            # triple (t, t+1, t+2): index (i, t) -> flat i*S + t, t=0..S-3
-            idx = torch.arange(N * n_triples, device=device)
-            i_doc = idx // n_triples                   # flat doc index
-            t_pos = idx % n_triples
-            f0 = i_doc * Ss + t_pos
-            f1 = f0 + 1
-            f2 = f0 + 2
-            V0, V1, V2 = V[f0], V[f1], V[f2]           # [N*T, D, R]
+                # .contiguous() makes a fresh tensor per R (at most ~2.15 GB
+                # at R=128; at R=128 it is a VIEW of Vh — zero extra). The
+                # previous R's tensor is GC'd on reassignment. Vh stays
+                # alive across the sweep.
+                V = Vh[:, :R].to(J.dtype).contiguous().transpose(1, 2)
+            # CHUNK OVER DOCUMENTS (v8 OOM fix): the three full-batch V-
+            # slices V0/V1/V2 ([N*T, D, R] each = 2.15 GB at R=128) plus the
+            # fp64 R-blocks and M transient pushed peak past T4 16 GB.
+            # Chunking caps the per-R working set; R=16 gives chunk == N
+            # (single pass, bit-identical to the unchunked path).
+            per_row = 3 * Dd * R * 4 + 48 * R * R      # 3 V-slices + 48 R-R fp64
+            chunk = max(1, min(N, (1500 * 10**6) // (n_triples * per_row) or 1))
+            B_tot = N * n_triples
+            step_res_cpu = np.empty(B_tot, dtype=np.float64)
+            Htot = np.empty((B_tot, R, R), dtype=np.float64)
+            for c0 in range(0, N, chunk):
+                c1 = min(c0 + chunk, N)
+                b0, b1 = c0 * n_triples, c1 * n_triples
+                idx = torch.arange(b0, b1, device=device)
+                i_doc = idx // n_triples                # flat doc index
+                t_pos = idx % n_triples
+                f0 = i_doc * Ss + t_pos
+                f1 = f0 + 1
+                f2 = f0 + 2
+                V0, V1, V2 = V[f0], V[f1], V[f2]        # [cT, D, R]
+                # R01 (V0,V1) and R20 (V2,V0) first, then V0 is gone before
+                # R12 — peak = 2 of the 3 V-slices + 3 R-blocks.
+                R01, res01 = _procrustes_batched(V0, V1)
+                R20, res20 = _procrustes_batched(V2, V0)
+                del V0
+                R12, res12 = _procrustes_batched(V1, V2)
+                del V1, V2
+                step_res_cpu[b0:b1] = torch.maximum(
+                    torch.maximum(res01, res12), res20).cpu().numpy()
+                # H = R01 @ R12 @ R20, cycle order (v1: R_total = I @ R01
+                # @ R12 @ R20, holonomy_accumulate left-multiplication).
+                # einsum index check (unit-tested vs torch.bmm chain):
+                # R01[b,i,j] R12[b,j,k] R20[b,k,l] -> H[b,i,l]; a transposed
+                # index (e.g. 'bsr') silently swaps the last factor.
+                Htot[b0:b1] = torch.einsum(
+                    "bij,bjk,bkl->bil", R01, R12, R20).cpu().numpy()
+                del R01, R12, R20
+                if device.startswith("cuda"):
+                    torch.cuda.empty_cache()
             if R != R_HEADLINE:
-                del V   # copies already made; frees ~2.1 GB (R=128)
-            # R01 (V0,V1) and R20 (V2,V0) first, then V0 is gone before
-            # R12 — peak = 2 of the 3 V-slices + 3 R-blocks.
-            R01, res01 = _procrustes_batched(V0, V1)
-            R20, res20 = _procrustes_batched(V2, V0)
-            del V0
-            R12, res12 = _procrustes_batched(V1, V2)
-            del V1, V2
-            step_res = torch.maximum(torch.maximum(res01, res12), res20)
-            degen_flat = (step_res > DEGEN_RES_FRAC * 2 * R).numpy()
-            # H = R01 @ R12 @ R20, cycle order (v1: R_total = I @ R01 @ R12
-            # @ R20, holonomy_accumulate left-multiplication convention)
-            B = R01.shape[0]
-            Htot = np.empty((B, R, R), dtype=np.float64)
-            for bi in range(B):
-                Htot[bi] = (R01[bi] @ R12[bi] @ R20[bi]).numpy()
-            del R01, R12, R20
-            if device.startswith("cuda"):
-                torch.cuda.empty_cache()
+                del V
+            degen_flat = (step_res_cpu > DEGEN_RES_FRAC * 2 * R)
 
             # Layouts (match v1 exactly):
             #   per-TRIPLE stats (kappa, theta, trivial, idiff): flat [B],
@@ -295,7 +312,7 @@ def main(results_dir="results", device="auto"):
                                                n_triples, N)
             degen_sweep = {}
             for frac in (0.7, 0.9, 0.95):
-                msk = _tn(step_res.numpy() > frac * 2 * R)
+                msk = _tn(step_res_cpu > frac * 2 * R)
                 rm, pm, nm = rho_at(trH_all, omega_all, msk, n_triples, N)
                 degen_sweep[f"{frac}x2r"] = {"degenerate_frac": float(msk.mean()),
                                              "rho_median": rm, "n_positions": nm}

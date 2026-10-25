@@ -1,10 +1,13 @@
 """Shared exp27b dense-cache loader for the E-38 series (docs/E38.md).
 
 The dense cache lives at ``kaggle_kernel/results/exp27b_jcache_L{l}.pt``
-(6 files, ~2.1 GB each) locally. On Kaggle, the producer kernel
-``prism-exp27b-dense-profile``'s /kaggle/working is mounted read-only at
-``/kaggle/input/prism-exp27b-dense-profile/results/`` (kernel_sources), so
-``jcache_path`` falls back to that mount when the local file is absent.
+(6 files, ~2.1 GB each) locally. On Kaggle the producer kernel's
+kernel-source mount is NOT attached (its outputs total 13 GB, above the
+mount limit), so ``jcache_path`` resolves from the two Kaggle datasets
+``prism-exp27b-jcache-jca`` (L6/12/18) and ``prism-exp27b-jcache-jcb``
+(L19/22/23), mounted at
+``/kaggle/input/datasets/voroninmichael/<dataset>/`` (dataset_sources,
+same split exp32r31-tail-recompute used).
 
 Per-layer file layout (verified):
 
@@ -40,9 +43,16 @@ except NameError:  # inlined into a notebook cell
     _HERE = os.getcwd()
 REPO = os.path.abspath(os.path.join(_HERE, ".."))
 JCACHE_DIR = os.path.join(REPO, "kaggle_kernel", "results")
-# Producer kernel slug (kaggle_kernel/push_all.py, exp27b): its outputs mount
-# at /kaggle/input/<slug>/ on a kernel that lists it in kernel_sources.
+# Producer kernel slug (kaggle_kernel/push_all.py, exp27b): its kernel-source
+# mount does NOT attach on 38d — the producer's outputs are 13 GB, above
+# the kernel-source mount limit (observed 2026-10-25: /kaggle/input only
+# contained notebooks + self). The cache is therefore ALSO published as two
+# Kaggle datasets (same split as exp32r31-tail-recompute uses):
+#   jca: L6, L12, L18   /   jcb: L19, L22, L23
+# mounted at /kaggle/input/datasets/voroninmichael/prism-exp27b-jcache-{jca,jcb}/.
+_E27B_KAGGLE_USERNAME = "voroninmichael"
 _E27B_KAGGLE_SLUG = "prism-exp27b-dense-profile"
+_E27B_DATASETS = ("prism-exp27b-jcache-jca", "prism-exp27b-jcache-jcb")
 LAYERS = (6, 12, 18, 19, 22, 23)
 DOMAINS = ("wiki", "math", "code", "chat")
 N_PER_DOMAIN = 8
@@ -63,13 +73,55 @@ def jcache_path(layer: int) -> str:
     local = os.path.join(JCACHE_DIR, f"exp27b_jcache_L{layer}.pt")
     if os.path.exists(local):
         return local
-    kaggle = os.path.join(
-        "/kaggle/input", _E27B_KAGGLE_SLUG, "results", f"exp27b_jcache_L{layer}.pt"
-    )
-    if os.path.exists(kaggle):
-        return kaggle
+    # Kaggle: dataset mounts first (reliable), then the kernel-source mount
+    # (only attaches if producer outputs are under the mount limit).
+    # Dataset mount layout varies by Kaggle version: observed
+    # /kaggle/input/<dataset>/ (2026-10-25, v6) and
+    # /kaggle/input/datasets/<user>/<dataset>/ (exp32r31 run) — probe both.
+    candidates = []
+    for ds in _E27B_DATASETS:
+        candidates += [
+            os.path.join(
+                "/kaggle/input", ds, f"exp27b_jcache_L{layer}.pt"
+            ),
+            os.path.join(
+                "/kaggle/input/datasets", _E27B_KAGGLE_USERNAME, ds,
+                f"exp27b_jcache_L{layer}.pt",
+            ),
+        ]
+    candidates += [
+        os.path.join(
+            "/kaggle/input", f"{_E27B_KAGGLE_USERNAME}-{_E27B_KAGGLE_SLUG}",
+            "results", f"exp27b_jcache_L{layer}.pt",
+        ),
+        os.path.join(
+            "/kaggle/input", _E27B_KAGGLE_SLUG, "results",
+            f"exp27b_jcache_L{layer}.pt",
+        ),
+    ]
+    for mount in candidates:
+        if os.path.exists(mount):
+            return mount
+    # Diagnostic: on Kaggle a miss means the producer mount layout changed
+    # or the source wasn't attached — say so in the log loudly.
+    if os.path.isdir("/kaggle/input"):
+        try:
+            lines = []
+            for e in sorted(os.listdir("/kaggle/input")):
+                p = os.path.join("/kaggle/input", e)
+                if os.path.isdir(p):
+                    try:
+                        sub = sorted(os.listdir(p))[:8]
+                    except OSError:
+                        sub = ["<unreadable>"]
+                    lines.append(f"{e}/ = {sub}")
+                else:
+                    lines.append(e)
+        except OSError:
+            lines = ["<unreadable>"]
+        print(f"[e38cache] JCACHE MISS for L{layer}; /kaggle/input = {lines}",
+              flush=True)
     return local
-    return os.path.join(JCACHE_DIR, f"exp27b_jcache_L{layer}.pt")
 
 
 def load_layer_H(layer: int) -> torch.Tensor:
