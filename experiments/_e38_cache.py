@@ -54,6 +54,14 @@ _E27B_KAGGLE_USERNAME = "voroninmichael"
 _E27B_KAGGLE_SLUG = "prism-exp27b-dense-profile"
 _E27B_DATASETS = ("prism-exp27b-jcache-jca", "prism-exp27b-jcache-jcb")
 LAYERS = (6, 12, 18, 19, 22, 23)
+# GDN (linear-attention) layers per model.config.layer_types (Qwen3.5-0.8B,
+# 24 layers: GDN at {0,1,2,4,5,6,8,9,10,12,13,14,16,17,18,20,21,22},
+# full attention at {3,7,11,15,19,23}). Among LAYERS: GDN = 6/12/18/22,
+# full = 19/23. The old hardcoded (19, 22) in exp38a was INVERTED on 4/6
+# layers (docs/E38_fixes.md §1.5, P1): a constant here, because loading
+# the model just for the label would be disproportionate.
+GDN_LAYERS = frozenset({0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18,
+                        20, 21, 22})
 DOMAINS = ("wiki", "math", "code", "chat")
 N_PER_DOMAIN = 8
 N_DOCS = 32

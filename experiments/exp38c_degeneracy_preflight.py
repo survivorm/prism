@@ -55,6 +55,7 @@ import torch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from _e38_cache import LAYERS, S, load_layer  # noqa: E402
+from prism.json_utils import dump as json_dump  # noqa: E402
 # NOTE: the vectorized gap below is the SAME math as
 # prism.spectral.eigengap_min EXCEPT the zero-spectrum edge: eigengap_min
 # special-cases s[0] == 0 -> (0.0, False), while the vectorized predicate
@@ -230,20 +231,10 @@ def main():
                               "is reported for reference only"},
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-
-    def _json_default(o):
-        """P1-10: do not silently convert np.bool_ → 1.0 (raise), do not
-        emit NaN/Inf literals (stringify, valid RFC-8259) — same
-        convention as exp38a/exp38d (docs/E38_fixes2.md)."""
-        if isinstance(o, np.bool_):
-            raise TypeError(f"unwrapped numpy bool_ in JSON: {o!r}")
-        if isinstance(o, np.integer):
-            return int(o)
-        if isinstance(o, (float, np.floating)) and not np.isfinite(o):
-            return "nan" if o != o else ("inf" if o > 0 else "-inf")
-        return str(o)
+    # Strict RFC-8259: sanitize + allow_nan=False (the old default hook was
+    # never called for Python floats; docs/E38_fixes.md §3).
     with open(OUT, "w") as f:
-        json.dump(out, f, indent=1, default=_json_default)
+        json_dump(out, f, indent=1)
     print(f"OUTCOMES {verdicts}")
     print(f"JSON -> {OUT} ({os.path.getsize(OUT)} bytes) in {time.time() - t0:.1f}s")
 

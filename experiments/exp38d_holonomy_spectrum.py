@@ -59,7 +59,6 @@ Deterministic: seed=0. spearmanr's p is an asymptotic t-approximation
 (NOT a permutation test; seed is irrelevant for it) — the median p is
 reported as p_med for diagnostics (docs/E38_fixes.md part-5 §3, M-3).
 """
-import json
 import os
 import sys
 import time
@@ -77,6 +76,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(_HERE, "..")))
 
 from _e38_cache import LAYERS, S, D, load_layer  # noqa: E402
 from prism.spectral import top_r_svd  # noqa: F401 (kept for traceability)
+from prism.json_utils import dump as json_dump  # noqa: E402
 
 SEED = 0
 R_HEADLINE = 16
@@ -327,8 +327,17 @@ def main(results_dir="results", device="auto"):
                 "kappa_median": float(np.median(kappa_flat)),
                 "kappa_ci": [float(x) for x in np.percentile(kappa_flat, [2.5, 97.5])],
                 "theta": {
+                    # High-R slices can be EMPTY (0 valid entries for some j):
+                    # n_valid per j is recorded, empty slice median = "nan"
+                    # (valid JSON string via json_utils.sanitize; the old
+                    # default=_json_default was dead for Python floats and
+                    # emitted the non-standard NaN literal —
+                    # docs/E38_fixes.md §4).
                     "median_per_j": [float(np.nanmedian(theta_flat[:, j]))
                                      for j in range(R // 2)],
+                    "n_valid_per_j": [int((theta_flat[:, j].nan_to_num(nan=-1.0)
+                                           > -0.5).sum())
+                                      for j in range(R // 2)],
                     "hist_8_angles": [float(c) for c in hist],
                     "n_dropped_nan": int(th_masked.size - th_vals.size),  # M-4
                     "spread_max_minus_min": spread,
@@ -447,26 +456,20 @@ def main(results_dir="results", device="auto"):
                          "exp38d_H012_doc0_L23.npz. consistency_e28 is a "
                          "diagnostic with an empirical 5e-3 tolerance, "
                          "not a hard verdict (1e-3 is tighter than the "
-                         "rounding of the cited 0.018)."},
+                         "rounding of the cited 0.018). "
+                         "median_per_j: at high r many j-slices are EMPTY "
+                         "(0 valid entries) — their median is the string "
+                         "'nan' (valid JSON); n_valid_per_j records the "
+                         "per-j counts (docs/E38_fixes.md §4)."},
     }
 
-    def _json_default(o):
-        """P0-3 (docs/E38_fixes2.md): strict JSON serializer — raise on
-        np.bool_, convert numpy numerics explicitly, NaN/Inf → strings
-        (valid RFC-8259)."""
-        if isinstance(o, np.bool_):
-            raise TypeError(f"unwrapped numpy bool_ in JSON: {o!r}")
-        if isinstance(o, np.integer):
-            return int(o)
-        if isinstance(o, np.floating):
-            o = float(o)
-        if isinstance(o, float) and not np.isfinite(o):
-            return "nan" if o != o else ("inf" if o > 0 else "-inf")
-        raise TypeError(
-            f"object of type {type(o).__name__} is not JSON serializable")
-
+    os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
+    # P0-3 (docs/E38_fixes2.md) + docs/E38_fixes.md §4: strict JSON —
+    # sanitize non-finite floats (the old default= hook was dead for
+    # Python floats: json.dump serializes float('nan') natively before
+    # default= is consulted) + allow_nan=False as defense in depth.
     with open(OUT_PATH, "w") as f:
-        json.dump(out, f, indent=1, default=_json_default)
+        json_dump(out, f, indent=1)
     print(f"VERDICTS {verdicts}")
     print(f"JSON -> {OUT_PATH} in {time.time() - t0:.1f}s")
 

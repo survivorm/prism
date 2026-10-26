@@ -48,7 +48,6 @@ Pre-registered outcomes:
 
 Model loaded on CPU, float32. Deterministic: seed=0 recorded.
 """
-import json
 import os
 import sys
 import time
@@ -63,6 +62,7 @@ from prism.cache import bootstrap_ci  # noqa: E402
 from prism.interventions import _resolve_lm_head_weight  # noqa: E402
 from prism.jacobian import _lm_module  # noqa: E402
 from prism.jstruct import build_M_K  # noqa: E402
+from prism.json_utils import dump as json_dump  # noqa: E402
 
 SEED = 0
 B = 1000
@@ -73,32 +73,25 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 OUT = os.path.join(REPO, "results", "exp38e_MK_diagnostic.json")
 
 
-def _json_default(o):
-    """P0 (docs/E38_fixes2.md): the old `default=float` silently converted
-    np.bool_ -> 1.0 and leaned on an np.float32-NaN str() coincidence.
-    Strict version: raise on np.bool_ (unwrapped numpy scalar = a code
-    bug), convert numpy numerics explicitly, NaN/Inf -> strings (valid
-    RFC-8259)."""
-    if isinstance(o, np.bool_):
-        raise TypeError(f"unwrapped numpy bool_ in JSON: {o!r}")
-    if isinstance(o, np.integer):
-        return int(o)
-    if isinstance(o, np.floating):
-        o = float(o)
-    if isinstance(o, float) and not np.isfinite(o):
-        return "nan" if o != o else ("inf" if o > 0 else "-inf")
-    raise TypeError(
-        f"object of type {type(o).__name__} is not JSON serializable")
+# JSON: strict RFC-8259 via prism.json_utils (the old
+# default=_json_default was never called for Python floats —
+# json.dump serializes float("nan") natively as the
+# non-standard NaN literal; docs/E38_fixes.md §38e).
 
 
 def main():
     t0 = time.time()
+    # Protocol-only: there are no random operations in this script (model
+    # loading is deterministic, all math is deterministic) — the seed and
+    # attn_implementation are recorded for protocol consistency, not
+    # consumed (docs/E38_fixes.md §38e P2).
     torch.manual_seed(SEED)
 
     # --- model-side quantities (once) ---
     from transformers import AutoModelForCausalLM
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL, dtype=torch.float32, attn_implementation="eager")
+        MODEL, dtype=torch.float32,
+        attn_implementation="eager")  # protocol-only (no forward pass)
     model.eval()
     ck23 = load_layer(23, want=("J", "H"))  # only J and H are used; skip P
     token_set = ck23["U128"]
@@ -165,6 +158,14 @@ def main():
     pos0_degenerate_frac = float((~pos0_valid).float().mean())
 
     ratio_median = float(np.nanmedian(ratios_docs))
+    # P1-1 (docs/E38_fixes.md §38e): an all-degenerate doc gives a NaN
+    # per-doc median; bootstrap_ci raises on NaN/Inf. Guard: bootstrap the
+    # finite subset; < 2 finite docs -> NaN CI (loud in the JSON, gated by
+    # nan_frac).
+    finite_ratios = [x for x in ratios_docs if np.isfinite(x)]
+    ratio_ci = (list(bootstrap_ci(np.array(finite_ratios), B=B, seed=SEED))
+                if len(finite_ratios) >= 2
+                else [float("nan"), float("nan")])
     # HIGH-1 fix: the LOCAL ratio (c·β)/(c·σ_1(M_K)) = β/σ_1(M_K)
     # ≈ cos(u_g, 1/√K) ≈ 0.9 (NOT ≈ 1 — see header).
     cons_ratio = float(np.nanmedian(beta_vec.numpy()) / sigma_1_MK)
@@ -179,8 +180,12 @@ def main():
         gate = "degenerate"
     # consistency == cos(u_g, 1/√K) ≈ 0.9 ± 0.15 — the alignment factor is
     # ≤ 1 by construction (docs/E38_fixes.md part-6 §1 HIGH-1).
+    # P2 (docs/E38_fixes.md §38e): NaN cons_ratio (all beta NaN, or
+    # sigma_1_MK == 0) is "undefined", NOT "redflag" — the old code assigned
+    # redflag silently.
     cons = ("consistency_consistent_with_E33r" if abs(cons_ratio - 0.9) <= TOL_CONSISTENCY
-            else "consistency_redflag")
+            else ("consistency_undefined" if not np.isfinite(cons_ratio)
+                  else "consistency_redflag"))
     # P1-7 (jacobian.py M-1 cross-check): if û is the INPUT to L23, the
     # factorization J = c·M_K·(I−ûû^T) kills û ⇒ ‖J·û‖/‖J‖ << 1; a value
     # ~ 1 would mean an off-by-one hidden-state convention.
@@ -189,13 +194,17 @@ def main():
     # norms are [N,S].
     resid = (torch.einsum("ntkd,ntd->ntk", J23, u).norm(dim=-1)
              / J23.norm(dim=(-1, -2)).clamp_min(1e-12))
-    j_uhat_resid = float(resid[valid].median())
+    # P2 (docs/E38_fixes.md §38e): valid.sum() == 0 -> empty slice, .median()
+    # raises on new torch. Guard.
+    resid_valid = resid[valid]
+    j_uhat_resid = (float(resid_valid.median()) if resid_valid.numel()
+                    else float("nan"))
     per_layer = {
         "L23": {
             "sigma_1_MK": sigma_1_MK, "w_norm": w_norm,
             "ratio_alpha_beta": {
                 "median_over_docs": ratio_median,
-                "ci": list(bootstrap_ci(np.array(ratios_docs), B=B, seed=SEED)),
+                "ci": ratio_ci,
                 "ci_note": "doc-level bootstrap over the 32 per-doc medians "
                            "(P0, docs/E38_fixes2.md); the old flat "
                            "percentile over N·S positions overstated "
@@ -218,7 +227,7 @@ def main():
                 "tolerance": TOL_CONSISTENCY},
             "consistency_factorization": {
                 "median_beta_over_JtU": float(np.nanmedian(beta_vs_JtU.numpy())),
-                "r_t_expected": float(np.nanmedian(norms.numpy()) / sqrtD),
+                "r_t_expected": r_t_expected,
                 "note": "β_t / ‖J_t^T 1/√K‖ = 1/c = r_t/√D (NOT 1) under "
                         "exact J = M_K(I − ûû^T): ‖J^T(1/√K)‖ = c·β with "
                         "c = √D/r_t. The expected value is set by the "
@@ -238,6 +247,11 @@ def main():
                                  "convention (jacobian.py M-1)"},
     }
     del M_K, H, J23, ck23   # P2: release ~2.2 GB before the (cheap) dump
+    # Precompute the scalar the out/print needs from the freed arrays.
+    r_t_expected = float(np.nanmedian(norms.numpy()) / sqrtD)
+    # P2 (docs/E38_fixes.md §38e): u/w2/beta_vec/JtU live to end of scope
+    # (u ~2.1 GB); release them too.
+    del u, w2, beta_vec, JtU, JtU_norm, norms, ratio, beta_scaled, beta_vs_JtU
     out = {
         "params": {"seed": SEED, "B": B, "model": MODEL, "layer": 23,
                    "N_docs": N,
@@ -246,7 +260,11 @@ def main():
                    "cache": "exp27b_jcache_L23.pt"},
         "metrics": per_layer,
         "outcomes": {"gate": gate, "consistency": cons,
-                     "gate_failed": gate == "gate_failed"},
+                     # P1-3 (docs/E38_fixes.md §38e): "degenerate" is
+                     # semantically equivalent to "gate_failed" for E-38f
+                     # (all medians undefined) — propagate it, else E-38f
+                     # processes degenerate data.
+                     "gate_failed": gate in ("gate_failed", "degenerate")},
         "meta": {"note": "cos(u_g, 1/√K) alignment factor recorded via the "
                          "direct factorization cross-check (β vs ‖J^T 1/√K‖ "
                          "= c·β, ratio = r_t/√D) and via β/σ_1(M_K) ≈ cos "
@@ -279,12 +297,15 @@ def main():
                  "token_set_range": [int(min(token_set)), int(max(token_set))]},
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    # P1-2 (docs/E38_fixes.md §38e): strict RFC-8259 — sanitize non-finite
+    # floats + allow_nan=False (the old default=_json_default was dead for
+    # Python floats).
     with open(OUT, "w") as f:
-        json.dump(out, f, indent=1, default=_json_default)
+        json_dump(out, f, indent=1)
     print(f"ratio |α|/|β| median-over-docs = {ratio_median:.4f} -> {gate}")
     print(f"consistency: |β|/σ_1(M_K) = {cons_ratio:.4f} -> {cons}; "
           f"β/‖J^T u‖ = {jtu_ratio:.4f} (r_t_expected = "
-          f"{float(np.nanmedian(norms.numpy()) / sqrtD):.2f})")
+          f"{r_t_expected:.2f}")
     print(f"JSON -> {OUT} in {time.time() - t0:.1f}s")
 
 
