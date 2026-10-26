@@ -31,7 +31,7 @@ Artifacts: results/exp38i_factorization.json
 """
 from __future__ import annotations
 
-import json
+import json  # noqa: F401  (outputs go via json_dump)
 import os
 import sys
 import time
@@ -39,6 +39,7 @@ import time
 import torch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from prism.json_utils import dump as json_dump  # noqa: E402
 from prism.exp38_hi_common import (  # noqa: E402
     D, j_raw, K_STEPS, load_snapshots, load_model_tensors,
     factor_residual, load_u128,
@@ -153,7 +154,9 @@ def main():
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
-        json.dump(out, f, indent=2, ensure_ascii=False)
+        # Strict RFC-8259: sanitize non-finite floats + allow_nan=False
+        # (docs/E38_fixes.md P2 — consistency with exp38a-g).
+        json_dump(out, f, indent=2, ensure_ascii=False)
     print(f"OK -> {OUT}")
     for s, v in out_states.items():
         print(f"  s={s}: resid_max={v['factorization_residual_max']:.2e} "
