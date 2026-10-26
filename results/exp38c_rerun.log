@@ -1,0 +1,8 @@
+L6: fraction_well_separated@0.01=0.000 (sweep [0.0, 0.0, 0.0]) | min_ratio_t=0.071 (global-ref ratio=0.083) informative=False
+L12: fraction_well_separated@0.01=0.000 (sweep [0.0, 0.0, 0.0]) | min_ratio_t=0.089 (global-ref ratio=0.097) informative=False
+L18: fraction_well_separated@0.01=0.000 (sweep [0.0, 0.0, 0.0]) | min_ratio_t=0.072 (global-ref ratio=0.082) informative=True
+L19: fraction_well_separated@0.01=0.000 (sweep [0.0, 0.0, 0.0]) | min_ratio_t=0.082 (global-ref ratio=0.089) informative=False
+L22: fraction_well_separated@0.01=0.000 (sweep [0.0, 0.0, 0.0]) | min_ratio_t=0.077 (global-ref ratio=0.090) informative=True
+L23: fraction_well_separated@0.01=0.000 (sweep [0.0, 0.0, 0.0]) | min_ratio_t=0.078 (global-ref ratio=0.076) informative=False
+OUTCOMES {'aggregate': 'near_degeneracy', 'near_degeneracy_layers': ['18', '22'], 'l23_architectural': False}
+JSON -> /home/survivor/work/prism/results/exp38c_degeneracy_preflight.json (45988 bytes) in 405.3s

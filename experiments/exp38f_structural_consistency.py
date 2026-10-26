@@ -101,7 +101,8 @@ def main():
               f"{'PASS (run)' if gate_ok else 'gate_failed/degenerate (skip)'}")
     if not gate_ok:
         os.makedirs(os.path.dirname(OUT), exist_ok=True)
-        with open(OUT, "w") as f:
+        tmp = OUT + ".tmp"
+        with open(tmp, "w") as f:
             json_dump({"params": {"seed": SEED, "gate": "gate_failed"},
                        "outcomes": {"skipped": True},
                        "meta": {"gate_file_missing": gate_file_missing,
@@ -110,6 +111,7 @@ def main():
                                         "JSON absent (fail-closed): E-38f "
                                         "uninformative, skipped per TZ"}},
                       f, indent=1)
+        os.replace(tmp, OUT)   # atomic: no 0-byte OUT on raise
         print("E-38f SKIPPED")
         return
 
@@ -279,8 +281,10 @@ def main():
     # P1-1 (docs/E38_fixes.md §38f): strict RFC-8259 — sanitize non-finite
     # floats + allow_nan=False (the old default=_json_default was dead for
     # Python floats; the insufficient_data_nan branch writes NaN CI).
-    with open(OUT, "w") as f:
+    tmp = OUT + ".tmp"
+    with open(tmp, "w") as f:
         json_dump(out, f, indent=1)
+    os.replace(tmp, OUT)   # atomic: no 0-byte OUT on raise
     print(f"cos(v_g,v_pred) med={cv_med:.4f}  cos(u_g,1/√K) med={cu_med:.4f}  "
           f"Δcos med={dc_med:.4f} CI={dc_ci}")
     print(f"VERDICT: {verdict}")

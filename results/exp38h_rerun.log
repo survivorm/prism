@@ -1,0 +1,13 @@
+OK -> /home/survivor/work/prism/results/exp38h_two_channel_goodhart.json
+  s=   10: energy_top(ΔW)=0.7351 energy_top(ΔJ)=0.7165
+  s=   20: energy_top(ΔW)=0.6862 energy_top(ΔJ)=0.6724
+  s=   40: energy_top(ΔW)=0.6060 energy_top(ΔJ)=0.6058
+  s=   80: energy_top(ΔW)=0.5292 energy_top(ΔJ)=0.5586
+  s=   90: energy_top(ΔW)=0.5168 energy_top(ΔJ)=0.5522
+  s=  100: energy_top(ΔW)=0.5061 energy_top(ΔJ)=0.5471
+  s=  200: energy_top(ΔW)=0.4514 energy_top(ΔJ)=0.5327
+  s=  400: energy_top(ΔW)=0.3986 energy_top(ΔJ)=0.5246
+  s=  800: energy_top(ΔW)=0.3076 energy_top(ΔJ)=0.4868
+  s= 1000: energy_top(ΔW)=0.2804 energy_top(ΔJ)=0.4930
+  defect top: {'10,100,1000': 0.0, '10,80,100': 0.0, '100,400,1000': 0.0}
+  defect tail: {'10,100,1000': 0.25314, '10,80,100': 0.14398, '100,400,1000': 0.17434}

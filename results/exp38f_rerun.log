@@ -1,0 +1,4 @@
+E-38e gate: mixed -> PASS (run)
+cos(v_g,v_pred) med=0.9647  cos(u_g,1/√K) med=0.8623  Δcos med=0.1025 CI=[0.1014732789248228, 0.10320095717906952]
+VERDICT: empirical_alignment_within_range
+JSON -> /home/survivor/work/prism/results/exp38f_structural_consistency.json in 82.9s

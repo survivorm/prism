@@ -1,6 +1,7 @@
 {
  "params": {
   "seed": 0,
+  "B": 1000,
   "model": "Qwen/Qwen3.5-0.8B",
   "layer": 23,
   "N_docs": 32,
@@ -13,14 +14,15 @@
  },
  "metrics": {
   "L23": {
-   "sigma_g": 14.347064971923828,
+   "sigma_1_MK": 14.347064971923828,
    "w_norm": 12.897159576416016,
    "ratio_alpha_beta": {
     "median_over_docs": 0.19582585245370865,
     "ci": [
-     0.1432464174926281,
-     0.23219508603215216
+     0.18091447111219167,
+     0.20492969453334808
     ],
+    "ci_note": "doc-level bootstrap over the 32 per-doc medians (P0, docs/E38_fixes2.md); the old flat percentile over N\u00b7S positions overstated precision ~\u221a(S)\u00d7",
     "per_doc": [
      0.19464591145515442,
      0.19939474761486053,
@@ -64,7 +66,7 @@
     "median": 12.655888557434082,
     "mean": 12.630669593811035
    },
-   "consistency_sigma_g": {
+   "consistency_sigma_1_MK": {
     "median_scaled_beta": 3.0957329273223877,
     "over_sigma_g_OLD": 0.21577465534210205,
     "over_sigma_g_OLD_note": "c\u00b7\u03b2/\u03c3_1(M_K) \u2248 c\u00b7cos \u2248 0.2\u20130.4 \u2014 the OLD normalization, kept for traceability; NOT \u2248 1 (false-positive source of the old redflag)",
@@ -74,9 +76,11 @@
    },
    "consistency_factorization": {
     "median_beta_over_JtU": 4.076811790466309,
-    "note": "\u03b2_t / \u2016J_t^T 1/\u221aK\u2016 = r_t/\u221aD (NOT 1) under exact J = M_K(I \u2212 \u00fb\u00fb^T): \u2016J^T(1/\u221aK)\u2016 = c\u00b7\u03b2 with c = \u221aD/r_t, so the ratio = 1/c. A value ~ 4 CONFIRMS the exact factorization (r_t \u2248 4\u00b7\u221aD), it is not a redflag (docs/E38_fixes.md part-6 \u00a71 HIGH-2)"
+    "r_t_expected": 4.076811790466309,
+    "note": "\u03b2_t / \u2016J_t^T 1/\u221aK\u2016 = 1/c = r_t/\u221aD (NOT 1) under exact J = M_K(I \u2212 \u00fb\u00fb^T): \u2016J^T(1/\u221aK)\u2016 = c\u00b7\u03b2 with c = \u221aD/r_t. The expected value is set by the hidden-state scale \u2014 compare with r_t_expected = median(\u2016h\u2016)/\u221aD (typical ~1\u20134, not a fixed 4); agreement with r_t_expected CONFIRMS the exact factorization, it is not a redflag (docs/E38_fixes.md part-6 \u00a71 HIGH-2)"
    },
    "pos0_ratio": 0.17670029401779175,
+   "pos0_ratio_capped": false,
    "pos0_degenerate_frac": 0.0,
    "nan_frac": 0.0,
    "j_uhat_resid_median": 4.5716916474702884e-08,
@@ -91,7 +95,9 @@
  "meta": {
   "note": "cos(u_g, 1/\u221aK) alignment factor recorded via the direct factorization cross-check (\u03b2 vs \u2016J^T 1/\u221aK\u2016 = c\u00b7\u03b2, ratio = r_t/\u221aD) and via \u03b2/\u03c3_1(M_K) \u2248 cos \u2014 the alignment factor is \u2264 1 and unknown a priori",
   "consistency_semantics": "consistency_consistent_with_E33r means median \u03b2/\u03c3_1(M_K) \u2248 0.9 \u00b1 15% (\u2248 cos(u_g, 1/\u221aK)), NOT exact agreement \u2014 the old check (c\u00b7\u03b2 vs \u03c3_1(M_K), expected \u2248 1) was impossible by construction and its redflag was a false positive of the check",
-  "gate_rule": ">10 \u2192 E-38f skipped; <0.1 \u2192 gauge_blind_sep; else mixed \u2192 E-38f runs",
+  "gate_rule": ">10 \u2192 E-38f skipped; <0.1 \u2192 gauge_blind_sep; else mixed \u2192 E-38f runs; degenerate \u2192 nan_frac > 0.5 (medians undefined)",
+  "redflag_semantics": "consistency_redflag is one-sided: it also fires when v_1(M_K) lies along \u00fb (\u03c3_g(J) << c\u00b7\u03c3_1(M_K) \u21d2 cons_ratio << cos even for a good model). redflag = 'the check did not confirm', not 'model is bad' (docs/E38_fixes2.md \u00a75)",
+  "vocab_guard": "the old ck23.get('V') guard was dead code; only the token-range check against the live model's V remains \u2014 a cache from a different checkpoint with the same V would pass (docs/E38_fixes2.md \u00a73)",
   "token_set_range": [
    0,
    248046

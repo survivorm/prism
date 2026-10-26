@@ -10,27 +10,33 @@
  },
  "metrics": {
   "cos_vg_vpred": {
-   "median": 0.9647100567817688
+   "median": 0.9647101759910583
   },
   "cos_ug_uniform": {
-   "median": 0.8623113930225372
+   "median": 0.8623112440109253
   },
   "dcos": {
-   "median": 0.10253080725669861,
+   "median": 0.10253086686134338,
    "ci": [
-    0.10147327780723572,
-    0.10320112109184265
+    0.1014732789248228,
+    0.10320095717906952
    ],
    "ci_note": "doc-level: per-doc median, bootstrap over 32 docs",
-   "mean": 0.10334718837111723,
+   "mean": 0.10334718610101845,
+   "mean_note": "flat mean over N*S positions \u2014 NOT comparable to the median (median-of-per-doc-medians): different aggregates (docs/E38_fixes.md \u00a738f)",
    "nan_count": 0,
-   "nan_frac": 0.0
+   "nan_frac": 0.0,
+   "g_not_top_frac": 0.0,
+   "g_not_top_note": "fraction of (doc,t) where argmax_k |c_k| picked a non-top mode: excluded from the verdict (NaN), \u0394cos >= 0 does not follow for k != 0 (docs/E38_fixes.md \u00a738f P0)",
+   "vpred_degenerate_frac": 0.0,
+   "frac_positions_above_upper": 0.0,
+   "frac_above_note": "per-position \u0394cos > 1 - c_g + eps (c_g per position): sensitivity diagnostic, not a verdict (per-doc median hides a single anomalous position), docs/E38_fixes.md \u00a738f"
   },
   "profile_dc_per_docblock": [
    0.10264676809310913,
-   0.10207223892211914,
-   0.1028272807598114,
-   0.10373780131340027
+   0.10207200050354004,
+   0.10282745957374573,
+   0.10373765230178833
   ],
   "profile_docs": [
    0,
@@ -40,10 +46,11 @@
   ]
  },
  "outcomes": {
-  "verdict": "lemma_confirmed",
+  "verdict": "empirical_alignment_within_range",
   "gate": "pass"
  },
  "meta": {
-  "note": "|cos| used (sign(v_g) non-unique, LAPACK); c_k = (U.T @ one)[k] = |u_k\u00b71/\u221aK| (the old (U @ one)[k] row-metric was a bug, part-7 \u00a71); lemma-compatible range \u0394cos \u2208 [0, 1\u2212c_g]: \u0394cos < \u22120.05 = broken (impossible exactly), \u0394cos \u2264 1\u2212c_g+0.05 = confirmed, above that = methodological_anomaly. dcos median is a NaN-excluding median (nanmedian); nan_count/nan_frac record the degenerate \u2016J^T u\u2016 \u2248 0 subset"
+  "note": "|cos| used (sign(v_g) non-unique, LAPACK); c_k = (U.T @ one)[k] = |u_k\u00b71/\u221aK| (the old (U @ one)[k] row-metric was a bug, part-7 \u00a71); the lemma J^T u = c \u03b2 v_\u22a5 is an exact identity \u2014 the cos test measures the EMPIRICAL alignment v_\u22a5 \u2225 v_g. The \u0394cos \u2265 0 range is a consequence of the lemma ONLY for g = top mode: (doc, t) with argmax c_k at k != 0 are EXCLUDED from the verdict (NaN) and counted in g_not_top_frac \u2014 a non-top pick can give \u0394cos << 0 without violating the lemma (P0, docs/E38_fixes.md \u00a738f; supersedes docs/E38_fixes2.md). \u0394cos < \u2212eps = empirical_alignment_violated, \u2264 1\u2212c_g+eps = empirical_alignment_within_range, above = methodological_anomaly. eps = 0.05 is a STATISTICAL tolerance, not a numerical one (float32 SVD noise is ~1e-7; 0.05 = 1e5\u00d7 that): a 'within_range' verdict on \u0394cos \u2208 [\u2212eps, 0) is empirical, not lemma-exact. dcos median is a NaN-excluding median (nanmedian); nan_count/nan_frac record the degenerate \u2016J^T u\u2016 \u2248 0 subset; vpred_degenerate_frac the v_pred_from_JT RuntimeErrors",
+  "labels_renamed": "verdict labels renamed from the pre-registered lemma_confirmed / lemma_broken to empirical_alignment_within_range / empirical_alignment_violated: the lemma is an exact identity, the test measures empirical alignment (docs/E38_fixes.md \u00a738f)"
  }
 }

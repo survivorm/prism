@@ -14,7 +14,7 @@
   ],
   "body": "[16,126]",
   "pos0_baseline": true,
-  "cache": "exp27b_jcache_L{l}.pt",
+  "cache": "exp27b_jcache_L<layer>.pt (one per layer)",
   "ci_policy": "pos0 CI: per-doc bootstrap; pos0-vs-body: paired bootstrap over per-doc body medians"
  },
  "metrics": {
@@ -215,7 +215,8 @@
      0.994754433631897
     ]
    },
-   "nan_count": 0
+   "nan_count": 0,
+   "frac_nan": 0.0
   },
   "12": {
    "C_b": {
@@ -414,7 +415,8 @@
      0.9955618381500244
     ]
    },
-   "nan_count": 0
+   "nan_count": 0,
+   "frac_nan": 0.0
   },
   "18": {
    "C_b": {
@@ -613,7 +615,8 @@
      0.99952632188797
     ]
    },
-   "nan_count": 0
+   "nan_count": 0,
+   "frac_nan": 0.0
   },
   "19": {
    "C_b": {
@@ -812,7 +815,8 @@
      0.9998471736907959
     ]
    },
-   "nan_count": 0
+   "nan_count": 0,
+   "frac_nan": 0.0
   },
   "22": {
    "C_b": {
@@ -1012,7 +1016,8 @@
      0.9997526407241821
     ]
    },
-   "nan_count": 0
+   "nan_count": 0,
+   "frac_nan": 0.0
   },
   "23": {
    "C_b": {
@@ -1021,10 +1026,10 @@
      0.01425797026604414,
      0.03215922294184564
     ],
-    "body_median": 0.0197299737483263,
+    "body_median": 0.019746849313378334,
     "body_flat_iid_ci_do_not_use": [
-     0.01900888914242387,
-     0.02058420367538929
+     0.019082160526886584,
+     0.02059996814932674
     ],
     "body_ci_note": "FLAT i.i.d. bootstrap over 3552 correlated (t, doc) values \u2014 ~10x too narrow; for reporting only, do NOT read as significance (docs/E38_fixes2.md P1-5). Use the paired CI / per-doc median.",
     "body_per_doc_median": 0.02233065664768219,
@@ -1117,7 +1122,7 @@
      0.007497555576264858,
      0.016257036477327347,
      0.01255434937775135,
-     0.02347222901880741,
+     0.027948489412665367,
      0.021508190780878067,
      0.01858295127749443,
      0.020361874252557755,
@@ -1211,7 +1216,8 @@
      0.9983446598052979
     ]
    },
-   "nan_count": 1
+   "nan_count": 0,
+   "frac_nan": 0.0
   }
  },
  "outcomes": {
@@ -1232,6 +1238,6 @@
   "warnings": [
    "L22 pos0 PR = 1.41 vs paper 4.6 (ratio 0.31) \u2014 4.6 may be a different definition"
   ],
-  "note": "C_b = per-doc median cross-doc Frobenius cosine of gauge-free J (exp01/exp27 family); convention = median-of-medians (per-doc median over the other docs, then median over docs) \u2014 NOT the flat median over all N*(N-1) pairs (docs/E38_fixes.md \u00a72.4); PR on sv(J_t)^2 per doc; L22 verdict: paired bootstrap, per-doc body vs pos0 (the paper's 4.6 is a min-over-positions cross-ref only); degenerate docs (\u2016J_t\u2016<1e-6) \u2192 NaN in C_b, counted per layer in nan_count"
+  "note": "C_b = per-doc median cross-doc Frobenius cosine of gauge-free J (exp01/exp27 family); convention = median-of-medians (per-doc median over the other docs, then median over docs) \u2014 NOT the flat median over all N*(N-1) pairs (docs/E38_fixes.md \u00a72.4); PR on sv(J_t)^2 per doc; L22 verdict: paired bootstrap, per-doc body vs pos0 (the paper's 4.6 is a min-over-positions cross-ref only); degenerate docs (\u2016J_t\u2016<1e-9) \u2192 NaN in C_b, counted per layer in nan_count"
  }
 }
