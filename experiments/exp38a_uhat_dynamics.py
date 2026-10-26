@@ -77,10 +77,19 @@ def seg_stats(vals: np.ndarray, body: np.ndarray) -> dict:
     q1, q3 = np.nanpercentile(vals, [25, 75])
     iqr_b = float(np.nanpercentile(body, 75) - np.nanpercentile(body, 25))
     med_b = float(np.nanmedian(body))
-    ratio = abs(med - med_b) / iqr_b if iqr_b > 0 else (
-        float("inf") if med != med_b else 0.0)
+    # docs/E38_fixes.md §3: all-NaN body (iqr_b/med_b NaN) or all-NaN segment
+    # (med NaN) must NOT be classified anomalous (NaN/0 → inf → False anomaly).
+    if np.isnan(med) or np.isnan(med_b) or np.isnan(iqr_b):
+        ratio = float("nan")
+        anomalous = False
+    elif iqr_b > 0:
+        ratio = abs(med - med_b) / iqr_b
+        anomalous = ratio > T_ANOM
+    else:
+        ratio = float("inf") if med != med_b else 0.0
+        anomalous = ratio > T_ANOM
     return {"median": med, "iqr": float(q3 - q1),
-            "anomaly_ratio": ratio, "anomalous": bool(ratio > T_ANOM)}
+            "anomaly_ratio": ratio, "anomalous": anomalous}
 
 
 def main():
@@ -94,7 +103,9 @@ def main():
         # sink diagnostics: ‖h_0‖ vs median position norm over positions
         # 1..S-1 — pos 0 is NOT in its own denominator (a strong sink
         # would inflate the ratio; docs/E38_fixes.md §1 MEDIUM).
-        pos0_ratio = (norms[:, 0] / norms[:, 1:].median(dim=-1).values
+        # P3: nanmedian — torch.median propagates NaN in norms[:, 1:]
+        # (clamp_min does NOT sanitize NaN; docs/E38_fixes.md §7).
+        pos0_ratio = (norms[:, 0] / norms[:, 1:].nanmedian(dim=-1).values
                       .clamp_min(1e-12))
         s = (u[:, 1:] - u[:, :-1]).norm(dim=-1)      # [N, S-1]  t=0..S-2
         kapp = np.zeros((N, S - 1), dtype=np.float64)  # t=0..S-2, kappa at t+1
@@ -258,7 +269,7 @@ def main():
         "params": {"seed": SEED, "S": S, "layers": list(LAYERS), "N_docs": 32,
                    "head": f"[0,{HEAD_END})", "body": f"[{HEAD_END},{BODY_END})",
                    "tail": f"{{{BODY_END}}}", "anomaly_threshold": T_ANOM,
-                   "cache": "kaggle_kernel/results/exp27b_jcache_L{l}.pt ({l} per layer)"},
+                   "cache": "kaggle_kernel/results/exp27b_jcache_L<layer>.pt (one per layer)"},
         "metrics": per_layer,
         "l18_vs_l19": l18_vs_l19,
         "outcomes": {"per_layer": verdicts, "aggregate": aggregate,
@@ -280,6 +291,10 @@ def main():
                          "off-by-one, code is right (docs/E38_fixes.md §1 "
                          "MEDIUM); 'mixed' is a post-hoc label extension, "
                          "not in the pre-registered set (same §)",
+                 "direction_from_s_only": "edges_atypical direction is "
+                         "taken from s only; if the anomaly is kappa-driven "
+                         "and s-direction disagrees, the label falls to "
+                         "mixed (docs/E38_fixes.md §2)",
                  "per_doc_ratio": "anomaly_ratio in seg_stats uses the MIXED "
                          "docs×positions body IQR (IQR-mixing, documented); "
                          "per_doc_ratio_* gives the per-doc medians over "

@@ -105,7 +105,7 @@ def main():
             # well_separated predicate. (docs/E38_fixes2.md does not
             # require float64 for 38c; that was an over-engineering bug.)
             sv = torch.linalg.svdvals(J[:, t])  # [N, K] desc
-            sv16 = sv[:, :R]                             # [N, R] float64
+            sv16 = sv[:, :R]                             # [N, R] float32 (J — float32)
             lam = (sv16 ** 2)                            # [N, R] eigenvalues
             # vectorized inner loop (P2): sort once, gaps vectorized;
             # same math as per-doc eigengap_min (which itself is float64).
@@ -134,8 +134,14 @@ def main():
         # (explicit, documented) so the layer lands in near_degeneracy
         # instead of silently dropping out of both branches.
         per_doc_ratio = gap_min_td / (EPS_MAIN * s1sq)   # [S, N]
-        per_doc_ratio = np.where(np.isfinite(per_doc_ratio),
-                                 per_doc_ratio, 0.0)
+        # P2 (docs/E38_fixes.md §3): mask ONLY 0/0 -> 0.0 (maximal
+        # degeneracy, documented above). np.isfinite→0.0 would ALSO mask
+        # inf (underflow of EPS_MAIN*s1sq → gap/0 = inf), which is the
+        # STRONGLY-separating case — masking it in the degeneracy
+        # direction is the wrong way.
+        denom = EPS_MAIN * s1sq
+        per_doc_ratio = np.where(denom > 0, gap_min_td / np.where(denom > 0, denom, 1.0), 0.0)
+        per_doc_ratio = np.where(np.isnan(per_doc_ratio), 0.0, per_doc_ratio)
         ratio_t = np.median(per_doc_ratio, axis=1)
         min_ratio_t = float(ratio_t.min())
         s1sq_global_med = float(np.median(s1sq))
@@ -160,6 +166,11 @@ def main():
                                 "degeneracy, docs/E38_fixes2.md P1-4)",
             "verdict_metric": "min_ratio_t (per-t threshold)",
             "argmin_t": int(gap_t_med.argmin()),
+            # P2 (docs/E38_fixes.md): the VERDICT is set by ratio_t.argmin(),
+            # not gap_t_med.argmin() — report both; argmin_t (gap) and
+            # argmin_ratio_t (the verdict-defining position) can differ when
+            # σ_1² varies across t.
+            "argmin_ratio_t": int(ratio_t.argmin()),
             "s1sq_median": s1sq_global_med,
             # per-position profile of σ_1² (median over docs) — shows how
             # the threshold scale varies with depth (docs/E38_fixes.md §5.3).

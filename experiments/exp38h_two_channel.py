@@ -9,7 +9,7 @@ Pre-registered (docs/E38.md §E-38h):
     ΔW_top = U_t U_tᵀ ΔW V_tᵀ V_t, ΔW_tail = ΔW − ΔW_top.
   - Non-commutativity: R(s1,s2) = procrustes_align (rotation aligning the
     channel's top-16 frame s2 -> s1); associativity defect
-    ‖R12 R23 − R13‖_F / r over triples.
+    ‖R23 R12 − R13‖_F / r over triples.
   - Per-channel Jacobian response: J(s) = (√D/r) M_K(s)(I−ûûᵀ) is exact at
     L23 (E-35), so ΔJ(s) = ΔJ_top(s) + ΔJ_tail(s) via the same channel
     split applied to ΔW — computed from ΔW alone. NOTE (E38_fixes P1):
@@ -99,10 +99,18 @@ def main():
 
     # --- non-commutativity: Procrustes associativity defect ---
     def defect(framedict, a, b, c, side):
+        # P0 (docs/E38_fixes.md section 38h): procrustes_align(U1, U2)
+        # returns R with U1 @ R ~ U2. Here R12: V_b R12 ~ V_a,
+        # R23: V_c R23 ~ V_b, R13: V_c R13 ~ V_a. The composition
+        # V_c -> V_b -> V_a applies R23 FIRST: prod = R23 @ R12.
+        # The old R12 @ R23 equals R13 only for ABELIAN frames;
+        # for a trivial bundle with different bases (V_x = V Q_x)
+        # the correct order gives 0 while the old order gives a
+        # false non-zero "non-Abelian" signal.
         R12, _ = procrustes_align(framedict[b], framedict[a])
         R23, _ = procrustes_align(framedict[c], framedict[b])
         R13, _ = procrustes_align(framedict[c], framedict[a])
-        prod = R12 @ R23
+        prod = R23 @ R12
         return float(((prod - R13).norm() / R))
 
     defects = {}

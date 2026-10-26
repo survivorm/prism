@@ -422,7 +422,7 @@ def main(results_dir="results", device="auto"):
                    "S": S, "J": "raw (E-28 convention)",
                    "degen_res_threshold": f"{DEGEN_RES_FRAC}*2r",
                    "device": device,
-                   "cache": "exp27b_jcache_L{l}.pt"},
+                   "cache": "exp27b_jcache_L<layer>.pt (one per layer)"},
         "metrics": per_layer,
         "outcomes": {"per_layer": verdicts,
                      "r_sweep_note": "verdicts use r=16 only (pre-registered); "
