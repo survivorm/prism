@@ -62,17 +62,24 @@ def load_snapshots():
     consumer must NOT subtract raw["W_orig"] again (E38_fixes P0)."""
     d = torch.load(_p(SNAPSHOTS), map_location="cpu", weights_only=True)
     snaps = {int(k): v.to(torch.float64) for k, v in d["snapshots"].items()}
-    # sanity: a double subtraction (W_curr − 2·W_orig) is O(‖W_orig‖) and
-    # anti-parallel to W_orig (cos ≈ −1); a correct ΔW slice is a small
-    # perturbation nearly orthogonal to W_orig (cos ≈ 0). Catch loudly.
+    # sanity: catch a W_orig bookkeeping bug (E38_fixes P0 class). The OLD
+    # guard ‖s @ Wo.T‖_F/(‖s‖_F‖Wo‖_F) is a matrix-product norm, NOT a
+    # cosine: ≈ 1/√D ≈ 0.03 for correct ΔW AND ≈ 1/√256 ≈ 0.06 for the bug
+    # case — both << 0.5, it never fired (docs/E38_fixes.md §38h P1 / §38i
+    # P1). The SIGNED Frobenius cosine |⟨s, Wo⟩_F|/(‖s‖_F‖Wo‖_F) separates
+    # them: correct ΔW (measured 0.02–0.26 across the 100-step grid, max at
+    # high E-16 dose) vs s = +W_curr (cos ≈ +1, W_orig not subtracted) or
+    # s = 2·W_curr − W_orig ≈ +Wo (cos ≈ +1, double subtraction).
     Wo = d["W_orig"].to(torch.float64)
+    wo_norm = float(Wo.norm())
     for k, s in snaps.items():
-        cos = float((s @ Wo.T).norm() / (s.norm() * Wo.norm()))
+        inner = float((s * Wo).sum())
+        cos = abs(inner) / (float(s.norm()) * wo_norm)
         assert cos < 0.5, (
             f"snapshot step {k}: cos(snap, W_orig)={cos:.3f} — "
-            "snapshots[k] is ΔW; do NOT subtract W_orig again "
-            "(double subtraction gives cos ≈ −1; a correct ΔW slice is "
-            "a small perturbation nearly orthogonal to W_orig, cos ≈ 0.07)")
+            "snapshots[k] is ΔW (measured cos 0.02–0.26 across the grid); "
+            "a cos ≈ ±1 means the snapshot is W_curr (W_orig not "
+            "subtracted) or a double subtraction, not ΔW")
     return snaps, d
 
 

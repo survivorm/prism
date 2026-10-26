@@ -49,7 +49,6 @@ instead of silently converting np.bool_ → 1.0 (docs/E38_fixes.md §1 LOW).
 
 Deterministic: no randomness (medians only), seed=0 recorded for protocol.
 """
-import json
 import os
 import sys
 import time
@@ -180,6 +179,8 @@ def main():
                 "median_s_head_excl_pos0": float(
                     np.nanmedian(s[:, 1:HEAD_END - 1])),
                 "kappa_nan_count": int(kapp_nan_count),
+                "kappa_measured_fraction": 1.0 - kapp_nan_count
+                                          / (N * (S - 2)),
             },
             "profile_S": [float(np.nanmedian(s[:, t])) for t in range(0, S - 1, 4)],
             "profile_K": [float(np.nanmedian(kapp[:, t])) for t in range(1, S, 4)],
@@ -252,7 +253,7 @@ def main():
         "params": {"seed": SEED, "S": S, "layers": list(LAYERS), "N_docs": 32,
                    "head": f"[0,{HEAD_END})", "body": f"[{HEAD_END},{BODY_END})",
                    "tail": f"{{{BODY_END}}}", "anomaly_threshold": T_ANOM,
-                   "cache": "kaggle_kernel/results/exp27b_jcache_L{l}.pt"},
+                   "cache": "kaggle_kernel/results/exp27b_jcache_L{l}.pt ({l} per layer)"},
         "metrics": per_layer,
         "l18_vs_l19_gdn": l18_vs_l19,
         "outcomes": {"per_layer": verdicts, "aggregate": aggregate,
@@ -282,15 +283,12 @@ def main():
                          "subset (docs/E38_fixes.md §5.1/§2.5)"},
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    # NaN in a per-doc segment (an all-NaN segment → nanmedian NaN) must
-    # not emit the non-standard NaN literal into the JSON (valid RFC-8259;
-    # same convention as exp38d's _json_default, docs/E38_fixes2.md §2).
-    def _json_default(o):
-        if isinstance(o, float) and not np.isfinite(o):
-            return "nan" if o != o else ("inf" if o > 0 else "-inf")
-        raise TypeError(f"object of type {type(o).__name__} is not JSON serializable")
+    
+    # Strict RFC-8259: sanitize non-finite floats + allow_nan=False
+    # (prism/json_utils — the old default=_json_default was never called
+    # for Python floats, docs/E38_fixes.md §1.1).
     with open(OUT, "w") as f:
-        json.dump(out, f, indent=1, default=_json_default)
+        json_dump(out, f, indent=1)
     print(f"VERDICTS {verdicts} aggregate={aggregate}")
     print(f"JSON -> {OUT} ({os.path.getsize(OUT)} bytes) in {time.time() - t0:.1f}s")
 

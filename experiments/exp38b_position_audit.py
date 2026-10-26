@@ -56,7 +56,6 @@ Pre-registered outcomes (per layer):
 
 Deterministic: seed=0, B=1000.
 """
-import json
 import os
 import sys
 import time
@@ -69,6 +68,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from _e38_cache import LAYERS, S, K, load_layer, gauge_free_J  # noqa: E402
 from prism.cache import bootstrap_ci, bootstrap_ci_paired  # noqa: E402
 from prism.spectral import participation_ratio  # noqa: E402
+from prism.json_utils import dump as json_dump  # noqa: E402
 
 SEED = 0
 B = 1000
@@ -95,7 +95,9 @@ def main():
         del ck
         N = Jraw.shape[0]
         Jgf = gauge_free_J(Jraw, P)         # [N, S, K, D]
-        del Jraw, ck
+        del Jraw   # P0 (docs/E38_fixes.md §2): the old `del Jraw, ck`
+        # re-deleted the already-freed ck -> NameError on the first layer
+        # (introduced by 7f29482, AFTER the published JSON).
         one = torch.ones(K) / torch.sqrt(torch.tensor(float(K)))
         eye = torch.eye(N, dtype=torch.bool)
         iu, ju = torch.nonzero(~eye).T      # row-major pairs, per-row groups
@@ -245,7 +247,7 @@ def main():
     out = {
         "params": {"seed": SEED, "B": B, "S": S, "K": K, "layers": list(LAYERS),
                    "body": f"[{HEAD_END},{BODY_END}]", "pos0_baseline": True,
-                   "cache": "exp27b_jcache_L{l}.pt",
+                   "cache": "exp27b_jcache_L{l}.pt ({l} per layer)",
                    "ci_policy": "pos0 CI: per-doc bootstrap; pos0-vs-body: "
                                 "paired bootstrap over per-doc body medians"},
         "metrics": per_layer,
@@ -276,15 +278,11 @@ def main():
                          "per layer in nan_count"},
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    # NaN in a per-doc aggregate (an all-NaN doc) must not emit the
-    # non-standard NaN literal (RFC-8259); fail loud on other non-JSON
-    # objects (same convention as exp38d/exp38a, docs/E38_fixes2.md).
-    def _json_default(o):
-        if isinstance(o, float) and not np.isfinite(o):
-            return "nan" if o != o else ("inf" if o > 0 else "-inf")
-        raise TypeError(f"object of type {type(o).__name__} is not JSON serializable")
+    # Strict RFC-8259: sanitize non-finite floats + allow_nan=False
+    # (the old default=_json_default was never called for Python floats,
+    # docs/E38_fixes.md §2).
     with open(OUT, "w") as f:
-        json.dump(out, f, indent=1, default=_json_default)
+        json_dump(out, f, indent=1)
     print(f"VERDICTS {verdicts}")
     print(f"JSON -> {OUT} ({os.path.getsize(OUT)} bytes) in {time.time() - t0:.1f}s")
 
