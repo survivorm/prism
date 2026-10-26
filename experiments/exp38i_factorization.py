@@ -97,21 +97,28 @@ def main():
         J = [j_raw(W_ed, h, gamma) for h in Hs]
         jdr = []
         for Ji, Ji0 in zip(J, J0):
-            rel = (Ji - Ji0).norm(dim=1) / Ji0.norm(dim=1)
+            # P3 (docs/E38_fixes.md): zero J0 row -> nan/inf in the
+            # relative drift; clamp the denominator (Qwen rows are
+            # nonzero - contract guard, not a data fix).
+            rel = ((Ji - Ji0).norm(dim=1)
+                   / Ji0.norm(dim=1).clamp_min(1e-12))
             jdr.append(rel.max().item())
         MK = W_ed * gamma[None, :]
         # E38_fixes P1: 115 of 128 rows are edit-invariant (not in token_set),
         # so max/median over ALL rows underreports — report shared-only too.
-        J_sh = torch.stack([(((Ji - Ji0).norm(dim=1) / Ji0.norm(dim=1))
+        J_sh = torch.stack([(((Ji - Ji0).norm(dim=1)
+                             / Ji0.norm(dim=1).clamp_min(1e-12))
                              [shared_idxU])
                             for Ji, Ji0 in zip(J, J0)])  # [16, 13]
-        MK_sh = ((MK - MK0).norm(dim=1) / MK0.norm(dim=1))[shared_idxU]
+        MK_sh = ((MK - MK0).norm(dim=1)
+                 / MK0.norm(dim=1).clamp_min(1e-12))[shared_idxU]
         out_states[s] = {
             "factorization_residual_max": max(res),
             "factorization_residual_mean": sum(res) / len(res),
             "J_rel_drift_max": max(jdr),
             "MK_rel_drift_max": float(
-                ((MK - MK0).norm(dim=1) / MK0.norm(dim=1)).max()),
+                ((MK - MK0).norm(dim=1)
+                 / MK0.norm(dim=1).clamp_min(1e-12)).max()),
             "J_rel_drift_max_shared": float(J_sh.max()),
             "J_rel_drift_median_shared": float(J_sh.median()),
             "MK_rel_drift_max_shared": float(MK_sh.max()),
@@ -130,7 +137,7 @@ def main():
         "experiment": "E-38i",
         "tz": "docs/E38.md (E-38i)",
         "data": {
-            "W_orig256": "exp16_dW_snapshots.pt (fp16->fp64), step grid",
+            "snapshots": "exp16_dW_snapshots.pt (fp16->fp64), step grid; snapshots[k] IS dW (W_orig256 is not read anymore after the P0 double-subtraction fix)",
             "subsample": K_STEPS,
             "W_full": "tied embed_tokens rows on U128 (fp64)",
             "shared_rows_256_U128": int(shared_idx256.numel()),
@@ -147,10 +154,11 @@ def main():
                            "computed on the CACHED h (original model) only "
                            "(E38_fixes P1)",
         "per_state": out_states,
-        "verdict_rule": "max_s residual <= %.0e => preserved" % RESID_TOL,
+        "verdict_rule": ("max_s residual <= %.0e => identity holds on edited W rows (residual at numeric floor; tautological - drift metrics carry the information)" % RESID_TOL),
         "verdict": verdict,
         "runtime_s": round(time.time() - t0, 1),
         "deterministic": True,
+        "s0_baseline": "s=0 (W_full, no edit) is an uninformative baseline: all drifts are 0 by construction and the factorization residual is at fp64 numeric precision (~1e-15); included for reference only (docs/E38_fixes.md P3)",
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:

@@ -195,14 +195,18 @@ def main():
         # median mixed aggregates, docs/E38_fixes2.md).
         c0 = float(pos0_cos.nanmedian())
         cb = float(body_per_doc_cos.nanmedian())
+        # P2 (docs/E38_fixes.md): c0 = NaN → NaN/1e-12 = NaN in JSON;
+        # explicit guard (max(NaN, 1e-12) = 1e-12 does NOT save it).
+        body_over_pos0 = cb / c0 if (np.isfinite(c0) and c0 > 0) else float("nan")
         per_layer[str(l)] = {
             "C_b": {**block(pos0_cos, body_cos_flat, body_per_doc_cos),
-                    "body_over_pos0": cb / max(c0, 1e-12)},
+                    "body_over_pos0": body_over_pos0},
             "PR_modes": block(pos0_pr, body_pr_flat, body_per_doc_pr),
             "align_K1": block(pos0_al, body_al_flat, body_per_doc_al),
             "profiles": {"t": prof_t, "C_b": prof_cos,
                          "PR_modes": prof_pr, "align_K1": prof_al},
             "nan_count": nan_count,
+            "frac_nan": nan_count / (N * S),
         }
         r = per_layer[str(l)]
         del Jgf  # ~2.1 GB; free it as soon as the block is written (P2-9)
@@ -232,6 +236,10 @@ def main():
                     reasons.append("l22_position_sensitive")
         if r["align_K1"]["body_median"] > 0.9 and r["align_K1"]["pos0_median"] < 0.7:
             reasons.append("align_edge_effect")
+        # P2 (docs/E38_fixes.md): a whole layer degenerate (frac_nan > 0.5)
+        # → verdicts are built on noise; label it separately.
+        if r["frac_nan"] > 0.5:
+            reasons.append("degenerate_layer")
         verdicts[l] = "no_artifact" if not reasons else ",".join(reasons)
 
     warnings_ = []
@@ -240,14 +248,14 @@ def main():
             pos0_pr_med = r["PR_modes"]["pos0_median"]
             ratio = pos0_pr_med / PR_MODES_L22_PAPER
             r["PR_modes"]["pos0_PR_vs_paper_ratio"] = ratio
-            if abs(ratio - 1) > 0.2:
+            if np.isfinite(ratio) and abs(ratio - 1) > 0.2:
                 warnings_.append(
                     f"L22 pos0 PR = {pos0_pr_med:.2f} vs paper 4.6 "
                     f"(ratio {ratio:.2f}) — 4.6 may be a different definition")
     out = {
         "params": {"seed": SEED, "B": B, "S": S, "K": K, "layers": list(LAYERS),
                    "body": f"[{HEAD_END},{BODY_END}]", "pos0_baseline": True,
-                   "cache": "exp27b_jcache_L{l}.pt ({l} per layer)",
+                   "cache": "exp27b_jcache_L<layer>.pt (one per layer)",
                    "ci_policy": "pos0 CI: per-doc bootstrap; pos0-vs-body: "
                                 "paired bootstrap over per-doc body medians"},
         "metrics": per_layer,
