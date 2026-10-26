@@ -1,0 +1,13 @@
+OK -> /home/survivor/work/prism/results/exp38i_factorization.json
+  s=0: resid_max=5.45e-16 J_drift_sh=0.0000 MK_drift_sh=0.0000
+  s=10: resid_max=5.46e-16 J_drift_sh=0.3553 MK_drift_sh=0.3557
+  s=20: resid_max=5.45e-16 J_drift_sh=0.5685 MK_drift_sh=0.5718
+  s=40: resid_max=5.45e-16 J_drift_sh=0.6847 MK_drift_sh=0.6882
+  s=80: resid_max=5.46e-16 J_drift_sh=0.7001 MK_drift_sh=0.7050
+  s=90: resid_max=5.44e-16 J_drift_sh=0.6993 MK_drift_sh=0.7043
+  s=100: resid_max=5.46e-16 J_drift_sh=0.6975 MK_drift_sh=0.7023
+  s=200: resid_max=5.45e-16 J_drift_sh=0.7082 MK_drift_sh=0.7123
+  s=400: resid_max=5.46e-16 J_drift_sh=0.6843 MK_drift_sh=0.6887
+  s=800: resid_max=5.47e-16 J_drift_sh=1.1968 MK_drift_sh=1.1970
+  s=1000: resid_max=5.48e-16 J_drift_sh=1.1517 MK_drift_sh=1.1521
+  verdict: identity holds on edited W rows (residual at numeric floor; tautological by construction — leaf drifts carry the information; h_t invariance FALSE for tied model, cached h used)

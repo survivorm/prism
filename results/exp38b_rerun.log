@@ -1,0 +1,8 @@
+L6: C_b pos0=0.0012 body=0.0011 x1.05 | PR pos0=1.308 body=1.417 | align pos0=0.926 body=0.895
+L12: C_b pos0=0.0018 body=0.0028 x1.77 | PR pos0=1.245 body=1.470 | align pos0=0.825 body=0.927
+L18: C_b pos0=0.0071 body=0.0135 x2.26 | PR pos0=1.416 body=1.604 | align pos0=0.872 body=0.962
+L19: C_b pos0=0.0095 body=0.0150 x1.75 | PR pos0=1.403 body=1.619 | align pos0=0.879 body=0.963
+L22: C_b pos0=0.0247 body=0.0277 x1.24 | PR pos0=1.406 body=1.648 | align pos0=0.917 body=0.966
+L23: C_b pos0=0.0188 body=0.0197 x1.18 | PR pos0=1.251 body=1.375 | align pos0=0.892 body=0.926
+VERDICTS {'6': 'no_artifact', '12': 'edge_contamination', '18': 'edge_contamination', '19': 'edge_contamination', '22': 'l22_position_sensitive', '23': 'no_artifact'}
+JSON -> /home/survivor/work/prism/results/exp38b_position_audit.json (31158 bytes) in 397.3s

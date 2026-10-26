@@ -103,10 +103,16 @@ def main():
         # sink diagnostics: ‖h_0‖ vs median position norm over positions
         # 1..S-1 — pos 0 is NOT in its own denominator (a strong sink
         # would inflate the ratio; docs/E38_fixes.md §1 MEDIUM).
-        # P3: nanmedian — torch.median propagates NaN in norms[:, 1:]
-        # (clamp_min does NOT sanitize NaN; docs/E38_fixes.md §7).
+        # P2/P3 (docs/E38_fixes.md): nan-robust on BOTH numerator and the
+        # final aggregates — clamp_min(1e-12) does not sanitize NaN; a
+        # corrupted H cache (‖h_0‖ = NaN) must not poison
+        # median_pos0_norm_ratio (torch .median() propagates NaN) nor
+        # silently count NaN docs as "not below 0.1x" in
+        # frac_norm_h0_below_0.1x_median (NaN < 0.1 = False).
         pos0_ratio = (norms[:, 0] / norms[:, 1:].nanmedian(dim=-1).values
                       .clamp_min(1e-12))
+        pos0_ratio_np = pos0_ratio.numpy()
+        pos0_finite = pos0_ratio_np[~np.isnan(pos0_ratio_np)]
         s = (u[:, 1:] - u[:, :-1]).norm(dim=-1)      # [N, S-1]  t=0..S-2
         kapp = np.zeros((N, S - 1), dtype=np.float64)  # t=0..S-2, kappa at t+1
         kapp_nan_count = 0
@@ -178,8 +184,9 @@ def main():
                 "median_s0": float(np.nanmedian(s[:, 0])),
                 "median_kappa_t1": float(np.nanmedian(kapp[:, 1])),
                 "frac_norm_h0_below_0.1x_median": float(
-                    (pos0_ratio < 0.1).float().mean()),
-                "median_pos0_norm_ratio": float(pos0_ratio.median()),
+                    (pos0_finite < 0.1).mean() if pos0_finite.size else 0.0),
+                "median_pos0_norm_ratio": float(np.nanmedian(pos0_ratio_np))
+                    if pos0_finite.size else float("nan"),
                 # pos 0 vs head EXCLUDING pos 0 — the TZ's «исключать ИЛИ
                 # записать» was resolved as «записать, не исключать»; this
                 # diagnostic supports the L6/L22 re-check asked in
@@ -211,11 +218,15 @@ def main():
               f"tail={row['kappa_g']['tail']['median']:.4f} | "
               f"h0/med-norm={row['pos0']['median_pos0_norm_ratio']:.3f}")
 
-    # L18 vs L19 profile comparison. Renamed from l18_vs_l19_gdn: the name
-    # was FALSE — both L18 and L19 are full attention (docs/E38_fixes.md
-    # P1); the comparison itself is valid (two full-attention layers), the
-    # GDN-vs-full framing was not. Guarded: if LAYERS changes and drops
-    # 18/19 the keys would be missing (docs/E38_fixes2.md §5).
+    # L18 vs L19 profile comparison. Renamed from l18_vs_l19_gdn (the old
+    # comment claimed "L18 (full) vs L19 (GDN)" — direction-swapped; the
+    # replacement comment "both full attention" was itself FALSE). Per
+    # GDN_LAYERS (_e38_cache.py): 18 IN GDN_LAYERS -> L18 is GDN; 19 NOT in
+    # GDN_LAYERS -> L19 is full attention. This is the GDN->full interface;
+    # a difference between the two profiles is expected and informative
+    # (cross-type), not an artifact. Consistent with metrics["18"]["is_gdn"]
+    # = True / metrics["19"]["is_gdn"] = False. Guarded: if LAYERS changes
+    # and drops 18/19 the keys would be missing (docs/E38_fixes2.md §5).
     l18_vs_l19 = None
     if "18" in per_layer and "19" in per_layer:
         p18 = np.array(per_layer["18"]["profile_S"])
@@ -239,16 +250,26 @@ def main():
         t = t_s or t_k
         head_above = row["s"]["head"]["median"] > row["s"]["body"]["median"]
         tail_above = row["s"]["tail"]["median"] > row["s"]["body"]["median"]
+        # P3 (docs/E38_fixes.md): if the s medians are NaN the direction is
+        # UNDEFINED — 'edges_atypical' (head << body) is not proven; fall
+        # to 'mixed' (meta.direction_from_s_only covers "disagrees" and
+        # "undefined" alike).
+        head_direction_defined = all(
+            np.isfinite(row["s"][seg]["median"]) for seg in ("head", "body"))
         if h and t and head_above and tail_above:
             v = "edges_special"
         elif h and t:
             # both anomalous but not both above (opposite directions) —
             # the TZ's (>>) is not satisfied; 'mixed' is the honest label.
             v = "mixed"
-        elif h and not head_above:
+        elif h and not head_above and head_direction_defined:
             # pre-registered 'edges atypical': head << body, anomalous
             # ratio (the same T_ANOM as every other label).
             v = "edges_atypical"
+        elif h and not head_direction_defined:
+            # s medians NaN — direction unknown; 'mixed' is the honest
+            # label (see head_direction_defined above).
+            v = "mixed"
         elif h or t:
             v = "mixed"
         else:
@@ -307,8 +328,10 @@ def main():
     # Strict RFC-8259: sanitize non-finite floats + allow_nan=False
     # (prism/json_utils — the old default=_json_default was never called
     # for Python floats, docs/E38_fixes.md §1.1).
-    with open(OUT, "w") as f:
+    tmp = OUT + ".tmp"
+    with open(tmp, "w") as f:
         json_dump(out, f, indent=1)
+    os.replace(tmp, OUT)   # atomic: no 0-byte OUT on raise
     print(f"VERDICTS {verdicts} aggregate={aggregate}")
     print(f"JSON -> {OUT} ({os.path.getsize(OUT)} bytes) in {time.time() - t0:.1f}s")
 

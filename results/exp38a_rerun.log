@@ -1,0 +1,8 @@
+L6: s head=0.9125 body=0.9031 tail=1.3441 | k head=1.9556 body=1.9587 tail=1.4249 | h0/med-norm=0.986
+L12: s head=0.8961 body=0.8880 tail=1.2063 | k head=1.9945 body=1.9903 tail=1.5289 | h0/med-norm=0.986
+L18: s head=0.9080 body=0.8867 tail=0.9829 | k head=2.0323 body=2.0512 tail=1.9096 | h0/med-norm=0.970
+L19: s head=0.8938 body=0.8888 tail=1.0737 | k head=2.0891 body=2.0586 tail=1.7300 | h0/med-norm=1.004
+L22: s head=0.8615 body=0.8511 tail=0.9826 | k head=2.1804 body=2.1775 tail=1.8928 | h0/med-norm=0.986
+L23: s head=0.8932 body=0.8681 tail=1.0496 | k head=2.1247 body=2.1309 tail=1.7056 | h0/med-norm=1.009
+VERDICTS {'6': 'mixed', '12': 'edges_typical', '18': 'edges_typical', '19': 'edges_typical', '22': 'edges_typical', '23': 'edges_typical'} aggregate=edges_typical
+JSON -> /home/survivor/work/prism/results/exp38a_uhat_dynamics.json (39285 bytes) in 7.7s

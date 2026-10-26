@@ -190,10 +190,12 @@ def main():
         "deterministic": True,
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, "w") as f:
+    tmp = OUT + ".tmp"
+    with open(tmp, "w") as f:
         # Strict RFC-8259: sanitize non-finite floats + allow_nan=False
         # (docs/E38_fixes.md P2 — consistency with exp38a-g).
         json_dump(out, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, OUT)   # atomic: no 0-byte OUT on raise
     print(f"OK -> {OUT}")
     for k in ks:
         print(f"  s={k:>5}: energy_top(ΔW)={per[k]['energy_top']:.4f} "

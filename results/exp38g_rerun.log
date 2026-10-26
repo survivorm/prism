@@ -1,0 +1,5 @@
+Lens J_22: σ1=5.721 median σ=1.050 ‖J−I‖_F=17.953 s1/median=5.446 -> SUSPECT
+overlap (our tail in lens tail) median=0.0596 CI=[0.058713649710019425, 0.06040920689702034]
+rho_our median=-0.2429 CI=[-0.33428229719831526, -0.18213811572971983] | rho_lens median=-0.9270 CI=[-0.9355829976194835, -0.9115718275041201]
+-> at_random,lens_validity_suspect
+JSON -> /home/survivor/work/prism/results/exp38g_jlens_link.json in 82.8s

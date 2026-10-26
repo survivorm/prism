@@ -1,0 +1,11 @@
+/home/survivor/work/prism/experiments/exp38d_holonomy_spectrum.py:336: RuntimeWarning: All-NaN slice encountered
+  "median_per_j": [float(np.nanmedian(theta_flat[:, j]))
+E-38d v2: device=cpu, R_VALUES=(16, 32, 64, 128) (headline 16)
+L6 r=16: κ_med=3.98816 maxθ=3.14159 ρ(trH,Ω)=0.484 degen=0.000 trivial=0.000
+L12 r=16: κ_med=3.47717 maxθ=3.14159 ρ(trH,Ω)=0.347 degen=0.000 trivial=0.000
+L18 r=16: κ_med=2.38685 maxθ=3.14159 ρ(trH,Ω)=0.241 degen=0.000 trivial=0.000
+L19 r=16: κ_med=2.24077 maxθ=3.14159 ρ(trH,Ω)=0.344 degen=0.000 trivial=0.000
+L22 r=16: κ_med=1.63705 maxθ=3.14159 ρ(trH,Ω)=0.251 degen=0.000 trivial=0.000
+L23 r=16: κ_med=0.01623 maxθ=0.04061 ρ(trH,Ω)=0.358 degen=0.000 trivial=0.000
+VERDICTS {'6': 'non_abelian_candidate,partial', '12': 'non_abelian_candidate,partial', '18': 'non_abelian_candidate,third_mechanism', '19': 'non_abelian_candidate,partial', '22': 'non_abelian_candidate,third_mechanism', '23': 'consistency_pass,effectively_abelian,partial'}
+JSON -> results/exp38d_holonomy_spectrum.json in 1553.3s

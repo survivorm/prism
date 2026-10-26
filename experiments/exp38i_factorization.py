@@ -161,10 +161,12 @@ def main():
         "s0_baseline": "s=0 (W_full, no edit) is an uninformative baseline: all drifts are 0 by construction and the factorization residual is at fp64 numeric precision (~1e-15); included for reference only (docs/E38_fixes.md P3)",
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, "w") as f:
+    tmp = OUT + ".tmp"
+    with open(tmp, "w") as f:
         # Strict RFC-8259: sanitize non-finite floats + allow_nan=False
         # (docs/E38_fixes.md P2 — consistency with exp38a-g).
         json_dump(out, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, OUT)   # atomic: no 0-byte OUT on raise
     print(f"OK -> {OUT}")
     for s, v in out_states.items():
         print(f"  s={s}: resid_max={v['factorization_residual_max']:.2e} "

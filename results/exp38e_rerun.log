@@ -1,0 +1,6 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:36,  8.80it/s]Loading weights:  61%|██████    | 195/320 [00:00<00:00, 1059.81it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1015.46it/s]
+M_K built: σ_1(M_K)=14.3471, ‖w‖=12.8972
+ratio |α|/|β| median-over-docs = 0.1958 -> mixed
+consistency: |β|/σ_1(M_K) = 0.8821 -> consistency_consistent_with_E33r; β/‖J^T u‖ = 4.0768 (r_t_expected = 4.08
+JSON -> /home/survivor/work/prism/results/exp38e_MK_diagnostic.json in 85.8s

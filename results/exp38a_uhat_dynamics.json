@@ -199,7 +199,7 @@
     "median_s0": 0.954269289970398,
     "median_kappa_t1": 1.9782069651867722,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 0.9829997420310974,
+    "median_pos0_norm_ratio": 0.9860714077949524,
     "median_s_head_excl_pos0": 0.9123276472091675,
     "kappa_nan_count": 0,
     "kappa_measured_fraction": 1.0
@@ -455,7 +455,7 @@
     "median_s0": 0.9347681999206543,
     "median_kappa_t1": 2.0058910289660474,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 0.9860718250274658,
+    "median_pos0_norm_ratio": 0.9863746762275696,
     "median_s_head_excl_pos0": 0.8954611420631409,
     "kappa_nan_count": 0,
     "kappa_measured_fraction": 1.0
@@ -711,7 +711,7 @@
     "median_s0": 0.9236807823181152,
     "median_kappa_t1": 2.0645150099297798,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 0.9670844078063965,
+    "median_pos0_norm_ratio": 0.9697999954223633,
     "median_s_head_excl_pos0": 0.904549241065979,
     "kappa_nan_count": 0,
     "kappa_measured_fraction": 1.0
@@ -967,7 +967,7 @@
     "median_s0": 0.9069857597351074,
     "median_kappa_t1": 2.1239104866697147,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 0.9994210600852966,
+    "median_pos0_norm_ratio": 1.0035009384155273,
     "median_s_head_excl_pos0": 0.8929516077041626,
     "kappa_nan_count": 0,
     "kappa_measured_fraction": 1.0
@@ -1223,7 +1223,7 @@
     "median_s0": 0.886315107345581,
     "median_kappa_t1": 2.1657094584084695,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 0.9818784594535828,
+    "median_pos0_norm_ratio": 0.9856417179107666,
     "median_s_head_excl_pos0": 0.8610588908195496,
     "kappa_nan_count": 0,
     "kappa_measured_fraction": 1.0
@@ -1479,7 +1479,7 @@
     "median_s0": 0.8951576948165894,
     "median_kappa_t1": 2.0303390881699093,
     "frac_norm_h0_below_0.1x_median": 0.0,
-    "median_pos0_norm_ratio": 1.0070641040802002,
+    "median_pos0_norm_ratio": 1.008765459060669,
     "median_s_head_excl_pos0": 0.8884900808334351,
     "kappa_nan_count": 0,
     "kappa_measured_fraction": 1.0

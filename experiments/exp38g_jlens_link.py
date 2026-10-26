@@ -95,6 +95,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from _e38_cache import S, D, load_layer  # noqa: E402
 from prism.cache import bootstrap_ci  # noqa: E402
+from prism.json_utils import dump as json_dump  # noqa: E402
 
 SEED = 0
 B = 1000
@@ -119,24 +120,6 @@ def entropy_frac_tail(c2: torch.Tensor, tail_idx: int):
     s = -(p * torch.log(p.clamp_min(1e-12))).sum(dim=-1)
     ft = c2[..., tail_idx + 1:].sum(dim=-1) / tot.squeeze(-1)
     return s, ft
-
-
-def _json_default(o):
-    """Strict JSON serializer (docs/E38_fixes2.md §6/§9): the old
-    `default=float` silently converted np.bool_ -> 1.0 and let bare NaN
-    literals through (invalid RFC-8259). Raise on np.bool_, convert
-    numpy numerics explicitly, NaN/Inf -> strings."""
-    if isinstance(o, np.bool_):
-        raise TypeError(f"unwrapped numpy bool_ in JSON: {o!r}")
-    if isinstance(o, np.integer):
-        return int(o)
-    if isinstance(o, np.floating):
-        o = float(o)
-    if isinstance(o, float) and not np.isfinite(o):
-        return "nan" if o != o else ("inf" if o > 0 else "-inf")
-    raise TypeError(
-        f"object of type {type(o).__name__} is not JSON serializable")
-
 
 def main():
     t0 = time.time()
@@ -354,8 +337,10 @@ def main():
         sha = hashlib.sha256(_lf.read()).hexdigest()
     out["params"]["lens_sha256"] = sha
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, "w") as f:
-        json.dump(out, f, indent=1, default=_json_default)
+    tmp = OUT + ".tmp"
+    with open(tmp, "w") as f:
+        json_dump(out, f, indent=1)
+    os.replace(tmp, OUT)   # atomic: no 0-byte OUT on raise
     print(f"overlap (our tail in lens tail) median={ov_med:.4f} CI={ov_ci}")
     print(f"rho_our median={rho_our_med:.4f} CI={rho_our_ci} | "
           f"rho_lens median={rho_lens_med:.4f} CI={rho_lens_ci}")

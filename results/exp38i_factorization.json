@@ -1,0 +1,225 @@
+{
+  "experiment": "E-38i",
+  "tz": "docs/E38.md (E-38i)",
+  "data": {
+    "snapshots": "exp16_dW_snapshots.pt (fp16->fp64), step grid; snapshots[k] IS dW (W_orig256 is not read anymore after the P0 double-subtraction fix)",
+    "subsample": [
+      10,
+      20,
+      40,
+      80,
+      90,
+      100,
+      200,
+      400,
+      800,
+      1000
+    ],
+    "W_full": "tied embed_tokens rows on U128 (fp64)",
+    "shared_rows_256_U128": 13,
+    "H": "exp27b L23 cache, sample of 16 (dom,doc,t)",
+    "samples": [
+      [
+        "wiki",
+        0,
+        0
+      ],
+      [
+        "wiki",
+        0,
+        60
+      ],
+      [
+        "wiki",
+        2,
+        127
+      ],
+      [
+        "wiki",
+        7,
+        45
+      ],
+      [
+        "math",
+        3,
+        100
+      ],
+      [
+        "math",
+        5,
+        0
+      ],
+      [
+        "math",
+        1,
+        127
+      ],
+      [
+        "math",
+        6,
+        70
+      ],
+      [
+        "code",
+        5,
+        10
+      ],
+      [
+        "code",
+        1,
+        127
+      ],
+      [
+        "code",
+        4,
+        64
+      ],
+      [
+        "code",
+        0,
+        30
+      ],
+      [
+        "chat",
+        7,
+        90
+      ],
+      [
+        "chat",
+        2,
+        0
+      ],
+      [
+        "chat",
+        6,
+        127
+      ],
+      [
+        "chat",
+        3,
+        55
+      ]
+    ],
+    "U128_size": 128,
+    "D": 1024
+  },
+  "identity": "J(t) = (sqrt(D)/r_t) M_K(I - û ûᵀ) — EXACT for any W (E-35 [M-1]); verified dense vs closed form",
+  "structural_fact": "readout-only edit leaves h_t, r_t, û_t, J_norm invariant ONLY in an untied model; Qwen3.5-0.8B is TIED (lm_head = embed_tokens) => in the REAL post-edit model h_t changes; all values here are computed on the CACHED h (original model) only (E38_fixes P1)",
+  "per_state": {
+    "0": {
+      "factorization_residual_max": 5.45078061551535e-16,
+      "factorization_residual_mean": 5.376480641274558e-16,
+      "J_rel_drift_max": 0.0,
+      "MK_rel_drift_max": 0.0,
+      "J_rel_drift_max_shared": 0.0,
+      "J_rel_drift_median_shared": 0.0,
+      "MK_rel_drift_max_shared": 0.0,
+      "MK_rel_drift_median_shared": 0.0
+    },
+    "10": {
+      "factorization_residual_max": 5.463726440287517e-16,
+      "factorization_residual_mean": 5.383238884495691e-16,
+      "J_rel_drift_max": 0.35531400517196515,
+      "MK_rel_drift_max": 0.3556963367774186,
+      "J_rel_drift_max_shared": 0.35531400517196515,
+      "J_rel_drift_median_shared": 0.21922988211480515,
+      "MK_rel_drift_max_shared": 0.3556963367774186,
+      "MK_rel_drift_median_shared": 0.2182767052611047
+    },
+    "20": {
+      "factorization_residual_max": 5.446264473618356e-16,
+      "factorization_residual_mean": 5.386182095957877e-16,
+      "J_rel_drift_max": 0.5685084007826232,
+      "MK_rel_drift_max": 0.5718392213335464,
+      "J_rel_drift_max_shared": 0.5685084007826232,
+      "J_rel_drift_median_shared": 0.2984234381132899,
+      "MK_rel_drift_max_shared": 0.5718392213335464,
+      "MK_rel_drift_median_shared": 0.3029993512272786
+    },
+    "40": {
+      "factorization_residual_max": 5.45058274627932e-16,
+      "factorization_residual_mean": 5.390021407355882e-16,
+      "J_rel_drift_max": 0.6847314671032229,
+      "MK_rel_drift_max": 0.688215942958241,
+      "J_rel_drift_max_shared": 0.6847314671032229,
+      "J_rel_drift_median_shared": 0.3619704269280866,
+      "MK_rel_drift_max_shared": 0.688215942958241,
+      "MK_rel_drift_median_shared": 0.36804314085309836
+    },
+    "80": {
+      "factorization_residual_max": 5.457740988014113e-16,
+      "factorization_residual_mean": 5.386783049198639e-16,
+      "J_rel_drift_max": 0.7001457027109641,
+      "MK_rel_drift_max": 0.704985083308041,
+      "J_rel_drift_max_shared": 0.7001457027109641,
+      "J_rel_drift_median_shared": 0.41498964549373196,
+      "MK_rel_drift_max_shared": 0.704985083308041,
+      "MK_rel_drift_median_shared": 0.41451651423154867
+    },
+    "90": {
+      "factorization_residual_max": 5.443021038168975e-16,
+      "factorization_residual_mean": 5.37996444615751e-16,
+      "J_rel_drift_max": 0.699328385113901,
+      "MK_rel_drift_max": 0.7042708607384,
+      "J_rel_drift_max_shared": 0.699328385113901,
+      "J_rel_drift_median_shared": 0.4376949572674634,
+      "MK_rel_drift_max_shared": 0.7042708607384,
+      "MK_rel_drift_median_shared": 0.437421122113134
+    },
+    "100": {
+      "factorization_residual_max": 5.455120845748825e-16,
+      "factorization_residual_mean": 5.380398014323153e-16,
+      "J_rel_drift_max": 0.6974536558851318,
+      "MK_rel_drift_max": 0.7022891241879322,
+      "J_rel_drift_max_shared": 0.6974536558851318,
+      "J_rel_drift_median_shared": 0.45409509555767247,
+      "MK_rel_drift_max_shared": 0.7022891241879322,
+      "MK_rel_drift_median_shared": 0.45514549937376464
+    },
+    "200": {
+      "factorization_residual_max": 5.447571295403157e-16,
+      "factorization_residual_mean": 5.388211639468943e-16,
+      "J_rel_drift_max": 0.7081531007255449,
+      "MK_rel_drift_max": 0.7123008853568211,
+      "J_rel_drift_max_shared": 0.7081531007255449,
+      "J_rel_drift_median_shared": 0.4538958575459216,
+      "MK_rel_drift_max_shared": 0.7123008853568211,
+      "MK_rel_drift_median_shared": 0.45499275554811697
+    },
+    "400": {
+      "factorization_residual_max": 5.464336448396086e-16,
+      "factorization_residual_mean": 5.3868867483543e-16,
+      "J_rel_drift_max": 0.6843444708876453,
+      "MK_rel_drift_max": 0.6887191173069493,
+      "J_rel_drift_max_shared": 0.6843444708876453,
+      "J_rel_drift_median_shared": 0.49773354663399866,
+      "MK_rel_drift_max_shared": 0.6887191173069493,
+      "MK_rel_drift_median_shared": 0.49843456754218485
+    },
+    "800": {
+      "factorization_residual_max": 5.469507412982866e-16,
+      "factorization_residual_mean": 5.391159395440933e-16,
+      "J_rel_drift_max": 1.1967746736074203,
+      "MK_rel_drift_max": 1.1970162493414704,
+      "J_rel_drift_max_shared": 1.1967746736074203,
+      "J_rel_drift_median_shared": 0.6542329565524558,
+      "MK_rel_drift_max_shared": 1.1970162493414704,
+      "MK_rel_drift_median_shared": 0.6525259860849845
+    },
+    "1000": {
+      "factorization_residual_max": 5.484690730795863e-16,
+      "factorization_residual_mean": 5.394682702045374e-16,
+      "J_rel_drift_max": 1.1516775867419167,
+      "MK_rel_drift_max": 1.1521101514838663,
+      "J_rel_drift_max_shared": 1.1516775867419167,
+      "J_rel_drift_median_shared": 0.6555128872282623,
+      "MK_rel_drift_max_shared": 1.1521101514838663,
+      "MK_rel_drift_median_shared": 0.6569205122130507
+    }
+  },
+  "verdict_rule": "max_s residual <= 1e-06 => identity holds on edited W rows (residual at numeric floor; tautological - drift metrics carry the information)",
+  "verdict": "identity holds on edited W rows (residual at numeric floor; tautological by construction — leaf drifts carry the information; h_t invariance FALSE for tied model, cached h used)",
+  "runtime_s": 6.0,
+  "deterministic": true,
+  "s0_baseline": "s=0 (W_full, no edit) is an uninformative baseline: all drifts are 0 by construction and the factorization residual is at fp64 numeric precision (~1e-15); included for reference only (docs/E38_fixes.md P3)"
+}

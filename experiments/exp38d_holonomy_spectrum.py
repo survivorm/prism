@@ -335,7 +335,7 @@ def main(results_dir="results", device="auto"):
                     # docs/E38_fixes.md §4).
                     "median_per_j": [float(np.nanmedian(theta_flat[:, j]))
                                      for j in range(R // 2)],
-                    "n_valid_per_j": [int((theta_flat[:, j].nan_to_num(nan=-1.0)
+                    "n_valid_per_j": [int((np.nan_to_num(theta_flat[:, j], nan=-1.0)
                                            > -0.5).sum())
                                       for j in range(R // 2)],
                     "hist_8_angles": [float(c) for c in hist],
@@ -468,8 +468,10 @@ def main(results_dir="results", device="auto"):
     # sanitize non-finite floats (the old default= hook was dead for
     # Python floats: json.dump serializes float('nan') natively before
     # default= is consulted) + allow_nan=False as defense in depth.
-    with open(OUT_PATH, "w") as f:
+    tmp = OUT_PATH + ".tmp"
+    with open(tmp, "w") as f:
         json_dump(out, f, indent=1)
+    os.replace(tmp, OUT_PATH)   # atomic: no 0-byte OUT on raise
     print(f"VERDICTS {verdicts}")
     print(f"JSON -> {OUT_PATH} in {time.time() - t0:.1f}s")
 

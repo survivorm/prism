@@ -244,8 +244,10 @@ def main():
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     # Strict RFC-8259: sanitize + allow_nan=False (the old default hook was
     # never called for Python floats; docs/E38_fixes.md §3).
-    with open(OUT, "w") as f:
+    tmp = OUT + ".tmp"
+    with open(tmp, "w") as f:
         json_dump(out, f, indent=1)
+    os.replace(tmp, OUT)   # atomic: no 0-byte OUT on raise
     print(f"OUTCOMES {verdicts}")
     print(f"JSON -> {OUT} ({os.path.getsize(OUT)} bytes) in {time.time() - t0:.1f}s")
 

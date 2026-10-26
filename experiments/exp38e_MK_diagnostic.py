@@ -199,6 +199,10 @@ def main():
     resid_valid = resid[valid]
     j_uhat_resid = (float(resid_valid.median()) if resid_valid.numel()
                     else float("nan"))
+    # Precompute the scalar the per_layer dict and the final print need
+    # (P2 reordering regression: it was computed BELOW this dict, after
+    # the del, -> UnboundLocalError at dict construction).
+    r_t_expected = float(np.nanmedian(norms.numpy()) / sqrtD)
     per_layer = {
         "L23": {
             "sigma_1_MK": sigma_1_MK, "w_norm": w_norm,
@@ -247,8 +251,6 @@ def main():
                                  "convention (jacobian.py M-1)"},
     }
     del M_K, H, J23, ck23   # P2: release ~2.2 GB before the (cheap) dump
-    # Precompute the scalar the out/print needs from the freed arrays.
-    r_t_expected = float(np.nanmedian(norms.numpy()) / sqrtD)
     # P2 (docs/E38_fixes.md §38e): u/w2/beta_vec/JtU live to end of scope
     # (u ~2.1 GB); release them too.
     del u, w2, beta_vec, JtU, JtU_norm, norms, ratio, beta_scaled, beta_vs_JtU
@@ -300,8 +302,10 @@ def main():
     # P1-2 (docs/E38_fixes.md §38e): strict RFC-8259 — sanitize non-finite
     # floats + allow_nan=False (the old default=_json_default was dead for
     # Python floats).
-    with open(OUT, "w") as f:
+    tmp = OUT + ".tmp"
+    with open(tmp, "w") as f:
         json_dump(out, f, indent=1)
+    os.replace(tmp, OUT)   # atomic: no 0-byte OUT on raise
     print(f"ratio |α|/|β| median-over-docs = {ratio_median:.4f} -> {gate}")
     print(f"consistency: |β|/σ_1(M_K) = {cons_ratio:.4f} -> {cons}; "
           f"β/‖J^T u‖ = {jtu_ratio:.4f} (r_t_expected = "
