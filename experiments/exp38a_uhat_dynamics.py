@@ -57,7 +57,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from _e38_cache import LAYERS, S, load_layer_H  # noqa: E402
+from _e38_cache import LAYERS, S, GDN_LAYERS, load_layer_H  # noqa: E402
+from prism.json_utils import dump as json_dump  # noqa: E402
 from prism.holonomy import geodesic_curvature  # noqa: E402
 
 
@@ -185,8 +186,10 @@ def main():
             "profile_S": [float(np.nanmedian(s[:, t])) for t in range(0, S - 1, 4)],
             "profile_K": [float(np.nanmedian(kapp[:, t])) for t in range(1, S, 4)],
         }
-        # GDN vs full-attention: L18 (full) vs L19 (GDN) profile distance
-        row["is_gdn"] = bool(l in (19, 22))
+        # GDN vs full-attention: docs/E38_fixes.md P1 — the old hardcoded
+        # (19, 22) was INVERTED on 4/6 layers. GDN = L6/L12/L18/L22, full =
+        # L19/L23 (verified against model.config.layer_types).
+        row["is_gdn"] = bool(l in GDN_LAYERS)
         per_layer[str(l)] = row
         del H
         print(f"L{l}: s head={row['s']['head']['median']:.4f} "
@@ -197,9 +200,11 @@ def main():
               f"tail={row['kappa_g']['tail']['median']:.4f} | "
               f"h0/med-norm={row['pos0']['median_pos0_norm_ratio']:.3f}")
 
-    # L18 (full) vs L19 (GDN) profile comparison (Pitfall: GDN recurrence may
-    # give a numerically different trajectory). Guarded: if LAYERS changes
-    # and drops 18/19 the keys would be missing (docs/E38_fixes2.md §5).
+    # L18 vs L19 profile comparison. Renamed from l18_vs_l19_gdn: the name
+    # was FALSE — both L18 and L19 are full attention (docs/E38_fixes.md
+    # P1); the comparison itself is valid (two full-attention layers), the
+    # GDN-vs-full framing was not. Guarded: if LAYERS changes and drops
+    # 18/19 the keys would be missing (docs/E38_fixes2.md §5).
     l18_vs_l19 = None
     if "18" in per_layer and "19" in per_layer:
         p18 = np.array(per_layer["18"]["profile_S"])
@@ -255,7 +260,7 @@ def main():
                    "tail": f"{{{BODY_END}}}", "anomaly_threshold": T_ANOM,
                    "cache": "kaggle_kernel/results/exp27b_jcache_L{l}.pt ({l} per layer)"},
         "metrics": per_layer,
-        "l18_vs_l19_gdn": l18_vs_l19,
+        "l18_vs_l19": l18_vs_l19,
         "outcomes": {"per_layer": verdicts, "aggregate": aggregate,
                      "counts": counts},
         "meta": {"S": S, "note": "GDN chunk boundary at S=128 (E-27.6) may "

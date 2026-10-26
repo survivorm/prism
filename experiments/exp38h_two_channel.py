@@ -44,6 +44,7 @@ from prism.exp38_hi_common import (  # noqa: E402
     load_model_tensors,
 )
 from prism.holonomy import procrustes_align  # noqa: E402
+from prism.json_utils import dump as json_dump  # noqa: E402
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 OUT = os.path.join(REPO, "results", "exp38h_two_channel_goodhart.json")
@@ -116,7 +117,7 @@ def main():
 
     # --- per-channel J-response (exact: ΔJ = ΔW @ J_norm, J_norm invariant) ---
     # channel split of ΔJ: ΔJ_top = ΔW_top @ J_norm — measure energy share
-    h0 = ck["H"][("wiki", 0, 60)].double()
+    h0 = ck["H"][("wiki", 0, 60)].double()  # [D]; position 60 = middle of the 128-token sequence — used only to build J_norm for the ΔJ response, not a reported number (docs/E38_fixes.md P2)
     r0 = h0.norm()
     u0 = h0 / r0
     emb, gamma = load_model_tensors()
@@ -126,7 +127,7 @@ def main():
     for k in ks:
         Jt = dW[k] @ Jnorm
         Jtt = (P_L @ dW[k] @ P_R) @ Jnorm
-        Jtail = Jt - Jtt
+        Jtail = Jt - Jtt  # noqa: F841 — energy_top(ΔJ) = ‖ΔJ_top‖²/‖ΔJ‖² may EXCEED 1 when ΔJ_top and ΔJ_tail are anti-aligned (not orthogonal projections of the same object — diagnostic only, docs/E38_fixes.md P2)
         jresp[k] = {"energy_top": float((Jtt.pow(2).sum() / Jt.pow(2).sum()))}
 
     out = {
@@ -176,7 +177,9 @@ def main():
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
-        json.dump(out, f, indent=2, ensure_ascii=False)
+        # Strict RFC-8259: sanitize non-finite floats + allow_nan=False
+        # (docs/E38_fixes.md P2 — consistency with exp38a-g).
+        json_dump(out, f, indent=2, ensure_ascii=False)
     print(f"OK -> {OUT}")
     for k in ks:
         print(f"  s={k:>5}: energy_top(ΔW)={per[k]['energy_top']:.4f} "
