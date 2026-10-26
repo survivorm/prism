@@ -55,13 +55,13 @@ TRIPLES = [(10, 100, 1000), (10, 80, 100), (100, 400, 1000)]
 
 def main():
     t0 = time.time()
-    U128, ck = load_u128()
+    ck = load_u128()[1]   # U128 itself is not used (only ck["H"]) — P2 dead code
     snaps_all, raw = load_snapshots()
     missing = [k for k in K_STEPS if k not in snaps_all]
     assert not missing, f"missing snapshot steps: {missing}"
     ks = list(K_STEPS)
-    W_orig = raw["W_orig"].to(torch.float64)  # noqa: F841 (schema check only)
     # P0 fix (E38_fixes): snapshots[k] IS ΔW — do NOT subtract W_orig again
+    # (raw["W_orig"] is only consumed by the load_snapshots schema/assert check).
     dW = {k: snaps_all[k] for k in ks}
 
     # --- fixed reference projector: top-16 frame of ΔW at the smallest dose
@@ -71,7 +71,7 @@ def main():
     # rank ≤ 13 — a 16-dim projector is undefined there). The leading
     # frame of the first edit is the honest in-space analog.
     A_ref = dW[ks[0]]
-    Us, sU, Vt = torch.linalg.svd(A_ref, full_matrices=False)
+    Us, _, Vt = torch.linalg.svd(A_ref, full_matrices=False)
     U_t = Us[:, :R]            # [256,16]
     V_t = Vt[:R].t()           # [16,1024]
     P_L = U_t @ U_t.t()        # [256,256]
@@ -135,7 +135,9 @@ def main():
     for k in ks:
         Jt = dW[k] @ Jnorm
         Jtt = (P_L @ dW[k] @ P_R) @ Jnorm
-        Jtail = Jt - Jtt  # noqa: F841 — energy_top(ΔJ) = ‖ΔJ_top‖²/‖ΔJ‖² may EXCEED 1 when ΔJ_top and ΔJ_tail are anti-aligned (not orthogonal projections of the same object — diagnostic only, docs/E38_fixes.md P2)
+        # energy_top(ΔJ) = ‖ΔJ_top‖²/‖ΔJ‖² MAY EXCEED 1 when ΔJ_top and
+        # ΔJ_tail are anti-aligned (not orthogonal projections of the same
+        # object — diagnostic only, docs/E38_fixes.md P2).
         jresp[k] = {"energy_top": float((Jtt.pow(2).sum() / Jt.pow(2).sum()))}
 
     out = {
@@ -173,6 +175,10 @@ def main():
                             "equal => both channels Abelian",
         },
         "j_response_channel_split": jresp,
+        "j_response_meta": "energy_top(ΔW) is a projection share in [0, 1]; "
+                           "energy_top(ΔJ) is a share of ΔJ only when "
+                           "ΔJ_top ⊥ ΔJ_tail — MAY EXCEED 1 in the "
+                           "anti-aligned case, diagnostic only (docs/E38_fixes.md P2)",
         "blocked": {
             "bridge_per_channel": "1 − jacobian_gap(J_L, J_S, E_L, E_S, p) "
                                   "needs J_L of the large target model "
