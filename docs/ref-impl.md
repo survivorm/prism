@@ -523,4 +523,117 @@ E_small = model_small.model.embed_tokens.weight.detach()  # [V, D_S]
 # Qwen3.5-0.8B: D_S = 1024; Qwen3.5-4B: D_L = 2560
 ```
 
+## 5. Алгоритмы шестираундового консенсуса (новые, paper §2)
+
+Формулы — paper §2 (2.1, 2.2, 2.5, 2.6, 2.7, 2.8, 2.9); входы/выходы явные. Все функции работают на топ-r SVD `J_{l,t} = U Σ V^T` (r = 16).
+
+### 5.1 compute_vertical_transport
+
+```python
+def compute_vertical_transport(D_l, V_l, r=16):
+    # Входы: D_l [D, D] (∂h^{l+1}/∂h^l, §2.1), V_l [D, r] (столбцы — правые сингулярные векторы слоя l)
+    # Выходы: Q [D, r_eff] (полярный фактор — основная определение),
+    #         S_vert [r_eff] (радиальный RG-поток), rank_eff (выживший ранг)
+    A = D_l @ V_l                    # [D, r]
+    # Основная: полярный фактор (единственный совместим с Procrustes по построению)
+    Qp, Sp, Vp = svd(A)              # Qp = A @ Vp^T — полярный фактор
+    # Контрольные: QR-реортогонализация (QR с сингулярностями), проектор на V_{l+1,t}
+    rank_eff = (Sp > tol).sum()      # потеря ранга от RMSNorm — отдельный факт, фиксируется явно
+    # при rank_eff < r: Q определяется на выжившем подпространстве
+    return Qp[:, :rank_eff], Sp[:rank_eff], rank_eff
+```
+
+### 5.2 compute_mixed_plaquette
+
+```python
+def compute_mixed_plaquette(V_l, V_lp1, R_l, R_lp1, Q_l, V_lp1_t, dL, dt):
+    # Входы: V_l, V_lp1 [D, r] (правые сингулярные векторы),
+    #         R_l, R_lp1 [r, r] (правые горизонтальные связи, §2.1),
+    #         Q_l [D, r_eff] (вертикальный транспорт, 5.1), dL, dt — шаги
+    # Выходы: F_lt = dist_Gr(A, B) = sqrt(Σ_j sin²θ_j) (главные углы),
+    #         beta = dκ/dln l (нормировка на неравномерный зазор глубины: (6,12),(12,18),(18,22),(22,23))
+    A = Q_l @ R_l @ V_l               # t-перенос, затем l-перенос
+    B = R_lp1 @ Q_l @ V_l             # l-перенос, затем t-перенос
+    # dist_Gr через главные углы: sin θ_j = сингулярные значения
+    # из sqrt(I − A^T (A^T A)^{-1} A B ... ) (стандартная формула, svd)
+    # β = (κ(l+dL) − κ(l)) / ln((l+dL)/l) — pretest знака по трём определениям транспорта (5.1)
+    return F_lt, beta
+```
+
+### 5.3 compute_kinetic_decomposition
+
+```python
+def compute_kinetic_decomposition(J_t, J_tp1, r=16):
+    # Входы: J_t, J_tp1 [K, D] (Якобианы соседних позиций)
+    # Выходы: 5 каналов (не 4 — кросс-член первого порядка не прячется в остаток):
+    #   right  = ‖Σ dV‖², radial = ‖dΣ‖², left = ‖dU Σ‖²,
+    #   cross  = 2 tr(Σ M Σ N), residual = ‖ΔJ − (сумма)‖² + калибровка
+    # Транспорт-фрейм: Procrustes-выравнивание (t, t+1) ДО дифференцирования
+    U, S, V = svd(J_t)                # базовый фрейм
+    # Procrustes-выравнивание V_tp1 к V (полярный фактор)
+    # M = dUᵀU, N = dVᵀV ∈ so(r) (антисимметричны)
+    # Кросс-член: тождественно нулевой при r = 1 (контроль, не баг);
+    #   систематически ненулевой — лево-правое locking (напарник теста 1.2)
+    # Доли отчитываются в двух нормировках: σ-взвешенной и сырой
+    return {"right": ..., "radial": ..., "left": ..., "cross": ..., "residual": ...}
+```
+
+### 5.4 compute_token_IPR
+
+```python
+def compute_token_IPR(U_esg, token_marginals, E34_surrogate):
+    # Входы: U_esg [K, r] (столбцы u_k — левые собственные векторы ESG-грамиана, §2.2),
+    #         token_marginals, E34_surrogate (matched-null: Q^T diag(√ESG_ii) —
+    #         рандомизация векторов при сохранении собственных значений)
+    # Выходы: IPR_k = Σ_i |u_{k,i}|⁴ (i = 1..K), p-value vs matched-null
+    # «Токен-специфичность» — свойство IPR, не голономии (§2.6)
+    return ipr_k, p_matched
+```
+
+### 5.5 compute_neural_IPR
+
+```python
+def compute_neural_IPR(V, r=16):
+    # Входы: V [D, r] (столбцы v_k — правые сингулярные векторы)
+    # Выходы: IPR_k = Σ_j |v_{k,j}|⁴ (j = 1..D), p-value vs Haar на S(D)
+    # Токен-специфичность на нейрон-IPR не распространяется: словаря
+    # «нейрон → токены» нет (E-38g)
+    return ipr_k, p_haar
+```
+
+### 5.6 compute_R_can / compute_R_raw
+
+```python
+def compute_R_can(E_K):
+    # Входы: E_K = J^(p)(J^(p))^T (канонический срез, §2.11.1)
+    # Выходы: R_can = λmax(E_K)/tr(E_K) — параметр порядка, только на каноническом срезе
+    return E_K.max() / E_K.sum()
+
+def compute_R_raw(J):
+    # Входы: J [K, D] (raw)
+    # Выходы: R_raw = λmax(JJ^T)/tr(JJ^T) — диагностический скаляр (paper §2.10),
+    #         НЕ параметр порядка (top-режим смешан с gauge-направлением v_g, [L-gauge])
+    # R_raw − R_can — число: доля калибровки в top-режиме
+    eig = torch.linalg.eigvalsh(J @ J.T)
+    return eig.max() / eig.sum()
+```
+
+### 5.7 compute_G
+
+```python
+def compute_G(delta_fixP, delta_raw):
+    # Входы: delta_fixP, delta_raw (decorrelation-метрики слоя l на срезах fixP и raw, E-25/E-26)
+    # Выходы: G(l) = 1 − ΔfixP(l)/Δraw(l) — доля p-индуцированной decorrelation (paper §2.5)
+    # G — не «доля калибровки» (это ESG-gauge_share, §2.3) и не параметр порядка
+    return 1.0 - delta_fixP / delta_raw
+```
+
+### Общие требования
+
+- float64 для всех вычислений (fp32 — только входные данные); svd — `torch.linalg.svd`
+- все функции принимают `r = 16` (E-27) и `tol` (порог выжившего ранга)
+- кросс-модельные прогоны: D_L = 2560, L = 32; основной — D_S = 1024, L = 24
+- результаты — в `results/` (JSON), имена: `vertical_transport_{l}.json`, `mixed_plaquette_{l}.json`,
+  `kinetic_decomposition_{t}.json`, `token_ipr_{l}.json`, `neural_ipr_{l}.json`, `R_can_{l}.json`, `G_{l}.json`
+
 ---
