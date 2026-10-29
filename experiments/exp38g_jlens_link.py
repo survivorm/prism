@@ -93,7 +93,7 @@ from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from _e38_cache import S, D, load_layer  # noqa: E402
+from _e38_cache import D, load_layer  # noqa: E402
 from prism.cache import bootstrap_ci  # noqa: E402
 from prism.json_utils import dump as json_dump  # noqa: E402
 
@@ -102,7 +102,8 @@ B = 1000
 T_LAYER = 22          # priority layer per TZ
 TAIL_FRAC = 0.10
 OVERLAP_HIGH = 0.9
-OVERLAP_LOW = 0.3
+# (OVERLAP_LOW = 0.3 removed — dead, docs/E38_fixes.md part-4 §3.5; the TZ
+# 0.3 threshold is superseded by the baseline-relative windows in main())
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LENS = os.path.join(REPO, "results", "exp38g_jlens", "lens.pt")
@@ -156,18 +157,27 @@ def main():
     del lens
 
     # --- activations + our per-position J from exp27b ---
-    ck = load_layer(T_LAYER)
+    # docs/E38_fixes.md part-4 §3.4: load only what is used (P is ~2 MB,
+    # 'pay only for what you use', E38_fixes2 §6).
+    ck = load_layer(T_LAYER, want=("J", "H"))
     H = ck["H"].float()                       # [N, S, D]
     J_our = ck["J"]                           # [N, S, K, D] raw
+    # docs/E38_fixes.md part-4 §3.1: fail loud on a corrupt cache — the
+    # old code would NaN the medians (Inf h -> Inf c2) and silently shrink
+    # the aggregation set.
+    assert torch.isfinite(H).all(), "exp27b H cache contains non-finite values"
+    assert torch.isfinite(J_our).all(), "exp27b J cache contains non-finite values"
     N, Ss, Kk, _ = J_our.shape
     del ck
 
     # --- per (doc, t): dual projection + overlap ---
     tail_o = int((1 - TAIL_FRAC) * Kk)        # 115 → modes 116..127 (12)
     r_our = Kk - tail_o - 1
-    overlap_t = np.empty((N, Ss))
+    overlap_t = np.full((N, Ss), np.nan)      # part-4 §3.2: NaN, not garbage
     rho_our_per_doc = []
     rho_lens_per_doc = []
+    rho_our_p_per_doc = []       # part-4 §3.11: spearmanr p, kept in JSON
+    rho_lens_p_per_doc = []
     S_our_med = np.full((N, Ss), np.nan)
     frac_our_med = np.full((N, Ss), np.nan)
 
@@ -194,10 +204,12 @@ def main():
             c2_l = (H[i, t] @ V_lens) ** 2
             S_l[t], Ft_l[t] = entropy_frac_tail(c2_l, tail_l)
         S_our_med[i], frac_our_med[i] = S_o, Ft_o
-        r_o, _ = spearmanr(S_o, Ft_o)
+        r_o, p_o = spearmanr(S_o, Ft_o)
         rho_our_per_doc.append(float(r_o) if np.isfinite(r_o) else float("nan"))
-        r_l, _ = spearmanr(S_l, Ft_l)
+        rho_our_p_per_doc.append(float(p_o) if np.isfinite(p_o) else float("nan"))
+        r_l, p_l = spearmanr(S_l, Ft_l)
         rho_lens_per_doc.append(float(r_l) if np.isfinite(r_l) else float("nan"))
+        rho_lens_p_per_doc.append(float(p_l) if np.isfinite(p_l) else float("nan"))
     del J_our, H
 
     # MEDIUM-4: DOC-level bootstrap for overlap (the unit of independence
@@ -212,6 +224,8 @@ def main():
     rho_lens_arr = np.array(rho_lens_per_doc)
     rho_our_med = float(np.nanmedian(rho_our_arr))
     rho_lens_med = float(np.nanmedian(rho_lens_arr))
+    rho_our_p_med = float(np.nanmedian(np.array(rho_our_p_per_doc)))
+    rho_lens_p_med = float(np.nanmedian(np.array(rho_lens_p_per_doc)))
     valid_rho_our = rho_our_arr[~np.isnan(rho_our_arr)]
     valid_rho_lens = rho_lens_arr[~np.isnan(rho_lens_arr)]
     rho_our_ci = (list(bootstrap_ci(valid_rho_our, B=B, seed=SEED))
@@ -224,6 +238,9 @@ def main():
     # dims r_our, r_lens in R^D: E[overlap] = r_lens/D ≈ 0.1. "Disjoint"
     # at overlap ≈ 0.1 is wrong: that is random independence, not
     # orthogonality. Reclassify relative to the baseline.
+    # part-4 §3.6: the [0.5·rb, 3·rb] at_random window is WIDE by design —
+    # an empirical rule of thumb (up to 3× the random baseline is labeled
+    # at_random); the current value sits near the window center.
     random_baseline = r_lens / D
     if ov_med > OVERLAP_HIGH:
         verdict = "our_tail_within_lens_tail"
@@ -237,6 +254,17 @@ def main():
         verdict += ",lens_validity_suspect"
     # HIGH-2: the overlap verdict is a REWRITE of the TZ pre-registration
     # (ρ-based). Report BOTH so the status is traceable to the TZ.
+    # part-4 §1/§7.1: the TZ's 'both < 0.3' rule is semantically wrong for
+    # NEGATIVE ρ — ρ_lens = −0.927 is STRONG tail-sparsity (concentrated
+    # h at low entropy ⇒ high tail energy), the opposite of 'not tail
+    # modes'. Refined per-operator labels: |ρ| < 0.3 → not_tail_structured;
+    # ρ < −0.3 → tail_sparse; ρ > 0.3 → anti_tail_sparse.
+    def _tz_rho_label(rho):
+        if abs(rho) < 0.3:
+            return "not_tail_structured"
+        return "tail_sparse" if rho < 0 else "anti_tail_sparse"
+    tz_refined_outcome = (f"rho_our={_tz_rho_label(rho_our_med)}, "
+                          f"rho_lens={_tz_rho_label(rho_lens_med)}")
     tz_preregistered_outcome = (
         "jlens_not_tail_modes" if rho_our_med < 0.3 and rho_lens_med < 0.3
         else ("symmetric" if min(rho_our_med, rho_lens_med) > 0.7 else "partial"))
@@ -269,6 +297,7 @@ def main():
             },
             "rho_our_S_frac_tail": {
                 "median": rho_our_med, "ci": rho_our_ci,
+                "p_median": rho_our_p_med,   # part-4 §3.11: per-doc spearmanr p
                 "per_doc": rho_our_per_doc,
                 "basis_note": "128 REAL right singular modes only (no null "
                     "completion — P0, docs/E38_fixes2.md: the old 896-mode "
@@ -278,6 +307,7 @@ def main():
             },
             "rho_lens_S_frac_tail": {
                 "median": rho_lens_med, "ci": rho_lens_ci,
+                "p_median": rho_lens_p_med,   # part-4 §3.11: per-doc spearmanr p
                 "per_doc": rho_lens_per_doc},
             "S_our_entropy": {"median": float(np.nanmedian(S_our_med))},
             "frac_tail_our": {"median": float(np.nanmedian(frac_our_med))},
@@ -285,15 +315,25 @@ def main():
         "outcomes": {
             "verdict": verdict,
             "rewritten_primary_outcome": verdict,
+            "tz_refined_outcome": tz_refined_outcome,   # part-4 §1: per-operator semantics for (negative) ρ
             "tz_preregistered_outcome": tz_preregistered_outcome,
             "outcome_note": "the TZ pre-registration was ρ-based (ρ>0.7 "
                 "symmetric / ρ<0.3 not_tail_modes); the code rewrite makes "
                 "the subspace OVERLAP primary (the old version measured "
                 "only lens-internal consistency — not the TZ question). "
                 "Both outcomes are reported; do not mix them in the "
-                "paper (docs/E38_fixes.md part-8 HIGH-1/2).",
+                "paper (docs/E38_fixes.md part-8 HIGH-1/2). tz_refined "
+                "fixes the TZ's 'both < 0.3' label for NEGATIVE ρ: "
+                "ρ_lens = −0.927 is strong tail-sparsity, not 'not tail "
+                "modes' (part-4 §1/§7.1).",
         },
         "meta": {
+            "rho_lens_interpretation": "ρ < −0.3 = tail-sparse (энергия "
+                                       "концентрируется в хвосте при низкой "
+                                       "энтропии): ρ_lens = −0.927 — strong "
+                                       "tail-sparsity в LENS, ρ_our ≈ 0 — её "
+                                       "нет у нашего J: АСИММЕТРИЯ, не "
+                                       "'оба без tail-структуры' (part-4 §1/§3.8)",
             "what_this_test_is": "PRIMARY (b): direct subspace check — "
                     "per-position tail subspace of OUR J_t (bottom 10% of "
                     "its 128 σ, right singular vectors, R^1024) vs tail "

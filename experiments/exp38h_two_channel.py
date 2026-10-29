@@ -56,7 +56,9 @@ TRIPLES = [(10, 100, 1000), (10, 80, 100), (100, 400, 1000)]
 def main():
     t0 = time.time()
     ck = load_u128()[1]   # U128 itself is not used (only ck["H"]) — P2 dead code
-    snaps_all, raw = load_snapshots()
+    # raw is NOT consumed here — P0 (E38_fixes): snapshots[k] IS ΔW. The
+    # schema/assert check happens inside load_snapshots.
+    snaps_all, _raw = load_snapshots()
     missing = [k for k in K_STEPS if k not in snaps_all]
     assert not missing, f"missing snapshot steps: {missing}"
     ks = list(K_STEPS)
@@ -87,18 +89,23 @@ def main():
         Qta, sta = top_r_subspaces(A_tail, R)       # right frame (tail ch)
         Ut, _ = top_r_subspaces(A_top.t(), R)       # left frame  (top ch)
         Uta, _ = top_r_subspaces(A_tail.t(), R)     # left frame  (tail ch)
-        e_top = float((A_top.pow(2).sum() / A.pow(2).sum()))
+        e_top = float((A_top.pow(2).sum() / A.pow(2).sum())
+                      if float(A.pow(2).sum()) > 0 else float("nan"))
         s_full = torch.linalg.svdvals(A)
         per[k] = {
             "energy_top": e_top,
             "sigma_top16_top_channel": st.tolist(),
             "sigma_top16_tail_channel": sta.tolist(),
             "eigengap_16_17_dW": float(s_full[15] - s_full[16]),
+            # docs/E38_fixes.md §38h §6.4: rank audit — stable frames at
+            # low doses require rank ≥ 16 on each channel.
+            "rank_top_channel": int((st > 1e-8).sum()),
+            "rank_tail_channel": int((sta > 1e-8).sum()),
             "_Q_top": Qt, "_Q_tail": Qta, "_U_top": Ut, "_U_tail": Uta,
         }
 
     # --- non-commutativity: Procrustes associativity defect ---
-    def defect(framedict, a, b, c, side):
+    def defect(framedict, a, b, c):
         # P0 (docs/E38_fixes.md section 38h): procrustes_align(U1, U2)
         # returns R with U1 @ R ~ U2. Here R12: V_b R12 ~ V_a,
         # R23: V_c R23 ~ V_b, R13: V_c R13 ~ V_a. The composition
@@ -107,6 +114,7 @@ def main():
         # for a trivial bundle with different bases (V_x = V Q_x)
         # the correct order gives 0 while the old order gives a
         # false non-zero "non-Abelian" signal.
+        # (the `side` parameter was removed — unused, docs/E38_fixes.md §38h §2.5)
         R12, _ = procrustes_align(framedict[b], framedict[a])
         R23, _ = procrustes_align(framedict[c], framedict[b])
         R13, _ = procrustes_align(framedict[c], framedict[a])
@@ -119,8 +127,8 @@ def main():
         framedU = {k: per[k][f"_U_{side}"] for k in ks}
         d_right, d_left = {}, {}
         for (a, b, c) in TRIPLES:
-            d_right[f"{a},{b},{c}"] = defect(framed, a, b, c, side)
-            d_left[f"{a},{b},{c}"] = defect(framedU, a, b, c, side)
+            d_right[f"{a},{b},{c}"] = defect(framed, a, b, c)
+            d_left[f"{a},{b},{c}"] = defect(framedU, a, b, c)
         defects[side] = {"right_hidden": d_right, "left_token": d_left}
 
     # --- per-channel J-response (exact: ΔJ = ΔW @ J_norm, J_norm invariant) ---
@@ -129,8 +137,27 @@ def main():
     r0 = h0.norm()
     u0 = h0 / r0
     emb, gamma = load_model_tensors()
-    Jnorm = (D ** 0.5 / r0) * (torch.eye(D, dtype=torch.float64)
-                               - torch.outer(u0, u0)) * gamma[:, None]
+    # docs/E38_fixes.md §38h §2.1: gamma = 1 + RMSNorm weight (Qwen3.5
+    # RMSNorm: x * (1 + w)). A RAW w would silently rescale Jnorm (and for
+    # a trained checkpoint neither gamma.mean() ≈ 1 — it is 3.3 — nor
+    # gamma.min() > 0 — it is -0.78 — is a usable assert). The convention
+    # is verified NUMERICALLY instead: J(t) = W_lm @ J_norm(t) must
+    # reproduce the cached J23 at this position (cos ≈ 1). With raw w the
+    # cos is ~ 0, so this fails loud on a convention regression.
+    assert gamma.dtype == torch.float64, f"gamma dtype {gamma.dtype}"
+    Jnorm_check = (D ** 0.5 / r0) * (torch.eye(D, dtype=torch.float64)
+                                     - torch.outer(u0, u0)) * gamma[:, None]
+    U128 = load_u128()[0]
+    J_expected = emb[U128] @ Jnorm_check
+    J_cached = ck["JR"][("wiki", 0, 60)].double()
+    cos = float((J_expected * J_cached).sum()
+                / (J_expected.norm() * J_cached.norm()).clamp_min(1e-30))
+    # 0.99 (not 0.999): the cached JR is fp32/GPU (cos ~ 0.9989 vs the
+    # fp64 rebuild); a RAW-w convention rescales rows by w (varies in
+    # [-1.8, ...]) and gives cos ~ 0.9 — cleanly separated.
+    assert cos > 0.99, f"gamma convention check: cos(J_expected, J23) = {cos:.5f} != 1"
+    Jnorm = Jnorm_check
+    del J_expected
     jresp = {}
     for k in ks:
         Jt = dW[k] @ Jnorm
@@ -138,7 +165,10 @@ def main():
         # energy_top(ΔJ) = ‖ΔJ_top‖²/‖ΔJ‖² MAY EXCEED 1 when ΔJ_top and
         # ΔJ_tail are anti-aligned (not orthogonal projections of the same
         # object — diagnostic only, docs/E38_fixes.md P2).
-        jresp[k] = {"energy_top": float((Jtt.pow(2).sum() / Jt.pow(2).sum()))}
+        # zero-guard (docs/E38_fixes.md §38h §2.4): ‖ΔJ‖ = 0 → NaN, not 0/0.
+        jt_n2 = float(Jt.pow(2).sum())
+        jresp[k] = {"energy_top": (float((Jtt.pow(2).sum()) / jt_n2)
+                                   if jt_n2 > 0 else float("nan"))}
 
     out = {
         "experiment": "E-38h",
@@ -173,6 +203,24 @@ def main():
             "verdict_rule": "pre-registered: defect_top >> defect_tail => "
                             "non-Abelian in top-16 (E-38d scenario 2); "
                             "equal => both channels Abelian",
+        },
+        "meta": {
+            # docs/E38_fixes.md §38h §1/§6.7 — the headline reading of this
+            # experiment, stated for the JSON consumer:
+            "tautology_warning": "defect(top) ≈ 0 is a CONSEQUENCE OF THE "
+                                 "FIXED two-sided projector (U_t, V_t from "
+                                 "ΔW(s=10)): the top channel is the SAME "
+                                 "subspace at every s by construction, so "
+                                 "its frames differ only by in-space "
+                                 "rotations and the Procrustes composition "
+                                 "closes exactly. It is NOT a data-driven "
+                                 "finding that 'the top channel is Abelian'. "
+                                 "The genuine question (non-Abelian "
+                                 "structure of UNPROJECTED ΔW(s) at top-16) "
+                                 "requires a separate experiment with "
+                                 "A_top(s) = top_r(dW[s]) and no fixed P. "
+                                 "Only the tail channel's defect is a "
+                                 "data-driven measurement here.",
         },
         "j_response_channel_split": jresp,
         "j_response_meta": "energy_top(ΔW) is a projection share in [0, 1]; "

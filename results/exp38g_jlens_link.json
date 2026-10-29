@@ -55,6 +55,7 @@
     -0.33428229719831526,
     -0.18213811572971983
    ],
+   "p_median": 0.005806233931340946,
    "per_doc": [
     -0.3691803241164622,
     -0.2764832448269548,
@@ -97,6 +98,7 @@
     -0.9355829976194835,
     -0.9115718275041201
    ],
+   "p_median": 1.692553119782869e-55,
    "per_doc": [
     -0.9268048434352683,
     -0.9596571140816699,
@@ -142,10 +144,12 @@
  "outcomes": {
   "verdict": "at_random,lens_validity_suspect",
   "rewritten_primary_outcome": "at_random,lens_validity_suspect",
+  "tz_refined_outcome": "rho_our=not_tail_structured, rho_lens=tail_sparse",
   "tz_preregistered_outcome": "jlens_not_tail_modes",
-  "outcome_note": "the TZ pre-registration was \u03c1-based (\u03c1>0.7 symmetric / \u03c1<0.3 not_tail_modes); the code rewrite makes the subspace OVERLAP primary (the old version measured only lens-internal consistency \u2014 not the TZ question). Both outcomes are reported; do not mix them in the paper (docs/E38_fixes.md part-8 HIGH-1/2)."
+  "outcome_note": "the TZ pre-registration was \u03c1-based (\u03c1>0.7 symmetric / \u03c1<0.3 not_tail_modes); the code rewrite makes the subspace OVERLAP primary (the old version measured only lens-internal consistency \u2014 not the TZ question). Both outcomes are reported; do not mix them in the paper (docs/E38_fixes.md part-8 HIGH-1/2). tz_refined fixes the TZ's 'both < 0.3' label for NEGATIVE \u03c1: \u03c1_lens = \u22120.927 is strong tail-sparsity, not 'not tail modes' (part-4 \u00a71/\u00a77.1)."
  },
  "meta": {
+  "rho_lens_interpretation": "\u03c1 < \u22120.3 = tail-sparse (\u044d\u043d\u0435\u0440\u0433\u0438\u044f \u043a\u043e\u043d\u0446\u0435\u043d\u0442\u0440\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u0432 \u0445\u0432\u043e\u0441\u0442\u0435 \u043f\u0440\u0438 \u043d\u0438\u0437\u043a\u043e\u0439 \u044d\u043d\u0442\u0440\u043e\u043f\u0438\u0438): \u03c1_lens = \u22120.927 \u2014 strong tail-sparsity \u0432 LENS, \u03c1_our \u2248 0 \u2014 \u0435\u0451 \u043d\u0435\u0442 \u0443 \u043d\u0430\u0448\u0435\u0433\u043e J: \u0410\u0421\u0418\u041c\u041c\u0415\u0422\u0420\u0418\u042f, \u043d\u0435 '\u043e\u0431\u0430 \u0431\u0435\u0437 tail-\u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u044b' (part-4 \u00a71/\u00a73.8)",
   "what_this_test_is": "PRIMARY (b): direct subspace check \u2014 per-position tail subspace of OUR J_t (bottom 10% of its 128 \u03c3, right singular vectors, R^1024) vs tail subspace of the LENS J_22 (bottom 10% of 1024 \u03c3): overlap = \u2016V_our_tail^T V_lens_tail\u2016_F\u00b2/r_our. This is the TZ's 'symmetry with Anthropic' claim. SECONDARY (a): dual sparsity/tail correlation in both bases (rho_our vs rho_lens; the old version reported only the lens-internal rho_lens, which is NOT the TZ question). docs/E38_fixes.md part-2 \u00a71.",
   "note": "Lens fit on HINDI (finewiki@hi), docs English. Lens J_22 is a position-averaged [1024,1024] Jacobian; our J_t is per-position [128,1024]. Both act on the same h_t \u2208 R^1024 at L22 \u2014 the right-singular comparison is well-defined there. Author flags the lens 'experimental/unvalidated'; validity gate = bounded spectrum of J_22. Per TZ: do NOT substitute 9B results (different D).",
   "basis_completion": "our 128 right singular vectors (REAL modes only; the old scipy null-space completion of 896 arbitrary modes made S_our/frac_tail_our near-constants and rho_our \u2248 0 for any completion \u2014 P0, docs/E38_fixes2.md). A degenerate \u03c3 in the LENS also makes V_lens_tail arbitrary within the degenerate subspace \u2014 the validity gate flags suspect lenses, but does not catch degeneracy (MEDIUM-6).",

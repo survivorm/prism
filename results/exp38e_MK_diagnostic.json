@@ -23,6 +23,9 @@
      0.20492969453334808
     ],
     "ci_note": "doc-level bootstrap over the 32 per-doc medians (P0, docs/E38_fixes2.md); the old flat percentile over N\u00b7S positions overstated precision ~\u221a(S)\u00d7",
+    "abs_ratio_note": "metric is |\u03b1|/|\u03b2| (module), not \u03b1/\u03b2",
+    "ratio_cap": 1000000.0,
+    "ratio_capped_frac": 0.0,
     "per_doc": [
      0.19464591145515442,
      0.19939474761486053,
@@ -90,6 +93,7 @@
  "outcomes": {
   "gate": "mixed",
   "consistency": "consistency_consistent_with_E33r",
+  "gate_raw": "mixed",
   "gate_failed": false
  },
  "meta": {
