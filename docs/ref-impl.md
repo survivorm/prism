@@ -594,8 +594,10 @@ def compute_token_IPR(U_esg, token_marginals, E34_surrogate):
 
 ```python
 def compute_neural_IPR(V, r=16):
-    # Входы: V [D, r] (столбцы v_k — правые сингулярные векторы)
+    # Входы: V [D, r] (столбцы v_k — правые сингулярные векторы), срез явный
     # Выходы: IPR_k = Σ_j |v_{k,j}|⁴ (j = 1..D), p-value vs Haar на S(D)
+    # На raw J — slice_invalid: левый/нейронный спектр несёт gauge-дрейф
+    # (P(p) не проектор) — допустимо только в gauge-free/fixP срезах (paper §2.1)
     # Токен-специфичность на нейрон-IPR не распространяется: словаря
     # «нейрон → токены» нет (E-38g)
     return ipr_k, p_haar
@@ -633,6 +635,7 @@ def compute_G(delta_fixP, delta_raw):
 - float64 для всех вычислений (fp32 — только входные данные); svd — `torch.linalg.svd`
 - все функции принимают `r = 16` (E-27) и `tol` (порог выжившего ранга)
 - кросс-модельные прогоны: D_L = 2560, L = 32; основной — D_S = 1024, L = 24
+- **Каждый выход несёт 4-координатную метку канала** `[natural/ΔW] × [raw/gf/fixP] × [top/tail] × [left/right]`; [raw × left] — запрещена (paper §3.2); каждый null и срез явны, дефолт — gauge-free `J^(p)`
 - результаты — в `results/` (JSON), имена: `vertical_transport_{l}.json`, `mixed_plaquette_{l}.json`,
   `kinetic_decomposition_{t}.json`, `token_ipr_{l}.json`, `neural_ipr_{l}.json`, `R_can_{l}.json`, `G_{l}.json`
 
