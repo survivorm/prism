@@ -60,7 +60,9 @@
         0.1611344080655035,
         0.1588051962983764
       ],
-      "eigengap_16_17_dW": 0.002440859226838704
+      "eigengap_16_17_dW": 0.002440859226838704,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     },
     "20": {
       "energy_top": 0.6861889646296033,
@@ -100,7 +102,9 @@
         0.2523541149132479,
         0.24887277231212424
       ],
-      "eigengap_16_17_dW": 0.0025329237434770224
+      "eigengap_16_17_dW": 0.0025329237434770224,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     },
     "40": {
       "energy_top": 0.6059682341629515,
@@ -140,7 +144,9 @@
         0.3566717946309115,
         0.35064274026023734
       ],
-      "eigengap_16_17_dW": 0.0056378042067228296
+      "eigengap_16_17_dW": 0.0056378042067228296,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     },
     "80": {
       "energy_top": 0.5292322324874092,
@@ -180,7 +186,9 @@
         0.4170100435274916,
         0.4119034287700904
       ],
-      "eigengap_16_17_dW": 0.0071017174397319804
+      "eigengap_16_17_dW": 0.0071017174397319804,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     },
     "90": {
       "energy_top": 0.5168492721614371,
@@ -220,7 +228,9 @@
         0.42971593470736646,
         0.4229761778372576
       ],
-      "eigengap_16_17_dW": 0.004840826505779994
+      "eigengap_16_17_dW": 0.004840826505779994,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     },
     "100": {
       "energy_top": 0.5060933784994965,
@@ -260,7 +270,9 @@
         0.44223629334634584,
         0.43616182176176854
       ],
-      "eigengap_16_17_dW": 0.00915481845092525
+      "eigengap_16_17_dW": 0.00915481845092525,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     },
     "200": {
       "energy_top": 0.45144498033637936,
@@ -300,7 +312,9 @@
         0.5199901517274915,
         0.5161769183444435
       ],
-      "eigengap_16_17_dW": 0.008016173421002026
+      "eigengap_16_17_dW": 0.008016173421002026,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     },
     "400": {
       "energy_top": 0.3986199394527661,
@@ -340,7 +354,9 @@
         0.5757333009970894,
         0.5749050033391683
       ],
-      "eigengap_16_17_dW": 0.0070854209963798764
+      "eigengap_16_17_dW": 0.0070854209963798764,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     },
     "800": {
       "energy_top": 0.3076082556717681,
@@ -380,7 +396,9 @@
         0.6827586117203619,
         0.6667842966173707
       ],
-      "eigengap_16_17_dW": 0.01671769260245015
+      "eigengap_16_17_dW": 0.01671769260245015,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     },
     "1000": {
       "energy_top": 0.2803732158266323,
@@ -420,7 +438,9 @@
         0.6664192289145132,
         0.6563572835652842
       ],
-      "eigengap_16_17_dW": 0.012586073013933108
+      "eigengap_16_17_dW": 0.012586073013933108,
+      "rank_top_channel": 16,
+      "rank_tail_channel": 16
     }
   },
   "non_commutativity": {
@@ -470,6 +490,9 @@
     },
     "verdict_rule": "pre-registered: defect_top >> defect_tail => non-Abelian in top-16 (E-38d scenario 2); equal => both channels Abelian"
   },
+  "meta": {
+    "tautology_warning": "defect(top) ≈ 0 is a CONSEQUENCE OF THE FIXED two-sided projector (U_t, V_t from ΔW(s=10)): the top channel is the SAME subspace at every s by construction, so its frames differ only by in-space rotations and the Procrustes composition closes exactly. It is NOT a data-driven finding that 'the top channel is Abelian'. The genuine question (non-Abelian structure of UNPROJECTED ΔW(s) at top-16) requires a separate experiment with A_top(s) = top_r(dW[s]) and no fixed P. Only the tail channel's defect is a data-driven measurement here."
+  },
   "j_response_channel_split": {
     "10": {
       "energy_top": 0.7165219499073682
@@ -507,6 +530,6 @@
     "bridge_per_channel": "1 − jacobian_gap(J_L, J_S, E_L, E_S, p) needs J_L of the large target model (not on this machine) — honestly not run",
     "behavior_top_p_retention": "needs E-16 eval runs under the per-channel edits — not run"
   },
-  "runtime_s": 4.7,
+  "runtime_s": 5.1,
   "deterministic": true
 }

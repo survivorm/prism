@@ -856,7 +856,7 @@ $\tau$: L6 1.4, L12 1.4, L18 61.6, L22 121.1, L23 30229. $C_{intra}(1) = C_F(1)$
 
 ### E-38c. [M-4] pre-flight: внутренние gaps матриц $J_t$ (exp38c, N=32, K=128, S=128; 0.8B, слои 6/12/18/19/22/23, CPU, exp27b dense)
 
-**Цель:** [M-4] (ref-math §E.4): $gap_{min}(t) = \min$ внутренних squared gap по $sv(J_t)^2$, порог $\varepsilon(t) = 0.01\cdot\sigma_1^2$ (per-t). Пройден ⟺ доля well-separated позиций > 0.
+**Цель:** [M-4] (ref-math §E.4): $gap_{min}(t) = \min$ внутренних squared gap по $sv(J_t)^2$, порог $\varepsilon(t) = 0.01\cdot\sigma_1^2$ (per-t). Пройден ⟺ near-degeneracy присутствует ($gap_{min}(t) < \varepsilon(t)$); маппинг **инвертирован**: $well\_separated=True$ → формализм **неприменим** там (meta.direction, INVERSION WARNING; docs/E38_paper.md A.4).
 
 - fraction_well_separated = **0 на всех слоях** (при $\varepsilon$/σ₁² = 0.005 / 0.01 / 0.02).
 - $gap_{min}$ при $t^*$: 3.88 (L6), 5.47 (L12), 2.29 (L18), 2.14 (L19), 1.80 (L22), **0.0092 (L23)**.
@@ -865,8 +865,8 @@ $\tau$: L6 1.4, L12 1.4, L18 61.6, L22 121.1, L23 30229. $C_{intra}(1) = C_F(1)$
 Артефакты: `results/exp38c_degeneracy_preflight.json` (44KB), `experiments/exp38c_degeneracy_preflight.py`.
 
 **Выводы (для картины в целом):**
-- [M-4] pre-flight **не пройден**: не-абелева (WZ-)формализация неприменима к внутренним gaps $J_t$ на всех шести слоях — WZ-мораторий (ref-math §E.4, [M-4]) **сохраняется**.
-- $eigengap_{16/17}(M_K) = 1.035$ из E-35 — gap на границе матрицы $M_K$, **не** внутренних gaps $J_t$ —不能作为 evidence for [M-4] (не является доказательством [M-4]).
+- [M-4] pre-flight **пройден**: near-degeneracy на всех слоях → не-абелева (WZ-)формализация **допустима** (docs/E38_paper.md A.4, E38_fixes2 §4), но область применимости **ограничена хвостом** спектра: топ-моды well-separated (E-38h: defect_top ≈ 0 — Abelian), вырождение tail-driven (E-30b). WZ-мораторий **снят для tail-анализа**, сохраняется для топ-мод. L23 — тривиален по построению (lm_head = $W_{lm}$; preflight информативен только для L18/L22).
+- $eigengap_{16/17}(M_K) = 1.035$ из E-35 — gap на границе матрицы $M_K$, **не** внутренних gaps $J_t$ — не является доказательством [M-4].
 
 ### E-38d. Голономия: спектр {θ_j} и Ω(t) vs Σθ_j(t) (exp38d, r=16, N=32, K=128, S=128; 0.8B, слои 6/12/18/19/22/23, CPU, exp27b dense)
 
@@ -877,7 +877,7 @@ $\tau$: L6 1.4, L12 1.4, L18 61.6, L22 121.1, L23 30229. $C_{intra}(1) = C_F(1)$
 - Вердикты: L18/L22 = **non_abelian_candidate, third_mechanism** ($\rho < 0.3$ — сферная гипотеза фальсифицирована; «third_mechanism» — метка, НЕ утверждение, что механизм идентифицирован, docs/E38_fixes.md part-5 §5); L6/L12/L19 = non_abelian_candidate, partial; L23 = **consistency_pass, effectively_abelian, partial**.
 - Точная проверка: $tr(H)$ и $\|H-I\|_F^2$ — точные функции {θ_j} ($identity\_check\_max\_absdiff \le 2.8\times10^{-14}$; L23 = 1.1×10⁻¹⁵).
 
-Артефакты: `results/exp38d_holonomy_spectrum.json` (986KB; $H_{012}$, doc0, L23 сохранён), `experiments/exp38d_holonomy_spectrum.py`.
+Артефакты: `results/exp38d_holonomy_spectrum.json` (60KB; $H_{012}$, doc0, L23 сохранён), `experiments/exp38d_holonomy_spectrum.py`.
 
 **Выводы (для картины в целом):**
 - Сферная интерпретация $\Omega \approx \sum_j \theta_j$ **фальсифицирована на L18/L22** ($\rho = 0.24$–0.25 < 0.3) — голономический и сферный вклады различны; ранние слои (L6) — non-Abelian кандидаты (partial, r=16).
@@ -892,7 +892,7 @@ $\tau$: L6 1.4, L12 1.4, L18 61.6, L22 121.1, L23 30229. $C_{intra}(1) = C_F(1)$
 - Factorization-чек: $\beta_t / \|J_t^T 1/\sqrt K\| = r_t/\sqrt D = 4.077$ — **подтверждает** точное $J = M_K(I - \hat u \hat u^T)$ (значение ≈ 4 — ожидание, не redflag; docs/E38_fixes.md part-6 §1 HIGH-2).
 - gate: **mixed**, gate_failed = false.
 
-Артефакты: `results/exp38e_MK_diagnostic.json` (2.3KB), `experiments/exp38e_MK_diagnostic.py`.
+Артефакты: `results/exp38e_MK_diagnostic.json` (4.7KB), `experiments/exp38e_MK_diagnostic.py`.
 
 **Выводы (для картины в целом):**
 - M-pinning-структура на L23 **подтверждена** с корректным alignment-фактором (β/σ₁(M_K) ≈ cos ≈ 0.88); старый redflag (consistency_redflag) — артефакт нормировки (ожидало ≈ 1 при верном ожидании ≈ 0.9), не сломанная физика.
@@ -917,11 +917,11 @@ $\tau$: L6 1.4, L12 1.4, L18 61.6, L22 121.1, L23 30229. $C_{intra}(1) = C_F(1)$
 **Цель:** claim «симметрия с Anthropic»: our-tail (bottom 10% из 128 σ $J_t$, правые сингулярные) vs LENS-tail (bottom 10% из 1024 σ $J_{22}$) — disjoint ли?
 
 - PRIMARY (b, прямая проверка подпространств): overlap $\|V_{our}^T V_{lens}\|_F^2 / r_{our}$ = **0.0596**, CI [0.0587, 0.0604] (doc-level, B=1000; r_our = 12, r_lens = 102) vs random-baseline 0.0996 (= E[r_lens/D] для двух независимых случайных подпространств; overlap ≈ 0.1 — СЛУЧАЙНАЯ НЕЗАВИСИМОСТЬ, не disjointness) → **at_random** (40% ниже случайного, но ≠ 0).
-- SECONDARY (a, dual sparsity): $\rho_{our}(S, frac\_tail)$ = −0.243, CI [−0.334, −0.182] (значимо; 128 REAL right singular modes, без null-completion — P0, docs/E38_fixes2.md: старый 896-mode completion доминировал в энергии и делал метрику near-constant, старый −0.041 «н.з.» — артефакт completion; NOT magnitude-comparable с $\rho_{lens}$ (1024 modes)); $\rho_{lens}$ = −0.927, CI [−0.936, −0.912].
+- SECONDARY (a, dual sparsity): $\rho_{our}(S, frac\_tail)$ = −0.243, CI [−0.334, −0.182] (значимо, p-медиана 0.006; 128 REAL right singular modes, без null-completion — P0, docs/E38_fixes2.md: старый 896-mode completion доминировал в энергии и делал метрику near-constant (S_our ≈ log 1024, frac ≈ 0.875), старый −0.041 «н.з.» — артефакт completion; NOT magnitude-comparable с $\rho_{lens}$ (1024 modes)); после фикса: S_our = 3.83, frac_tail_our = 0.135 (не константы). $\rho_{lens}$ = −0.927, CI [−0.936, −0.912] (p-медиана 1.7e-55).
 - Lens-валидность: valid = **false** ($\sigma_1/\sigma_{median}$ = 5.45, $\|J_{22}-I\|$ = 17.95).
 - Вердикт: **at_random, lens_validity_suspect**. Пред-зарегистрированный ρ-based outcome (jlens_not_tail_modes) — до ре-врайта PRIMARY; оба outcomes отчёты, не смешивать (docs/E38_fixes.md part-8). Уточнённая (part-4 §1) семантика: ρ_our = −0.243 → not_tail_structured, ρ_lens = −0.927 → **tail_sparse** (сильная концентрированная энергия в хвосте при низкой энтропии) — **асимметрия, а не «оба без tail-структуры»** (правило ТЗ «оба < 0.3» некорректно для отрицательных ρ); p-медианы: 0.006 (our), 1.7e-55 (lens).
 
-Артефакты: `results/exp38g_jlens_link.json` (4.6KB), `experiments/exp38g_jlens_link.py`.
+Артефакты: `results/exp38g_jlens_link.json` (7.2KB), `experiments/exp38g_jlens_link.py`.
 
 **Выводы (для картины в целом):**
 - Claim «симметрия с Anthropic» **не подтверждён** в сильной форме: our-tails (L22) at_random относительно LENS-хвостов (overlap 0.0596 — ниже random 0.0996, но не 0, не disjoint) [И].
@@ -933,7 +933,7 @@ $\tau$: L6 1.4, L12 1.4, L18 61.6, L22 121.1, L23 30229. $C_{intra}(1) = C_F(1)$
 
 **Отклонение от ТЗ (зафиксировано):** двухсторонний проектор top-16 ТЗ строился из J23 (U128, 128 токенов), а ΔW живёт в 256-токеном пространстве E-16 (пересечение = 13 токенов, rank ≤ 13) — 16-мерный проектор U128 на ΔW не определён. Фиксированный двухсторонний проектор top-16 взят от ведущего кадра ΔW(s=10) (наименьшая доза). ΔJ-канал — аппроксимация на cached-h (ΔJ = ΔW @ J_norm; h_t инвариантна для оригинальной модели, с оговоркой tied-весов).
 
-**Результаты (v3, 2026-10-26, после P0-фикса формулы дефекта: `prod = R23 @ R12` — композиция `V_c -> V_b -> V_a` применяет R23 ПЕРВОЙ; старая формула `R12 @ R23` совпадала с R13 только для абелевых кадров и измеряла фактически дрейф кадров, давая ложные 0.31–0.35 в ОБОИХ каналах; P0-фикс снапшотов E-16 от 2026-10-24 сохранён: снапшоты = ΔW = W(s)−W_orig, guard cos(snap, W_orig) ≈ 0.07).** (1) Энергия top-16 канала: ΔW 0.735→0.280 по s (топ-16-проектор, построенный на s=10, остаётся «хорошим» и при больших s, но доля энергии в нём падает — энергия уезжает в tail по мере роста дозы), ΔJ 0.717→0.493 — канал следит за ΔW. (2) Некоммутативность (дефект ассоциативности Procrustes ‖R12R23−R13‖F/16 по тройкам {10,100,1000}, {10,80,100}, {100,400,1000}): **top 3.1e-16 / 3.5e-16 / 3.1e-16 (численный пол) vs tail 0.253 / 0.144 / 0.174 (right/hidden-side); left/token-side: top 4.2e-16, tail 0.268 / 0.152 / 0.175 — паттерн воспроизводится на обеих сторонах**. По pre-registered правилу (`defect_top >> defect_tail => non-Abelian in top-16`) условие ложно: сценарий «неабелев в top-16» (сценарий 2, E-38d) НЕ подтверждён. **Тавтология (фикс. проектор, E38_paper.md B.1):** `defect_top ≈ 3e-16` — следствие фиксированных P_L, P_R (оба ранг 16, построены на s=10): правый фрейм A_top(s) постоянен по s, композиция R23·R12 = R13 тождественна; это **не** эмпирическое свидетельство абелевости top-канала. Информативна только tail-сторона: `defect_tail = 0.14–0.27` — измеренный неабелев сигнал (воспроизводится на обеих сторонах). Не противоречит E-38d (max_theta = π): E-38d меряет top-r спектр J_t, E-38h — проекторное разбиение ΔW с фиксированными проекторами (B.4). Оговорка (tied-веса): lm_head = embed_tokens (tied) — h_t реальной post-edit модели меняется; ΔJ = ΔW@J_norm — аппроксимация на cached-h (оригинальной модели).
+**Результаты (v3, 2026-10-26, после P0-фикса формулы дефекта: `prod = R23 @ R12` — композиция `V_c -> V_b -> V_a` применяет R23 ПЕРВОЙ; старая формула `R12 @ R23` совпадала с R13 только для абелевых кадров и измеряла фактически дрейф кадров, давая ложные 0.31–0.35 в ОБОИХ каналах; P0-фикс снапшотов E-16 от 2026-10-24 сохранён: снапшоты = ΔW = W(s)−W_orig, guard cos(snap, W_orig) ≈ 0.07).** (1) Энергия top-16 канала: ΔW 0.735→0.280 по s (топ-16-проектор, построенный на s=10, остаётся «хорошим» и при больших s, но доля энергии в нём падает — энергия уезжает в tail по мере роста дозы), ΔJ 0.717→0.493 — канал следит за ΔW. (2) Некоммутативность (дефект ассоциативности Procrustes ‖R12R23−R13‖F/16 по тройкам {10,100,1000}, {10,80,100}, {100,400,1000}): **top ≈ 0 (≤ 4e-16, числовой пол) vs tail 0.253 / 0.144 / 0.174 (right/hidden-side); left/token-side: top ≈ 0, tail 0.268 / 0.152 / 0.175 — паттерн воспроизводится на обеих сторонах**. По pre-registered правилу (`defect_top >> defect_tail => non-Abelian in top-16`) условие ложно: сценарий «неабелев в top-16» (сценарий 2, E-38d) НЕ подтверждён. **Тавтология (фикс. проектор, E38_paper.md B.1):** `defect_top ≈ 0` (≤ 4e-16, числовой пол) — следствие фиксированных P_L, P_R (оба ранг 16, построены на s=10): правый фрейм A_top(s) постоянен по s, композиция R23·R12 = R13 тождественна; это **не** эмпирическое свидетельство абелевости top-канала. Информативна только tail-сторона: `defect_tail = 0.14–0.27` — измеренный неабелев сигнал (воспроизводится на обеих сторонах). Не противоречит E-38d (max_theta = π): E-38d меряет top-r спектр J_t, E-38h — проекторное разбиение ΔW с фиксированными проекторами (B.4). Оговорка (tied-веса): lm_head = embed_tokens (tied) — h_t реальной post-edit модели меняется; ΔJ = ΔW@J_norm — аппроксимация на cached-h (оригинальной модели).
 
 **BLOCKED (честно):** per-channel `bridge(s) = 1 − jacobian_gap(J_L, J_S, E_L, E_S, p)` — нужен J_L большой целевой модели (нет локально); behavior top-p retention под per-channel edits — не запускался. Числа в JSON — только small-side response.
 
@@ -1202,6 +1202,42 @@ Softmax-мост между оригиналом и каждой схемой к
 
 **Почему (механизм Goodharta).** Эксперимент 16 тянет **одну точку** (один last-layer hidden state → одно направление ΔJ, одна метрика bridge по одной паре слоёв). Оказалось, что такую точку можно «подогнать» (bridge 0.60→0.92) **без улучшения — а с разрушением** реального поведения. Точечный якобиан не несёт ограничения на **остальные** точки/домены, поэтому оптимизация по нему = **Goodhart на геометрическом прокси**: метрика растёт, качество гниёт. Чтобы это исправить, метрика/ограничение должны быть **многоточечными**: не точка, а **гиперповерхность из якобианов по доменам** (и по глубине), т.е. нельзя подогнать одну точку, не сломав другие. Это направление — следующая работа (после exp16/exp19).
 
+### E-39a. U-observability gate: ранг U_obs на L23 и dry-run M_K-хирургии (exp39a, N=32, S=128, D=1024, r=16, r_pool=64; 0.8B, L23, CPU, fp64, exp27b dense)
+
+**Цель (ТЗ `docs/E39.md` §1, фаза 0 серии E-39):** существует ли 16-dim U_obs⊥, куда можно поместить топ-16 правых СВ M_K → плоский L23-лист (κ → 0)? U_obs = span{û_t} по всем (doc, t); feasibility: dim(U_obs⊥) ≥ 16; эффективность — насколько топ-16 M_K «загрязняет» остаточные моды после проекции.
+
+**Постановка (v11, ревью-раунды 1–7):** U = H[4096, 1024] (нормированные h_t), SVD; body = t ∈ [16,126] — канонический срез (sentinel-сплит несчитаем из кэша exp27b: P128 хранит нормированные массы → r_eff(body) — верхняя оценка). Dry-run surgery: топ-16 M_K → V_new ⊂ U_obs⊥ (3 стратегии: a_random / b_principal / c_balanced), M_rest сохраняется; κ' — Procrustes на топ-16 правых СВ J_t (4032 тройки, медиана по all-triples).
+
+**Результаты:**
+- **Ранговый режим:** U полноранговая (1024) — точного null-пространства нет; r_obs судится по r_eff(τ): body r_eff(0.01/0.05/0.1/0.5) = 944/178/41/1; r_obs_99 = 768. Канонический τ = 0.05 → **r_eff = 178 — умеренный режим** (интерпретация ТЗ: 32–256 → surgery возможна, κ не до 0, скорее ~0.003–0.008). Per-position r_eff = 178 vs per-document = 31 (5.7×): per-position-манифолд доминируется внутри-документными (noise-level) направлениями — surgery действует на них (по спецификации, заявлено явно).
+- **Базовая:** κ(L23) = 0.0162 (CI [0.0049, 0.0377], 4032 тройки) — воспроизводит E-38d (0.0162, |Δ| = 3.3e-5); контроль d_noop: abs_diff = 1.74e-9 (tol 1e-3) — пайплайн верифицирован.
+- **Dry-run surgery:** κ' = 0.0162 → 0.0040 (a_random 0.00396 / c_balanced 0.00446 / b_principal 0.00460; best/worst = 0.863) — flattening 4.1×; целевое состояние flat leaf (κ < 0.005) достигается в превью.
+- **Сравнение стратегий (paired per-doc, n = 32, Bonferroni α = 0.05/3 ≈ 0.0167, t.ppf(df=31) = 2.531):** a_random < b_principal (Δκ' = −0.00065, CI [−0.00077, −0.00054], 32/32) и a_random < c_balanced (Δ = −0.00055, CI [−0.00067, −0.00043], 32/32) — значимо; b_principal vs c_balanced: Δ = +0.00010, CI [−3.8e-06, +0.00021], 11/32 — **не значимо** при Bonferroni (пограничный: без коррекции при α = 0.05 CI исключает 0). Честный ранжированный вывод: a_random лучший; порядок b и c статистически неразличим (полное «a < c < b» не подтверждено).
+- **ρ_noise ≈ 0.0143 (≈1.4%) у всех трёх стратегий** — распыление point-estimates 16% в пределах индивидуальных bootstrap CI (~26–34%): функциональная зависимость ρ_noise → κ' при n = 3 не устанавливается (прежнее v5-утверждение «14× amplification» отозвано).
+
+**Ограничения:** (a) dry-run κ' на cached û_t (базовой модели) — в реальной модели E-39c меняются embed_tokens (tied-веса), поэтому κ' — **превью**, не измерение E-39c; (b) sentinel-сплит несчитаем (верхняя оценка r_eff); (c) только R_POOL = 64 (R_POOL = 128/256 не тестировались — уйдёт ли κ' ниже 0.0040, неизвестно).
+
+**Вердикт:** `surgery_approximate_bottom_svs, rank_regime_moderate_178, dryrun_kappa_min_0.0040` — E-39c (surgery без тренировки) feasible с оговоркой κ' ~ 0.004 ≠ 0; следующий гейт серии — E-39b (PTQ).
+
+Артефакты: `results/exp39a_u_obs_rank.json` (структурированные `paired_tests`), `experiments/exp39a_u_obs_rank.py`.
+
+**Выводы (для картины в целом):**
+- L23-лист «выпрямляем» в превью: M_K-хирургия даёт ~75% снижения κ (4.1×) без тренировки — основание для E-39c/d/e (гипотеза серии: плоский лист снижает Goodhart — drift без потери поведения).
+- U_obs умеренно сконцентрирован (r_eff = 178), меж-документная вариативность мала (31) — «кривизна» листа в значительной мере position-level (внутри-документное) явление.
+
+### E-39l. Drift листа vs поведение (v2, non-tautological; joined E-38i + E-16b, N=10 joined точек; 0.8B, L23, CPU)
+
+**Цель (ТЗ `docs/E39.md` §12 v2 + `docs/E39_fixes.md`):** предсказывает ли дрейф листа J_rel_drift(s) поведенческую деградацию (top-p retention)? v1 (ρ = −0.818) — тавтология (обе серии монотонны по s_frac → ρ_all тривиален). v2: детрендинг (isotonic → linear fallback) + пермутационный тест на residual; ρ_res — связь остатков, НЕ причинность. v2.1 (по `docs/E39l_fixes.md`): §2.1 anti-control criterion инвертирован (старый `rho_anti < 0.3` на raw-сериях всегда fails) → заменён пермутационным тестом; §2.2 anti-control перенесён с raw-серий на residual (raw orthogonal к primary metric); §2.3 NaN early-exit; §2.4 monotonicity — без смены направления (оба направления); §3.1 endpoint-mismatch — fail-loud (было warn+use); §3.2/3.5 caveats.
+
+**Результаты:** ρ_res = +0.031 (p = 0.93); ρ_all = −0.758 — тривиальная (только для прозрачности, не в вердикте); пермутационный null на residual (B=1000, seed=0): median|ρ| = 0.239, p95 = 0.633 → |ρ_res| = 0.031 < p95, **не значим** (остатки совместимы со шумом); monotonicity_ok = false (drift меняет направление на joined-сетке: рост 0.355→0.708, провалы, рост 1.197); n_measured = 2, n_interpolated = 8 (retention интерполирован с 6 узлов E-16b на joined-сетку E-38i).
+
+**Оговорки:** (a) joined-сетка: 8 из 10 точек — интерполяция E-16b, drift измерен в состояниях E-38i; s_frac = 0 исключён (retention(0) = 0.837 — post-E-16a state, не base); (b) retention-кривая — hardcoded из ref-exp E-16b (results/exp16b_*.json на диске нет, verified = False); (c) общий третий фактор (деградация W_lm) ведёт обе серии — ρ_res = 0 не исключает каузальной связи; (d) пермутационный null — перестановка residual фиксированной серии, не raw-data null; (e) linear detrend fallback на нелинейной монотонной серии может оставлять систематический остаток.
+
+**Вердикт:** `inconclusive`, confidence low. E-39l НЕ утверждает «drift не предсказывает retention» и не опровергает: текущие данные не различают «drift предсказывает retention» и «оба убывают с s»; ρ_res не значим против пермутационного нуля → не интерпретируется как специфическая связь. Каузальный тест — E-39d/e (drift-loss vs flatness-loss, не прогонялся); по E-39l менять flatness-loss на drift-loss нельзя.
+
+Артефакты: `results/exp39l_drift_behavior.json`, `results/exp39l_scatter.png`, `experiments/exp39l_drift_behavior.py` (v2.1: E39l_fixes §2.1–§3.5).
+
+
 # Индекс экспериментов и реестр гипотез
 
 ## B.1. Индекс экспериментов
@@ -1257,13 +1293,15 @@ Softmax-мост между оригиналом и каждой схемой к
 | E-37 | Анатомия P(p_t)-чувствительной компоненты K | `experiments/exp37_p_sensitivity.py` | N=32, K=128, S=128, слои 6/12/18/19/22/23 (exp27b dense, CPU) | ✅ | `results/exp37_p_sensitivity.md` | foundation | §ref-exp (блок 4.5/4.7) | K = dominant uniform-фон (align_K1 0.71–0.90) + плотный остаток (не rank-1); u_g неинформативна (80–92% uniform); L22 провал (GDN) |
 | E-38a | Динамика û по позициям: special-ли кромки | `experiments/exp38a_uhat_dynamics.py` | N=32, K=128, S=128, слои 6/12/18/19/22/23 (exp27b dense, CPU) | ✅ | `results/exp38a_uhat_dynamics.json` | foundation | §ref-exp (блок 4.3) | edges_typical 5/6, L6 mixed (пост-хок); pos0 0.89–0.95 отдельно; special-краевой эффект не подтверждён [И] |
 | E-38b | Аудит pos0-артефакта в C_b | `experiments/exp38b_position_audit.py` | N=32, K=128, S=128, слои 6/12/18/19/22/23 (exp27b dense, CPU) | ✅ | `results/exp38b_position_audit.json` | foundation | §ref-exp (блок 4.3) | body/pos0: L12 1.54, L18 1.91, L19 1.58 (edge_contamination); L6 0.91, L22 1.12, L23 1.05 (no_artifact); L22 paired CI через 0 по трём метрикам [И] |
-| E-38c | [M-4] pre-flight: внутренние gaps J_t | `experiments/exp38c_degeneracy_preflight.py` | N=32, K=128, S=128, слои 6/12/18/19/22/23 (exp27b dense, CPU) | ✅ | `results/exp38c_degeneracy_preflight.json` | foundation | §ref-exp (блок 4.3) | fraction_well_separated = 0 все слои; gap_min(L23) = 0.0092; near_degeneracy; WZ-мораторий сохраняется [И] |
+| E-38c | [M-4] pre-flight: внутренние gaps J_t | `experiments/exp38c_degeneracy_preflight.py` | N=32, K=128, S=128, слои 6/12/18/19/22/23 (exp27b dense, CPU) | ✅ | `results/exp38c_degeneracy_preflight.json` | foundation | §ref-exp (блок 4.3) | fraction_well_separated = 0 все слои; gap_min(L23) = 0.0092; near_degeneracy → [M-4] пройден, применимость tail-only (топ-моды Abelian, E-38h); мораторий снят для tail-анализа [И] |
 | E-38d | Голономия: спектр θ_j и Ω vs Σθ_j | `experiments/exp38d_holonomy_spectrum.py` | r=16, N=32, K=128, S=128, слои 6/12/18/19/22/23 (exp27b dense, CPU) | ✅ | `results/exp38d_holonomy_spectrum.json` | foundation | §ref-exp (блок 4.3) | κ(L23) = 0.0162 (E-28: 0.018); ρ(trH, Ω) 0.24–0.36; L18/L22 third_mechanism, L23 consistency_pass [И] |
 | E-38e | M-pinning-диагностика [M-1]/[L-gap] L23 | `experiments/exp38e_MK_diagnostic.py` | N=32, K=128, S=128, L23 (exp27b dense, CPU) | ✅ | `results/exp38e_MK_diagnostic.json` | foundation | §ref-exp (блок 4.3) | β/σ₁(M_K) = 0.882 (consistent с E-33r); α/β = 0.196 [0.181–0.205]; старый redflag — артефакт нормировки [И] |
 | E-38f | Лемма о предикторе v_pred (переписанная пред-регистрация) | `experiments/exp38f_structural_consistency.py` | N=32, S=128, L23 (exp27b dense, CPU) | ✅ | `results/exp38f_structural_consistency.json` | foundation | §ref-exp (блок 4.3) | Δcos = 0.1025 [0.1015–0.1032] ≤ 0.1877 → lemma_confirmed; старый «broken» — баг row-metric [И] |
 | E-38g | Наши хвосты vs LENS-хвосты | `experiments/exp38g_jlens_link.py` | N=32, S=128, L22 (exp27b dense, CPU) | ✅ | `results/exp38g_jlens_link.json` | foundation | §ref-exp (блок 4.3) | overlap = 0.0596 [0.0587–0.0604] vs random 0.0996 → at_random (не disjoint); ρ_our −0.243 [−0.334, −0.182] (значимо; 128 REAL modes, без null-completion), ρ_lens −0.927; lens valid=false → lens_validity_suspect [И]/[П] |
 | E-38h | Two-channel Goodhart: top-16 vs tail ΔW | `experiments/exp38h_two_channel.py` | 10 s (step 10..1000), K=256×D=1024 (ΔW-снапшоты E-16 v6 = ΔW, P0-фикс 2026-10-24, CPU) | ✅ | `results/exp38h_two_channel_goodhart.json` | foundation | §ref-exp (блок 4.3) | энергия топ-16 ΔW 0.735→0.280, ΔJ 0.717→0.493; дефект ассоциативности: **top ≈ 0 (численный пол) vs tail 0.14–0.27** — top≈0 — **ТАВТОЛОГИЯ фикс-проектора** (подпространство то же на всех s по построению), data-driven только tail (неабелев); «неабелев в топ-16» не подтверждён; bridge per-channel BLOCKED (нет J_L) [И] |
 | E-38i | Факторизация J = (√D/r) M_K(I−ûûᵀ) под readout-edit | `experiments/exp38i_factorization.py` | 10 s × 16 позиций, fp64 (CPU), после P0-фикса 2026-10-24 | ✅ | `results/exp38i_factorization.json` | foundation | §ref-exp (блок 4.3) | residual = 5.48e-16 (тавтология — тождество для любого W); информативно: J_rel_drift max 0.355→1.152 (s=1000, median 0.656), MK совпадает — лист перетягивается (bridge 0.60→0.91), Goodhart не подтверждён; оговорка tied-весов (h_t — cached-h аппроксимация) [И] |
+| E-39a | U-observability gate: ранг U_obs L23, dry-run M_K-surgery | `experiments/exp39a_u_obs_rank.py` | N=32, S=128, r=16, r_pool=64, L23 (exp27b dense, CPU, fp64) | ✅ | `results/exp39a_u_obs_rank.json` | foundation | §ref-exp (блок 4.8) | r_eff(τ=0.05) = 178 (moderate; per-doc = 31); κ baseline 0.0162 (E-38d воспроизведён, noop 1.74e-9); dry-run κ' 0.0162→0.0040 (4.1× flattening); a_random < b_principal и < c_balanced (32/32, Bonferroni α=0.05/3), b ≈ c неразличимы (NS); ρ_noise ≈ 1.4%; κ' — превью (tied-веса), не E-39c [И] |
+| E-39l | Drift листа vs поведение (v2 non-tautological, v2.1 E39l_fixes) | `experiments/exp39l_drift_behavior.py` | joined E-38i (drift) + E-16b (retention), 10 точек (2 measured, 8 interpolated), L23 (CPU) | ✅ | `results/exp39l_drift_behavior.json` | foundation | §ref-exp (блок 4.8) | ρ_res = +0.031 (p = 0.93), не значим против пермутационного null на residual (p95 = 0.633); monotonicity_ok = false (drift меняет направление); вердикт inconclusive (low) — «drift не предсказывает» НЕ утверждено; ρ_all = −0.758 тривиален; retention-кривая hardcoded (verified = False); каузальный тест — E-39d/e [И] |
 
 - E-12b: таблица — из JSON (N=4, K=32); скрипт обновлён до K=64.
 - E-12c: таблица — из JSON (N=4, K=32); скрипт `exp12c_bridge_quantized.py` на K=64.

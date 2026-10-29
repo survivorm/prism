@@ -32,6 +32,13 @@ htmlcov/
 
 # Results (heavy artifacts)
 results/.gramians
+results/*.npz
+results/archive/
+results/v2check/
+
+# Local model/dataset caches + run logs (heavy, never in git)
+.hf_cache/
+prism-*.log
 
 # Misc
 .DS_Store

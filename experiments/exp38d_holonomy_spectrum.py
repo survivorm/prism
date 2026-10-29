@@ -86,8 +86,8 @@ DEGEN_RES_FRAC = 0.9          # degenerate step: residual_sq > frac * 2r
 
 # _HERE is defined above the imports (inlining-safe __file__).
 REPO = os.path.abspath(os.path.join(_HERE, ".."))
-OUT = os.path.join(REPO, "results", "exp38d_holonomy_spectrum.json")
-# OUT is the LOCAL default; main() overrides it on Kaggle (see OUT_PATH).
+# (module-level OUT removed — dead, docs/E38_fixes.md part-5 §3.2;
+# main() builds OUT_PATH from the resolved out_dir)
 
 
 def _procrustes_batched(V_a, V_b):
@@ -117,29 +117,39 @@ def _spectrum_batched(H):
     Mirrors prism/holonomy.holonomy_spectrum's binning contract:
       * one angle per conjugate pair {e^{iθ}, e^{−iθ}}, sorted ascending;
       * +1 axes dropped; the lone-−1 (reflection) axis lands in the π bin;
-      * a π pair split across the ±π boundary is merged into one (counted
-        once); repeated angles (degenerate spectrum) keep multiplicity;
+      * ABS angles are used (part-5 §1.2): np.angle returns (−π, π] and a
+        −1 eigenvalue at −π was silently dropped by the old `> 1e-6`
+        filter — a π block (all−1) became "R ≈ I"; with abs every 2D
+        block contributes exactly 2 equal angles {θ, θ} and mult = counts//2;
+      * repeated angles (degenerate spectrum) keep multiplicity;
       * if fewer than r//2 angles survive, the array is NaN-PADDED
         (v1 convention — zero-padding would bias spread high).
-    Returns (theta [B, r//2] with NaN padding, n_angles [B]).
+    Returns (theta [B, r//2] with NaN padding, n_angles [B]);
+    n_angles == 0 marks the trivial H ≈ I case (part-5 §1.1).
     """
     B, r = H.shape[0], H.shape[1]
-    Hn = H.numpy()
+    Hn = H if isinstance(H, np.ndarray) else H.numpy()
     half = r // 2
     theta = np.full((B, half), np.nan, dtype=np.float64)
     n_ang = np.zeros(B, dtype=int)
     for bi in range(B):
-        angs = np.angle(np.linalg.eigvals(Hn[bi]))   # (-π, π]
+        # docs/E38_fixes.md part-5 §1.2 (mirrors the FIXED
+        # prism/holonomy.holonomy_spectrum contract): work with ABS
+        # angles — np.angle returns (−π, π] and LAPACK fp noise in the
+        # imag part of a −1 eigenvalue puts it at −π, which the old
+        # `angs > 1e-6` filter silently dropped. With abs, every 2D
+        # rotation block contributes exactly 2 equal angles, so
+        # mult = counts // 2 is UNIFORM (the old pi_mask special case is
+        # gone); a lone −1 (reflection axis, counts = 1 → mult 0) merges
+        # into one π angle.
+        angs = np.abs(np.angle(np.linalg.eigvals(Hn[bi])))   # [0, π]
         pos = angs[angs > 1e-6]
         if pos.size == 0:
-            continue                                  # H ≈ I (or −I? no:
-                                                      # −I gives π angles)
+            continue                                  # H ≈ I (all +1)
         rounded = np.round(pos, 8)
         uniq, counts = np.unique(rounded, return_counts=True)
-        mult = counts.copy()
-        pi_mask = uniq > np.pi - 1e-6
-        mult[pi_mask] //= 2
-        mult[mult == 0] = 1   # π-pair split across the ±π boundary
+        mult = counts // 2
+        mult[mult == 0] = 1   # lone −1 (reflection axis) → one π angle
         vals = np.repeat(uniq, mult)
         vals = vals[vals <= np.pi + 1e-12]            # guard: none > π
         vals.sort()
@@ -149,7 +159,7 @@ def _spectrum_batched(H):
     return theta, n_ang
 
 
-def main(results_dir="results", device="auto"):
+def main(results_dir=None, device="auto"):
     t0 = time.time()
     np.random.seed(SEED)
     if device == "auto":
@@ -158,6 +168,8 @@ def main(results_dir="results", device="auto"):
 
     # Output dir: explicit > /kaggle/working > repo (kaggle.md pattern;
     # /kaggle/input is read-only, /kaggle/working survives the run).
+    # results_dir=None (default) keeps the Kaggle branch reachable —
+    # docs/E38_fixes.md part-5 §3.3; __main__ passes "results" explicitly.
     if results_dir:
         out_dir = results_dir
     elif os.path.isdir("/kaggle/working"):
@@ -172,8 +184,9 @@ def main(results_dir="results", device="auto"):
     def rho_at(trH, omega, degen_mask, n_triples, n_docs):
         """rho_median (+ median p) over non-degenerate finite positions.
 
-        trH/omega/degen_mask are [n_docs, n_triples] (doc=axis0, position=axis1).
-        At each fixed position t we correlate trH[:, t] against omega[:, t]
+        trH/omega/degen_mask are [n_triples, n_docs] (position=axis0,
+        doc=axis1 — the v1 layout produced by _tn()).
+        At each fixed position t we correlate trH[t, :] against omega[t, :]
         ACROSS the n_docs=32 documents (the per-position Spearman the TZ wants).
         """
         rs, ps = [], []
@@ -188,6 +201,13 @@ def main(results_dir="results", device="auto"):
                     ps.append(float(p_))
         return (float(np.median(rs)) if rs else float("nan"),
                 float(np.median(ps)) if ps else float("nan"), len(rs))
+
+    def _nanmedian_str(x):
+        """median, or the string 'nan' for an all-NaN slice — WITHOUT the
+        RuntimeWarning np.nanmedian emits on empty slices (part-5 §3.7;
+        json_dump sanitizes the NaN-equivalent the same way as before)."""
+        fin = x[np.isfinite(x)]
+        return float(np.median(fin)) if fin.size else "nan"
 
     per_layer = {}
     for l in LAYERS:
@@ -299,15 +319,21 @@ def main(results_dir="results", device="auto"):
                 return flat.reshape(N, n_triples).T
             kappa_flat = np.linalg.norm(Htot - np.eye(R), axis=(1, 2))   # [B]
             trH_all = _tn(np.trace(Htot, axis1=1, axis2=2))              # [T, N]
-            theta_flat = _spectrum_batched(torch.tensor(Htot))[0]        # [B, R//2]
+            theta_flat, n_ang = _spectrum_batched(Htot)    # [B, R//2] (numpy in, numpy out — no torch round-trip, part-5 §3.6)
             max_theta = np.nanmax(theta_flat, axis=1)                    # [B]
             degen_mask = _tn(degen_flat)                                 # [T, N]
             # exact identity: ||H−I||_F^2 = Σ_j 2(1−cos ang_j) over ALL r
-            # eigenvalues (v1's M-2 check, kept per triple)
+            # eigenvalues — valid for ORTHOGONAL H (|λ| = 1); for a
+            # non-orthogonal H it measures the orthogonality drift
+            # Σ cos θ (|λ|−1) (part-5 §3.1). v1's M-2 check, kept per triple.
             angs = np.angle(np.linalg.eigvals(Htot))
             idiff_max = float(np.abs(kappa_flat ** 2
                                      - (2.0 * (1.0 - np.cos(angs))).sum(axis=1)).max())
-            trivial = np.all(theta_flat <= 1e-9, axis=1)                 # [B]
+            trivial = (n_ang == 0)                  # [B]  H ≈ I: no rotation
+                                                    # angles (part-5 §1.1 —
+                                                    # the old np.all(NaN <= 1e-9)
+                                                    # was always False on
+                                                    # NaN-padded rows: dead)
             rho_med, p_med, n_rho_pos = rho_at(trH_all, omega_all, degen_mask,
                                                n_triples, N)
             degen_sweep = {}
@@ -323,6 +349,10 @@ def main(results_dir="results", device="auto"):
             hist = np.histogram(th_vals,
                                 bins=[0, 0.01, 0.05, 0.1, 0.5, 1.0, np.pi])[0]
             kappa_tn = _tn(kappa_flat)                                   # [T, N]
+            # part-5 §7.3: all-NaN theta (every triple trivial) → 0.0, NOT
+            # NaN — the verdict of a trivial-H layer is effectively_abelian.
+            mt_finite = max_theta[np.isfinite(max_theta)]
+            max_theta_headline = float(mt_finite.max()) if mt_finite.size else 0.0
             entry = {
                 "kappa_median": float(np.median(kappa_flat)),
                 "kappa_ci": [float(x) for x in np.percentile(kappa_flat, [2.5, 97.5])],
@@ -333,7 +363,7 @@ def main(results_dir="results", device="auto"):
                     # default=_json_default was dead for Python floats and
                     # emitted the non-standard NaN literal —
                     # docs/E38_fixes.md §4).
-                    "median_per_j": [float(np.nanmedian(theta_flat[:, j]))
+                    "median_per_j": [_nanmedian_str(theta_flat[:, j])
                                      for j in range(R // 2)],
                     "n_valid_per_j": [int((np.nan_to_num(theta_flat[:, j], nan=-1.0)
                                            > -0.5).sum())
@@ -341,8 +371,7 @@ def main(results_dir="results", device="auto"):
                     "hist_8_angles": [float(c) for c in hist],
                     "n_dropped_nan": int(th_masked.size - th_vals.size),  # M-4
                     "spread_max_minus_min": spread,
-                    "max_theta": float(np.nanmax(max_theta)) if max_theta.size
-                    else float("nan"),
+                    "max_theta": max_theta_headline,
                 },
                 "trH_vs_omega": {"rho_median": rho_med, "n_positions": n_rho_pos,
                                  "p_med": p_med},
@@ -477,4 +506,4 @@ def main(results_dir="results", device="auto"):
 
 
 if __name__ == "__main__":
-    main()
+    main(results_dir="results")   # explicit: repo layout, not Kaggle

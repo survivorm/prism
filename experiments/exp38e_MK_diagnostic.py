@@ -120,6 +120,11 @@ def main():
     # --- per (doc, t) decomposition ---
     H = ck23["H"]                                     # [N, S, D]
     J23 = ck23["J"]                                   # raw J [N, S, K, D]
+    # docs/E38_fixes.md part-6 §1.1: fail loud on a corrupt cache — the
+    # old code would silently NaN the medians (Inf h -> Inf ratios) and
+    # report a plausible-looking mixed/redflag on broken data.
+    assert torch.isfinite(H).all(), "exp27b H cache contains non-finite values"
+    assert torch.isfinite(J23).all(), "exp27b J23 cache contains non-finite values"
     N, Ss, Dd = H.shape
     norms = H.norm(dim=-1)                            # [N, S]
     u = H / norms.clamp_min(1e-12)[:, :, None]
@@ -140,7 +145,19 @@ def main():
     beta_vec = torch.where(valid, beta_vec, torch.tensor(float("nan")))
 
     ratio = w2.abs() / beta_vec.clamp_min(1e-12)     # [N, S] |α|/|β| (NaN-safe)
-    beta_scaled = (sqrtD * beta_vec / norms.clamp_min(1e-12)).detach()
+    # docs/E38_fixes.md part-6 §1.2: cap the FULL ratio before any
+    # aggregation (the old code capped only pos0_ratio; a β≈0 position in
+    # the body would give ratio ~ 1e9 and poison the per-doc medians).
+    RATIO_CAP = 1e6
+    ratio_capped_frac = float((ratio > RATIO_CAP).float().mean())
+    ratio = torch.where(ratio > RATIO_CAP, torch.full_like(ratio, RATIO_CAP), ratio)
+    # docs/E38_fixes.md part-6 §1.4: beta_scaled on the VALID positions
+    # only (the old norms.clamp_min(1e-12) denominator made the scaled β of
+    # degenerate positions ~ w·1e12 — garbage in the median).
+    beta_scaled = torch.where(
+        valid,
+        (sqrtD * beta_vec / norms.clamp_min(1e-12)).detach(),
+        torch.full_like(beta_vec, float("nan")))
     beta_vs_JtU = beta_vec / JtU_norm.clamp_min(1e-12)
     alpha_abs = w2.abs().numpy()
     beta_abs = beta_vec.numpy()
@@ -172,8 +189,11 @@ def main():
     jtu_ratio = float(np.nanmedian(beta_vs_JtU.numpy()))
     bs = beta_scaled.numpy()
 
-    gate = ("gate_failed" if ratio_median > 10
-            else ("gauge_blind_sep" if ratio_median < 0.1 else "mixed"))
+    gate_raw = ("gate_failed" if ratio_median > 10
+                else ("gauge_blind_sep" if ratio_median < 0.1 else "mixed"))
+    # docs/E38_fixes.md part-6 §2.2: keep the raw gate so the mass-degeneracy
+    # override does not silently erase it from the JSON (diagnostics).
+    gate = gate_raw
     # P1 (docs/E38_fixes2.md §8): mass degeneracy would make every median
     # NaN and silently fall into "mixed"/"redflag"; fail loud instead.
     if nan_frac > 0.5:
@@ -202,7 +222,9 @@ def main():
     # Precompute the scalar the per_layer dict and the final print need
     # (P2 reordering regression: it was computed BELOW this dict, after
     # the del, -> UnboundLocalError at dict construction).
-    r_t_expected = float(np.nanmedian(norms.numpy()) / sqrtD)
+    # docs/E38_fixes.md part-6 §1.3: the VALID set, same as jtu_ratio —
+    # the old all-positions norms mixed in degenerate ‖h‖ < 1e-6 rows.
+    r_t_expected = float(np.nanmedian(norms[valid].numpy()) / sqrtD)
     per_layer = {
         "L23": {
             "sigma_1_MK": sigma_1_MK, "w_norm": w_norm,
@@ -213,6 +235,12 @@ def main():
                            "(P0, docs/E38_fixes2.md); the old flat "
                            "percentile over N·S positions overstated "
                            "precision ~√(S)×",
+                # docs/E38_fixes.md part-6 §2.1: the metric is the
+                # MODULE of the ratio, |α|/|β| (not α/β with signs) —
+                # recorded in meta so the paper cannot be misread.
+                "abs_ratio_note": "metric is |α|/|β| (module), not α/β",
+                "ratio_cap": RATIO_CAP,
+                "ratio_capped_frac": ratio_capped_frac,
                 "per_doc": ratios_docs},
             "alpha": {"median_abs": float(np.nanmedian(alpha_abs)),
                       "mean_abs": float(np.nanmean(alpha_abs))},
@@ -262,6 +290,9 @@ def main():
                    "cache": "exp27b_jcache_L23.pt"},
         "metrics": per_layer,
         "outcomes": {"gate": gate, "consistency": cons,
+                     # docs/E38_fixes.md part-6 §2.2: the pre-override
+                     # gate (visible when nan_frac > 0.5 sets "degenerate").
+                     "gate_raw": gate_raw,
                      # P1-3 (docs/E38_fixes.md §38e): "degenerate" is
                      # semantically equivalent to "gate_failed" for E-38f
                      # (all medians undefined) — propagate it, else E-38f
