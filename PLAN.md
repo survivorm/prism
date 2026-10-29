@@ -1,72 +1,50 @@
-# PLAN: E39_fixes — довести до конца (частично реализовано) — **DONE** (commits 354e64d, 2391fd6)
+# PLAN: доведение — E38-раунд (коммит) + paper [M-4] синхронизация
 
 ## Запрос (фиксация)
 
-`docs/E39_fixes.md` = две части: (1) ревью E-39b (→ `exp39c_pre_kl_surgery.py`), (2) ТЗ:
-правка E39.md §12 + `exp39l_drift_behavior.py` (non-tautological design).
-Пользователь: «бери docs/E39_fixes.md и исправляй», «частично может быть уже
-реализовано, но не полностью». Довести до конца: закрыть разрывы, прогнать,
-обновить paper §5/§6, commit.
+После E39_fixes (DONE: 354e64d, 2391fd6, e3e0ccd) и paper_add (DONE: e4993af,
+3271991 — верифицировано по таблице ТЗ paper_add.md §1: 8/8 «выполнено») в дереве
+остался незакоммиченный E38-раунд и stale [M-4]-вердикты в paper.md. Довести:
+закоммитить, синхронизировать [M-4] (A.4/A.5 E38_paper.md), закрыть хвост D.2–D.5.
 
 ## DONE
 
-### Part 1 — `exp39c_pre_kl_surgery.py`
-- [x] Фикс #1 (unpack): `kap_new, kap_ci, _ = _kappa_dryrun(...)` → dict-разбор: функция возвращает
-  dict из 8 ключей, 3-tuple unpack → ValueError; скрипт не запускался никогда)
-- [x] Фикс #2 (`@torch.no_grad()` на `main()`): `W_lm` — parameter с requires_grad; без no_grad
-  `np.percentile(dratio, 90)` падает (`Can't call numpy() on Tensor that requires grad`),
-  `float()` ворнит. Инференс-only → no_grad на main
-- [x] Production run (`.venv/bin/python`, `HF_HOME=.hf_cache`, CPU, 170s) →
-  `results/exp39c_pre_kl_surgery.json`. **Gate: FAIL** — mean KL (real tokens, t≥0) =
-  **4.986 nats/token** >> 0.05 (per-doc 3.56–6.24); κ' dry-run = 0.00416 (consistent с E-39a
-  0.0042); m_k_norm Frobenius preserved (33.8454→33.8454); v_new = bottom_16_right_svs_of_U
-  (no true null space, r_obs=16); row_diag (space: W_lm): mean 0.983 / p90 1.328 / max 1.402.
-  Stale `results/archive/exp39b_kl_surgery.json` (mean KL 8.89, pre-rename) — артефакт, не трогать
+- [x] paper_add верификация: G(l)/R_can/R_raw в §2.5, шаблон 7 полей + лестница
+  каузальности в §3.2, §6 пункты 13–17, запрещённые термины — 0 вхождений
+  (вхождения «gauge share» — ESG-метрика; «не причинный тест» — корректная
+  отрицательная формулировка). PLAN stale «шаги 4–8 NEXT» снят
+- [x] Коммит A (842afa9): E38-раунд — E38.md (+565, восстановление текста всех
+  экспериментов — обязательство E38_fixes2), E38_fixes.md, E38_fixes2.md, E38+.md,
+  E38_paper.md, ref-exp.md (карточки E-39a/E-39l + M-4-строка E-38c + D.2),
+  exp38d/e/g/h (C-фиксы), results JSON ×3, kernel-exp38d; .gitignore
+  (.hf_cache, logs, npz, archive/v2check)
+- [x] Коммит B (bfacd27): docs/models/ (6-раундовый консенсус — source paper_add),
+  docs/paper_add.md, experiments/exp39a_u_obs_rank.py (критично: закоммиченный
+  exp39c_pre импортирует `_kappa_dryrun` из него — без коммита репо сломано)
+- [x] Paper [M-4] синхронизация (A.4/A.5): §5 WZ-гипотеза, §6 п.8, proof map —
+  «не прогонялся/мораторий» → «пройден (tail-only); мораторий снят для tail»
+- [x] D.2 (уже был в рабочем diff, вошёл в A), D.3 (exp38i), D.5 (hi_common)
+- [x] Коммит C: paper.md (3 строки [M-4]) + exp38i + hi_common + PLAN.md
 
-### Part 2 — E-39l v2
-- [x] `exp39l_drift_behavior.py`: фикс n_measured — было n_measured = n_interpolated = n_joined = 10;
-  ТЗ §1.2/§3.4: «9 из 11 точек — интерполированы по 6 узлам E-16b» → n_measured = join-точки,
-  совпадающие с узлами E-16b (s_frac 0.1 → step 100, 1.0 → step 1000) = **2**, n_interpolated = **8**
-  (совпало с примером ТЗ JSON). Rerun: n_measured=2, n_interpolated=8
-- [x] Anti-control: реализация уже по псевдокоду ТЗ §3.3 (only `ρ_anti > 0.3`, diagnostics в caveats);
-  решение о расширении (OR |ρ_all| > p95) отменено — ТЗ самодостаточен, данные дают
-  `anti_control_passed=false` (честный исход, diagnostic уже в caveats)
-- [x] Rerun → `results/exp39l_drift_behavior.json` + `results/exp39l_scatter.png`:
-  `verdict = inconclusive (drift non-monotone)`; ρ_res=+0.031 (p=0.933), ρ_all=−0.758 (tautological),
-  ρ_anti=0.236 (≤0.3), monotonicity_ok=false (0.700→0.697→1.197→1.152), n_joined=10.
-  Все поля spec §3.4 на месте (metrics: rho_residual, rho_all_trivial, rho_anti_control,
-  anti_control_passed, monotonicity_ok, n_joined, n_measured, n_interpolated, missing_steps,
-  s_frac_excluded; top: verdict, verdict_confidence, e16b_source, points, caveats, scatter_plot)
-- [x] E39.md §12 → v2: §12.1 (почему v2 — тавтология v1), §12.2.1–2.4 (определения), §12.3
-  (протокол + fail-loud), §12.4 (таблица интерпретаций + правило: predictive запрещено без
-  anti_control/n_measured/monotonicity), §12.4.5 (s=0 semantics), §12.4.7 (обязательные проверки),
-  §12.5 (sources of truth), §12.6 (limitations для paper §6), §12.7 (реализация и исход)
-- [x] E39.md §13.2 + §15 ASCII: v1-формулировки «E-39l решает, работает ли flatness-loss» /
-  «может заменить E-39d/e, если ρ сильная» → согласованы с v2 (замена возможна только при
-  `drift_predictive_beyond_trend` + anti-control; текущий исход — `inconclusive`, замена по E-39l нельзя)
-- [x] paper.md §5: строка «Не установлено [И] | Leaf drift предсказывает behavioral деградацию
-  (E-39l)» + механизм (ТЗ §5.1 — строка в §5, НЕ в §4)
-- [x] paper.md §6: пункт 17 (limitation E-39l из ТЗ §12.6: ρ_all тривиален; ρ_res — не причинность;
-  каузальный тест = E-39d/e)
+## Границы (не менять)
 
-### Верификация
-- [x] grep «Goodhart geometric» / «ρ < −0.7» в E39.md §12 — 0 (только упоминание удалённого ярлыка
-  в §12.1/§12.4 — легитимно)
-- [x] exp39l JSON: все поля spec §3.4 (см. выше)
-- [x] exp39c_pre JSON: gate (metric/threshold/value/pass/basis), m_k_norm (before/after/frobenius_preserved),
-  v_new_subspace, row_diag (space/mean/p90/max), kappa_dryrun (median/consistent),
-  kl_nats_per_token (mean/per_doc_real/max/p99), runtime_s
-- [x] JSON git-ignored (`results/*.json`) — артефакты локальные, как у остальных экспериментов;
-  PNG (scatter) в коммите
+- [ ] Paper §4 числа/вердикты — не трогать (граница paper_add; A.1/A.2/D.1 уже
+  закрыты — соответствующих величин в paper.md v6.0 нет: 0 grep-хитов)
+- [ ] A.3 (переименование `jlens_not_tail_modes` + перегенерация outcome) — НЕ делать:
+  требует перегенерации JSON (Kaggle)
+- [ ] C.13–C.14 (trivial_frac/−π в exp38d) — НЕ делать: по ТЗ E38_paper.md —
+  после пере-генерации E-38d JSON (Kaggle); локально кодовые фиксы уже в diff
+- [ ] Результаты E-38a–i не пересчитывать; E38.md — только уже восстановленный текст
 
-## Границы (не менять) — соблюдены
+## NEXT (открытые хвосты, не в этом раунде)
 
-- [x] Результаты E-39a/E-38i/E-16b не пересчитывать; drift(s) — из `results/exp38i_factorization.json`
-- [x] `E38I_STEPS` и пути файлов не менять (ТЗ §3.5)
-- [x] Paper §4 карточки E-* не трогать (кроме §5/§6 строк)
-- [x] E-39b (настоящий, GPTQ) — не реализовывать (Kaggle, kernel-exp39b)
-- [x] E39.md §0–§11, §13–§15 — не трогать (кроме §12 и ссылок на него, если есть)
-
-## NEXT
-
-- [ ] paper_add шаги 4–8 (пауза; возобновить свежими якорями — см. PLAN paper_add в git log)
+- **Параллельная сессия: E39l v3** (docs/E39l_fixes.md: anti-control →
+  пермутационный тест на residual, NaN→None, fail-loud endpoint, monotone
+  both directions, verdict_confidence по frac_measured) — В ПРОГРЕССЕ, не
+  коммитить её файлы (exp39l_drift_behavior.py, E39l_fixes.md, scatter.png)
+  до завершения; после — синхронизировать E39.md §12/§13/§15 и paper §6 п.17
+  (ρ_res сейчас «+0.031, p=0.933» — сменится пермутационным критерием)
+- E-39b (настоящий PTQ/GPTQ — Kaggle kernel-exp39b); E-39c (M_K-хирургия) —
+  pre-gate FAIL (KL 4.986 > 0.05), серия заблокирована до решения по pre-stage
+- E-39d/e — каузальный тест drift vs flatness (training)
+- Tier 0.x/1.x/2.x (F_lt profile, κ_fixP, locking, master-curve) — по paper_add

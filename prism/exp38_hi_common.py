@@ -137,6 +137,8 @@ def top_r_subspace(A, r):
 
 
 def top_r_subspaces(A, r):
+    """E38_paper D.5: returns the RIGHT singular vectors (V, row-space of A) —
+    NOT the left (U). Callers compare subspace overlaps in the V space."""
     _, s, Vt = torch.linalg.svd(A, full_matrices=False)
     return Vt[:r].t().contiguous(), s[:r]
 
