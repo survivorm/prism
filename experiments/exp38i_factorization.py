@@ -104,8 +104,10 @@ def main():
                    / Ji0.norm(dim=1).clamp_min(1e-12))
             jdr.append(rel.max().item())
         MK = W_ed * gamma[None, :]
-        # E38_fixes P1: 115 of 128 rows are edit-invariant (not in token_set),
-        # so max/median over ALL rows underreports — report shared-only too.
+        # E38_fixes P1 / E38_paper D.3: 115 of 128 rows are edit-invariant
+        # (not in token_set), so the max over ALL rows is already max over
+        # shared rows (not underreported), while the median over ALL rows
+        # IS diluted by zero-invariant rows — report shared-only too.
         J_sh = torch.stack([(((Ji - Ji0).norm(dim=1)
                              / Ji0.norm(dim=1).clamp_min(1e-12))
                              [shared_idxU])
