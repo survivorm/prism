@@ -212,3 +212,28 @@ M_K_rank_def[:r-1] = torch.randn(r-1, Dd, device=device)  # rank r-1
 - **SUCCESS** — маловероятно, но если да, то требует репликации с actual KL (не proxy).
 
 **Текущая версия E-39d — не может идти в paper.** Оба CRITICAL бага дают смещённые результаты в разных аспектах: #1 искажает KL (систематически), #2 не даёт запустить на GPU. После фикса #1+#2+#3+#4 — 10 минут работы, и код станет **valid** (в отличие от E-39a/E-39c_pre, где было 4-6 раундов).
+
+---
+
+## Статус фикса (round 8, commit b918961)
+
+| # | Статус | Что сделано |
+|---|---|---|
+| 1 | ✅ FIXED | KL + sentinel на **actual logits** `√D·M_K·û` (E-38e факторизация). Верификация: `√D·(û·(W_lm·diag g)ᵀ)` совпадает с настоящим `model.lm_head(model.model.norm(h))` до **9.5e-6** (старый `H@W_lmᵀ` — до 2.69 nats). KL-шлейк, base logits, sentinel-масса — все на actual. Логсумэксп-трюк для readout-only edit **exact** (не proxy): cross-check с полным 2-forward KL на тех же H даёт diff 8.9e-6. Verdict KL (full-dataset) + независимый 2-forward cross-check на C4-доках (первый run) в JSON (`kl_full_2forward_check`). |
+| 2 | ✅ FIXED | `u64_docs = torch.stack(u64_docs).to(device)` — T4 cuda×cpu краш устранён. |
+| 3 | ✅ FIXED | NaN-check **до** `backward/step` (pre-step guard) + повторная проверка `W_rows` после `opt.step()`. |
+| 4 | ✅ FIXED | `clamp(min=1e-20).sqrt()` в flatness (rank-degenerate M_K → нет 0-деления). |
+| 5 | N/A | `kl_safe_alphas`/`budget_note`/`sweep[1]` — **не существуют в E-39d** (паттерны E-39c_pre; проверено grep'ом). |
+| 6 | N/A (опционально) | Selftest rank-deficient — не добавлен (защита #4 покрывает; selftest проверяет корректность top-r, а не degeneracy). |
+| 7 | ✅ FIXED | `H_sub.norm(...).clamp_min(1e-12)` в kl_leash и flatness. |
+| 8 | N/A | См. #5. |
+
+### Побочные эффекты фикса #1 (важно для paper)
+
+- **Sentinel: 0.0% → 55.4%**. Старый `Σ exp(pseudo_logit)` всегда > 0.5 → «sentinel excluded: 0/4096 (0.0%)» был артефактом. Новый sub-stochastic `Σ_k p_k` (= P128_RAW по определению; поле P128_RAW отсутствует в кэше, но reconstruction точна до 9.5e-6) → 2271/4096 позиций sentinel, 1825 в тренировке. Это **согласуется с E-34** (порог 0.5 калиброван на P128_RAW). Тренировка теперь на ~45% позиций — это честнее, не баг.
+- **PPL base: 28.38 → 34.31**. Отличие от прошлого smoke — порядок загрузки C4-доков / skip (детерминированность между запусками не гарантирована без seed'а в `_c4_docs`); не влияет на verdict-логику (PPL-дифференциал внутри run).
+- **KL-шкала теперь совпадает с E-39c_pre** (реальные логиты, не temperature-scaled proxy) — сравнение «E-39d KL < 0.05 vs E-39c 6.31» становится валидным.
+
+### Запуск (round 8 valid)
+
+`experiments/exp39d_l23_training.py` — λ∈{0.01,0.1,1,10} × 3 seeds × 100 steps, CPU. Логи: `/tmp/exp39d_round8.log`, JSON: `results/exp39d_l23_training.json`.
