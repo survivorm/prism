@@ -235,6 +235,35 @@ KERNELS = {
                 "experiment needing Kaggle (38a/b/c/e/g/h/i run in seconds "
                 "on CPU — docs/E38_fixes2.md).",
     },
+    "exp39b": {
+        "dir": "kernel-exp39b",
+        # Provisional id (never pushed): Kaggle derives the slug from the
+        # title. After the first successful push, verify the canonical slug
+        # (`kaggle kernels list`) and update here (re-push 409 otherwise).
+        "id": "voroninmichael/prism-exp39b-ptq-perturbation",
+        "title": "Prism: exp39b-ptq-perturbation",
+        "exp_file": "experiments/exp39b_ptq_perturbation.py",
+        "sources": ["voroninmichael/prism-exp27b-dense-profile"],
+        # Same two datasets as exp38d (27b jcache: jca L6/12/18, jcb L19/22/23).
+        "datasets": [
+            "voroninmichael/prism-exp27b-jcache-jca",
+            "voroninmichael/prism-exp27b-jcache-jcb",
+        ],
+        # prism.jstruct/_interventions are NOT in build_kernel's default inline
+        # list (relative cross-imports) — build_M_K/_resolve_lm_head_weight/
+        # _lm_module are inlined directly in the exp file instead. No extra
+        # modules needed (top_r_svd was an unused import, removed).
+        "extra_local": ["_e38_cache"],
+        "note": "E-39b (docs/E39.md §2): κ(L23) + M_K structure under GPTQ-4bit. "
+                "Levels: fp16 baseline / int8 RTN / GPTQ 4-bit (group 128, desc_act, "
+                "damp 0.01, IST-DASLab port). Hand-rolled GPTQ on lm_head.weight only "
+                "(151936×1024); activations frozen (û_t from 27b jcache H fields). "
+                "Self-check: rebuild base J at L23 from cached H (rel err ~1e-7, "
+                "local 7.8e-7) BEFORE any quantized metric. Gate on κ(L23) r=16: "
+                "<0.02 pass / 0.02–0.10 moderate / >0.10 catastrophic (base 0.0162). "
+                "PPL via h_normed @ W_q.T (tied weights — no in-place lm_head replace). "
+                "C4: Hessian train skip 8192 (128 docs × 128 tok), PPL val 32 docs.",
+    },
     "exp19": {
         "dir": "kernel-exp19",
         "slug": "exp4-top-p-tokens",

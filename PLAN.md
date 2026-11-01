@@ -11,21 +11,24 @@ PTQ квантует lm_head.weight → M_K → J_t; û_t заморожен (а
 ## DONE
 - [x] Рекон: ВСЕ контракты зафиксированы в FINDINGS ниже (2026-10-30). НЕ перечитывать — смотреть в FINDINGS.
 - [x] PLAN.md как findings-ledger
+- [x] `experiments/exp39b_ptq_perturbation.py` написан полностью (ruff чистый), локальный smoke пройден:
+  self-check rebuild J @L23 vs 27b-cache: rel err max 7.8e-7 (tol 1e-5); κ(cached J) = 0.016233
+  = exp38d L23 r16 (0.016233441) — pipeline верен; RTN/GPTQ finiteness + детерминированность GPTQ
+  (max diff 0.0) проверены. Поправлены: форма c.unsqueeze(1)→[n,1,1,1] в _recompute_J;
+  V_all [n,r,D] = Vh[:,:r,:].transpose(-1,-2) в _kappa_from_J (Vh — строки); main() → small_model.
+- [x] push_all.py: entry exp39b (dir kernel-exp39b, title="Prism: exp39b-ptq-perturbation" — title
+  должен резолвиться в id, иначе 400; sources 27b-dense-profile, datasets jca+jcb, extra_local _e38_cache).
+- [x] Kernel собран и pushed (v1): https://www.kaggle.com/code/voroninmichael/prism-exp39b-ptq-perturbation
+  (self-source warning при первом push — expected, kernel ещё не существовал; datasets смонтированы).
 
 ## DOING
-- [ ] Написать `experiments/exp39b_ptq_perturbation.py` ПОЛНОСТЬЮ одной записью (раньше pi-filter/nreki
-      резал кусочные записи; ruff чистый; без placeholder-строк)
+- [ ] Мониторинг Kaggle-рана (T4, ~20–40 мин): status → log; затем скачать
+  results/exp39b_ptq_perturbation.json с /kaggle/working.
 
 ## NEXT
-- [ ] Локальный smoke: rebuild J на L23 из jcache (ожид. rel err ~1.6e-7) + GPTQ на мини-подмножестве (CPU)
-- [ ] push_all.py: добавить регистрию kernel-exp39b (dir/id/title/sources/datasets/extra_modules/extra_local)
-- [ ] `build_kernel.py --exp experiments/exp39b_ptq_perturbation.py --out kaggle_kernel/kernel-exp39b
-      --id voroninmichael/prism-exp39b-ptq-perturbation --title "E-39b PTQ perturbation gate"
-      --sources voroninmichael/prism-exp27b-dense-profile
-      --datasets voroninmichael/prism-exp27b-jcache-jca voroninmichael/prism-exp27b-jcache-jcb
-      --extra-local _e38_cache` (НЕ передавать пустой --datasets — argparse nargs='+' сожрёт следующий флаг)
-- [ ] `kaggle kernels push -p kaggle_kernel/kernel-exp39b/`; мониторить (~20–30 мин на T4); скачать results
-- [ ] E39.md: вписать результаты (новый §2.x / §15 строка)
+- [ ] GATE по κ(L23) r=16: <0.02 pass / 0.02–0.10 moderate / >0.10 catastrophic (base 0.016233).
+- [ ] E39.md: вписать результаты (новый §2.x / §15 строка) — только после получения JSON.
+- [ ] Коммит: exp39b-скрипт + kernel-exp39b/ + push_all entry + E39.md (paper.md НЕ трогать).
 
 ## Границы (не менять)
 - paper.md — E-39b результаты tier-pending, в paper не попадают (правило: ни одна строка paper не зависит от E-39)
