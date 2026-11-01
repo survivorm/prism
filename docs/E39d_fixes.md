@@ -1,239 +1,232 @@
-# Финальный аудит E-39d (round 8) — 2 критических silent-бага + 4 средних
+# Финальный аудит E-39d (round 8) — критических нет, но нашёл 1 stale-комментарий и 4 medium
 
-## 🔴 CRITICAL #1 — `H @ W_lm.t()` даёт **псевдо-логиты**, не настоящие
+## ✅ Проверено — вычисления корректны
 
-### Код (строки base logits cache)
+### Fix #1 (actual logits) — **математически верен**
 
+Алгебраически проверил: для L23 (последний слой, вход в final norm):
+```
+h_norm = h_L23 / rms(h_L23) · (1+w) ≈ √D · û · (1+w)
+logit_v = W_lm[v,:] · h_norm = √D · W_lm[v,:] · diag(1+w) · û
+        = √D · M_K[v,:] · û,   M_K = W_lm·diag(1+w)
+```
+Код: `SQRT_D * (u_all @ M_K_full.t())` — правильно. Старая форма `H @ W_lm.t()` отличалась на `‖h‖/(√D·g)` — position/token-dependent. ✓
+
+### Fix #2 (u64_docs на device) — **исправлено**
 ```python
-bl = Hb @ W_lm.t()                                # [B, V]  ← псевдо-логиты
-lse_b_all[i:i+B] = torch.logsumexp(bl, dim=-1)
-base_k_all[i:i+B] = bl[:, tok_ids]
-raw_k = torch.exp(bl[:, tok_ids])                 # псевдо-вероятности
+u64_docs = torch.stack(u64_docs).to(device)  # было .cpu() в конце
 ```
+`.cpu()` внутри loop, `.to(device)` после stack. ✓
 
-### Что должно быть (E-38e факторизация)
+### Fix #3 (NaN guard) — **правильно**
+Pre-step check + post-step param check. ✓
 
-Для L23 (последний слой) настоящие логиты:
-```
-logits_t = lm_head(RMSNorm(h_L23)) = √D · M_K · û_t,  M_K = W_lm · diag(1+w)
-```
-где `û_t = h_L23/‖h_L23‖`.
+### Fix #4 (sqrt guard) — **работает**
+`clamp(min=1e-20).sqrt()` → max 1e-10 → нет NaN. ✓ (см. issue #4 ниже)
 
-**Код считает** `W_lm · h_L23 = ‖h‖ · û · W_lm`, что **отличается** от `√D · (1+w) · û · W_lm` на фактор `√D·(1+w)/‖h‖`, **зависящий от позиции и токена**.
+### Fix #5 (H-norm clamp) — **применено**
+В `u_all`, `u`, `u64_docs` — но **не везде** (см. issue #2).
 
-### Влияние
-
-**Softmax per-position temperature:**
-- `softmax(pseudo_logits)` использует температуру `‖h_p‖/√D`
-- `softmax(actual_logits)` использует температуру `1`
-- Для позиции с `‖h_p‖ = 60`, `D=1024` → температура ≈ **1.875**
-
-Настоящий KL = KL(softmax(actual_e) ‖ softmax(actual_b)), а код считает KL(softmax(pseudo_e) ‖ softmax(pseudo_b)) — это **temperature-scaled KL**, численно отличающийся от настоящего.
-
-### Всё заражено через один root cause
-
-- `base_k_all` — псевдо, `lse_b_all` — псевдо → **KL псевдо**
-- `raw_sum_all` — псевдо → **sentinel mask смещён** (E-34 определил threshold 0.5 на настоящих P128_RAW, а `exp(pseudo) ≠ actual`)
-
-**PPL не заражён** — `_ppl` использует `model(...)`, настоящий forward. Это спасает: verdict по PPL корректен, KL и sentinel — нет.
-
-### Сравнение с E-39c_pre
-
-E-39c_pre использует `_logprobs(model, ids)` (настоящий forward) → **KL=6.31 настоящий**. E-39d использует псевдо → **KL несравним с E-39c_pre**. Paper не сможет писать «E-39d достиг KL < 0.05 при κ' < 0.005, в отличие от E-39c» — числа на разных шкалах.
-
-### Fix (2 строки)
-
-```python
-u_all = H_all / H_all.norm(dim=-1, keepdim=True)          # û_t
-M_K_full = (W_lm * g_base[None, :])                       # [V, D] — для base
-bl = math.sqrt(D) * (u_all @ M_K_full.t())                # actual logits
-```
-
-**Альтернатива (безопаснее):** final-eval KL через настоящий forward:
-```python
-# Один раз: lp_base = _logprobs(model, ppl_ids)
-# В final: swap W_rows → forward → _kl_vs_base(lp_edit, lp_base, ppl_attn)[1]
-```
-Дороже (2 forward), но гарантирует корректность verdict `kl_ok`.
+### Other verifications
+- `_c4_docs` — исправлено через persistent iterator ✓
+- `flatness_loss` — top-r SVs правильные, Vt orthonormal, Pt rank-r projector ✓
+- `_selftest_kl` — тестирует logsumexp trick ✓
+- `_selftest_flatness` — тестирует top-r SVs ✓
+- Verdict требует все три критерия ✓
+- `kl_f_fwd` cross-check (first run only) ✓
+- Post-step `if not isfinite(W_rows).all()` — lовит corrputed state ✓
 
 ---
 
-## 🔴 CRITICAL #2 — device mismatch на GPU
+## 🟡 MEDIUM #1 — **stale comment: `l_flat is ~1e3` математически невозможно**
 
 ```python
-u64_docs.append(arr.double().cpu())     # явно CPU
-...
-u64_docs = torch.stack(u64_docs)        # CPU (без .to(device))
+# l_flat is ~1e3 on this data while l_kl is ~1e-1, so WITHOUT this the
+# spec λ-grid {0.01..10} would have flat dominate at every λ (KL leash
+# never binds). Normalising makes λ a meaningful relative weight.
 ```
 
-Вызов:
+**Математический факт** (проверено):
+- Vt имеет orthonormal columns → `trace(Pt) = r = 16`
+- `‖Pt‖_F² = r = 16` для rank-r projector
+- `sum_norm_sq = P·16` (не P·1e3)
+- `l_flat = 16 − ‖P̄‖_F²` ∈ **[0, 16]**
+
+**Max l_flat = 16, не 1e3.** Comment устарел — вероятно, до fix #1a/#1b (когда Vt был garbage-mixture, и `Pt` не был projector).
+
+**Влияние:**
+- Comment вводит в заблуждение о роли normalizer
+- Reader подумает «λ-grid откалиброван под l_flat ~1e3», но фактический l_flat ∈ [0, 16]
+
+**Fix:** обновить comment:
+> l_flat ∈ [0, r=16] by construction (rank-r projectors). Base l_flat is expected O(1e-3)–O(16) depending on leaf flatness; normalizer keeps λ-sweep scale-invariant.
+
+---
+
+## 🟡 MEDIUM #2 — **нет clamp в `u64_docs`**
+
 ```python
-kap_base = _kappa_dryrun(M_K_base.double(), u64_docs, N_docs, S, R)
+arr = arr / arr.norm(dim=-1, keepdim=True)  # NO clamp
+u64_docs.append(arr.double().cpu())
 ```
-где `M_K_base` на `device` (cuda).
 
-Внутри `_kappa_dryrun`:
+Если какая-то `h_t` имеет **ровно** норму 0 (unlikely для trained model, но defensive), `arr = 0/0 = NaN`. `_kappa_dryrun` с NaN → `κ_base = NaN` → всё заражено.
+
+**Fix:**
 ```python
-proj = torch.einsum("kd,td->tk", M_kp, u_t)  # cuda × cpu → RuntimeError
-```
-
-**На CPU работает** (device="cpu", всё на cpu). **На T4 падает** сразу. Docstring обещает «T4: ~1-2 min» — этот сценарий **не работает**.
-
-### Fix
-
-```python
-u64_docs = torch.stack(u64_docs).to(device)
+arr = arr / arr.norm(dim=-1, keepdim=True).clamp_min(1e-12)
 ```
 
 ---
 
-## 🟡 MEDIUM #3 — NaN-check **после** `opt.step()`
+## 🟡 MEDIUM #3 — **surrogate награждает rank deficiency**
 
+Если `M_K` деградирует до rank `< 16`:
+- `s[-i] → 0` для некоторых i → `clamp(1e-20)` даёт 1e-10 → `Vt = J^T u / 1e-10`
+- `J^T u = 0` (u в null space) → `Vt = 0/1e-10 = 0` → `Pt` имеет **меньший rank** → `‖Pt‖_F² < 16`
+- **`l_flat` уменьшается** (surrogate "улучшился")
+- Но `κ'` через SVD (правильная метрика) → **растёт** (top-16 включает произвольные null-space directions)
+
+**KL leash должен предотвратить катастрофическую rank loss** (logits станут почти нулевыми для всех K токенов → KL взорвётся). Но **mild rank loss** (rank 15 из 16) может пройти: KL растёт на ~10%, surrogate уменьшается. Это training-game, а не реализация flattening.
+
+**Fix (опционально):** penalize rank deficiency:
 ```python
-loss.backward()
-torch.nn.utils.clip_grad_norm_([W_rows], 1.0)
-opt.step()                                     # ← NaN-градиент уже применён
-
-if not torch.isfinite(loss.detach()):          # ← check ПОЗЖЕ
-    break
+if (s < 1e-6).any():
+    # rank < r — flatness metric unreliable; add penalty
+    rank_penalty = r - (s > 1e-6).sum(1).float().mean()
+    # или: clamp l_flat to be >= min value
 ```
 
-Если forward дал NaN, `backward` даёт NaN-градиенты, `opt.step()` корраптит `W_rows` (Adam state тоже NaN), и только потом детектится. Run всё равно завершается корректно (`diverged_at_step` записан), но состояние W_rows — мусор.
-
-### Fix
-
-```python
-loss = lam * l_flat + LAMBDA_KL * l_kl
-if not torch.isfinite(loss):
-    run["diverged_at_step"] = step
-    break
-loss.backward()
-...
-```
+**Severity:** MEDIUM, но только если training реально пойдёт в эту область. Обычно KL leash доминирует.
 
 ---
 
-## 🟡 MEDIUM #4 — `.clamp(min=0).sqrt()` → возможное деление на 0
+## 🟡 MEDIUM #4 — **docstring "9.5e-6" не валидируется runtime кодом**
 
 ```python
-s = w[:, -r:].clamp(min=0).sqrt()
-Vt = torch.bmm(J.transpose(1, 2), U16) / s[:, None, :]
+# Verified: √D·(û·(W·diag g)ᵀ) matches model.lm_head(model.model.norm(h))
+# to 9.5e-6 (the old form was off by 2.69 nats).
 ```
 
-Если **top-16 eigenvalue** становится **точно 0** (M_K деградирует до rank < 16 во время тренировки), `.clamp(min=0)` даёт `s = 0`, деление → **Inf/NaN** → `Pt = NaN` → `L_flat = NaN` → `loss = NaN`.
-
-Тренировка мотивирована снижать `L_flat`; один из способов — сделать P_t вырожденным → возможен именно этот сценарий.
-
-### Fix
-
+**Runtime проверка в коде** (§cross-check first run):
 ```python
-s = w[:, -r:].clamp(min=1e-20).sqrt()  # или 1e-12
-Vt = torch.bmm(J.transpose(1, 2), U16) / (s[:, None, :] + 1e-12)
+kl_f_fwd = ...  # 2-forward KL on C4 PPL docs
+kl_f = ...      # cached-H formula on jcache positions
+if abs(kl_f_fwd - kl_f) > max(0.05, 0.2 * max(...)):
+    WARN
 ```
 
----
+Это **сравнение на РАЗНЫХ данных** (C4 vs jcache). Порог 20% — sanity check по magnitude, не formula-correctness.
 
-## 🟡 MEDIUM #5 — `conclusion` / `budget_note` broken
+Формула **алгебраически верна** (я проверил), но **9.5e-6 claim не доказан этим кодом**. Возможно, это результат offline-разработки — тогда стоит указать в docstring «offline verified during development; runtime validates magnitude on held-out data».
 
-Те же проблемы, что я отмечал в E-39c_pre:
-
-```python
-f"small α ({kl_safe_alphas}) pass KL<{KL_PASS}"
-```
-Если `kl_safe_alphas = []` — «small α ([]) pass KL» бессмысленно. И:
-```python
-f"κ'≈{sweep[1]['kappa_dryrun']:.4f}"  # sweep[1] — fragile index
-```
-
-В E-39c_pre это уже подтверждено — текст в JSON противоречил данным.
-
-### Fix
-
-Заменить f-string на условную генерацию:
-```python
-if not kl_safe_alphas:
-    conclusion = "no α passes KL budget"
-else:
-    conclusion = "..."
-```
-
----
-
-## 🟡 MEDIUM #6 — `_selftest_flatness` не покрывает degenerate случай
-
-Selftest проверяет: projector, `tr P = r`, `s[-1] = σ₁`. Но **не проверяет** M_K с rank < r (когда `s` содержит 0). Это именно тот случай, где `#4` может сработать в production.
-
-### Fix (опционально)
-
-```python
-# в selftest добавить
-M_K_rank_def = torch.zeros(K, Dd, device=device)
-M_K_rank_def[:r-1] = torch.randn(r-1, Dd, device=device)  # rank r-1
-# должна дать NaN / inf, или должна падать громко
-```
+**Severity:** LOW-MEDIUM (не bug, но overclaiming).
 
 ---
 
 ## 🟢 LOW
 
-- **`H_sub.norm()` без clamp** — `u = H_sub / H_sub.norm(...)`. Нулевая норма (крайне редко) → NaN. `.clamp_min(1e-12)` безопаснее.
-- **`dtype` version-check** — `transformers.__version__.split(".")[:2]` — если версия «4.35.0rc1», то `("4", "35")` — OK. Если «5.0.0dev» → `(5, 0) >= (4, 35)` → OK. Работает.
+### #5 — `kl_full` (jcache) vs `kl_full_2forward_check` (C4) — разная семантика
+
+```python
+"kl_full": kl_f,                    # mean KL over jcache positions
+"kl_full_2forward_check": kl_f_fwd, # mean KL over C4 PPL docs
+```
+
+Два разных числа, один label «full». Paper должен знать, что это разные datasets. Minor confusion risk.
+
+### #6 — `SEEDS[0]` hardcoded в `torch.manual_seed(SEEDS[0])` перед normalizer
+
+```python
+torch.manual_seed(SEEDS[0])  # после этого norm_idx=random deterministic
+```
+
+Если `SEEDS` изменится, normalizer использует новый seed. OK, но стоит комментарий про «normalizer uses SEEDS[0] to keep norm_idx deterministic across runs».
+
+### #7 — `_selftest_flatness` не покрывает degenerate case
+
+Проверяет only полноценный rank-K M_K. Не проверяет M_K с rank < r. Именно этот случай **породил бы issue #3**. Расширение selftest'а:
+```python
+M_K_lowrank = torch.randn(K, Dd, device=device)
+M_K_lowrank[r:] = 0  # rank r
+# должна дать l_flat = 0 (small rank projectors), но κ' высокий
+```
 
 ---
 
-## Итоговая таблица
+## Итог
 
-| # | Баг | Severity | Что портит |
-|---|---|---|---|
-| 1 | Псевдо-логиты в KL/sentinel | 🔴 CRITICAL | KL = biased proxy; sentinel mask biased; несравнимо с E-39c_pre |
-| 2 | Device mismatch на GPU | 🔴 CRITICAL | T4 запуск падает сразу; только CPU работает |
-| 3 | NaN-check timing | 🟡 MEDIUM | W_rows корраптится до детекта (но run останавливается корректно) |
-| 4 | `clamp(min=0)` деление на 0 | 🟡 MEDIUM | При деградации M_K → NaN |
-| 5 | conclusion/budget_note текст | 🟡 MEDIUM | Ложные утверждения в JSON |
-| 6 | selftest не покрывает rank-deficient | 🟡 MEDIUM | Пропускает #4 в selftest |
-| 7 | `H.norm()` без clamp | 🟢 LOW | Редко NaN |
-| 8 | `sweep[1]` hardcode | 🟢 LOW | Fragile при изменении grid |
+**После round 8 код вычислительно КОРРЕКТЕН** по всем CRITICAL issues:
+- ✅ Actual logits (fix #1)
+- ✅ Device consistency (fix #2)
+- ✅ NaN guard (fix #3)
+- ✅ Sqrt guard (fix #4)
+- ✅ H-norm clamp в u_all (fix #5, но см. #2)
 
----
+**Осталось (не блокируют запуск, но снижают честность):**
 
-## Приоритет для paper v6.0
-
-**До любого запуска (E-39d невалиден без них):**
-
-1. **Fix #1** (псевдо-логиты) — без этого KL не сравним с E-39c_pre, verdict `kl_ok` недостоверен.
-2. **Fix #2** (device) — без этого GPU не запустится.
-3. **Fix #3** (NaN-check) — 3 строки.
-4. **Fix #4** (clamp) — 2 строки.
-
-**После запуска — пересмотреть paper-нарратив:**
-
-- Если E-39d после фикса даст **FAIL** (κ' < 0.005 только при KL ≫ 0.05) — это подтверждает E-39c_pre: training не преодолевает фундаментальный trade-off. **Честный negative result.**
-- Если **PARTIAL** (κ' достигается, но PPL растёт) — тренировка учится чему-то, но ценой поведения.
-- **SUCCESS** — маловероятно, но если да, то требует репликации с actual KL (не proxy).
-
-**Текущая версия E-39d — не может идти в paper.** Оба CRITICAL бага дают смещённые результаты в разных аспектах: #1 искажает KL (систематически), #2 не даёт запустить на GPU. После фикса #1+#2+#3+#4 — 10 минут работы, и код станет **valid** (в отличие от E-39a/E-39c_pre, где было 4-6 раундов).
-
----
-
-## Статус фикса (round 8, commit b918961)
-
-| # | Статус | Что сделано |
+| # | Issue | Impact |
 |---|---|---|
-| 1 | ✅ FIXED | KL + sentinel на **actual logits** `√D·M_K·û` (E-38e факторизация). Верификация: `√D·(û·(W_lm·diag g)ᵀ)` совпадает с настоящим `model.lm_head(model.model.norm(h))` до **9.5e-6** (старый `H@W_lmᵀ` — до 2.69 nats). KL-шлейк, base logits, sentinel-масса — все на actual. Логсумэксп-трюк для readout-only edit **exact** (не proxy): cross-check с полным 2-forward KL на тех же H даёт diff 8.9e-6. Verdict KL (full-dataset) + независимый 2-forward cross-check на C4-доках (первый run) в JSON (`kl_full_2forward_check`). |
-| 2 | ✅ FIXED | `u64_docs = torch.stack(u64_docs).to(device)` — T4 cuda×cpu краш устранён. |
-| 3 | ✅ FIXED | NaN-check **до** `backward/step` (pre-step guard) + повторная проверка `W_rows` после `opt.step()`. |
-| 4 | ✅ FIXED | `clamp(min=1e-20).sqrt()` в flatness (rank-degenerate M_K → нет 0-деления). |
-| 5 | N/A | `kl_safe_alphas`/`budget_note`/`sweep[1]` — **не существуют в E-39d** (паттерны E-39c_pre; проверено grep'ом). |
-| 6 | N/A (опционально) | Selftest rank-deficient — не добавлен (защита #4 покрывает; selftest проверяет корректность top-r, а не degeneracy). |
-| 7 | ✅ FIXED | `H_sub.norm(...).clamp_min(1e-12)` в kl_leash и flatness. |
-| 8 | N/A | См. #5. |
+| 1 | «l_flat ~1e3» stale | Misleading comment |
+| 2 | No clamp в u64_docs | Potential NaN (rare) |
+| 3 | Rank deficiency rewarded | Surrogate game (KL leash guard) |
+| 4 | «9.5e-6» not runtime-verified | Overclaiming |
+| 5-7 | LOW/misc | Minor |
 
-### Побочные эффекты фикса #1 (важно для paper)
+**Рекомендация перед paper v6.0:**
 
-- **Sentinel: 0.0% → 55.4%**. Старый `Σ exp(pseudo_logit)` всегда > 0.5 → «sentinel excluded: 0/4096 (0.0%)» был артефактом. Новый sub-stochastic `Σ_k p_k` (= P128_RAW по определению; поле P128_RAW отсутствует в кэше, но reconstruction точна до 9.5e-6) → 2271/4096 позиций sentinel, 1825 в тренировке. Это **согласуется с E-34** (порог 0.5 калиброван на P128_RAW). Тренировка теперь на ~45% позиций — это честнее, не баг.
-- **PPL base: 28.38 → 34.31**. Причина: `_c4_docs` берёт **streaming C4 без seed** — набор 8 доков не детерминирован между запусками (pre-existing; PPL-код и веса не менялись — PPL считается на оригинальных весах до обучения). Не влияет на verdict (PPL-дифференциал считается внутри одного run по тем же докам), но для репликации paper нужен фикс seed'а в `_c4_docs` (отметить как follow-up).
-- **KL-шкала теперь совпадает с E-39c_pre** (реальные логиты, не temperature-scaled proxy) — сравнение «E-39d KL < 0.05 vs E-39c 6.31» становится валидным.
+1. **Fix #1** — переписать comment (5 мин). Иначе paper-рецензент поймает inconsistency.
+2. **Fix #2** — clamp (1 мин), правильность кода.
+3. **Fix #3** — отметить в limitations (rank deficiency is not covered by the surrogate; KL leash is the only guard).
+4. **Fix #4** — либо runtime verify, либо переформулировать docstring.
 
-### Запуск (round 8 valid)
+**Ожидаемый результат E-39d после fix:**
 
-`experiments/exp39d_l23_training.py` — λ∈{0.01,0.1,1,10} × 3 seeds × 100 steps, CPU. Логи: `/tmp/exp39d_round8.log`, JSON: `results/exp39d_l23_training.json`.
+Скорее всего **FAIL или низкий SUCCESS rate**:
+- Fundamental trade-off (E-39c_pre): κ' < 0.005 requires KL ≫ 0.05
+- Training может найти **лучшее решение**, чем algebra **если** есть структура, которую linear rotation не может exploit
+- Но — E-39c_pre показал, что trade-off **структурный** (all α disjoint), не «optimizer не нашёл»
+- Training с W_lm trainable — **та же степень свободы** (131K params) что и rotation (16×1024 subspace). Может найти немного другое, но не фундаментально проходить trade-off
+
+**Приоритетный прогноз:** E-39d даст 0 SUCCESS, несколько PARTIAL (κ' < 0.005, но PPL/KL проваливаются), подтверждая E-39c_pre negative conclusion. **Это будет честный результат**, подтверждающий, что проблема структурная.
+
+**Если E-39d даст SUCCESS** — это будет сюрприз и важный результат: «training finds structure that algebra misses». Тогда **обязательна репликация** с 3+ seeds и cross-model, чтобы убедиться, что это не seed-luck.
+
+**Текущая версия E-39d — после исправления #1 и #2 — готова к запуску**. Запускать 12 runs × 100 steps = ~10-15 min на CPU, ~2 min на T4. Результат стоит получить до paper v6.0 — это закроет блок 4.8 §E-39d и позволит написать окончательный verdict по E-39 линии.
+
+---
+
+# Round 9 — disposition (применено к коду + верификация)
+
+Round 9: 4 MEDIUM + 3 LOW, **критических нет**. Ни один не меняет динамику обучения (комментарии, defensive-clamp, selftest, документация) → **запущенный run остаётся valid**, правки применены для след. запусков.
+
+| # | Issue | Статус | Что сделано |
+|---|---|---|---|
+| M#1 | «l_flat ~1e3» stale comment | ✅ Fixed | Comment переписан: l_flat ∈ [0, r=16] по построению (rank-r projectors, ‖P_t‖²=tr P_t=r). Реальное base l_flat ≈ **0.187** (live run) — O(0.1), не 1e3. (См. ниже про 3575.4 в старом логе.) |
+| M#2 | No clamp в `u64_docs` | ✅ Fixed | `arr / arr.norm(dim=-1,keepdim=True).clamp_min(1e-12)` — defensive: 0-норма h_t → 0/0=NaN → κ'=NaN → весь sweep заражён. |
+| M#3 | Rank deficiency rewarded (surrogate game) | 📝 Documented, **не чинится кодом** | Это **inherent limitation** surrogate (не bug): rank-degenerate M_K сжимает ‖P_t‖² и «улучшает» l_flat, но κ' (SVD-метрика) растёт. Единственный guard — KL leash (logits K токенов → 0 → KL взрывается). Добавлен **degenerate-case finite-check** в `_selftest_flatness` (rank0 / rank-r → l_flat finite) + комментарий в коде. Penaltу в loss НЕ добавляю (изменит динамику, не требуется для вердикта). |
+| M#4 | «9.5e-6» not runtime-verified | ✅ Fixed | Docstring переформулирован: 9.5e-6 — **offline-верификация при разработке**; runtime-чеки проверяют **формулу** (vs full-softmax KL в `_selftest_kl`) и **магнитуду** на held-out C4 (kl_f_fwd), но **не** пере-доказывают 9.5e-6. |
+| L#5 | kl_full (jcache) vs kl_full_2forward (C4) | ✅ Fixed | Комментарий: два числа на **разных** популяциях (jcache train positions vs C4 PPL docs) → same-ORDER magnitude check, **не** equality; порог max(0.05, 20%) отражает это. |
+| L#6 | `SEEDS[0]` hardcoded в normalizer | ✅ Fixed | Комментарий: нормализатор детерминирован через `SEEDS[0]` (одинаковый norm_idx между runs). |
+| L#7 | `_selftest_flatness` не покрывает degenerate | ✅ Fixed | Добавлен degenerate-check (rank0=0.0, rankr=0.0064, оба finite). |
+
+## Два false-positive, которые я поймал при верификации (важно для честности)
+
+**1. Спурные NaN в `kl_leash` были багом МОИХ тест-скриптов, а не кода.**
+При проверке я написал `H/H.norm(-1, keepdim=True)` — аргумент `-1` попал в `p` (L_p-норма), а не в `dim` → `u` получилась ~7392 (вместо 1.0) → логиты ~5e10 → NaN. Это **тот же bug, что был в round 1**. Реальный код **корректен** (`dim=-1`, строки 147/229/383).
+
+С **корректной** нормализацией на **реальных** jcache данных `kl_leash` совпадает с точным full-vocab KL до **≤3e-6** на всех масштабах edit (1.0→5.0), все значения finite. Запущенный run работает при frozen base p_topK≈**0.42–0.52**.
+
+**2. В формуле `kl_leash` есть (теоретический) float32-cancellation edge при p_topK_base→1**: член `exp(lse_b−m)−Σexp(b_k−m) = (1−p_topK_base)·exp(lse_b−m) → 0 → log(0) → NaN`. Но этот режим **не достигается** (frozen base p_topK≈0.42–0.52, член остаётся ~0.48·exp(…) > 0). Guard (`clamp`) **НЕ добавлен** — он no-op в реальном режиме, а NaN-guard в training-цикле (round 8 #3) — backstop. Для paper: упомянуть как known float32 edge, не для данного run.
+
+## Про «3575.4» в старом логе (red herring)
+
+Старый лог `/tmp/exp39d_run.log` (08:47) показывает `flatness normalizer (base l_flat): 3575.4` и `sentinel excluded: 0/4096`. Это **pre-round-8 v1 код** (до fix #1a/#1b top-r и до actual-logits) — garbage Vt (не projector → ‖P_t‖²≫r) и старый sentinel. **Live run** (19:xx, round 8): `base l_flat = 0.1869`, `sentinel 55.4%`, κ' base 0.015923 — всё согласовано с audit. 3575.4 — артефакт старой версии, не текущий код.
+
+## Состояние live run (на момент правок)
+
+PID 3917103, ~1.5ч из ~2.7ч, на λ=0.1 s2. Ранние результаты: κ' падает 0.0159→0.0044 (λ=0.01), KL_full 0.029<0.05, PPL +12–106%. 2-forward KL (0.069, C4) vs cached-H (0.029, jcache) — same order (разные популяции). Правки в этот запуск **не влияют** (процесс уже загрузил старый .py в память).
+
+## Итог round 9
+
+Код вычислительно КОРРЕКТЕН (CRITICAL закрыты в round 8, верифицировано заново). Round 9 — только честность/robustness: 5 фиксов применено (M#1, M#2, M#4, L#5, L#6, L#7), 1 задокументирован как limitation (M#3), 2 false-positive отклонено с доказательствами. Self-тесты проходят (KL brute + p_topK~0.5; flatness top-r + degenerate-finite).
