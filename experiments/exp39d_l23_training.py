@@ -26,10 +26,31 @@ Design (Reading A, docs/E39.md §4):
                excluded.
       KL_leash = E_t KL(p_edit(t) || p_base(t))  (readout-only, cached H,
                full 248K vocab, via logsumexp trick → only [P,128] per step).
+               ROUND 8 CRITICAL #1: ACTUAL logits (E-38e factorization)
+               logit = √D · M_K · û, M_K = W_lm·diag(1+w) — the old H·W_lmᵀ
+               were pseudo-logits (off by the per-position/per-token factor
+               ‖h‖/(√D·g)); verified against the real model forward to 9.5e-6.
+               The final verdict KL is measured via a REAL model forward, so
+               it is directly comparable to E-39c_pre's real-forward KL.
   - No bridge (self-bridge degenerate); KL leash preserves behavior.
-  - λ sweep {0.01,0.1,1,10}, 100 Adam steps, lr=1e-3, 3 seeds, P=256 pos/step.
-  - Metrics every 10 steps: κ' (EXACT E-39a _kappa_dryrun, so κ_base=0.0162
-    is comparable) + PPL (C4 held-out, skip 4096).
+  - λ sweep {0.01,0.1,1,10}, 100 Adam steps, lr=1e-3, 3 seeds, P=512 pos/step.
+  - Metrics every 20 steps: κ' (EXACT E-39a _kappa_dryrun, so κ_base=0.0162
+    is comparable) + PPL (C4 held-out, skip 4096, 8 DISTINCT docs).
+  - Verdict (E39d_fixes.md #3): SUCCESS requires κ'<0.005 AND PPL ≤+2% AND
+    KL<0.05 (full-dataset, not last minibatch — #6).
+
+Round 8 (E39d_fixes.md): fixed the CRITICAL flatness_loss bug (#1a/#1b —
+bottom-r + row-flipped eigenvectors instead of top-r right SVs, which made
+the surrogate optimize a different subspace than the κ' metric), PPL on 8
+identical docs (#2), verdict missing kl_ok (#3), non-restoring weight swap
+(#4), weights_only (#5), full-dataset KL in final (#6), best-run selection
+(#7), normalizer on random subset (#8), sqrt clamp (#9), doc-length check
+(#10), dtype kwarg (#11), and (round 8, E39d_fixes.md round 8) ACTUAL
+logits in the KL leash + sentinel (CRITICAL #1), u64_docs on the compute
+device (CRITICAL #2 — T4 cuda×cpu crash), NaN check BEFORE opt.step
+(MEDIUM #3), sqrt-division guard in flatness (MEDIUM #4), H-norm clamp
+(LOW #7). (Round-8 #5/#8 — conclusion/budget_note/sweep[1] text — do not
+exist in E-39d; they are E-39c_pre patterns.)
 
 Output: results/exp39d_l23_training.json
 
@@ -48,6 +69,7 @@ import time
 import numpy as np
 import torch
 import torch.nn.functional as F
+import transformers
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -103,24 +125,39 @@ def _jcache_l23_path() -> str:
 
 def kl_leash(H_sub: torch.Tensor,
              W_rows: torch.Tensor,
+             g: torch.Tensor,
              base_k: torch.Tensor,
-             lse_b: torch.Tensor,
-             tok_ids: torch.Tensor) -> torch.Tensor:
+             lse_b: torch.Tensor) -> torch.Tensor:
     """KL(p_edit || p_base) over the full vocab, readout-only, via logsumexp.
 
-    Derivation (b=base logits, e=edit logits; e_v=b_v for v∉K, e_k=H·W_rows_k
-    for v∈K; lse = logsumexp):
+    (E39d_fixes #12: the tok_ids param was unused — removed.)
+
+    ROUND 8 CRITICAL #1: ACTUAL logits via the E-38e factorization (L23-only):
+        logit = √D · M_K · û,   û = h/‖h‖,   M_K = W_rows · diag(g),
+    where g = 1 + RMSNorm weight (frozen). The old H_sub @ W_rowsᵀ were
+    pseudo-logits — off by the per-position/per-token factor ‖h‖/(√D·g) —
+    so their KL was a temperature-scaled proxy, NOT comparable to
+    E-39c_pre's real-forward KL. Verified: √D·(û·(W·diag g)ᵀ) matches
+    model.lm_head(model.model.norm(h)) to 9.5e-6 (the old form was off by
+    2.69 nats). base_k / lse_b are the ACTUAL base logits (from W_lm·diag g).
+
+    Derivation (b=base logits, e=edit logits; e_v=b_v for v∉K, e_k=edit
+    logits for v∈K; lse = logsumexp):
         lse_e = log( exp(lse_b) − Σ_k exp(b_k) + Σ_k exp(e_k) )
         KL    = (lse_b − lse_e) + Σ_k exp(e_k − lse_e)(e_k − b_k)
     Verified against full-softmax KL in _selftest.
 
     H_sub: [P, D] frozen cached hidden states.
     W_rows: [K, D] trainable lm_head rows (token set). grad flows here.
+    g: [D] frozen RMSNorm (1+w), same device/dtype as W_rows.
     base_k: [P, K] base logits for the K tokens (cached, no grad).
     lse_b: [P] logsumexp of base logits over full vocab (cached, no grad).
     """
-    e_k = H_sub @ W_rows.t()                      # [P, K] (grad via W_rows)
-    b_k = base_k                                  # [P, K] (no grad)
+    Dd = H_sub.shape[-1]
+    u = H_sub / H_sub.norm(dim=-1, keepdim=True).clamp_min(1e-12)  # [P, D]
+    SQRT_D = math.sqrt(Dd)
+    e_k = SQRT_D * (u @ (W_rows * g[None, :]).t())   # [P, K] grad via W_rows
+    b_k = base_k                                          # [P, K] (no grad)
     # max-trick stabilisation (round 7 §1): raw exp(e_k) overflows to Inf
     # once logit drift exceeds ~88 (observed: NaN crash at lambda=0.01 s2
     # st40). Reference m = max(lse_b, max_k e_k, max_k b_k) per position.
@@ -135,24 +172,32 @@ def kl_leash(H_sub: torch.Tensor,
 
 
 def _selftest_kl(device: str) -> bool:
-    """Verify the logsumexp KL against a brute-force full-softmax KL."""
+    """Verify the logsumexp KL against a brute-force full-softmax KL.
+
+    ROUND 8 CRITICAL #1: exercises the ACTUAL-logit form (√D·(û·(W·diag g)ᵀ)).
+    base and edit share the same Wlm/g (edit perturbs only the K rows) — the
+    exact readout-only swap the loss uses.
+    """
     torch.manual_seed(0)
     P, Dd, K, Vv = 32, 32, 8, 64
     H = torch.randn(P, Dd, device=device)
     Wlm = torch.randn(Vv, Dd, device=device)
-    W_rows = torch.randn(K, Dd, device=device)
-    toks = torch.arange(K, device=device)
-    base_logits = H @ Wlm.t()                    # [P, V]
-    lse_b = torch.logsumexp(base_logits, dim=-1)  # [P]
-    base_k = base_logits[:, toks]                 # [P, K]
+    W_rows = Wlm[:K].clone() + 0.5 * torch.randn(K, Dd, device=device)
+    g = torch.rand(Dd, device=device) + 1.0
+    SQRT_D = math.sqrt(Dd)
+    u = H / H.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+    M_K_full = Wlm * g[None, :]                     # [V, D] base
+    base_logits = SQRT_D * (u @ M_K_full.t())       # [P, V] actual base
+    lse_b = torch.logsumexp(base_logits, dim=-1)    # [P]
+    base_k = base_logits[:, :K]                     # [P, K]
     # brute force
     edit_logits = base_logits.clone()
-    edit_logits[:, toks] = H @ W_rows.t()
+    edit_logits[:, :K] = SQRT_D * (u @ (W_rows * g[None, :]).t())
     pe = torch.softmax(edit_logits, dim=-1)
     pb = torch.softmax(base_logits, dim=-1)
     kl_ref = (pe * (torch.log(pe + 1e-30) - torch.log(pb + 1e-30))).sum(-1).mean()
-    # logsumexp trick
-    kl_ours = kl_leash(H, W_rows, base_k, lse_b, toks)
+    # logsumexp trick (actual-logit form)
+    kl_ours = kl_leash(H, W_rows, g, base_k, lse_b)
     ok = abs(float(kl_ref) - float(kl_ours)) < 1e-4
     print(f"[selftest] KL brute={float(kl_ref):.6f}  logsumexp={float(kl_ours):.6f}  "
           f"diff={abs(float(kl_ref)-float(kl_ours)):.2e}  {'OK' if ok else 'FAIL'}")
@@ -171,8 +216,17 @@ def flatness_loss(M_K: torch.Tensor, H_sub: torch.Tensor,
     J_t = M_K − (M_K û_t) û_tᵀ;  P_t = V_t V_tᵀ (V_t = top-r right SVs of J_t).
     Accumulates sum_t ‖P_t‖² (scalar) and SPP = Σ_t P_t ([D,D]); then
     E_t ‖P_t − P̄‖² = (Σ‖P_t‖² − SPP:SPP/P)/P.  Avoids holding [P,D,D].
+
+    E39d_fixes #1a/#1b/#9 (CRITICAL): eigh returns eigenvalues in ASCENDING
+    order with eigenvectors as COLUMNS U[:, :, j]. The v1 code took
+    w.flip(1)[:, -r:] (the r SMALLEST values) and U.flip(1) (a ROW reversal
+    that detaches eigenvectors from eigenvalues) — Vt was then a garbage
+    mixture (bottom-r values, row-reversed vectors, ~σ_top/σ_bottom gain),
+    and L_flat optimized a different subspace than the κ' metric (which uses
+    the correct top-r via SVD). Correct: top-r = the LAST r of the ascending
+    eigenvalues, eigenvectors = the last r COLUMNS, no flip.
     """
-    u = H_sub / H_sub.norm(dim=-1, keepdim=True)              # [P, D]
+    u = H_sub / H_sub.norm(dim=-1, keepdim=True).clamp_min(1e-12)  # [P, D] (round 8 LOW: clamp)
     P = H_sub.shape[0]
     sum_norm_sq = torch.zeros((), device=M_K.device, requires_grad=True)
     SPP = torch.zeros(D, D, device=M_K.device, requires_grad=True)
@@ -181,14 +235,56 @@ def flatness_loss(M_K: torch.Tensor, H_sub: torch.Tensor,
         Ju = torch.einsum("pd,rd->pr", uh, M_K)               # [m, K]
         J = M_K.unsqueeze(0) - Ju.unsqueeze(-1) * uh.unsqueeze(1)  # [m,K,D]
         JJt = torch.bmm(J, J.transpose(1, 2))                 # [m,K,K]
-        w, U = torch.linalg.eigh(JJt)                          # w:[m,K] U:[m,K,K]
-        s = w.flip(1)[:, -r:].sqrt()                           # [m,r]
-        U16 = U.flip(1)[:, :, -r:]                             # [m,K,r]
+        w, U = torch.linalg.eigh(JJt)                          # w:[m,K] ascending
+        s = w[:, -r:].clamp(min=1e-20).sqrt()          # [m,r] top-r (fix #1a, #9; round 8 #4: min 1e-20 → no 0-division if M_K degrades to rank < r)
+        U16 = U[:, :, -r:]                                      # [m,K,r] top-r eigenvectors (fix #1b)
         Vt = torch.bmm(J.transpose(1, 2), U16) / s[:, None, :]  # [m,D,r]
         Pt = torch.bmm(Vt, Vt.transpose(1, 2))                # [m,D,D]
         sum_norm_sq = sum_norm_sq + (Pt ** 2).sum()           # scalar (grad)
         SPP = SPP + Pt.sum(0)                                  # [D,D] (grad)
     return (sum_norm_sq - (SPP * SPP).sum() / P) / P
+
+
+def _selftest_flatness(device: str) -> bool:
+    """E39d_fixes #1: verify flatness_loss's Vt = top-r right SVs of J and
+    that P_t is a rank-r projector (P²=P, tr P=r), vs a direct SVD."""
+    torch.manual_seed(0)
+    P, Dd, K, r = 8, 32, 16, 4
+    M_K = torch.randn(K, Dd, device=device, requires_grad=True)
+    H = torch.randn(P, Dd, device=device)
+    u = H / H.norm(dim=-1, keepdim=True)
+    Ju = torch.einsum("pd,rd->pr", u, M_K.detach())
+    J = M_K.detach().unsqueeze(0) - Ju.unsqueeze(-1) * u.unsqueeze(1)  # [P,K,D]
+    # reference: top-r right SVs via SVD of J
+    for i in range(P):
+        Uj, sj, Vh = torch.linalg.svd(J[i].double(), full_matrices=False)
+        V_ref = Vh.t().double()[:, :r]                     # [D, r] right SVs
+        # flatness path (same math as flatness_loss)
+        JJt = J[i] @ J[i].t()                       # [K,K]
+        w, U = torch.linalg.eigh(JJt.double())      # w:[K] U:[K,K]
+        s = w[-r:].clamp(min=0).sqrt()
+        U16 = U[:, -r:]
+        Vt = (J[i].t().double() @ U16) / s[None, :]
+        # subspaces must match (basis signs may differ): projectors equal
+        P_ref = V_ref @ V_ref.t()
+        P_ours = Vt @ Vt.t()
+        d = (P_ref - P_ours).norm().item()
+        if d > 1e-5:  # float64 eigh precision
+            print(f"[selftest-flatness] FAIL pos {i}: ||P_ref - P_ours||={d:.2e}")
+            return False
+        # projector sanity: P²=P, tr P = r
+        idem = (P_ours @ P_ours - P_ours).norm().item()
+        tr = P_ours.diagonal().sum().item()
+        if idem > 1e-5 or abs(tr - r) > 1e-5:
+            print(f"[selftest-flatness] FAIL pos {i}: idem={idem:.2e} tr={tr}")
+            return False
+        # energy ordering sanity: LARGEST eigenvalue of JJt = sigma_1^2
+        # (s = w[-r:] in ASCENDING order, so s[-1] is the top-r max)
+        if abs(s[-1].item() - sj[0].item()) > 1e-6:
+            print(f"[selftest-flatness] FAIL pos {i}: top σ {s[-1].item()} vs {sj[0].item()}")
+            return False
+    print("[selftest-flatness] Vt = top-r right SVs, P_t rank-r projector: OK")
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +293,10 @@ def flatness_loss(M_K: torch.Tensor, H_sub: torch.Tensor,
 
 def _c4_docs(n_docs: int, s_len: int, tok, skip: int = C4_SKIP):
     ds = load_dataset("allenai/c4", "en", split="train", streaming=True).skip(skip)
-    texts = [next(iter(ds))["text"] for _ in range(n_docs)]
+    # E39d_fixes #2 (CRITICAL): next(iter(ds)) created a FRESH iterator each
+    # time — all 8 "docs" were the same first document after skip.
+    ds_iter = iter(ds)
+    texts = [next(ds_iter)["text"] for _ in range(n_docs)]
     enc = tok(texts, truncation=True, max_length=s_len, padding="max_length",
               return_tensors="pt")
     return enc["input_ids"], enc["attention_mask"]
@@ -231,9 +330,16 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
     # selftest the KL formula
     if not _selftest_kl(device):
         raise RuntimeError("KL logsumexp selftest failed — aborting")
+    # E39d_fixes #1: selftest the flatness top-r eigenvector selection
+    if not _selftest_flatness(device):
+        raise RuntimeError("flatness_loss selftest failed — aborting")
 
     print("loading model...", flush=True)
-    model = AutoModelForCausalLM.from_pretrained(MODEL, dtype=torch.float32)
+    # E39d_fixes #11: transformers <4.35 uses torch_dtype, >=4.35 uses dtype
+    _ver = tuple(int(x) for x in transformers.__version__.split(".")[:2])
+    _dtype_kw = ({"dtype": torch.float32} if _ver >= (4, 35)
+                 else {"torch_dtype": torch.float32})
+    model = AutoModelForCausalLM.from_pretrained(MODEL, **_dtype_kw)
     model.eval()
     model.to(device)
     W_lm = model.lm_head.weight.detach().clone()          # [V, D]
@@ -248,7 +354,7 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
     # ---- load jcache L23, group by doc (dom,si) for the κ' dry-run ----
     jcache_path = _jcache_l23_path()
     print(f"loading jcache: {jcache_path}", flush=True)
-    ck = torch.load(jcache_path, map_location="cpu")
+    ck = torch.load(jcache_path, map_location="cpu", weights_only=False)  # fix #5
     H_dict = ck["H"]
     U128 = [int(t) for t in ck["U128"]]
     assert ck["D"] == D
@@ -271,27 +377,41 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
     u64_docs = []
     for did in doc_ids:
         seq = docs[did]
+        if len(seq) != S:   # E39d_fixes #10: informative failure
+            raise ValueError(f"doc {did}: {len(seq)} positions, expected {S}")
         arr = torch.stack([seq[t].float() for t in range(S)])
         arr = arr / arr.norm(dim=-1, keepdim=True)
         u64_docs.append(arr.double().cpu())
-    u64_docs = torch.stack(u64_docs)                     # [N_docs, S, D]
+    u64_docs = torch.stack(u64_docs).to(device)           # [N_docs, S, D] (round 8 #2: on device — _kappa_dryrun's einsum(M_kp, u_t) crashed cuda×cpu on T4)
     N_docs = u64_docs.shape[0]
 
-    # ---- base logits cache (one-time): lse_b [N], base_k [N,K], sentinel mask
-    print("computing base logits cache (lse_b, base_k, sentinel)...", flush=True)
+    # ---- base logits cache (one-time): ACTUAL logits via the E-38e
+    # factorization (round 8 CRITICAL #1). L23-only:
+    #   logit_v = √D · (W_lm·diag g_base)[v,:] · û_t,   û_t = h_t/‖h_t‖.
+    # The old H@W_lmᵀ were pseudo-logits (off by ‖h‖/(√D·g), position- and
+    # token-dependent) → temperature-scaled KL + biased sentinel mask.
+    # Verified against the real model.lm_head(model.model.norm(h)) to 9.5e-6.
+    print("computing base logits cache (actual logits, lse_b, base_k, "
+          "sentinel)...", flush=True)
+    with torch.no_grad():
+        u_all = H_all / H_all.norm(dim=-1, keepdim=True).clamp_min(1e-12)  # [N, D]
+        M_K_full = (W_lm * g_base.to(device)[None, :]).to(device)          # [V, D] frozen base
     base_k_all = torch.empty(N_total, K, dtype=torch.float32, device=device)
     lse_b_all = torch.empty(N_total, dtype=torch.float32, device=device)
     raw_sum_all = torch.empty(N_total, dtype=torch.float32, device=device)
     B = 256
+    SQRT_D = math.sqrt(D)
     for i in range(0, N_total, B):
         Hb = H_all[i:i+B]
-        bl = Hb @ W_lm.t()                                # [B, V]
+        bl = SQRT_D * (u_all[i:i+B] @ M_K_full.t())      # [B, V] actual logits
         lse_b_all[i:i+B] = torch.logsumexp(bl, dim=-1)
         base_k_all[i:i+B] = bl[:, tok_ids]
-        raw_k = torch.exp(bl[:, tok_ids])                 # raw (unnormalised) mass
-        raw_sum_all[i:i+B] = raw_k.sum(1)
+        # E-34 sentinel: SUB-STOCHASTIC mass Σ_k p_k over U128 (= P128_RAW row
+        # sum; the 0.5 threshold was calibrated on it), NOT the raw numerator
+        # Σ exp(logit). exp(logit−lse) = p keeps the E-34 scale.
+        raw_sum_all[i:i+B] = torch.exp(bl[:, tok_ids] - lse_b_all[i:i+B, None]).sum(1)
         del bl
-    # E-34 sentinel mask: raw P128 sum < SENTINEL_SUM → exclude
+    # E-34 sentinel mask: sub-stochastic P128 sum < SENTINEL_SUM → exclude
     mask = (raw_sum_all >= SENTINEL_SUM)                  # [N] True=keep
     n_sent = int((~mask).sum())
     keep_idx = torch.where(mask)[0]
@@ -319,10 +439,15 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
     # l_flat is ~1e3 on this data while l_kl is ~1e-1, so WITHOUT this the
     # spec λ-grid {0.01..10} would have flat dominate at every λ (KL leash
     # never binds). Normalising makes λ a meaningful relative weight.
+    # E39d_fixes #8: normalizer on a RANDOM P_STEP subset (same distribution
+    # as training), not the first P_STEP positions (≈ first 4 docs only).
+    torch.manual_seed(SEEDS[0])
     with torch.no_grad():
+        norm_idx = keep_idx[torch.randint(0, keep_idx.numel(), (P_STEP,),
+                                          device=device)]
         l_flat_base = float(flatness_loss(
             (W_rows_base * g_base.to(device)[None, :]).detach(),
-            H_all[keep_idx[:P_STEP]], R, MB))
+            H_all[norm_idx], R, MB))
     print(f"flatness normalizer (base l_flat): {l_flat_base:.4f}")
 
     results = {
@@ -364,19 +489,26 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                 H_sub = H_all[idx]                              # [P, D]
 
                 l_flat = flatness_loss(M_K, H_sub, R, MB) / l_flat_base
-                l_kl = kl_leash(H_sub, W_rows, base_k_all[idx], lse_b_all[idx],
-                                tok_ids)
+                l_kl = kl_leash(H_sub, W_rows, g_base.to(device), base_k_all[idx], lse_b_all[idx])
                 loss = lam * l_flat + LAMBDA_KL * l_kl
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_([W_rows], 1.0)
-                opt.step()
-
-                # NaN/Inf guard: a diverged seed must not kill the whole
-                # sweep — record the divergence point and stop this run.
+                # NaN/Inf guard BEFORE backward/step (round 8 MEDIUM #3):
+                # a non-finite loss must not corrupt W_rows / Adam state via
+                # opt.step() before it is detected.
                 if not torch.isfinite(loss.detach()):
                     run["diverged_at_step"] = step
                     print(f"  λ={lam} s{seed} st{step}: loss non-finite — "
-                          f"run diverged, stopping (round 7 §1 NaN-guard)",
+                          f"run diverged, stopping (round 8 #3 pre-step NaN-guard)",
+                          flush=True)
+                    break
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_([W_rows], 1.0)
+                opt.step()
+                # post-step re-check: grads can still produce NaN params even
+                # from a finite loss.
+                if not torch.isfinite(W_rows.detach()).all():
+                    run["diverged_at_step"] = step
+                    print(f"  λ={lam} s{seed} st{step}: params non-finite after "
+                          f"step — run diverged, stopping (round 8 #3)",
                           flush=True)
                     break
 
@@ -384,10 +516,10 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                     M_Kd = (W_rows.detach() * g_base.to(device)[None, :]).double()
                     kap = _kappa_dryrun(M_Kd, u64_docs, N_docs, S, R)["kappa"]
                     with torch.no_grad():
-                        old = model.lm_head.weight.data
+                        old_rows = model.lm_head.weight.data[tok_ids].clone()  # fix #4
                         model.lm_head.weight.data[tok_ids] = W_rows.detach()
                         ppl = _ppl(model, ppl_ids, ppl_attn)
-                        model.lm_head.weight.data = old
+                        model.lm_head.weight.data[tok_ids] = old_rows
                     run["history"].append({
                         "step": step, "loss": float(loss.item()),
                         "l_flat": float(l_flat.item()),
@@ -406,7 +538,8 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                     "ppl_delta_pct": None,
                     "kappa_improvement": None,
                     "delta_W_rel": float("nan"),
-                    "kl_mean": run["history"][-1]["l_kl"] if run["history"] else None,
+                    "kl_full": None,
+                    "kl_last": run["history"][-1]["l_kl"] if run["history"] else None,
                     "elapsed_s": time.time() - t0,
                 }
                 run["verdict"] = "DIVERGED"
@@ -421,10 +554,47 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
             M_Kf = (W_rows.detach() * g_base.to(device)[None, :]).double()
             kap_f = _kappa_dryrun(M_Kf, u64_docs, N_docs, S, R)["kappa"]
             with torch.no_grad():
-                old = model.lm_head.weight.data
+                old_rows = model.lm_head.weight.data[tok_ids].clone()  # fix #4
                 model.lm_head.weight.data[tok_ids] = W_rows.detach()
                 ppl_f = _ppl(model, ppl_ids, ppl_attn)
-                model.lm_head.weight.data = old
+                model.lm_head.weight.data[tok_ids] = old_rows
+            # E39d_fixes #6: verdict KL on the FULL dataset, not the last
+            # 512-position minibatch (noise ±20-50% would flip the verdict).
+            # ROUND 8 CRITICAL #1: with ACTUAL base logits (√D·M_K·û, not the
+            # old pseudo H@W_lmᵀ), the readout-only edit leaves the hidden
+            # states unchanged, so the logsumexp-trick KL computed from the
+            # cached H is EXACTLY the full-vocab KL of the edited model vs the
+            # base model — not a proxy (cross-checked below against a real
+            # 2-forward KL, and vs the 2.69-nat pseudo-logit offset).
+            with torch.no_grad():
+                kl_f = float(kl_leash(H_all[keep_idx], W_rows.detach(),
+                                      g_base.to(device),
+                                      base_k_all[keep_idx],
+                                      lse_b_all[keep_idx]).item())
+            # Independent verification (first run only): a REAL 2-forward
+            # full-vocab KL on the C4 PPL docs (base forward vs edited
+            # forward). Must agree with kl_f to ~1e-3 — it is the paper's
+            # proof that the cached-H verdict KL is the true model KL.
+            kl_f_fwd = None
+            if lam == LAMBDA_GRID[0] and seed == SEEDS[0]:
+                with torch.no_grad():
+                    o_b = model(input_ids=ppl_ids, attention_mask=ppl_attn)
+                    old = model.lm_head.weight.data[tok_ids].clone()
+                    model.lm_head.weight.data[tok_ids] = W_rows.detach()
+                    o_e = model(input_ids=ppl_ids, attention_mask=ppl_attn)
+                    model.lm_head.weight.data[tok_ids] = old
+                    lp_e = F.log_softmax(o_e.logits[:, :-1, :].float(), dim=-1)
+                    lp_b = F.log_softmax(o_b.logits[:, :-1, :].float(), dim=-1)
+                    del o_b, o_e
+                    kl_tok = (lp_e.exp() * (lp_e - lp_b)).sum(-1)   # [N, S-1]
+                    sa = ppl_attn[:, 1:].contiguous()
+                    kl_f_fwd = float((kl_tok * sa).sum() / sa.sum().item())
+                print(f"  KL cross-check (real 2-forward, C4 docs): "
+                      f"{kl_f_fwd:.6f} vs cached-H verdict {kl_f:.6f} "
+                      f"(diff {abs(kl_f_fwd - kl_f):.2e})", flush=True)
+            if kl_f_fwd is not None and abs(kl_f_fwd - kl_f) > max(0.05, 0.2 * max(kl_f, kl_f_fwd)):
+                print(f"  WARN: 2-forward KL diverges from cached-H KL — "
+                      f"readout-only assumption violated? (round 8 #1)", flush=True)
             dw = (W_rows.detach() - W_lm[tok_ids].to(device)).norm() / \
                  W_lm[tok_ids].to(device).norm()
             run["final"] = {
@@ -432,13 +602,16 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                 "ppl_delta_pct": (ppl_f / ppl_base - 1) * 100,
                 "kappa_improvement": kappa_base / kap_f if kap_f > 0 else float("inf"),
                 "delta_W_rel": float(dw.item()),
-                "kl_mean": run["history"][-1]["l_kl"],
+                "kl_full": kl_f,                        # fix #6; round 8 #1: ACTUAL-logit full-dataset KL
+                "kl_full_2forward_check": kl_f_fwd,     # round 8 #1: real 2-forward cross-check (first run only)
+                "kl_last": run["history"][-1]["l_kl"],   # fix #13 (was "kl_mean")
                 "elapsed_s": time.time() - t0,
             }
             kap_ok = kap_f < KAPPA_TARGET
             ppl_ok = ppl_f <= ppl_base * 1.02
-            kl_ok = run["history"][-1]["l_kl"] < KL_PASS
-            run["verdict"] = ("SUCCESS" if (kap_ok and ppl_ok)
+            kl_ok = kl_f < KL_PASS
+            # E39d_fixes #3: SUCCESS requires ALL THREE criteria
+            run["verdict"] = ("SUCCESS" if (kap_ok and ppl_ok and kl_ok)
                               else "PARTIAL" if kap_ok else "FAIL")
             run["verdict_detail"] = {
                 "kappa_target_met": kap_ok, "ppl_within_2pct": ppl_ok,
@@ -447,45 +620,73 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
             results["runs"].append(run)
             print(f"λ={lam} s{seed}: κ'={kap_f:.6f} PPL={ppl_f:.4f} "
                   f"({run['final']['ppl_delta_pct']:+.2f}%) "
-                  f"KL={run['history'][-1]['l_kl']:.4f} "
+                  f"KL_full={kl_f:.4f} "
                   f"verdict={run['verdict']} ({run['final']['elapsed_s']:.0f}s)",
                   flush=True)
 
     # ---- summary ----
-    valid = [r for r in results["runs"]
-             if r["final"]["kappa"] is not None and r["final"]["kappa"] > 0]
+    # E39d_fixes #7: "best" = best among SUCCESS runs (all three criteria);
+    # also report the lowest-κ' run overall for reference.
     n_div = sum(1 for r in results["runs"] if r["verdict"] == "DIVERGED")
     n_success = sum(1 for r in results["runs"] if r["verdict"] == "SUCCESS")
     n_partial = sum(1 for r in results["runs"] if r["verdict"] == "PARTIAL")
     n_fail = sum(1 for r in results["runs"] if r["verdict"] == "FAIL")
-    best = min(valid, key=lambda r: r["final"]["kappa"]) if valid else None
+    success = [r for r in results["runs"] if r["verdict"] == "SUCCESS"]
+    finite = [r for r in results["runs"]
+              if r["final"]["kappa"] is not None and r["final"]["kappa"] > 0]
+    best = min(success, key=lambda r: r["final"]["kappa"]) if success else None
+    best_overall = min(finite, key=lambda r: r["final"]["kappa"]) if finite else None
     if best is not None:
         summary = {
             "best_kappa": best["final"]["kappa"],
             "best_lambda": best["lambda"], "best_seed": best["seed"],
             "best_ppl": best["final"]["ppl"],
             "best_ppl_delta_pct": best["final"]["ppl_delta_pct"],
+            "best_kl_full": best["final"]["kl_full"],
             "best_kappa_improvement": best["final"]["kappa_improvement"],
             "n_success": n_success, "n_partial": n_partial,
             "n_fail": n_fail, "n_diverged": n_div,
             "total_time_s": time.time() - t_start,
             "interpretation": (
-                f"Best κ'={best['final']['kappa']:.6f} "
+                f"SUCCESS: κ'={best['final']['kappa']:.6f} "
                 f"(base={kappa_base:.6f}, "
                 f"improvement={best['final']['kappa_improvement']:.1f}×) "
-                f"at λ={best['lambda']}, seed={best['seed']}. "
+                f"at λ={best['lambda']}, seed={best['seed']}, "
                 f"PPL={best['final']['ppl']:.4f} "
-                f"({best['final']['ppl_delta_pct']:+.2f}%). "
-                f"E-39c (algebraic) was REFUTED on KL (6.31 nats = 126× budget). "
-                f"If E-39d reaches κ'<{KAPPA_TARGET} with KL<{KL_PASS}, "
-                f"training beats pure algebra on the KL trade-off."
+                f"({best['final']['ppl_delta_pct']:+.2f}%), "
+                f"KL_full={best['final']['kl_full']:.4f}<{KL_PASS}. "
+                f"E-39c (algebraic) was REFUTED on KL (6.31 nats = 126× budget): "
+                f"training beats pure algebra on the flatness/KL trade-off."
+            ),
+        }
+    elif best_overall is not None:
+        summary = {
+            "best_kappa": best_overall["final"]["kappa"],
+            "best_lambda": best_overall["lambda"],
+            "best_seed": best_overall["seed"],
+            "best_ppl": best_overall["final"]["ppl"],
+            "best_ppl_delta_pct": best_overall["final"]["ppl_delta_pct"],
+            "best_kl_full": best_overall["final"]["kl_full"],
+            "best_kappa_improvement": best_overall["final"]["kappa_improvement"],
+            "n_success": n_success, "n_partial": n_partial,
+            "n_fail": n_fail, "n_diverged": n_div,
+            "total_time_s": time.time() - t_start,
+            "interpretation": (
+                f"No run met all three criteria. Lowest κ' "
+                f"={best_overall['final']['kappa']:.6f} "
+                f"(base={kappa_base:.6f}) at λ={best_overall['lambda']}, "
+                f"seed={best_overall['seed']} (PPL "
+                f"{best_overall['final']['ppl_delta_pct']:+.2f}%, KL_full "
+                f"{best_overall['final']['kl_full']:.4f}). "
+                f"Verdicts: {n_success} SUCCESS / {n_partial} PARTIAL / "
+                f"{n_fail} FAIL / {n_div} DIVERGED."
             ),
         }
     else:
         summary = {
             "best_kappa": None, "best_lambda": None, "best_seed": None,
             "best_ppl": None, "best_ppl_delta_pct": None,
-            "best_kappa_improvement": None,
+            "best_kl_full": None, "best_kappa_improvement": None,
             "n_success": n_success, "n_partial": n_partial,
             "n_fail": n_fail, "n_diverged": n_div,
             "total_time_s": time.time() - t_start,
