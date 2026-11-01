@@ -1,0 +1,34 @@
+U SVD ...
+loading model fp32 ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:40,  7.86it/s]Loading weights:  71%|███████▏  | 228/320 [00:00<00:00, 1203.99it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1062.34it/s]
+C4 docs: torch.Size([8, 128]) (skip 4096)
+base forward ...
+KL decomposition (full / head_only / embed_only) ...
+  KL t≥1: full=6.3146 head_only=1.3594 embed_only=5.2279
+α-blend sweep (KL + per-α κ' dry-run, round 4: KL-budget vs flattening-target trade-off) ...
+  α=0.0  KL(t≥1)=  0.0000 row=0.000 |Vm.Vt|=4.000 pert=0.000/0.000 (exp 0.000) κ'=0.0159 clean=True KL<0.05=True κ'<0.005=False
+  α=0.01 KL(t≥1)=  0.1347 row=0.243 |Vm.Vt|=3.980 pert=0.100/0.100 (exp 0.100) κ'=0.0157 clean=True KL<0.05=False κ'<0.005=False
+  α=0.02 KL(t≥1)=  0.5808 row=0.343 |Vm.Vt|=3.960 pert=0.142/0.142 (exp 0.142) κ'=0.0156 clean=True KL<0.05=False κ'<0.005=False
+  α=0.05 KL(t≥1)=  2.3306 row=0.542 |Vm.Vt|=3.899 pert=0.225/0.225 (exp 0.225) κ'=0.0151 clean=True KL<0.05=False κ'<0.005=False
+  α=0.08 KL(t≥1)=  2.8126 row=0.686 |Vm.Vt|=3.837 pert=0.286/0.286 (exp 0.286) κ'=0.0146 clean=True KL<0.05=False κ'<0.005=False
+  α=0.1  KL(t≥1)=  2.9752 row=0.768 |Vm.Vt|=3.795 pert=0.320/0.320 (exp 0.320) κ'=0.0142 clean=True KL<0.05=False κ'<0.005=False
+  α=0.2  KL(t≥1)=  3.6347 row=1.087 |Vm.Vt|=3.578 pert=0.460/0.460 (exp 0.460) κ'=0.0125 clean=True KL<0.05=False κ'<0.005=False
+  α=0.5  KL(t≥1)=  5.5169 row=1.725 |Vm.Vt|=2.828 pert=0.765/0.765 (exp 0.765) κ'=0.0077 clean=True KL<0.05=False κ'<0.005=False
+  α=0.7  KL(t≥1)=  6.2860 row=2.051 |Vm.Vt|=2.191 pert=0.951/0.951 (exp 0.951) κ'=0.0046 clean=True KL<0.05=False κ'<0.005=True
+  α=0.9  KL(t≥1)=  6.7549 row=2.345 |Vm.Vt|=1.265 pert=1.169/1.169 (exp 1.169) κ'=0.0016 clean=True KL<0.05=False κ'<0.005=True
+  α=1.0  KL(t≥1)=  6.7276 row=2.516 |Vm.Vt|=0.000 pert=1.414/1.414 (exp 1.414) κ'=0.0001 clean=True KL<0.05=False κ'<0.005=True
+§5.3 V_new strategy sensitivity (full surgery, α=1) ...
+  a_random     KL(t≥1)=6.0994  ρ_noise=0.00019 κ'=0.0003 |Vn.Vt|=0.509 KL<0.05=False κ'<0.005=True
+  b_principal  KL(t≥1)=5.2236  ρ_noise=0.00026 κ'=0.0004 |Vn.Vt|=1.122 KL<0.05=False κ'<0.005=True
+  c_balanced   KL(t≥1)=6.5948  ρ_noise=0.00021 κ'=0.0004 |Vn.Vt|=1.011 KL<0.05=False κ'<0.005=True
+
+§3 KL-vs-κ' trade-off (round 4): KL-safe α=[] | κ'-safe α=[0.7, 0.9, 1.0] | both=[] | KL=budget crossing α≈None
+
+E-39c_pre done in 1176.2s → /home/survivor/work/prism/results/exp39c_pre_kl_surgery.json
+gate (α=1 full, t≥1): FAIL (mean KL 6.31458 < 0.05)
+α-sweep: non-trivial α with KL<0.05 = []; min KL over α>0 = 0.1347 (2.69× budget at α=0.01)
+§3 trade-off (round 4): KL-safe α=[] | κ'-safe α=[0.7, 0.9, 1.0] | BOTH=[] (DISJOINT — no α satisfies both)
+a_random κ' dry-run = 0.0003 (E-39a: 0.0002969915962521594; |diff| = 0.0000)
+flattening side: per-α κ' dry-run (round 4); α=1 ref =0.0002969915962521594 < 0.005
+§5.3 strategy sensitivity: any V_new direction KL-safe = False

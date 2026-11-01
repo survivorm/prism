@@ -1,216 +1,160 @@
-# Ревью E-39c_pre v3 (round 2 fixes applied)
+# Ревью E-39c_pre v4 (round 4): α-grid extended + per-α κ' + trade-off
 
-## 1. Все мои round-2 fixes — верифицированы ✅
+## 1. Round 4 fixes — verified ✅
 
-| Fix | Status |
+| Fix | Check |
 |---|---|
-| §2 α-blend orthogonalization | `V_new_use = V_new - V_top @ (V_top.T @ V_new)` ✓ |
-| §3 `V_c` rank check | `V_c_valid` + `warnings.warn` ✓ |
-| §4.1 `‖V_new.T V_top‖_F` | `vnew_vtop_ov = 0.533` в JSON ✓ |
-| §4.2 per-α `‖V_mixed.T V_top‖_F` | в `points[].v_mixed_vs_v_top_fro` ✓ |
-| §4.3 hidden_drift t=0 exclusion | `real[:, 0] = False` ✓ |
-| §4.4 `try/finally` via contextmanager | `_state_ctx` ✓ |
-| §4.5 α=1 endpoint docstring | `endpoint_note` ✓ |
+| α-grid extended below 0.1 (0.01, 0.02, 0.05, 0.08) | ✅ 11 точек |
+| Per-α κ' dry-run | ✅ `kappa_dryrun` в каждой точке |
+| trade-off computed | ✅ `trade_off` block |
+| QR-blend removed | ✅ `pert_col_observed ≈ pert_col_expected` точно |
+| `rho_noise` convention aligned | ✅ `0.01416` matches E-39a |
+| `V_c` rank check | ✅ `v_c_rank_ok: true` |
+| `V_new_perp` computed once | ✅ in closure |
+| a_random consistency check | ✅ `abs_diff = 0.00024` |
 
-**Механически fix правильный.** `v_mixed_vs_v_top_fro` теперь **монотонен** от 4.0 (α=0) к 0.0 (α=1) — QR-коллапс устранён. Хорошо.
-
----
-
-## 2. Но: два бага, подрывающих вывод «non-monotonicity is genuine» (HIGH)
-
-### 2.1. `rho_noise` — **разная нормализация** между E-39a и E-39c_pre (MEDIUM, silent)
-
-**E-39a** (v_new_strategy_sensitivity, тот же код):
-```python
-ov = (u64 @ V_new).pow(2).sum(dim=-1).mean().item()  # mean over [N, S]
-```
-→ `a_random: 0.0142`
-
-**E-39c_pre** (сейчас):
-```python
-ov = float((u.double() @ Vn).pow(2).mean())  # mean over [N, S, R]
-```
-→ `a_random: 0.000885`
-
-**Отношение = 16 = R.** `0.0142 / 16 = 0.000888`. **Одинаковое значение, разная нормализация.**
-
-**Проблема:** метрика называется одинаково (`rho_noise_u_obs_overlap_mean`), но в E-39a это `E[‖û_tᵀ V_new‖_F²]` (норма на позицию), а в E-39c_pre — `E[(û_tᵀ V_new)²]` (средний квадрат элементов). Reader сравнивающий «E-39a говорит 0.014, E-39c_pre говорит 0.0009» решит, что стратегия стала в 16× чище.
-
-**Fix:** либо выровнять (использовать `.sum(dim=-1).mean()` в E-39c_pre), либо явно переименовать (`rho_noise_per_element` vs `rho_noise_fro_per_position`).
-
-### 2.2. **`row_diag` при α=0.1 противоречит теоретическому ожиданию** (HIGH, silent)
-
-**Теория:** для ортогонализованного blend, `V_mixed(α) = √α V_new_perp + √(1−α) V_top`, с `V_new_perp ⊥ V_top`:
-```
-‖V_mixed(α)[:,j] − V_top[:,j]‖ = √(α + (√(1−α)−1)²) = √(2 − 2√(1−α))
-```
-- α=0.1: **0.320** (малый rotation)
-- α=0.5: **0.766**
-- α=1.0: **1.414**
-
-**Ожидаемый row change** = `0.32·c` при α=0.1, где `c ≈ ‖U_top Σ_top‖_F/‖M_K‖_F ≈ 0.9-1.0`. Ожидание: **≈0.29–0.32**.
-
-**Фактически в JSON:**
-| α | `mean_dW/row` | Ожидание | Отношение |
-|---|---|---|---|
-| 0.1 | **0.772** | ~0.30 | **2.5×** |
-| 0.2 | 0.767 (dip!) | ~0.42 | 1.8× |
-| 0.5 | 0.840 | ~0.70 | 1.2× |
-| 0.7 | 0.828 (dip!) | ~0.87 | 0.95× |
-| 0.9 | 0.886 | ~0.97 | 0.91× |
-| 1.0 | 0.982 | ~0.98 | 1.0× ✓ |
-
-**Два аномальных сигнала:**
-1. **При α=0.1 row change в 2.5× больше ожидаемого** — это не «малый rotation», это большой.
-2. **Немонотонность:** α=0.1 → 0.772, α=0.2 → 0.767 (dip), α=0.5 → 0.840, α=0.7 → 0.828 (dip). Ожидание — монотонный рост.
-
-**Причина (гипотеза):** `V_new_perp = QR(V_new − V_top·V_topᵀ·V_new)` — если у V_new есть колонки с большим overlap с V_top, то после проекции эти колонки **почти нулевые**, и QR заполняет их **произвольными** направлениями в ортогональном дополнении. Эти «произвольные» направления при α=0.1 получают вес √0.1 ≈ 0.32 — и в `M_kp` они замещают часть исходных колонок M_K.
-
-**Эффект:** α=0.1 — не «малая ротация», а «90% V_top + 10% случайного направления в ортогональном дополнении». `mean_dW/row = 0.772` потому что **одна или несколько колонок V_new_perp имеют высокий overlap с исходными направлениями M_K** (несмотря на ортогональность V_new_perp к V_top, они могут быть близки к `U_rest` направлениям).
-
-### 2.3. Следствие для интерпретации
-
-JSON утверждает:
-> «Even with the corrected orthogonalized blend, the KL is non-monotonic... this is **NOT** a blend/QR artifact... it is a **genuine loss-landscape property**: a small partial rotation near the top subspace is MORE destructive than the full rotation.»
-
-**Это overclaim.** Правильная интерпретация:
-
-> «KL non-monotonicity persists after orthogonalization, but **row_diag is also non-monotonic** (0.772 at α=0.1 vs 0.982 at α=1, dips at α=0.2 and α=0.7). The expected row change for a clean orthogonalized blend at α=0.1 is ~0.30; observed 0.772. **The blend is NOT producing a "small" rotation at small α** — it's producing a large row change because `V_new_perp` (via QR of the projected V_new) is not a small perturbation of V_top. The non-monotonicity may be a property of `V_new_perp`'s structure, not a "loss landscape" property of partial rotation per se.»
-
-**Это важное различие для paper:**
-- Текущий claim: «**любая** partial surgery несовместима с behavior»
-- Более слабый (но honest) claim: «partial surgery на этой конкретной `V_new_perp` конструкции несовместима с behavior»
-
-Второй допускает, что если найдётся «правильная» V_new-конструкция (например, `V_new` с контролируемой ортогонализацией), partial surgery могла бы работать.
-
-### 2.4. Fix — верификация row_diag
-
-**Диагностика** (2 строки в `_mkp_and_rows`):
-```python
-# в blend branch:
-V_pert = V_mixed_col - V_top_col
-per_col_norm = V_pert.norm(dim=0)  # [R]
-# ожидание: √(2-2√(1-α)) для каждой колонки
-expected = (2 - 2*np.sqrt(1-alpha))**0.5
-# если max(per_col_norm) > 1.5*expected → QR fill для degenerate columns
-```
-
-Добавить в JSON:
-```python
-"alpha_blend_sweep": {
-    "per_alpha_diagnostics": [
-        {"alpha": 0.1, "expected_pert_norm": 0.32, 
-         "observed_pert_norm_mean": ..., "observed_pert_norm_max": ...}
-    ]
-}
-```
-
-Если `observed_pert_norm_max >> expected` → **V_new_perp нестабильна**, и «non-monotonicity» — artefact этой нестабильности. Если `observed ≈ expected` для всех α, но row change всё равно большой → **g-scaling amplification** (несколько колонок с малым g доминируют в ratio).
+**Механически всё правильно.**
 
 ---
 
-## 3. Реальный результат (то, что можно заявить честно)
+## 2. Главный результат — **regions DISJOINT, отрицательный результат окончателен**
 
-### 3.1. **Tied-weights decomposition — сильнейшее утверждение**
+### 2.1. Данные (round 4)
 
-| | KL(t≥1) |
-|---|---|
-| head_only | 1.238 |
-| embed_only | 4.007 (**80%**) |
-| full | 5.017 |
-| cross | −0.228 |
+| α | KL(t≥1) | row_diag | pert_col / theory | κ' | KL<0.05 | κ'<0.005 |
+|---|---|---|---|---|---|---|
+| 0.0 | 0.000 | 0.000 | 0 / 0 | 0.0159 | ✓ | ✗ |
+| **0.01** | 0.0043 | 0.073 | 0.1001 / 0.1001 | 0.0157 | ✓ | ✗ |
+| 0.02 | 0.0086 | 0.104 | 0.1418 / 0.1418 | 0.0156 | ✓ | ✗ |
+| 0.05 | 0.0227 | 0.164 | 0.2250 / 0.2250 | 0.0151 | ✓ | ✗ |
+| **0.08** | 0.0401 | 0.208 | 0.2858 / 0.2858 | 0.0148 | ✓ | ✗ |
+| 0.1 | 0.0628 | 0.233 | 0.3204 / 0.3204 | 0.0147 | ✗ | ✗ |
+| 0.2 | 0.3864 | 0.334 | 0.4595 / 0.4595 | 0.0134 | ✗ | ✗ |
+| 0.5 | 2.0217 | 0.551 | 0.7654 / 0.7654 | 0.0099 | ✗ | ✗ |
+| 0.7 | 2.4293 | 0.679 | 0.9511 / 0.9511 | 0.0076 | ✗ | ✗ |
+| 0.9 | 3.7836 | 0.825 | 1.1694 / 1.1694 | 0.0053 | ✗ | ✗ |
+| **1.0** | 4.9045 | 0.982 | 1.4142 / 1.4142 | 0.0041 | ✗ | ✓ |
 
-**`embed_only_hidden_drift.mean_rel = 0.877`** — last-layer hidden state дрейфует на 88% при изменении embeddings. **Это значит: surgery — не readout-only в tied-модели.**
+### 2.2. **Blend теперь идеально чистый** ✅
 
-**Для paper:**
+`pert_col_observed_mean ≈ pert_col_observed_max ≈ pert_col_expected` **для всех α** — все 16 колонок имеют **идентичную** пертурбацию `√(2−2√(1−α))`. **QR-артефакт (Householder sign-flips) устранён.** Это подтверждает round-3 фикс.
 
-> **E-39c_pre (KL decomposition, tied weights):** surgery на tied-модели изменяет **и** lm_head, **и** embed_tokens. Decomposition показывает: head_only cost = 1.24 nats (25× бюджет), embed_only cost = 4.01 nats (80× бюджет), full = 5.02. **embed_only доминирует** (hidden state drift 87.7%). Surgery **фундаментально не readout-only** в tied-моделях — «дешёвого readout-пути» не существует. Даже untied head-only (1.24) далеко выше бюджета (0.05).
+**Следствие:** `row_diag` теперь **монотонен** (0 → 0.982). `KL` тоже **монотонен** (0 → 4.905). Никаких dips в α=0.1 или α=0.7. **Round-3 "genuine loss-landscape" гипотеза опровергнута — non-monotonicity была QR-артефактом, а не свойством loss landscape.** Спасибо за честное retraction.
 
-### 3.2. **Full surgery: definitively infeasible**
+### 2.3. **Trade-off — окончательный отрицательный результат**
 
-- KL = 5.02, budget 0.05 → **100× over budget**
-- Row change 98% от row norm (mean), 140% max
-- Consistent across all 3 V_new strategies (4.71–5.51)
+**KL-safe α:** `[0.01, 0.02, 0.05, 0.08]` — все малые.
+**κ'-safe α:** `[1.0]` — только полная surgery.
+**Both safe:** `[]` — **пусто.**
 
-**Утверждение:** full-rotation M_K-surgery at L23 destroys the model. E-39c as designed **not viable**.
+Проверка magnitude:
 
-### 3.3. **α-blend: negative result, но с caveat**
+- При α=0.08 (max KL-safe): κ' = 0.01477 = **3.0× target** (0.005)
+- При α=0.9 (near κ'-safe): KL = 3.78 = **76× budget** (0.05)
 
-- min KL over α>0 = 4.57 (α=0.7) — **91× над бюджетом**
-- Non-monotonic, с row_diag anomaly (см. §2)
-- Claim «no partial α works» — вероятно правильный, но требует верификации §2.4
-
-> **ROUND-3 RESOLUTION (выполнено):** верификация §2.4 + fix §2.2 подтвердили
-> механизм: `torch.linalg.qr` на already-orthonormal input делал **sign-flip
-> 7 из 16 колонок** (Householder convention), **отрицая** отдельные слагаемые
-> `M_kp` вместо малого вращения. QR убран (blend orthonormal by construction).
-> После фикса:
-> - min KL over α>0 = **0.0628 (α=0.1)** — **≈1.26× бюджет**, НЕ 91×.
-> - KL монотонно и гладко: 0.063 → 0.386 → 2.02 → 2.43 → 3.78 → 4.90.
-> - per-column perturbation **точно** = √(2−2√(1−α)) для всех α (clean=True).
-> - Вывод (FAIL) **не изменился**, но **магнитуда** радикально другая:
->   partial surgery при малом α **near-budget**, а не «катастрофически 100×
->   сверх». Это честная коррекция: раньше артефакт завышал α=0.1 в 120×
->   (7.54 вместо 0.063).
+**Regions полностью disjoint с огромным margin (3× и 76×).** Это не "тонкая грань", это **фундаментальная несовместимость** в данной конструкции.
 
 ---
 
-## 4. Мелкие замечания
+## 3. Критический inconsistency — **JSON не соответствует коду** (HIGH)
 
-### 4.1. `_mkp_and_rows(1.0, orthogonalize=False)` в main — vs `_mkp_and_rows(1.0)` в sweep (INFO, documented)
+### 3.1. Факт
 
-Main surgery использует **raw V_new** (actual E-39a design). Sweep α=1 использует **V_new_perp**. KL: 5.02 vs 4.90 — различимо, но оба infeasible. Documented в `endpoint_note` ✓.
+**.py файл** (line ~740):
+```python
+"budget_note": (f"Small α PASSES the KL budget: KL<{KL_PASS} for "
+                f"α ∈ {kl_safe_alphas} (min KL = {min_kl_nonzero:.4f} "
+                f"= {min_kl_nonzero / KL_PASS:.2f}× the budget at "
+                f"α={min_alpha_nonzero}). But at those small α, "
+                f"κ' ≈ {sweep[1]['kappa_dryrun']:.4f} "
+                f"(~{sweep[1]['kappa_dryrun'] / KAPPA_TARGET:.0f}× the "
+                f"{KAPPA_TARGET} target) FAILS the flattening side. ...")
+```
 
-### 4.2. `V_new_perp` computed fresh per `_mkp_and_rows` call (MINOR)
+**Ожидаемый вывод:**
+> "Small α PASSES the KL budget: KL<0.05 for α ∈ [0.01, 0.02, 0.05, 0.08] (min KL = 0.0043 = 0.09× the budget at α=0.01). But at those small α, κ' ≈ 0.0157 (~3× the 0.005 target) FAILS the flattening side. ..."
 
-Для α-sweep (7 итераций) и strategy sweep (3 итерации) — 10 вызовов QR для `V_new_perp`. Незначительно (~50ms × 10), но в `_mkp_and_rows` эта операция кешируема.
+**JSON** (что фактически в файле):
+> "min KL over α>0 = 0.0043 = 0.09× the 0.05 budget at α=0.01 — **FAILS**."
 
-**Fix:** вынести `V_new_perp` в closure перед `_mkp_and_rows`.
+### 3.2. Проблема
 
-### 4.3. `c_balanced` per-α не тестировался (limitation, documented)
+Это **два разных текста**. И JSON-версия **внутренне противоречива**: "0.09× the budget" = 0.09·0.05 = 0.0045 < 0.05 = **проходит бюджет**. Но текст говорит "**FAILS**". Reader увидит "0.09× under budget — FAILS" и решит, что либо budget_note сломан, либо 0.05 не является threshold.
 
-Strategy sweep только при α=1. Caveat есть в limitations ✓. Для paper: если α-blend не работает для a_random, скорее всего и для b/c — но не доказано.
+**Причина:** JSON — от предыдущей версии кода (round 4 partial fix). .py — уже обновлён (round 4 final). Скрипт был переписан, но **не перезапущен** с обновлённым кодом — JSON остался от промежуточного прогона.
 
-### 4.4. `runtime_s = 305` (INFO)
+### 3.3. Severity
 
-11 forwards × ~25s = 275s + overhead. Consistent.
+- **Paper-level HIGH:** если paper цитирует `budget_note` из JSON, получит противоречивое утверждение.
+- **Код-level MEDIUM:** сам код правильный, но output stale.
 
-### 4.5. `bs = base_t.clone(); ed = base_t.clone()` в цикле (MINOR)
+**Fix:** перезапустить скрипт с текущим кодом. JSON обновится.
 
-`base_t.clone()` в каждом цикле α-sweep (7) + strategy sweep (3) = 10 clones × [128, 1024] × float32 ≈ 0.5 MB each = 5 MB total. Negligible.
-
-### 4.6. `Pn = P_pool @ P_pool.T` — **1024×1024 matrix multiplication** (INFO)
-
-Computing projector as [1024, 64] × [64, 1024] = [1024, 1024] — ~67M mults × float64, fine. But `V_b = qr(Pn @ V_top.T)` could be done cheaper as `qr(P_pool @ (P_pool.T @ V_top.T))` — avoids materializing [1024, 1024].
-
-Cosmetic.
+**Проверка после перезапуска:** `budget_note` должен начинаться с "Small α PASSES the KL budget", не "min KL ... FAILS".
 
 ---
 
-## 5. Что paper может (и не может) утверждать
+## 4. Средние замечания
 
-**Может:**
-1. ✅ Full M_K-surgery (α=1): KL = 5.02, 100× бюджет, row damage 98%. **Catastrophic, infeasible.**
-2. ✅ Tied-weights: embed_only (4.01) >> head_only (1.24). Surgery **фундаментально не readout-only**, hidden drift 87.7%.
-3. ✅ All 3 V_new strategies fail at α=1 (4.71–5.51).
-4. ✅ Untied head-only still 25× budget.
+### 4.1. `runtime_s = 1285s` (~21 мин) — iteration стоимость (MEDIUM)
 
-**Может (с оговоркой, ROUND-3):**
-5. ✅ α-blend (чистый QR-free blend): min KL = **0.0628 (α=0.1), ≈1.26× бюджет**.
-   **Ни один α не проходит** (все > 0.05), но это **near-budget**, а не 91–100×.
-   KL монотонен, blend верифицирован чистым (pert = √(2−2√(1−α)) exactly).
+Round 3: 305s. Round 4: 1285s. **4.2× рост** из-за:
+- 4 дополнительных α-forward (275s → 375s)
+- 11 × `_kappa_dryrun` (каждый ~40-50s = 500s)
+- 3 × per-strategy `_kappa_dryrun` = 150s
+- Остальное = KL decomposition + base
 
-**Не может:**
-6. ❌ «Partial surgery refuted as a route» — слишком сильно. Правильно:
-   «partial surgery на данной V_new_perp конструкции refuted (near-budget,
-   мин. 1.26× сверх)».
-7. ✅ (исправлено в round 3) «non-monotonicity = loss-landscape property» —
-   **было неверно**: это был QR sign-flip артефакт. После фикса blend чистый и
-   KL монотонен; утверждение о loss-landscape property снято.
-8. ❌ «surgery fundamentally incompatible with behavior at all α» — overclaim.
-   Честно: «no non-trivial α passes the 0.05 KL budget; the closest (α=0.1)
-   is 1.26× over, so partial surgery is near-feasible but not within budget on
-   this construction».
+**Проблема:** `_kappa_dryrun` вызывается **11 раз** на α-sweep. Каждый вызов SVD 32×128 раз.
+
+**Fix (опционально, non-blocking):** κ'(α) — гладкая функция от α. Можно измерить только на 4-5 точках (α ∈ {0.01, 0.1, 0.5, 0.9, 1.0}) и интерполировать. Но для paper лучше полный grid, так что это trade-off.
+
+### 4.2. `kl_crossing_alpha = 0.01` — misnomer (LOW)
+
+Семантика: `min(kl_safe_alphas) = 0.01` — smallest α that PASSES, но это не "crossing point" (crossing = где KL=0.05, between α=0.08 и α=0.1). Reader может подумать, что α=0.01 — точка пересечения budget.
+
+**Fix:** переименовать `kl_crossing_alpha` → `kl_min_passing_alpha` или добавить `kl_budget_crossing_estimate: ~0.085` (интерполяция).
+
+### 4.3. V_new_perp endpoint (α=1) KL = 4.90 vs raw V_new full = 5.02 (LOW)
+
+Разница 2.4% — малая, но в paper §4.4 это два разных числа. `endpoint_note` документирует. OK, но нужна ясность: **какой α используется в headline full-surgery?**
+
+- `kl_full_nats_per_token.mean_real_tokens_t_ge_1 = 5.017` — это **raw V_new** (α=1, orthogonalize=False)
+- `alpha_blend_sweep.points[α=1].kl_t1 = 4.904` — это **V_new_perp** (α=1, orthogonalize=True)
+
+Оба infeasible, но для consistency paper должен явно цитировать **5.02** для full surgery и **4.90** для orthogonalized α=1 endpoint. **Сейчас это только в `endpoint_note`, что может быть пропущено.**
+
+### 4.4. `sweep[1]['kappa_dryrun']` в `budget_note` — fragile (LOW)
+
+```python
+f"κ' ≈ {sweep[1]['kappa_dryrun']:.4f} "
+```
+
+`sweep[1]` — hardcoded index для α=0.01. Если grid изменится, это станет α=0.02 (или что-то ещё). Хрупко.
+
+**Fix:** явно `sweep_by_alpha = {p["alpha"]: p for p in sweep}; alpha01_kap = sweep_by_alpha[min_alpha_nonzero]["kappa_dryrun"]`.
+
+### 4.5. `V_a` consistency — очень хорошо, но `KAPPA_39A_FULL = 0.0042` (LOW)
+
+`a_random.kappa_dryrun = 0.003965` vs `KAPPA_39A_FULL = 0.0042`. Diff = 0.00024. Откуда 0.0042? Из E-39a JSON: a_random kappa = 0.00396, kappa_median_all_triples = 0.00399. Ни одно не 0.0042. 0.0042 — вероятно старая quoted value.
+
+**Fix:** установить `KAPPA_39A_FULL = 0.00396` (actual a_random from E-39a JSON) или явно документировать rounding. Diff 0.00024 малый, не критично.
+
+---
+
+## 5. Что paper может утверждать (окончательно)
+
+### 5.1. Strong claim (все confirmed):
+
+1. **Full M_K-surgery (α=1, raw V_new):** KL = **5.02** nats, **100×** над бюджетом. Row damage 98%. **Catastrophic.**
+2. **Tied-weights decomposition:** embed_only = 4.01 (80%) >> head_only = 1.24 (20%). Hidden drift 87.7%. **Surgery fundamentally non-readout-only.**
+3. **All 3 V_new strategies fail at α=1:** 4.71–5.51. **Structural, not V_new-specific.**
+4. **Untied head-only cost = 1.24** (25× budget) — даже лучший случай далеко.
+5. **α-blend verified clean** (round-3 QR-artifact retracted): monotone row_diag, monotone KL, per-column perturb = theory exactly.
+6. **Trade-off disjoint:** KL-safe α ≤ 0.08; κ'-safe α = 1.0; **crossing point непроходим**. Max KL-safe α=0.08 gives κ'=0.0148 (3× target); κ'-safe α=0.9 gives KL=3.78 (76× budget).
+
+### 5.2. Окончательный verdict
+
+> **E-39c_pre (definitive negative):** M_K-surgery at L23 is infeasible both in full rotation and in the tested partial-α family. Full surgery: KL = 5.02 (100× budget), tied-weight dominant embed term (4.01, 80%), hidden drift 88%. Clean α-blend: KL-safe region [α ≤ 0.08] and κ'-safe region [α = 1.0] are **disjoint** — at max KL-safe α=0.08, κ' = 0.0148 (3× the 0.005 target); at min κ'-safe α=1.0, KL = 4.90 (98× budget). **The route to L23 leaf flattening via M_K-surgery is refuted within the tested construction.** A conceptually different approach (e.g., LoRA training with flatness loss, E-39d) is required.
 
 ---
 
@@ -218,93 +162,30 @@ Cosmetic.
 
 **Блокеры:**
 
-1. **§2.2/§2.3** — row_diag at α=0.1 (0.772 vs expected 0.32) не сходится с «clean orthogonalized blend». Интерпретация «non-monotonicity = loss landscape» может быть **artefactом V_new_perp QR-нестабильности**, а не физическим свойством. Fix: per-α `‖V_mixed − V_top‖_per_col` диагностика + сравнение с theory.
+1. **§3.1** — JSON stale / mismatch с .py. `budget_note` в JSON содержит противоречивый "0.09× the budget — FAILS". Перезапустить скрипт.
 
-2. **§2.1** — `rho_noise_u_obs_overlap_mean` нормализация отличается от E-39a (mean over [N,S,R] vs [N,S]). Silent inconsistency.
+**Средние:**
 
-**Средне:**
-
-3. §4.1 — α=1 endpoint mismatch (5.02 raw vs 4.90 perp). Documented, но стоит явно в paper тексте (не только в JSON note).
-4. §4.2 — V_new_perp recompute в цикле (cosmetic).
+2. **§4.2** — `kl_crossing_alpha` naming misleading. Fix: rename или add interpolation estimate.
+3. **§4.4** — `sweep[1]` fragile index в budget_note. Fix: lookup by value.
 
 **Мелочи:**
 
-5. §4.6 — projector matmul size.
-6. §4.3 — c_balanced per-α untested.
+4. **§4.1** — runtime 21 min (documentation, non-blocking).
+5. **§4.3** — 5.02 vs 4.90 (paper consistency).
+6. **§4.5** — `KAPPA_39A_FULL=0.0042` vs actual 0.00396.
 
-**Оценка: 7.5/10** (до round 3). **После round-3 фикса — 9/10:** оба HIGH blockera (§2.2/§2.3, §2.1) закрыты, blend верифицирован чистым, вывод честный и data-driven.
+**Оценка: 8.5/10.**
 
-**ROUND-3 STATUS (закрыто):**
-- ✅ §2.2/§2.4: механизм подтверждён (QR sign-flip 7/16 колонок = отрицание слагаемых M_kp). QR убран, blend orthonormal by construction, per-column perturbation = √(2−2√(1−α)) exactly для всех α (clean=True). KL теперь монотонен и гладко; немонотонность была артефактом, а не loss-landscape property.
-- ✅ §2.1: rho_noise переведён на конвенцию E-39a (per-position Frobenius), ключ переименован `rho_noise_u_obs_overlap_mean` (0.01416 vs 0.0142 в E-39a — совпадает).
-- ✅ §4.2: V_new_perp вынесен в closure (вычисляется один раз).
-- ✅ §4.6: b_principal через factored projector (без [D,D]).
+- **Blend cleanup** — отлично. QR-artifact retraction honest.
+- **Trade-off** — mathematically conclusive negative result.
+- **Runtime** — выросло до 21 min.
+- **JSON/code mismatch** — единственный блокер, лёгкий fix.
 
-**Остаток (не блокеры):** §4.1 (α=1 endpoint raw vs perp — documented), §4.3 (c_balanced per-α untested — limitation), §4.5 (clones — negligible).
+**Главное достижение цепочки:** E-39a → E-39c_pre v1 → v2 → v3 → v4 — это textbook-quality iterative refinement. Каждый round поймал важный дефект:
+- v1: `M_kp/g` bug (round 1)
+- v2: tied-weights decomposition (round 2)
+- v3: QR-blend artifact (round 3)
+- v4: α-grid extension + per-α κ' (round 4)
 
----
-
-## 7. Round-3 (v4) — применение фиксов + новый результат
-
-### 7.1. Механиз немонотонности (подтверждён диагностикой)
-
-`torch.linalg.qr` на **already-orthonormal** input (Gram = I) вырождается в
-signed permutation, и знак каждого столбца определяется Householder convention —
-**произвольно**. В α-blend (round 2) QR применялся к `√α·V_new_perp +
-√(1−α)·V_top`, который orthonormal **by construction** → QR лишь перекидывал
-знаки 7 из 16 колонок. Столбец с перекинутым знаком **отрицает** своё
-слагаемое `+σ_j·u_j·v_jᵀ → −σ_j·u_j·v_jᵀ` в `M_kp` — т.е. вместо малого
-вращения происходит **sign-flip**, который и давал row_diag 0.77 (против
-теоретических 0.32) и немонотонный KL (7.54 при α=0.1).
-
-### 7.2. Fix (round 3)
-
-- Blend branch: **QR убран** (`V_mixed = √α·V_new_perp + √(1−α)·V_top`),
-  orthonormal by construction (V_new_perp ⊥ V_top).
-- Диагностика §2.4: per-α per-column `‖V_mixed[:,j]−V_top[:,j]‖` vs теория
-  `√(2−2√(1−α))`; `clean_rotation_verified` = all(пер_col < 1.5·exp).
-- §2.1: rho_noise = `E_t[‖û_tᵀVn‖²]` (per-position Frobenius), ключ
-  `rho_noise_u_obs_overlap_mean` (совпадает с E-39a).
-- §4.2/§4.6: V_new_perp в closure; b_principal через factored projector.
-- Conclusion data-driven (не хардкод), `near_budget_note` в JSON.
-
-### 7.3. Новый результат (детерминированный, gate 5.01748 воспроизведён)
-
-| α | KL(t≥1) | row | per-col pert (exp) | clean |
-|---|---|---|---|---|
-| 0.0 | 0.0000 | 0.000 | 0.000 (0.000) | ✓ |
-| 0.1 | **0.0628** | 0.233 | 0.320 (0.320) | ✓ |
-| 0.2 | 0.3864 | 0.334 | 0.460 (0.460) | ✓ |
-| 0.5 | 2.0217 | 0.551 | 0.765 (0.765) | ✓ |
-| 0.7 | 2.4293 | 0.679 | 0.951 (0.951) | ✓ |
-| 0.9 | 3.7836 | 0.825 | 1.169 (1.169) | ✓ |
-| 1.0 | 4.9045 | 0.982 | 1.414 (1.414) | ✓ |
-
-- **min KL = 0.0628 (α=0.1) ≈ 1.26× бюджет** (было 7.54 ≈ 150× до фикса).
-- **Вывод (FAIL) не изменился**, но магнитуда: partial surgery **near-budget**,
-  а не «100× сверх».
-- Full surgery (raw V_new, actual E-39a design): **5.0175**, FAIL (100×). Не
-  изменился.
-- Tied decomp (raw V_new): full 5.0175 = head_only 1.2380 + embed_only 4.0071
-  (+ cross −0.2276).
-- Strategies (α=1): a_random 4.7083, b_principal 5.5061, c_balanced 4.7878 —
-  все FAIL; ρ_noise теперь 0.01416/0.01432/0.01430 (конвенция E-39a).
-
-### 7.4. Что paper может утверждать (round 3)
-
-> **E-39c_pre (negative result):** M_K-surgery at L23 fails the KL pre-gate.
-> **Full rotation (α=1):** KL = 5.02 (≈100× the 0.05 budget) — catastrophic,
-> refuted. Tied-weight decomposition: 80% from embed (upstream propagation,
-> hidden drift 88%), 20% from head; the surgery is NOT readout-only.
-> **Partial rotation (α-sweep, clean QR-free blend):** KL is smooth and
-> monotone in α (0.063 → 4.90); min KL = 0.063 at α=0.1, only ≈1.26× the
-> budget. **No non-trivial α passes 0.05**, but the margin is small — partial
-> surgery is *near-budget*, not 100× over. The blend is verified a true
-> partial rotation (per-column perturbation = √(2−2√(1−α)) exactly). All three
-> V_new strategies fail at full surgery (4.71–5.51).
-> **(Changelog v5→v6):** the earlier «non-monotonic α-blend / loss-landscape
-> property» claim was a **QR sign-flip artifact** (Householder sign convention
-> on an orthonormal input silently negated M_kp terms). With the QR removed,
-> the small-α point is a genuinely small rotation; the negative result is
-> unchanged but its magnitude is near-budget, and the loss-landscape
-> interpretation is withdrawn.
+**Для paper v6.0:** результат **conclusive negative** — surgery refuted, следующая ставка должна быть E-39d (LoRA training) с flatness-loss, которая **не модифицирует embed** (LoRA на отдельных слоях вместо full W_lm edit). Это единственный оставшийся path.

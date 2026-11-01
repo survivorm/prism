@@ -121,10 +121,14 @@ def kl_leash(H_sub: torch.Tensor,
     """
     e_k = H_sub @ W_rows.t()                      # [P, K] (grad via W_rows)
     b_k = base_k                                  # [P, K] (no grad)
-    exp_b_k = torch.exp(b_k)                     # [P, K]
-    exp_e_k = torch.exp(e_k)                     # [P, K] (grad)
-    # lse_e = log( exp(lse_b) − Σ_k exp(b_k) + Σ_k exp(e_k) )
-    lse_e = torch.log(torch.exp(lse_b) - exp_b_k.sum(1) + exp_e_k.sum(1))  # [P]
+    # max-trick stabilisation (round 7 §1): raw exp(e_k) overflows to Inf
+    # once logit drift exceeds ~88 (observed: NaN crash at lambda=0.01 s2
+    # st40). Reference m = max(lse_b, max_k e_k, max_k b_k) per position.
+    m = torch.cat([lse_b[:, None], e_k, b_k], dim=1).max(dim=1).values  # [P]
+    exp_e_k = torch.exp(e_k - m[:, None])
+    exp_b_k = torch.exp(b_k - m[:, None])
+    # lse_e = m + log( exp(lse_b - m) - Σ_k exp(b_k - m) + Σ_k exp(e_k - m) )
+    lse_e = m + torch.log(torch.exp(lse_b - m) - exp_b_k.sum(1) + exp_e_k.sum(1))  # [P]
     # KL = (lse_b − lse_e) + Σ_k exp(e_k − lse_e)(e_k − b_k)
     kl_t = (lse_b - lse_e) + (torch.exp(e_k - lse_e[:, None]) * (e_k - b_k)).sum(1)
     return kl_t.mean()
@@ -367,6 +371,15 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                 torch.nn.utils.clip_grad_norm_([W_rows], 1.0)
                 opt.step()
 
+                # NaN/Inf guard: a diverged seed must not kill the whole
+                # sweep — record the divergence point and stop this run.
+                if not torch.isfinite(loss.detach()):
+                    run["diverged_at_step"] = step
+                    print(f"  λ={lam} s{seed} st{step}: loss non-finite — "
+                          f"run diverged, stopping (round 7 §1 NaN-guard)",
+                          flush=True)
+                    break
+
                 if step % METRIC_EVERY == 0 or step == N_STEPS:
                     M_Kd = (W_rows.detach() * g_base.to(device)[None, :]).double()
                     kap = _kappa_dryrun(M_Kd, u64_docs, N_docs, S, R)["kappa"]
@@ -387,6 +400,24 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                           f"({(time.time()-t0):.0f}s)", flush=True)
 
             # final
+            if run.get("diverged_at_step") is not None:
+                run["final"] = {
+                    "diverged": True, "kappa": None, "ppl": None,
+                    "ppl_delta_pct": None,
+                    "kappa_improvement": None,
+                    "delta_W_rel": float("nan"),
+                    "kl_mean": run["history"][-1]["l_kl"] if run["history"] else None,
+                    "elapsed_s": time.time() - t0,
+                }
+                run["verdict"] = "DIVERGED"
+                run["verdict_detail"] = {"kappa_target_met": None,
+                                         "ppl_within_2pct": None,
+                                         "kl_within_budget": None}
+                results["runs"].append(run)
+                print(f"λ={lam} s{seed}: DIVERGED at step "
+                      f"{run['diverged_at_step']} "
+                      f"({run['final']['elapsed_s']:.0f}s)", flush=True)
+                continue
             M_Kf = (W_rows.detach() * g_base.to(device)[None, :]).double()
             kap_f = _kappa_dryrun(M_Kf, u64_docs, N_docs, S, R)["kappa"]
             with torch.no_grad():
@@ -421,30 +452,49 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                   flush=True)
 
     # ---- summary ----
-    valid = [r for r in results["runs"] if r["final"]["kappa"] > 0]
-    best = min(valid, key=lambda r: r["final"]["kappa"])
-    results["summary"] = {
-        "best_kappa": best["final"]["kappa"],
-        "best_lambda": best["lambda"], "best_seed": best["seed"],
-        "best_ppl": best["final"]["ppl"],
-        "best_ppl_delta_pct": best["final"]["ppl_delta_pct"],
-        "best_kappa_improvement": best["final"]["kappa_improvement"],
-        "n_success": sum(1 for r in results["runs"] if r["verdict"] == "SUCCESS"),
-        "n_partial": sum(1 for r in results["runs"] if r["verdict"] == "PARTIAL"),
-        "n_fail": sum(1 for r in results["runs"] if r["verdict"] == "FAIL"),
-        "total_time_s": time.time() - t_start,
-        "interpretation": (
-            f"Best κ'={best['final']['kappa']:.6f} "
-            f"(base={kappa_base:.6f}, "
-            f"improvement={best['final']['kappa_improvement']:.1f}×) "
-            f"at λ={best['lambda']}, seed={best['seed']}. "
-            f"PPL={best['final']['ppl']:.4f} "
-            f"({best['final']['ppl_delta_pct']:+.2f}%). "
-            f"E-39c (algebraic) was REFUTED on KL (6.31 nats = 126× budget). "
-            f"If E-39d reaches κ'<{KAPPA_TARGET} with KL<{KL_PASS}, "
-            f"training beats pure algebra on the KL trade-off."
-        ),
-    }
+    valid = [r for r in results["runs"]
+             if r["final"]["kappa"] is not None and r["final"]["kappa"] > 0]
+    n_div = sum(1 for r in results["runs"] if r["verdict"] == "DIVERGED")
+    n_success = sum(1 for r in results["runs"] if r["verdict"] == "SUCCESS")
+    n_partial = sum(1 for r in results["runs"] if r["verdict"] == "PARTIAL")
+    n_fail = sum(1 for r in results["runs"] if r["verdict"] == "FAIL")
+    best = min(valid, key=lambda r: r["final"]["kappa"]) if valid else None
+    if best is not None:
+        summary = {
+            "best_kappa": best["final"]["kappa"],
+            "best_lambda": best["lambda"], "best_seed": best["seed"],
+            "best_ppl": best["final"]["ppl"],
+            "best_ppl_delta_pct": best["final"]["ppl_delta_pct"],
+            "best_kappa_improvement": best["final"]["kappa_improvement"],
+            "n_success": n_success, "n_partial": n_partial,
+            "n_fail": n_fail, "n_diverged": n_div,
+            "total_time_s": time.time() - t_start,
+            "interpretation": (
+                f"Best κ'={best['final']['kappa']:.6f} "
+                f"(base={kappa_base:.6f}, "
+                f"improvement={best['final']['kappa_improvement']:.1f}×) "
+                f"at λ={best['lambda']}, seed={best['seed']}. "
+                f"PPL={best['final']['ppl']:.4f} "
+                f"({best['final']['ppl_delta_pct']:+.2f}%). "
+                f"E-39c (algebraic) was REFUTED on KL (6.31 nats = 126× budget). "
+                f"If E-39d reaches κ'<{KAPPA_TARGET} with KL<{KL_PASS}, "
+                f"training beats pure algebra on the KL trade-off."
+            ),
+        }
+    else:
+        summary = {
+            "best_kappa": None, "best_lambda": None, "best_seed": None,
+            "best_ppl": None, "best_ppl_delta_pct": None,
+            "best_kappa_improvement": None,
+            "n_success": n_success, "n_partial": n_partial,
+            "n_fail": n_fail, "n_diverged": n_div,
+            "total_time_s": time.time() - t_start,
+            "interpretation": (
+                f"All {n_div} runs diverged (non-finite loss) — training "
+                f"unstable at these λ/lr. No finite κ' measured."
+            ),
+        }
+    results["summary"] = summary
     out_path = os.path.join(results_dir, "exp39d_l23_training.json")
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)

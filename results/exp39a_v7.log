@@ -1,0 +1,10 @@
+/home/survivor/work/prism/experiments/exp39a_u_obs_rank.py:467: UserWarning: 241 Procrustes triples with det(R01) < 0 (reflections; E-28 convention has no det-fix — the frequency is the indicator to watch)
+  warnings.warn(f"{neg_det0} Procrustes triples with det(R01) < 0 "
+'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
+Retrying in 1s [Retry 1/5].
+'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
+Retrying in 2s [Retry 2/5].
+'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
+Retrying in 4s [Retry 3/5].
+'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
+Retrying in 8s [Retry 4/5].
