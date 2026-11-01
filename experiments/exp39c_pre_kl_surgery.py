@@ -1,6 +1,6 @@
 """E-39c_pre — KL pre-gate + behavioral budget for M_K-surgery (pre-stage of
 E-39c, docs/E39.md §3).  REVISED per docs/E39_fixes.md (round 1) and
-docs/E39c_pre_fixes.md (rounds 2 + 3).
+docs/E39c_pre_fixes.md (rounds 2–4).
 
 ID HISTORY (fixes §0): the first implementation was named `exp39b_kl_surgery`
 — an ID collision (E-39b per TЗ §2 is the PTQ/GPTQ gate). Renamed to
@@ -34,21 +34,23 @@ ROUND 2 (docs/E39c_pre_fixes.md):
          V_top), not a consequence of the bottom-16 choice. Defined locally
          (mirrors E-39a) to avoid the exp39a coupling (round-1 §8.1).
   §7   — α-BLEND sweep (the actionable next step): full top-16 rotation
-         (α=1) is catastrophic (KL≈5.02). We test partial rotation with the
+         (α=1) is catastrophic (KL≈6.31 post-fix, was ≈5.02 pre-Vh.T-fix). We test partial rotation with the
          CLEAN blend (round 3 §2.2): V_mixed(α) = √α·V_new_perp + √(1−α)·V_top
          (NO QR — orthonormal by construction since V_new_perp ⊥ V_top; the
          earlier qr(·) version silently negated M_kp terms via Householder
          sign flips on an orthonormal input), M_kp(α) = U_top Σ_top
-         V_mixed(α)ᵀ + M_rest, and sweep α ∈ {0,0.1,0.2,0.5,0.7,0.9,1.0}
-         recording KL(α). Per-α perturbation ‖V_mixed−V_top‖_col is checked
-         against the theory √(2−2√(1−α)) (round 3 §2.4) to verify the blend
-         is a true partial rotation. The κ' side is NOT recomputed per α:
-         E-39a already measured full-surgery (bottom-16) κ' = 0.0042 < the
-         0.005 target, so the flattening side is already satisfied and KL is
-         the binding constraint. The sweep therefore asks: is there ANY
-         non-trivial α with KL < 0.05? (If not, surgery as a route to L23
-         flattening is refuted. A per-α κ' measurement would be needed to
-         claim a specific partial-α flattening level — noted as a limitation.)
+         V_mixed(α)ᵀ + M_rest, and sweep α ∈ {0,0.01,0.02,0.05,0.08,0.1,0.2,
+         0.5,0.7,0.9,1.0} (round 4 §3 EXTENDS the grid below 0.1 — the
+         round-3 grid's min α=0.1 was already 1.26× over the KL budget, and
+         the KL=0.05 crossing sits near α≈0.08 which the old grid never
+         probed) recording KL(α). Per-α perturbation ‖V_mixed−V_top‖_col is
+         checked against the theory √(2−2√(1−α)) (round 3 §2.4) to verify
+         the blend is a true partial rotation. round 4 §3 also measures
+         per-α κ'(α) DRY-RUN (E-39a's exact _kappa_dryrun, N=32) so the
+         KL-budget-vs-flattening-target trade-off is quantified across α —
+         the α-grid alone cannot answer "is there an α with both KL<0.05 AND
+         κ'<0.005". The sweep therefore asks: on the tested grid, is there
+         ANY non-trivial α with BOTH KL < 0.05 AND κ' < 0.005?
 
 Round-1 fixes retained (numbers refer to docs/E39_fixes.md, round 1):
   §2 κ' = DRY-RUN (base û_t, not a measurement); §3 row_diag in one space
@@ -66,6 +68,17 @@ Round-3 fixes (numbers refer to docs/E39c_pre_fixes.md, round 3):
   removed (orthonormal by construction) + per-α perturbation-vs-theory check;
   §4.2 V_new_perp computed once in the closure; §4.6 b_principal via the
   factored projector (no [D,D] materialization).
+Round-4 fixes (docs/E39c_pre_fixes.md, round 4):
+  §3 the α-grid is EXTENDED below 0.1 (0.01/0.02/0.05/0.08) and per-α κ'(α)
+  dry-run is measured (E-39a's _kappa_dryrun, N=32) → the KL-vs-κ' trade-off
+  is computed (disjoint/overlapping passing regions); a_random κ' dry-run is
+  a consistency check vs E-39a's a_random κ' (loaded from the E-39a JSON;
+  post-fix value 0.000297); §4 the 'near-budget' hedge is
+  replaced by an honest '× budget, FAILS' budget_note; §5 the conclusion is
+  scoped to 'the tested grid' (no 'no α works' overclaim); §6 the
+  kappa_note logical error ('flattening side already satisfied') is fixed —
+  κ'(a_random, exact) applies ONLY at α=1, so both constraints are
+  simultaneously binding.
 
 Protocol (CPU, deterministic seed=0):
   1. Base forward on 8 fresh C4 docs (skip 4096), S=128 → logprobs_base (once).
@@ -77,7 +90,7 @@ Protocol (CPU, deterministic seed=0):
   5. Gating: PASS iff mean KL (real tokens, t≥1) < 0.05 nats/token.
 
 Note: the gate verdict for the FULL surgery (α=1) is unchanged by rounds 2/3
-(KL≈5.02 ≫ 0.05). Round 2 adds the decomposition + the α-sweep that answer
+(KL≈6.31 ≫ 0.05; pre-Vh.T-fix it was ≈5.02). Round 2 adds the decomposition + the α-sweep that answer
 *why* it fails and *whether* a weaker surgery survives; round 3 fixes the
 α-blend construction (the earlier QR-blend silently negated M_kp terms) so
 the partial-surgery verdict rests on a verified-clean rotation.
@@ -102,6 +115,11 @@ from _e38_cache import D, load_layer  # noqa: E402
 from prism.interventions import _resolve_lm_head_weight  # noqa: E402
 from prism.jacobian import _lm_module  # noqa: E402
 from prism.jstruct import build_M_K  # noqa: E402
+# round 4 §3: per-α κ' dry-run — reuse E-39a's EXACT _kappa_dryrun so the
+# α=1 point reproduces E-39a's a_random κ' (consistency check, loaded from
+# the E-39a JSON) and the
+# κ'(α) curve is measured under the same construction E-39a validated.
+from exp39a_u_obs_rank import _kappa_dryrun  # noqa: E402
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MODEL = "Qwen/Qwen3.5-0.8B"
@@ -113,14 +131,31 @@ S_LEN = 128
 C4_SKIP = 4096        # 27b cache used the first per-domain C4 docs; 4096 ≫ 8
 # E-16 KL leash = 0.1 nats; half-leash = conservative behavioral budget.
 KL_PASS = 0.05
-KAPPA_39A_FULL = 0.0042   # E-39a full-surgery (bottom-16) κ' < the 0.005 target
+# round 4 §3: κ' flattening target (E-39a: κ < 0.005). Per-α κ' dry-run is
+# measured against this to close the KL-vs-κ' trade-off the α-grid alone can't.
+KAPPA_TARGET = 0.005
+# round 5 §4.5: E-39a's ACTUAL a_random dry-run κ' — loaded from the E-39a
+# JSON (surgery_dryrun.a_random.kappa) so the a_random consistency check is a
+# TRUE machine-precision test. The earlier hardcoded 0.00396477 (and before
+# it 0.0042) were stale quotes: after the E-39a VU-fix (bottom-16 right-SVs of
+# U_obs as V_new) the real value is 0.000297, and the hardcoded ref made the
+# consistency check report a false 0.0037 «diff». Loading from the JSON makes
+# the check track whatever E-39a actually measured (E39_a_fixes.md §5).
+with open(os.path.join(REPO, "results", "exp39a_u_obs_rank.json")) as _f:
+    _E39A_DATA = json.load(_f)
+KAPPA_39A_FULL = _E39A_DATA["surgery_dryrun"]["a_random"]["kappa"]  # E-39a a_random κ' (exact, from JSON)
 KAPPA_39A_REF = KAPPA_39A_FULL  # alias for the α=1 dry-run ref in the JSON
 QR_RANK_TOL = 1e-6
 # round 2 §4.3: near-singular γ threshold (inverse normalization amplifies a
 # column by 1/min(γ); 1e-3 → 1000×, already dangerous).
 G_SINGULAR_TOL = 1e-3
-# round 2 §7: α-blend sweep grid (0 = no-op, 1 = full surgery).
-ALPHA_GRID = [0.0, 0.1, 0.2, 0.5, 0.7, 0.9, 1.0]
+# round 2 §7 + round 4 §3: α-blend sweep grid. round 4 EXTENDS it below 0.1
+# (0.01/0.02/0.05/0.08): the round-3 grid's min-α (0.1) was already 1.26× over
+# the KL budget, and the review's extrapolation (KL~α^2.5) predicts the KL=0.05
+# crossing sits near α≈0.08 — which the round-3 grid NEVER probed. Adding
+# these points closes the "no α works" overclaim by actually measuring the
+# α<0.1 region (4 extra forwards, ~40s).
+ALPHA_GRID = [0.0, 0.01, 0.02, 0.05, 0.08, 0.1, 0.2, 0.5, 0.7, 0.9, 1.0]
 # round 2 §5.3: candidate-pool width for the three E-39a V_new strategies
 # (E-39a uses R_POOL=64 so (a)/(b)/(c) span genuinely distinct 16-dim
 # subspaces; the α-sweep's V_new is the bottom-16, a narrower pool).
@@ -147,12 +182,17 @@ def _logprobs(model, ids):
 @torch.no_grad()
 def _kl_vs_base(lp_edit, lp_base, attn):
     """Per-token KL(P_edit ‖ P_base) over real tokens (padding excluded).
-    Returns (mean_t_ge_0, mean_t_ge_1, per_doc_t_ge_1)."""
+    Returns (mean_t_ge_0, mean_t_ge_1, per_doc_t_ge_1).
+
+    E39_a_fixes Bug 2: per_doc is now computed at t≥1 (matching the field
+    name `per_doc_t_ge_1`). The earlier version used `real` (t≥0), which
+    silently included the unconditioned first token t=0 — an error of ~0.5
+    nats in the per-doc values."""
     p_edit = lp_edit.exp()
     kl = (p_edit * (lp_edit - lp_base)).sum(dim=-1)          # [N, S]
     real = attn.bool()                                        # excludes padding
     t1 = real.clone(); t1[:, 0] = False                       # excludes t=0
-    per_doc = [float(kl[i, real[i]].mean()) for i in range(kl.shape[0])]
+    per_doc = [float(kl[i, t1[i]].mean()) for i in range(kl.shape[0])]
     return (float(kl[real].mean()), float(kl[t1].mean()), per_doc)
 
 
@@ -202,9 +242,18 @@ def main(results_dir=None):
     ck = load_layer(23, want=("H",))
     H, U128 = ck["H"], ck["U128"]
     u = H / H.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+    # round 4 §3: float64 û_t for the per-α κ' dry-run (E-39a convention).
+    u64 = u.double()
     U = u.reshape(-1, D).double()
     print("U SVD ...")
-    _, sU, VU = torch.linalg.svd(U, full_matrices=False)
+    _, sU, Vh = torch.linalg.svd(U, full_matrices=False)
+    # CRITICAL FIX (E39_a_fixes Bug 1): torch.linalg.svd returns (U, S, Vh)
+    # where Vh has right SVs as ROWS (Vh = Vᵀ). The code treated VU as V
+    # (right SVs as columns), so VU[:, -R] was selecting the last COLUMNS of
+    # Vh (= an arbitrary orthonormal basis, NOT the bottom-R right SVs of U).
+    # ρ_noise PRE-fix = 0.0148 ≈ R/D = 0.0156 confirmed this (a true bottom-R subspace
+    # gives ρ ≈ σ_bottom16²/N ≈ 3.9e-5, i.e. the POST-fix value ≈0.0002). Fix: transpose.
+    VU = Vh.T   # now VU = V: right SVs as columns
     sub_rep = {}
     P_sub, sub_rep = _obs_subspace(sU, VU, R, sub_rep)
     sv = torch.linalg.svdvals(P_sub)
@@ -309,10 +358,11 @@ def main(results_dir=None):
         return M_kp, W_new_rows, V_mixed_col
 
     # ---------------- α=1 surgery (the design under test) ----------------
-    # round 2 §2: the FULL surgery = the ACTUAL E-39a a_random design, which
-    # uses the RAW V_new (not the orthogonalized blend endpoint). So the
-    # headline full-surgery KL is the real E-39a design's cost (~5.02),
-    # independent of the blend fix (which only cleans the partial α∈(0,1)).
+    # The FULL surgery = the bottom-16 RAW V_new (VU[:,-16:], orthogonalize=False).
+    # This is NOT the E-39a a_random design (bottom-64 random; that costs
+    # a_random kl_t1 — see v_new_strategy_sensitivity). The headline full-surgery
+    # KL is the bottom-16 raw-rotation cost (≈6.31 post-fix), independent of the
+    # blend fix (which only cleans the partial α∈(0,1)).
     M_kp, W_new_rows, _ = _mkp_and_rows(1.0, orthogonalize=False)
     mnorm_new = float(torch.linalg.norm(M_kp))
     assert abs(mnorm_new - mnorm_old) < 1e-6, (
@@ -397,11 +447,10 @@ def main(results_dir=None):
 
     # ---------------- round 2 §7: α-blend sweep ----------------
     # For each α, edit head+embed (tied = real model) with M_kp(α) and record
-    # KL(α) (the binding behavioral cost). The κ' side is already satisfied
-    # (E-39a full-surgery κ'=0.0042 < 0.005), so the sweep asks only: is there
-    # any non-trivial α with KL < 0.05?
-    print("α-blend sweep (KL only; κ' is not the binding constraint — E-39a "
-          "full-surgery κ'=0.0042 < 0.005 already) ...")
+    # KL(α) (the binding behavioral cost) AND κ'(α) dry-run (round 4 §3) so the
+    # KL-budget-vs-flattening-target trade-off is quantified across α.
+    print("α-blend sweep (KL + per-α κ' dry-run, round 4: KL-budget vs "
+          "flattening-target trade-off) ...")
     sweep = []
     for alpha in ALPHA_GRID:
         M_kp_a, W_new_a, Vm_a = _mkp_and_rows(alpha)
@@ -428,6 +477,15 @@ def main(results_dir=None):
         pc_mean = float(per_col.mean())
         pc_max = float(per_col.max())
         pc_uniform = bool(pc_max < 1.5 * exp_pert) if alpha > 0 else True
+        # round 4 §3: per-α κ' DRY-RUN (base-model û_t, E-39a's exact
+        # _kappa_dryrun, N=32 cache, S=128). This closes the KL-vs-κ' trade-off
+        # the α-grid alone cannot: the KL budget (KL<0.05) is only satisfiable
+        # at SMALL α, but the flattening target (κ'<0.005) needs a substantial
+        # top-16 rotation (LARGE α). Measuring κ'(α) shows whether the two
+        # "passing" regions overlap. α=1 (V_new_perp) ≈ E-39a's a_random, so
+        # its κ' should match E-39a a_random's κ' (post-fix: 0.000297, loaded
+        # from the E-39a JSON) — a machine-precision consistency check on the dry-run pipeline.
+        kap_a = _kappa_dryrun(M_kp_a, u64, u64.shape[0], S_LEN, R)["kappa"]
         sweep.append({
             "alpha": alpha,
             "kl_t1": k1, "kl_t0": k0,
@@ -437,11 +495,14 @@ def main(results_dir=None):
             "pert_col_observed_mean": pc_mean,
             "pert_col_observed_max": pc_max,
             "pert_col_uniform_clean_rotation": pc_uniform,
+            "kappa_dryrun": kap_a,
+            "kappa_below_target": bool(kap_a is not None and kap_a < KAPPA_TARGET),
             "kl_below_0.05": crossing,
         })
         print(f"  α={alpha:<4} KL(t≥1)={k1:8.4f} row={mean_row:.3f} "
               f"|Vm.Vt|={vm_top:.3f} pert={pc_mean:.3f}/{pc_max:.3f} "
-              f"(exp {exp_pert:.3f}) clean={pc_uniform} KL<0.05={crossing}")
+              f"(exp {exp_pert:.3f}) κ'={kap_a:.4f} clean={pc_uniform} "
+              f"KL<0.05={crossing} κ'<0.005={kap_a < KAPPA_TARGET}")
     # state restored by _state_ctx finally; free the last per-α clone.
     del ed
 
@@ -490,6 +551,12 @@ def main(results_dir=None):
         # round 2 §4.1 (MEDIUM): per-strategy ‖Vnᵀ V_top‖_F (overlap diagnostic
         # for whether that strategy's full-surgery is a clean rotation).
         vn_ov = float(torch.linalg.norm(Vn.T @ V_top.T, "fro"))
+        # round 4 §3: per-strategy κ' DRY-RUN (E-39a's _kappa_dryrun, N=32
+        # cache). a_random is EXACTLY E-39a's a_random (bottom-64 QR of a
+        # random projection), so its κ' should reproduce E-39a's 0.0040
+        # (consistency check on the dry-run pipeline + the E-39c_pre V_new
+        # construction). b/c are the other two E-39a strategies.
+        kap_s = _kappa_dryrun(M_kp_s, u64, u64.shape[0], S_LEN, R)["kappa"]
         strat_kl[name] = {
             "kl_t1": k1,
             # round 3 §2.1: key name + convention now MATCH E-39a exactly
@@ -497,10 +564,13 @@ def main(results_dir=None):
             # experiments are directly comparable (no silent 16× gap).
             "rho_noise_u_obs_overlap_mean": ov,
             "v_new_vs_v_top_fro": vn_ov,
+            "kappa_dryrun": kap_s,
+            "kappa_below_target": bool(kap_s is not None and kap_s < KAPPA_TARGET),
             "kl_below_0.05": bool(k1 < KL_PASS),
         }
         print(f"  {name:12} KL(t≥1)={k1:.4f}  ρ_noise={ov:.5f} "
-              f"|Vn.Vt|={vn_ov:.3f} KL<0.05={k1 < KL_PASS}")
+              f"κ'={kap_s:.4f} |Vn.Vt|={vn_ov:.3f} KL<0.05={k1 < KL_PASS} "
+              f"κ'<0.005={kap_s < KAPPA_TARGET}")
     # state restored by _state_ctx finally; free the last clone.
     del ed
     any_strat_kl_safe = any(s["kl_below_0.05"] for s in strat_kl.values())
@@ -513,6 +583,58 @@ def main(results_dir=None):
                           if s["kl_below_0.05"] and s["alpha"] > 0.0]
     min_kl_nonzero = min((s["kl_t1"] for s in sweep if s["alpha"] > 0.0),
                          default=None)
+
+    # ---------------- round 4 §3: KL-vs-κ' trade-off (the actionable result) ----------------
+    # The round-3 grid's min-α (0.1) was already 1.26× over the KL budget; the
+    # round-4 grid probes α<0.1 so the KL=0.05 crossing is MEASURED, not
+    # extrapolated. Meanwhile κ'(α) is monotone DECREASING (base 0.0162 at α=0
+    # → ~0.004 at α=1), so the KL budget (small α) and the flattening target
+    # (large α) are in tension. Compute the two "passing" regions and whether
+    # they overlap — the question the α-grid alone could not answer.
+    kl_safe_alphas = [s["alpha"] for s in sweep
+                      if s["kl_below_0.05"] and s["alpha"] > 0.0]
+    kap_safe_alphas = [s["alpha"] for s in sweep
+                       if s["kappa_below_target"] and s["alpha"] > 0.0]
+    both_safe_alphas = [s["alpha"] for s in sweep
+                        if s["kl_below_0.05"] and s["kappa_below_target"]
+                        and s["alpha"] > 0.0]
+    # smallest non-trivial α that passes KL, and the smallest α that passes κ'
+    # (needs substantial rotation). round 5 §4.2: renamed from
+    # kl_crossing_alpha (misnomer: 0.01 is the smallest PASSES, not the
+    # KL=0.05 crossing, which sits between α=0.08 and α=0.1).
+    kl_min_passing_alpha = min(kl_safe_alphas) if kl_safe_alphas else None
+    kap_min_passing_alpha = min(kap_safe_alphas) if kap_safe_alphas else None
+    # round 5 §4.2: the actual KL=budget crossing α, by linear interpolation
+    # between the last passing and first failing α (data, not a guess).
+    kl_budget_crossing_estimate = None
+    _p = [s for s in sweep if s["alpha"] > 0.0 and s["kl_below_0.05"]]
+    _f = [s for s in sweep if s["alpha"] > 0.0 and not s["kl_below_0.05"]]
+    if _p and _f:
+        a_lo, kl_lo = max(_p, key=lambda s: s["alpha"])["alpha"], max(_p, key=lambda s: s["alpha"])["kl_t1"]
+        a_hi, kl_hi = min(_f, key=lambda s: s["alpha"])["alpha"], min(_f, key=lambda s: s["alpha"])["kl_t1"]
+        if kl_hi > kl_lo:
+            kl_budget_crossing_estimate = round(
+                a_lo + (KL_PASS - kl_lo) * (a_hi - a_lo) / (kl_hi - kl_lo), 4)
+    # the α<0.1 region is now MEASURED (round 4 grid), so the "does a pass
+    # exist at small α" question is answered by data, not extrapolation.
+    alpha01_measured = [s["alpha"] for s in sweep
+                        if 0.0 < s["alpha"] < 0.1]
+    alpha01_min_kl = min((s["kl_t1"] for s in sweep
+                          if 0.0 < s["alpha"] < 0.1), default=None)
+    min_alpha_nonzero = min((s["alpha"] for s in sweep if s["alpha"] > 0.0))
+    # round 5 §4.4: lookup-by-value (no fragile hardcoded sweep[1] index).
+    sweep_by_alpha = {s["alpha"]: s for s in sweep}
+    min_alpha_kap = sweep_by_alpha[min_alpha_nonzero]["kappa_dryrun"]
+    # --- E39_a_fixes.md §1-§6: data-driven text (no stale hardcoded values) ---
+    full_surgery_kl = dec["full"]["mean_t1"]          # bottom-16 RAW V_new (headline)
+    endpoint_orth_kl = sweep_by_alpha[1.0]["kl_t1"]   # α=1 orthogonalized endpoint
+    kap_lo = min(kap_safe_alphas) if kap_safe_alphas else None
+    kl_at_kap_safe = [sweep_by_alpha[a]["kl_t1"] for a in sorted(kap_safe_alphas)] \
+        or [full_surgery_kl]
+    a_random_kl = strat_kl["a_random"]["kl_t1"]       # actual E-39a a_random design
+    print(f"\n§3 KL-vs-κ' trade-off (round 4): KL-safe α={kl_safe_alphas} | "
+          f"κ'-safe α={kap_safe_alphas} | both={both_safe_alphas} | "
+          f"KL=budget crossing α≈{kl_budget_crossing_estimate}")
 
     res = {
         "experiment": "E-39c_pre: KL pre-gate + behavioral budget for M_K-surgery "
@@ -539,10 +661,13 @@ def main(results_dir=None):
             "note": "0.8B ties lm_head↔embed_tokens; the full edit changes "
                     "both readout and input embeddings (→ all 24 layers). "
                     "Three untied states split the cost. Values are mean KL "
-                    "over real tokens (t≥1). 'full' uses the RAW V_new (the "
-                    "actual E-39a a_random design), NOT the orthogonalized "
-                    "blend endpoint — so the headline full-surgery KL is the "
-                    "real design's cost.",
+                    "over real tokens (t≥1). 'full' uses the RAW bottom-16 "
+                    "V_new (VU[:,-16:], orthogonalize=False) — NOT the "
+                    "orthogonalized blend endpoint, and NOT the E-39a a_random "
+                    "design (bottom-64 random; see "
+                    f"v_new_strategy_sensitivity.strategies.a_random = "
+                    f"{a_random_kl:.2f}). The headline full-surgery KL is the "
+                    "bottom-16 raw-rotation cost.",
             "full": dec["full"],
             "head_only": dec["head_only"],
             "embed_only": dec["embed_only"],
@@ -611,49 +736,105 @@ def main(results_dir=None):
                           "the row change is monotone in α and the small-α point "
                           "is a genuinely small rotation.",
             },
-            "endpoint_note": "α=1 endpoint of the ORTHOGONALIZED blend is "
-                             "V_new_perp (V_new with its V_top component "
-                             "removed); its KL is reported in points[α=1] and is "
-                             "≈ the full-surgery (raw V_new = actual E-39a "
-                             "design) KL reported in kl_decomposition_tied_"
-                             "weights. Both full-surgery values are KL-infeasible.",
-            "kappa_note": "κ' is NOT recomputed per α: E-39a already measured "
-                          "full-surgery (a-equivalent, bottom-16) κ'=0.0042 "
-                          "< the 0.005 target, so the flattening side is "
-                          "already satisfied and KL is the binding constraint. "
-                          "The per-α subsampled κ' is numerically degenerate "
-                          "at this resolution and not reported.",
+            # the two full-surgery KL values are DISTINCT (paper must cite the
+            # right one). Headline FULL surgery (bottom-16 RAW V_new) =
+            # kl_decomposition_tied_weights.full ≈ 6.31 (post-fix; ≈5.02 pre-fix).
+            # The α-blend's ORTHOGONALIZED endpoint (V_new_perp) at α=1 ≈ 6.73.
+            # Both KL-infeasible; the orthogonalized endpoint is HIGHER (+6.5%).
+            # (The actual E-39a a_random = bottom-64 random costs ≈6.10.)
+            "endpoint_note": (f"TWO distinct full-rotation values — cite the "
+                             f"right one in the paper: (1) headline FULL surgery "
+                             f"(bottom-16 RAW V_new = VU[:,-16:], "
+                             f"orthogonalize=False) = kl_decomposition_tied_"
+                             f"weights.full = {full_surgery_kl:.2f}; "
+                             f"(2) the α-blend's ORTHOGONALIZED endpoint "
+                             f"(V_new_perp = V_new minus its V_top component) at "
+                             f"α=1 = points[α=1].kl_t1 = {endpoint_orth_kl:.2f}. "
+                             f"Gap = {endpoint_orth_kl - full_surgery_kl:+.2f} "
+                             f"({(endpoint_orth_kl - full_surgery_kl) / full_surgery_kl * 100:.1f}%): "
+                             f"the orthogonalized endpoint is HIGHER than the raw "
+                             f"bottom-16 rotation. Both are KL-infeasible. (The "
+                             f"ACTUAL E-39a a_random design — bottom-64 random, not "
+                             f"bottom-16 — costs {a_random_kl:.2f}; see "
+                             f"v_new_strategy_sensitivity.)"),
+            "kappa_note": "round 4 §6: κ'(α) IS measured per α (dry-run on the "
+                          "base-model û_t, E-39a's exact _kappa_dryrun, N=32). "
+                          "The round-2/3 claim 'the flattening side is already "
+                          "satisfied' was WRONG: E-39a's a_random κ' (post-fix: "
+                          "0.000297, from the E-39a JSON) applies ONLY at α=1 (full rotation). At small α the top-16 "
+                          "subspace is dominated by V_top, so κ' stays near the "
+                          "base 0.0162. Hence the KL budget (KL<0.05, small α) "
+                          "and the flattening target (κ'<0.005, large α) are "
+                          "SIMULTANEOUSLY binding — see "
+                          "alpha_blend_sweep.trade_off.",
             "kappa_full_surgery_ref": KAPPA_39A_FULL,
+            # round 4 §3: the measured KL-vs-κ' trade-off. Both "passing"
+            # regions are computed from the sweep data (not extrapolated);
+            # the α<0.1 region is now MEASURED (grid extended to 0.01/0.02/
+            # 0.05/0.08) so the KL crossing is a data point.
+            "trade_off": {
+                "kappa_target": KAPPA_TARGET,
+                "kl_budget": KL_PASS,
+                "kl_safe_alphas": kl_safe_alphas,
+                "kappa_safe_alphas": kap_safe_alphas,
+                "both_safe_alphas": both_safe_alphas,
+                "alpha01_measured": alpha01_measured,
+                "alpha01_min_kl": alpha01_min_kl,
+                "kl_min_passing_alpha": kl_min_passing_alpha,
+                "kap_min_passing_alpha": kap_min_passing_alpha,
+                "kl_budget_crossing_estimate": kl_budget_crossing_estimate,
+                "disjoint": (len(both_safe_alphas) == 0),
+            },
             "points": sweep,
             "any_nontrivial_alpha_with_kl_below_0.05": nontrivial_kl_safe,
             "min_kl_over_nonzero_alpha": min_kl_nonzero,
-            # round 3 §2.3: data-driven (no hardcoded claim). Reports what the
-            # CLEAN (QR-free, orthogonalized) blend actually produces, and notes
-            # that the blend is verified-clean so the verdict is robust to the
-            # blend construction (not an artifact).
-            "conclusion": ("no non-trivial α achieves KL<0.05 with the clean "
-                           "(orthogonalized, QR-free) blend — the blend is a "
-                           "verified true partial rotation (per-column "
-                           "perturbation matches √(2−2√(1−α)) exactly), so the "
-                           "negative result is robust to blend construction, not "
-                           "an artifact; min KL over α>0 = "
-                           f"{min_kl_nonzero:.3f}" if not nontrivial_kl_safe else
-                           "a non-trivial α achieves KL<0.05 with the clean "
-                           "blend — partial surgery IS feasible; see "
-                           "min_kl_over_nonzero_alpha"),
-            # round 3 (honest-magnitude correction): the EARLIER QR-blend made
-            # the small-α point look ~100× over budget (KL≈7.5 at α=0.1). With
-            # the QR sign-flip removed, the same α=0.1 is KL≈0.063 — only ~1.26×
-            # over the 0.05 budget. The verdict (FAIL) is unchanged but the
-            # MARGIN is far smaller than the artifact implied: partial surgery
-            # at small α is near-budget, not catastrophically over.
-            "near_budget_note": (f"min KL over α>0 = {min_kl_nonzero:.4f} ≈ "
-                                 f"{min_kl_nonzero / KL_PASS:.2f}× the "
-                                 f"{KL_PASS} budget (α=0.1). The full surgery "
-                                 f"(α=1, raw V_new) is ~{dec['full']['mean_t1'] / KL_PASS:.0f}× over. "
-                                 "So the partial-surgery route is near-budget at "
-                                 "small α, not 100× over as the earlier QR-blend "
-                                 "artifact suggested."),
+            # round 4 §5: no overclaim — the verdict is scoped to the TESTED
+            # GRID (now including α<0.1), and the blend-clean caveat is kept.
+            "conclusion": ((f"on the tested grid (α ∈ {sorted(ALPHA_GRID)}, incl. "
+                            f"α<0.1), NO α satisfies BOTH constraints. NO α passes "
+                            f"the KL budget: min KL = {min_kl_nonzero:.4f} at "
+                            f"α={min_alpha_nonzero} ({min_kl_nonzero / KL_PASS:.2f}× "
+                            f"over); at that α, κ'≈{min_alpha_kap:.4f} (≃"
+                            f"{min_alpha_kap / KAPPA_TARGET:.0f}× the {KAPPA_TARGET} "
+                            f"target). The κ' target is reached only at "
+                            f"α ∈ {kap_safe_alphas}, where KL = "
+                            f"{min(kl_at_kap_safe):.2f}–{max(kl_at_kap_safe):.2f} "
+                            f"(≃{min(kl_at_kap_safe) / KL_PASS:.0f}–"
+                            f"{max(kl_at_kap_safe) / KL_PASS:.0f}× over). The two "
+                            f"feasible regions are DISJOINT (trade_off) — the route "
+                            f"is infeasible by TENSION, not a thin margin. The clean "
+                            f"(QR-free) blend makes KL monotone in α, so this is not "
+                            f"a blend artifact. Full surgery (α=1) is refuted on KL "
+                            f"(~{full_surgery_kl / KL_PASS:.0f}× over).")
+                            if not both_safe_alphas else
+                           "an α on the tested grid achieves both KL<0.05 and "
+                           "κ'<0.005 — partial surgery IS feasible; see "
+                           "trade_off.both_safe_alphas"),
+            # round 4 §4: honest magnitude language (no 'near-budget' hedge).
+            # ACCURATE (data-driven, post-fix): NO α passes the KL budget (min
+            # KL = 0.135 at α=0.01); the κ' target is reached only at α ∈
+            # {0.7, 0.9, 1.0} where KL = 6.29–6.75. The feasible regions are
+            # DISJOINT — the route is infeasible by TENSION, not a thin margin.
+            "budget_note": ((f"NO α on the tested grid passes the KL budget: "
+                            f"min KL = {min_kl_nonzero:.4f} at α={min_alpha_nonzero} "
+                            f"({min_kl_nonzero / KL_PASS:.2f}× over). Since KL "
+                            f"increases monotonically with α "
+                            f"(clean_rotation_verified), no smaller α can help. "
+                            f"The κ' target (<{KAPPA_TARGET}) is reached only at "
+                            f"α ∈ {kap_safe_alphas}, where KL = "
+                            f"{min(kl_at_kap_safe):.2f}–{max(kl_at_kap_safe):.2f} "
+                            f"({min(kl_at_kap_safe) / KL_PASS:.0f}–"
+                            f"{max(kl_at_kap_safe) / KL_PASS:.0f}× over budget). "
+                            f"The feasible regions are DISJOINT — the route is "
+                            f"infeasible by tension, not by a thin margin. (At the "
+                            f"smallest α, κ'≈{min_alpha_kap:.4f} ≃"
+                            f"{min_alpha_kap / KAPPA_TARGET:.0f}× the target; at "
+                            f"the smallest κ'-passing α={kap_lo}, KL≈"
+                            f"{min(kl_at_kap_safe):.2f}.)")
+                            if not both_safe_alphas else
+                           "an α on the tested grid achieves both KL<0.05 and "
+                           "κ'<0.005 — partial surgery IS feasible; see "
+                           "trade_off.both_safe_alphas"),
         },
         # round 2 §5.3: V_new strategy sensitivity (a_random/b_principal/
         # c_balanced), full surgery (α=1). Defined locally (mirrors E-39a) to
@@ -667,16 +848,37 @@ def main(results_dir=None):
             "v_c_rank_ok": V_c_valid,
             "strategies": strat_kl,
             "any_strategy_kl_below_0.05": any_strat_kl_safe,
+            # round 4 §3: the a_random strategy is EXACTLY E-39a's a_random
+            # (bottom-64 QR of a random projection), so its dry-run κ' is a
+            # consistency check on the whole dry-run pipeline: it should
+            # reproduce E-39a's a_random κ' (post-fix: 0.000297, from E-39a JSON).
+            "e39a_consistency": {
+                "e39c_pre_a_random_kappa": strat_kl["a_random"]["kappa_dryrun"],
+                "e39a_a_random_kappa": KAPPA_39A_FULL,
+                "abs_diff": abs((strat_kl["a_random"]["kappa_dryrun"] or 0.0)
+                                - KAPPA_39A_FULL),
+                "note": "a_random (E-39c_pre) vs a_random (E-39a) dry-run κ'. "
+                        "Small diff (≲1e-3) confirms the E-39c_pre V_new "
+                        "construction + _kappa_dryrun pipeline reproduce "
+                        "E-39a. (A larger diff would flag a construction/"
+                        "convention mismatch.)",
+            },
             "conclusion": ("no V_new direction is KL-safe at full surgery — "
                            "the failure is structural (no V_new in the bottom "
                            "pool is KL-safe at full rotation), not a "
-                           "consequence of the bottom-16 choice" if
+                           "consequence of the bottom-16 choice; per-strategy "
+                           "κ' dry-run also reported (round 4)" if
                            not any_strat_kl_safe else
                            "at least one V_new direction is KL-safe"),
         },
         "kappa_dryrun_alpha1": {
-            "note": "dry-run on base-model û_t (edited-model û_t differ due to "
-                    "tied weights — NOT a measurement)",
+            "note": "round 4: per-α κ' DRY-RUN is now measured (base-model û_t, "
+                    "E-39a's exact _kappa_dryrun, N=32). Edited-model û_t differ "
+                    "due to tied weights — this is a DRY-RUN, NOT an E-39c "
+                    "measurement. See alpha_blend_sweep.points[].kappa_dryrun "
+                    "and .trade_off.",
+            "per_alpha": {s["alpha"]: s["kappa_dryrun"] for s in sweep},
+            "target": KAPPA_TARGET,
             "ref_39a": KAPPA_39A_REF,
         },
         "kl_full_nats_per_token": {
@@ -711,12 +913,19 @@ def main(results_dir=None):
             "negation of M_kp terms), not a loss-landscape property. The α=1 "
             "blend endpoint is V_new_perp, ≈ the full-surgery raw-V_new design "
             "(kl_decomposition_tied_weights); both are KL-infeasible.",
-            "Per-α κ' is NOT measured: the per-α subsampled κ' is numerically "
-            "degenerate (≈0) at this resolution and E-39a's full-surgery κ'="
-            "0.0042 already satisfies the 0.005 flattening target, so the "
-            "α-sweep verdict (no KL-safe non-trivial α) rests on the KL side "
-            "alone. A full per-α κ' measurement would be needed to claim a "
-            "specific partial-α flattening level.",
+            "Per-α κ' IS measured (round 4 §3) as a DRY-RUN on the base-model "
+            "û_t (E-39a's _kappa_dryrun, N=32). This is a PREVIEW, not an "
+            "E-39c measurement: the real edited-model κ'(α) could differ "
+            "(tied weights). The trade-off verdict (KL budget vs flattening "
+            "target across α) rests on this dry-run κ'(α); a real E-39c "
+            "measurement at a candidate α would be needed to confirm.",
+            "κ' dry-run uses the 32-doc cache (N=32, S=128) — the SAME "
+            "convention as E-39a (its a_random dry-run = 0.0040). The KL side "
+            "uses only 8 fresh C4 docs (skip 4096), so KL and κ' are measured "
+            "on different doc sets (both base-model references, disjoint from "
+            "each other by offset). The a_random consistency check in "
+            "v_new_strategy_sensitivity.e39a_consistency validates the "
+            "pipeline.",
         ],
         "runtime_s": round(time.time() - t0, 1),
         "deterministic": True,
@@ -728,10 +937,15 @@ def main(results_dir=None):
           f"(mean KL {kl_full_t1:.5f} < {KL_PASS})")
     print(f"α-sweep: non-trivial α with KL<0.05 = {nontrivial_kl_safe}; "
           f"min KL over α>0 = {min_kl_nonzero:.4f} "
-          f"(≈ {min_kl_nonzero / KL_PASS:.2f}× budget → near-budget, NOT the "
-          f"~100× the earlier QR-blend artifact implied)")
-    print(f"flattening side: E-39a full-surgery κ'={KAPPA_39A_FULL} "
-          f"(already < 0.005 → KL is the binding constraint)")
+          f"({min_kl_nonzero / KL_PASS:.2f}× budget at α={min_alpha_nonzero})")
+    print(f"§3 trade-off (round 4): KL-safe α={kl_safe_alphas} | "
+          f"κ'-safe α={kap_safe_alphas} | BOTH={both_safe_alphas} "
+          f"({'DISJOINT — no α satisfies both' if not both_safe_alphas else 'overlap found'})")
+    print(f"a_random κ' dry-run = {strat_kl['a_random']['kappa_dryrun']:.4f} "
+          f"(E-39a: {KAPPA_39A_FULL}; |diff| = "
+          f"{abs((strat_kl['a_random']['kappa_dryrun'] or 0.0) - KAPPA_39A_FULL):.4f})")
+    print(f"flattening side: per-α κ' dry-run (round 4); α=1 ref "
+          f"={KAPPA_39A_FULL} < {KAPPA_TARGET}")
     print(f"§5.3 strategy sensitivity: any V_new direction KL-safe = "
           f"{any_strat_kl_safe}")
 

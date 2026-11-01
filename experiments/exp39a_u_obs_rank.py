@@ -338,6 +338,11 @@ def _paired_tests(strat, names):
     if not all(p is not None and len(p) > 0 for p in per_doc_map.values()):
         return None
     pairs = [(a, b) for i, a in enumerate(names) for b in names[i + 1:]]
+    # E39_a_fixes Bug 3: guard against empty pairs (e.g. names=[] or all
+    # strategies invalid). Without this, alpha = 0.05 / len(pairs) crashes
+    # with ZeroDivisionError on the noop-failed / all-invalid path.
+    if len(names) < 2 or not pairs:
+        return None
     alpha = 0.05 / len(pairs)   # Bonferroni
     res = []
     for lo, hi in pairs:
@@ -464,7 +469,14 @@ def main(results_dir=None):
     # ---------- 1. U_obs rank ----------
     u = H / H.norm(dim=-1, keepdim=True).clamp_min(1e-12)     # [N, S, D]
     U = u.reshape(-1, Dd).double()                            # [4096, 1024]
-    _, sU, VU = torch.linalg.svd(U, full_matrices=False)      # VU: [D, D] (cols)
+    _, sU, Vh = torch.linalg.svd(U, full_matrices=False)
+    # CRITICAL FIX (E39_a_fixes Bug 1): torch.linalg.svd returns (U, S, Vh)
+    # where Vh has right SVs as ROWS (Vh = Vᵀ). The code treated VU as V
+    # (right SVs as columns), so VU[:, -R_pool:] was selecting the last
+    # COLUMNS of Vh (= an arbitrary orthonormal basis, NOT the bottom-R
+    # right SVs of U). ρ_noise = 0.0148 ≈ R/D = 0.0156 confirms this (a true
+    # bottom-R subspace gives ρ ≈ σ_bottom16²/N ≈ 3.9e-5). Fix: transpose.
+    VU = Vh.T   # now VU = V: right SVs as columns
 
     body = np.zeros(S_s, dtype=bool); body[BODY_LO:BODY_HI + 1] = True
     pos0 = np.zeros(S_s, dtype=bool); pos0[0] = True
