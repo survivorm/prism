@@ -7,7 +7,8 @@ PTQ (GPTQ/AWQ) квантует lm_head.weight → M_K → J_t, при этом 
 Уровни (spec):
   * "fp16"  — неоквантованный baseline: загруженный fp16 W_lm (→ fp64).
               Воспроизводит кэшированное J в L23 до ~1e-7 (self-check).
-  * "int8"  — RTN (per-group min-max, round-to-nearest), без Hessian.
+  * "int8_rtn" — RTN (per-group min-max, round-to-nearest), без Hessian.
+    (P1.7: RTN, не GPTQ-8bit — переименовано int8 → int8_rtn.)
   * "gptq4" — GPTQ 4-bit, group_size=128, desc_act=True, damp=0.01
               (port IST-DASLab/gptq: H = (2/n)·Σxxᵀ, cholesky-inverse,
               per-group scale/zero, in-block error compensation).
@@ -18,7 +19,7 @@ PTQ (GPTQ/AWQ) квантует lm_head.weight → M_K → J_t, при этом 
   * cos(u_g, 1/√K) — gauge-axis alignment (E-37).
   * J_rel_drift = ‖J_q − J‖_F / ‖J‖_F (per (doc,t) median/p95/max).
   * PPL на C4 holdout (lm_head.replace не используется — tied weights;
-    logits = norm(h_last) @ W_qᵀ в fp32).
+    PPL readout-only: квантуется только W_lm, h от базовой модели — P0.5).
 
 GATE на κ(L23) (spec §2.4):
   < 0.02  → PTQ не ломает лист, flatness не приоритет для PTQ.
@@ -119,7 +120,12 @@ KAPPA_MODERATE = 0.10
 
 
 def _c4_docs(n_docs, s_len, tokenizer, skip=0, split="train"):
-    """Load n_docs C4 docs of length s_len, skipping `skip` docs."""
+    """Load n_docs C4 docs, tokenize FULL text to s_len tokens (no char-slice).
+
+    Truncation to s_len happens in the tokenizer (by tokens), not by cutting
+    the raw string — so the calibration/holdout sets are ~s_len real tokens,
+    not ~s_len characters (P0.1).
+    """
     ds = load_dataset("allenai/c4", "en", split=split, streaming=True)
     texts = []
     n_skip = 0
@@ -129,7 +135,7 @@ def _c4_docs(n_docs, s_len, tokenizer, skip=0, split="train"):
             continue
         t = doc["text"]
         if t:
-            texts.append(t[:s_len])
+            texts.append(t)
         if len(texts) >= n_docs:
             break
     if len(texts) < n_docs:
@@ -383,27 +389,23 @@ def _quantize_gptq(W, X, bits, group, damp_frac, device):
     return Wq
 
 
-def _ppl_from_logits(logits, ids, attn):
-    """PPL from precomputed logits [N, S, V] and ids [N, S] with attn mask.
-    Returns mean per-token NLL (real tokens only).
-    """
-    lp = torch.log_softmax(logits.float(), dim=-1)  # [N, S, V]
-    # Shift: predict token t+1 from logits at t.
-    N, S, V = lp.shape
-    target = ids[:, 1:]  # [N, S-1]
-    lp_shift = lp[:, :-1, :]  # [N, S-1, V]
-    real = attn[:, 1:].bool()  # [N, S-1]
-    # Gather logprob of target.
-    lp_target = lp_shift.gather(2, target.unsqueeze(2)).squeeze(2)  # [N, S-1]
-    if real.sum() == 0:
-        return float("nan")
-    return float(lp_target[real].mean().abs().item())
-
-
 @torch.no_grad()
 def main(device=None, results_dir=None, small_model=None):
     t0 = time.time()
     dev = _resolve_device(device)
+    # P1.4: deterministic — seed RNGs (GPTQ itself is deterministic given
+    # inputs; this seeds any stochastic path). use_deterministic_algorithms
+    # is best-effort (some T4 cuBLAS ops lack a deterministic path).
+    import random
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    if dev.type == "cuda":
+        torch.cuda.manual_seed_all(SEED)
+        try:
+            torch.use_deterministic_algorithms(True)
+        except Exception as e:
+            print(f"  (deterministic_algorithms not fully settable: {e})")
     out_dir = results_dir or os.path.join(os.getcwd(), "results")
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, "exp39b_ptq_perturbation.json")
@@ -443,6 +445,10 @@ def main(device=None, results_dir=None, small_model=None):
     assert rel_arr.max() < SELFCHECK_TOL, (
         f"J reconstruction self-check failed: max rel err {rel_arr.max():.2e} "
         f"> {SELFCHECK_TOL} — W_lm/g/c_t chain broken")
+    # P1.5: release self-check GPU tensors (~4 GB) before the per-layer loop.
+    del J_rec, J_cache, H, M_K_base, rel
+    if dev.type == "cuda":
+        torch.cuda.empty_cache()
 
     # ---------------- GPTQ: capture Hessian inputs ----------------
     print("capturing GPTQ Hessian inputs (C4 train skip "
@@ -450,27 +456,36 @@ def main(device=None, results_dir=None, small_model=None):
     ids_cal, attn_cal = _c4_docs(N_CAL, S_CAL, tok, skip=C4_CAL_SKIP)
     ids_cal = ids_cal.to(dev)
     attn_cal = attn_cal.to(dev)
+    # lm_head input == model.model(...).last_hidden_state (post final RMSNorm).
+    # Capture it directly (chunked to bound memory) instead of a full-model
+    # forward: no 8 GB logits tensor (fixes the v5 OOM) and no double norm.
     captured = []
-
-    def _hook(module, inp, out):
-        # inp: (x,) where x [B, S, D] fp16 (lm_head input)
-        captured.append(inp[0].float().cpu())
-
-    hook = model.lm_head.register_forward_pre_hook(_hook)
-    with torch.no_grad():
-        model(input_ids=ids_cal, attention_mask=attn_cal)
-    hook.remove()
-    X = torch.cat(captured, dim=1).reshape(-1, D)  # [n*S, D]
-    print(f"  Hessian inputs: {tuple(X.shape)}")
+    cal_chunk = 16
+    for c0 in range(0, N_CAL, cal_chunk):
+        c1 = min(c0 + cal_chunk, N_CAL)
+        with torch.no_grad():
+            out = model.model(input_ids=ids_cal[c0:c1],
+                              attention_mask=attn_cal[c0:c1])
+        captured.append(out.last_hidden_state.float().cpu())
+        if dev.type == "cuda":
+            torch.cuda.empty_cache()
+    X_all = torch.cat(captured, dim=0)  # [n, S, D]
+    del captured
+    # Mask out padding (P0.2): keep only real tokens in the Hessian.
+    mask = attn_cal.cpu().bool()  # [n, S]
+    X = X_all[mask]  # [n_real, D]
+    del X_all
+    print(f"  Hessian inputs: {tuple(X.shape)} "
+          f"(real tokens, masked) of {attn_cal.sum().item()} expected")
     X_dev = X.to(dev)
 
     # ---------------- quantize all 3 levels ----------------
     levels = {}
     # fp16 baseline (no quantization)
     levels["fp16"] = W_lm64
-    # int8 RTN
+    # int8 RTN (P1.7: renamed int8 → int8_rtn, it is RTN not GPTQ-8bit)
     print("quantizing int8 (RTN) ...")
-    levels["int8"] = _quantize_rtn(W_lm64, RTN_BITS, RTN_GROUP)
+    levels["int8_rtn"] = _quantize_rtn(W_lm64, RTN_BITS, RTN_GROUP)
     # gptq 4-bit
     print("quantizing GPTQ 4-bit ...")
     t_gptq = time.time()
@@ -490,23 +505,48 @@ def main(device=None, results_dir=None, small_model=None):
               f"{C4_PPL_SKIP}")
         ids_ppl, attn_ppl = _c4_docs(N_PPL, S_PPL, tok, skip=C4_PPL_SKIP)
     ids_ppl = ids_ppl.to(dev)
-    attn_ppl = attn_ppl.to(dev)
-    # Base forward: capture last_hidden_state.
+    attn_ppl_dev = attn_ppl.to(dev)
+    attn_ppl_cpu = attn_ppl  # keep a CPU copy for the NLL mask
+    # P0.4 check: last_hidden_state (post final RMSNorm) must equal the lm_head
+    # input, i.e. model.lm_head(last_hidden_state) == model(...).logits. Verified
+    # on a 4-doc batch (cheap); a mismatch would mean double-norm / wrong input.
     with torch.no_grad():
-        out = model.model(input_ids=ids_ppl, attention_mask=attn_ppl)
-        h_last = out.last_hidden_state  # [N, S, D] fp16 (pre-norm)
-    # lm_head input = final RMSNorm(h_last). Apply once, reuse for all levels.
-    with torch.no_grad():
-        h_normed = _lm_module(model).norm(h_last.float())  # [N, S, D] fp32
-    del h_last
+        lref = model.model(input_ids=ids_ppl[:4], attention_mask=attn_ppl_dev[:4]).last_hidden_state
+        lref2 = model(input_ids=ids_ppl[:4], attention_mask=attn_ppl_dev[:4]).logits
+        ref_err = (lref.float() @ W_lm64.float().T - lref2.float()).abs().max().item()
+    print(f"  P0.4 check: |lm_head(lh) - model.logits| max = {ref_err:.3e} "
+          f"(should be ~0 for a few docs; fp16 round-off allowed)")
+    if ref_err > 2.0:
+        print("  WARNING: P0.4 check failed — last_hidden_state may already be "
+              "post-norm differently than expected; PPL/quant may be biased.")
+    # Capture last_hidden_state chunked (lm_head input, post final RMSNorm).
+    # No double norm (P0.4), no full-batch logits tensor (OOM fix).
     ppl = {}
-    for name, Wq in {"base": W_lm64, "int8": levels["int8"],
+    V_vocab = W_lm64.shape[0]
+    ppl_chunk = 8
+    for name, Wq in {"base": W_lm64, "int8_rtn": levels["int8_rtn"],
                      "gptq4": levels["gptq4"]}.items():
-        with torch.no_grad():
-            logits_q = h_normed @ Wq.float().T  # [N, S, V]
-        ppl[name] = _ppl_from_logits(logits_q, ids_ppl, attn_ppl)
-        print(f"  PPL {name} = {ppl[name]:.4f}")
-    del h_normed
+        nll_sum = 0.0
+        n_real = 0
+        for c0 in range(0, N_PPL, ppl_chunk):
+            c1 = min(c0 + ppl_chunk, N_PPL)
+            with torch.no_grad():
+                h = model.model(input_ids=ids_ppl[c0:c1],
+                                attention_mask=attn_ppl_dev[c0:c1]).last_hidden_state.float()
+                logits_c = h @ Wq.float().T  # [chunk, S, V]
+                del h
+                lp = torch.log_softmax(logits_c, dim=-1)
+                del logits_c
+                target = ids_ppl[c0:c1, 1:]
+                real = attn_ppl_cpu[c0:c1, 1:].bool()
+                lp_t = lp[:, :-1, :].gather(2, target.unsqueeze(2)).squeeze(2)
+                nll_sum += float((-lp_t[real]).sum().item())
+                n_real += int(real.sum().item())
+                del lp, lp_t, target, real
+            if dev.type == "cuda":
+                torch.cuda.empty_cache()
+        ppl[name] = float(np.exp(nll_sum / max(n_real, 1)))
+        print(f"  PPL {name} = {ppl[name]:.4f} (n_real={n_real})")
     if dev.type == "cuda":
         torch.cuda.empty_cache()
 
@@ -559,9 +599,11 @@ def main(device=None, results_dir=None, small_model=None):
     # ---------------- gate ----------------
     kap23_base = metrics[23]["fp16"]["kappa"]
     kap23_gptq = metrics[23]["gptq4"]["kappa"]
-    kap23_int8 = metrics[23]["int8"]["kappa"]
-    # Gate on κ(L23) GPTQ vs base.
-    if kap23_gptq < KAPPA_PASS:
+    kap23_int8 = metrics[23]["int8_rtn"]["kappa"]
+    kap_ratio = kap23_gptq / kap23_base if kap23_base > 0 else float("nan")
+    # Gate on κ(L23) GPTQ vs base. P1.6: pass also requires the relative
+    # bound ≤ +25% (ratio ≤ 1.25), not just the absolute 0.02 threshold.
+    if kap23_gptq < KAPPA_PASS and kap_ratio <= 1.25:
         gate = "pass"
     elif kap23_gptq < KAPPA_MODERATE:
         gate = "moderate"
@@ -571,7 +613,6 @@ def main(device=None, results_dir=None, small_model=None):
     ppl_base_v = ppl["base"]
     ppl_gptq_v = ppl["gptq4"]
     ppl_delta_pct = (ppl_gptq_v - ppl_base_v) / ppl_base_v * 100 if ppl_base_v > 0 else float("nan")
-    kap_ratio = kap23_gptq / kap23_base if kap23_base > 0 else float("nan")
     print(f"\nGATE: κ(L23) base={kap23_base:.5f} gptq4={kap23_gptq:.5f} "
           f"int8={kap23_int8:.5f}")
     print(f"  gate={gate} (κ_gptq < {KAPPA_PASS}: pass; "
@@ -588,7 +629,8 @@ def main(device=None, results_dir=None, small_model=None):
         "r": R,
         "layers": L_CACHED,
         "gate_layers": L_GATE,
-        "levels": ["fp16", "int8", "gptq4"],
+        "levels": ["fp16", "int8_rtn", "gptq4"],
+        "readout_only_ptq": True,  # P0.5: W_lm only quantized; h from base model
         "gptq_bits": GPTQ_BITS,
         "gptq_group": GPTQ_GROUP,
         "gptq_damp": GPTQ_DAMP,
@@ -609,7 +651,7 @@ def main(device=None, results_dir=None, small_model=None):
         "ppl_delta_pct_gptq4_vs_base": float(ppl_delta_pct),
         "kappa_l23": {
             "base": kap23_base,
-            "int8": kap23_int8,
+            "int8_rtn": kap23_int8,
             "gptq4": kap23_gptq,
             "ratio_gptq4_vs_base": float(kap_ratio),
         },
