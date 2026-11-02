@@ -33,6 +33,9 @@ C4 split (disjoint from E-16/E-27b calibration):
 J_t recompute (kappa/beta/u_g/drift) uses the jcache H fields (32 docs ×
 128 pos, the 27b split) per spec — the same split for base and quantized,
 so base-vs-quantized is internally consistent.
+
+P1.3: sentinel-фильтра нет — κ/β/cos считаются на всех тройках/позициях
+для консистентности с E-39a (baseline 0.0162 тоже без фильтра).
 """
 
 import json
@@ -117,6 +120,11 @@ SELFCHECK_TOL = 1e-5
 # Gate thresholds (spec §2.4)
 KAPPA_PASS = 0.02
 KAPPA_MODERATE = 0.10
+# N2: base self-checks — known numbers from E-38d/E-38e (L23, r=16).
+KAPPA_BASE_REF = 0.0162   # E-38d / E-39a kappa_median (L23, r=16)
+KAPPA_BASE_TOL = 0.005
+BETA_BASE_REF = 0.882     # E-38e beta/sigma1 baseline (~0.9 ± 0.15)
+BETA_BASE_TOL = 0.05
 
 
 def _c4_docs(n_docs, s_len, tokenizer, skip=0, split="train"):
@@ -226,7 +234,7 @@ def _beta_sigma1(M_K, H):
     beta_list = []
     hnorm = H.norm(dim=2)
     U_hat = H / hnorm.clamp(min=1e-12).unsqueeze(2)  # [n, S, D]
-    alpha = torch.einsum("ntd,cd->nt", U_hat, w)  # [n, S]
+    alpha = U_hat @ w  # [n, S] (w: [D])
     beta = (w.unsqueeze(0).unsqueeze(0) - alpha.unsqueeze(2) * U_hat).norm(dim=2)
     beta_flat = (beta / s1).flatten().cpu().numpy()
     beta_flat = beta_flat[np.isfinite(beta_flat)]
@@ -241,13 +249,13 @@ def _cos_ug_1k(J):
     J: [n, S, K, D]. Returns (median cos, n_valid).
     """
     K = J.shape[2]
-    ones = torch.ones(K, device=J.device, dtype=J.dtype) / np.sqrt(K)
-    JG = torch.einsum("ntkd,ntld->ntkl", J, J)  # JJ^T [n, S, K, K]
-    v = torch.einsum("ntkl,kl->ntk", JG, ones)  # [n, S, K]
+    inv_sqrt_K = 1.0 / np.sqrt(K)
+    s = J.sum(dim=2)  # [n, S, D]: s[d] = sum over K tokens
+    v = torch.einsum("ntkd,ntd->ntk", J, s)  # [n, S, K] = JJ^T 1
     nv = v.norm(dim=2)  # [n, S]
     with torch.no_grad():
         u_g = v / nv.clamp(min=1e-12).unsqueeze(2)
-        cos = (u_g * ones.unsqueeze(0).unsqueeze(0)).sum(dim=2)  # [n, S]
+        cos = (u_g * inv_sqrt_K).sum(dim=2)  # [n, S] = u_g · (1/√K)
     cos_flat = cos.flatten().cpu().numpy()
     cos_flat = cos_flat[np.isfinite(cos_flat)]
     if len(cos_flat) == 0:
@@ -294,9 +302,10 @@ def _recompute_J(M_K, H, chunk_docs=8):
         U_hat = h / hnorm.clamp(min=1e-12).unsqueeze(2)  # [nc, S, D]
         MK_Ut = M_K @ U_hat.transpose(1, 2)  # [nc, K, S]
         cross = MK_Ut.permute(0, 2, 1).unsqueeze(3) * U_hat.unsqueeze(2)  # [nc, S, K, D]
-        Jc = c.unsqueeze(2).unsqueeze(3) * (M_K.unsqueeze(0).unsqueeze(0) - cross)
-        Jout[c0:c1] = Jc  # [nc, S, K, D]
-        del h, hnorm, c, U_hat, MK_Ut, cross, Jc
+        out = Jout[c0:c1]  # [nc, S, K, D] view — no extra [nc,S,K,D] temporary
+        torch.sub(M_K.unsqueeze(0).unsqueeze(0), cross, out=out)
+        out.mul_(c.unsqueeze(2).unsqueeze(3))
+        del h, hnorm, c, U_hat, MK_Ut, cross, out
         if H.device.type == "cuda":
             torch.cuda.empty_cache()
     return Jout
@@ -331,7 +340,7 @@ def _quantize_gptq(W, X, bits, group, damp_frac, device):
     Returns dequantized W_q [V, D] fp32 (unpermuted).
     """
     V, Dd = W.shape
-    W = W.clone().float()
+    W = W.to(device).clone().float()
     n = X.shape[0]
     H = (2.0 / n) * (X.float().T @ X.float())  # [D, D] fp32 (X: [n, D])
     dead = H.diagonal() == 0
@@ -342,7 +351,6 @@ def _quantize_gptq(W, X, bits, group, damp_frac, device):
     diag = torch.arange(Dd, device=device)
     H[diag, diag] += damp
     perm = torch.argsort(H.diagonal(), descending=True)
-    invperm = torch.argsort(perm)
     Wp = W[:, perm].clone()
     Hp = H[perm][:, perm]
     maxq = (1 << bits) - 1
@@ -402,10 +410,10 @@ def main(device=None, results_dir=None, small_model=None):
     torch.manual_seed(SEED)
     if dev.type == "cuda":
         torch.cuda.manual_seed_all(SEED)
-        try:
-            torch.use_deterministic_algorithms(True)
-        except Exception as e:
-            print(f"  (deterministic_algorithms not fully settable: {e})")
+    try:
+        torch.use_deterministic_algorithms(True)  # P1.4: best-effort, CPU too
+    except Exception as e:
+        print(f"  (deterministic_algorithms not fully settable: {e})")
     out_dir = results_dir or os.path.join(os.getcwd(), "results")
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, "exp39b_ptq_perturbation.json")
@@ -414,16 +422,23 @@ def main(device=None, results_dir=None, small_model=None):
 
     # ---------------- model ----------------
     print("loading model fp16 ...")
+    # N3: fp16 only on GPU (CPU fp16 forward is 5-10x slower); W_lm.double()
+    # keeps fp64 metrics regardless of model dtype.
+    model_dtype = torch.float16 if dev.type == "cuda" else torch.float32
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_P, torch_dtype=torch.float16, attn_implementation="eager")
+        MODEL_P, torch_dtype=model_dtype, attn_implementation="eager")
     model.to(dev)
     model.eval()
     tok = AutoTokenizer.from_pretrained(MODEL_P)
     W_lm = _resolve_lm_head_weight(model)  # [V, D] fp16 (GPU)
-    W_lm64 = W_lm.double().detach()  # fp16 baseline → fp64, no quantization
+    # T4 memory: the full [V,D] weight copies live on CPU — the per-layer loop
+    # only needs the 128 token-set rows (M_K), PPL moves one fp32 copy at a time.
     vocab = W_lm.shape[0]
-    g = _lm_module(model).norm.weight.float() + 1  # [D] (1+w)
-    print(f"W_lm: {tuple(W_lm.shape)}, g: min={g.min().item():.3f}")
+    W_lm64 = W_lm.double().detach().cpu()  # fp16 baseline → fp64, no quantization
+    W_lm32 = W_lm.float().detach().cpu()  # N4: one fp32 copy for PPL matmuls (~1 GB)
+    del W_lm
+    g = _lm_module(model).norm.weight.float().cpu() + 1  # [D] (1+w)
+    print(f"W_lm: {tuple(W_lm64.shape)}, g: min={g.min().item():.3f}")
 
     # ---------------- self-check: J reconstruction at L23 ----------------
     print("self-check: J reconstruction at L23 ...")
@@ -433,7 +448,7 @@ def main(device=None, results_dir=None, small_model=None):
     # H fields: [n, S, D] (hidden states at L23) — moved to GPU to match M_K.
     H = data["H"].float().to(dev)  # [n, S, D]
     # J_t = M_K · (I − û_t û_tᵀ) · c_t, per (doc, t).
-    M_K_base = build_M_K(W_lm64, U128, g).float()  # [K, D]
+    M_K_base = build_M_K(W_lm64, U128, g).float().to(dev)  # [K, D]
     J_rec = _recompute_J(M_K_base, H)  # [n, S, K, D]
     J_cache = data["J"].float().to(dev)  # [n, S, K, D]
     del data
@@ -490,7 +505,7 @@ def main(device=None, results_dir=None, small_model=None):
     print("quantizing GPTQ 4-bit ...")
     t_gptq = time.time()
     levels["gptq4"] = _quantize_gptq(W_lm64, X_dev, GPTQ_BITS, GPTQ_GROUP,
-                                     GPTQ_DAMP, dev).double()
+                                     GPTQ_DAMP, dev).cpu().double()
     print(f"  GPTQ done in {time.time() - t_gptq:.1f}s", flush=True)
     del X_dev, X
     if dev.type == "cuda":
@@ -505,27 +520,31 @@ def main(device=None, results_dir=None, small_model=None):
               f"{C4_PPL_SKIP}")
         ids_ppl, attn_ppl = _c4_docs(N_PPL, S_PPL, tok, skip=C4_PPL_SKIP)
     ids_ppl = ids_ppl.to(dev)
-    attn_ppl_dev = attn_ppl.to(dev)
-    attn_ppl_cpu = attn_ppl  # keep a CPU copy for the NLL mask
+    attn_ppl_dev = attn_ppl.to(dev)  # N1: NLL mask on the same device
     # P0.4 check: last_hidden_state (post final RMSNorm) must equal the lm_head
     # input, i.e. model.lm_head(last_hidden_state) == model(...).logits. Verified
     # on a 4-doc batch (cheap); a mismatch would mean double-norm / wrong input.
     with torch.no_grad():
         lref = model.model(input_ids=ids_ppl[:4], attention_mask=attn_ppl_dev[:4]).last_hidden_state
         lref2 = model(input_ids=ids_ppl[:4], attention_mask=attn_ppl_dev[:4]).logits
-        ref_err = (lref.float() @ W_lm64.float().T - lref2.float()).abs().max().item()
+        ref_err = (lref.float() @ W_lm32.T.to(dev) - lref2.float()).abs().max().item()
     print(f"  P0.4 check: |lm_head(lh) - model.logits| max = {ref_err:.3e} "
           f"(should be ~0 for a few docs; fp16 round-off allowed)")
+    # P0.4 (fix): raise instead of warn — a mismatch would silently corrupt PPL.
     if ref_err > 2.0:
-        print("  WARNING: P0.4 check failed — last_hidden_state may already be "
-              "post-norm differently than expected; PPL/quant may be biased.")
+        raise RuntimeError(
+            f"P0.4 check FAILED (ref_err={ref_err:.3e} > 2.0): "
+            "last_hidden_state is not the lm_head input (double-norm?) — "
+            "PPL would be INVALID; aborting.")
     # Capture last_hidden_state chunked (lm_head input, post final RMSNorm).
     # No double norm (P0.4), no full-batch logits tensor (OOM fix).
     ppl = {}
     V_vocab = W_lm64.shape[0]
     ppl_chunk = 8
-    for name, Wq in {"base": W_lm64, "int8_rtn": levels["int8_rtn"],
+    # N4: base uses the single precast fp32 copy; other levels cast once.
+    for name, Wq in {"base": W_lm32, "int8_rtn": levels["int8_rtn"],
                      "gptq4": levels["gptq4"]}.items():
+        Wq32 = (Wq if Wq.dtype == torch.float32 else Wq.float()).to(dev)
         nll_sum = 0.0
         n_real = 0
         for c0 in range(0, N_PPL, ppl_chunk):
@@ -533,12 +552,13 @@ def main(device=None, results_dir=None, small_model=None):
             with torch.no_grad():
                 h = model.model(input_ids=ids_ppl[c0:c1],
                                 attention_mask=attn_ppl_dev[c0:c1]).last_hidden_state.float()
-                logits_c = h @ Wq.float().T  # [chunk, S, V]
+                logits_c = h @ Wq32.T  # [chunk, S, V] (N4: no per-chunk cast)
                 del h
                 lp = torch.log_softmax(logits_c, dim=-1)
                 del logits_c
                 target = ids_ppl[c0:c1, 1:]
-                real = attn_ppl_cpu[c0:c1, 1:].bool()
+                # N1: mask on the same device as the CUDA logprobs.
+                real = attn_ppl_dev[c0:c1, 1:].bool()
                 lp_t = lp[:, :-1, :].gather(2, target.unsqueeze(2)).squeeze(2)
                 nll_sum += float((-lp_t[real]).sum().item())
                 n_real += int(real.sum().item())
@@ -547,6 +567,7 @@ def main(device=None, results_dir=None, small_model=None):
                 torch.cuda.empty_cache()
         ppl[name] = float(np.exp(nll_sum / max(n_real, 1)))
         print(f"  PPL {name} = {ppl[name]:.4f} (n_real={n_real})")
+        del Wq32
     if dev.type == "cuda":
         torch.cuda.empty_cache()
 
@@ -564,10 +585,10 @@ def main(device=None, results_dir=None, small_model=None):
         # construction for base and quantized (exact at L23; convention for
         # L<23, isolates M_K-only quantization effect). At L23 reproduces
         # the cached J to ~1e-7 (self-check above).
-        J_base = _recompute_J(build_M_K(W_lm64, U128_L, g).float(), H_L)
+        J_base = _recompute_J(build_M_K(W_lm64, U128_L, g).float().to(dev), H_L)
         for name, Wq in levels.items():
             # M_K for this Wq (g is the same — RMSNorm not quantized).
-            M_K_q = build_M_K(Wq, U128_L, g).float()
+            M_K_q = build_M_K(Wq, U128_L, g).float().to(dev)
             # J_q = M_K_q · (I − û_t û_tᵀ) · c_t.
             Jq = _recompute_J(M_K_q, H_L)  # [n, S, K, D]
             # κ
@@ -579,6 +600,11 @@ def main(device=None, results_dir=None, small_model=None):
             # J_rel_drift (base = cached J; for fp16 this is ~0 by self-check)
             drift_med, drift_p95, drift_max = _j_rel_drift(Jq, J_base)
             metrics[L][name] = {
+                # P1.1/P1.8: L<23 J is readout-linearized (no D_i); L19 is
+                # extra (not in the gate) — readers must not mistake
+                # kappa(L6) for a real L6 leaf kappa.
+                "synthetic_readout_j": L != 23,
+                "extra_layer": L not in L_GATE,
                 "kappa": kap,
                 "beta_sigma1": beta_med,
                 "beta_n_valid": beta_n,
@@ -595,6 +621,18 @@ def main(device=None, results_dir=None, small_model=None):
             if dev.type == "cuda":
                 torch.cuda.empty_cache()
         del J_base
+
+    # N2: base self-checks against known E-38d/E-38e numbers — a drift here
+    # would flip the gate verdict, so fail loudly instead of reporting it.
+    kap_b = metrics[23]["fp16"]["kappa"]
+    beta_b = metrics[23]["fp16"]["beta_sigma1"]
+    assert abs(kap_b - KAPPA_BASE_REF) < KAPPA_BASE_TOL, (
+        f"κ(L23) fp16 = {kap_b:.4f}, expected ~{KAPPA_BASE_REF} "
+        f"(E-38d/E-39a) — SVD/driver drift, gate unreliable")
+    assert abs(beta_b - BETA_BASE_REF) < BETA_BASE_TOL, (
+        f"β/σ₁(L23) fp16 = {beta_b:.3f}, expected ~{BETA_BASE_REF} (E-38e)")
+    print(f"  N2 base self-checks OK: κ={kap_b:.5f} "
+          f"(ref {KAPPA_BASE_REF}), β/σ₁={beta_b:.4f} (ref {BETA_BASE_REF})")
 
     # ---------------- gate ----------------
     kap23_base = metrics[23]["fp16"]["kappa"]
