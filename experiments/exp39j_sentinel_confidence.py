@@ -230,8 +230,20 @@ def recheck_verdict(path):
     old = d.get("verdict")
     d["verdict"] = _verdict(pr[0]["rho"], inc["rho_partial"], inc["p_perm"],
                             inc["delta_rho_vs_best_baseline"], inc["delta_boot_ci95"])
+    inc["better_than_baseline"] = bool(inc["delta_boot_ci95"][0] > 0)
+    inc["worse_than_baseline"] = bool(inc["delta_boot_ci95"][1] < 0)
+    if "beats_baseline" in inc:
+        # v1 писал один симметричный флаг `beats_baseline` (|Δρ| ≠ 0 → true), то есть
+        # «прогон отличается от базлайна». После исправления направления он читался бы
+        # как «лучше базлайна» и противоречил вердикту, поэтому поле удаляется.
+        inc["field_history"] = {"removed_beats_baseline_v1": True,
+                                "replaced_by": ["better_than_baseline",
+                                                "worse_than_baseline"]}
+        inc.pop("beats_baseline")
     d["beats_baseline_direction_fixed"] = True
-    d["verdict_history"] = {"v1": old, "v2": d["verdict"],
+    # идемпотентность: повторный вызов не должен затирать v1 текущим verdict
+    v1 = (d.get("verdict_history") or {}).get("v1") or old
+    d["verdict_history"] = {"v1": v1, "v2": d["verdict"],
                             "why": "v1 сравнивал |Δρ| с нулём симметрично и не различал "
                                    "направление (базлайн лучше → писалось «промежуточный»); "
                                    "числа не менялись"}
