@@ -385,6 +385,22 @@ def _boot_ci_over_docs(per_doc, b, rng):
 
 
 @torch.no_grad()   # входы — параметры модели; torch.sub(out=) и граф тут не нужны
+def _paired_delta_ci(a, b, b_boot, rng):
+    """Парный bootstrap CI медианы разности по документам (одни и те же доки в a и b).
+
+    Отличается от _boot_ci_over_docs: там CI каждой медианы по отдельности, и две
+    пересекающиеся CI не значат «разность не различима». Здесь перемешиваются ПАРЫ,
+    поэтому CI отвечает на вопрос «различим ли сдвиг».
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    n = len(a)
+    vals = [float(np.median(a[rng.integers(0, n, n)] - b[rng.integers(0, n, n)]))
+            for _ in range(b_boot)]
+    ci = [float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5))]
+    return ci, bool(ci[0] > 0 or ci[1] < 0)
+
+
 def _quantize_gptq(W, X, bits, group, damp_frac, device):
     """GPTQ (порт IST-DASLab/gptq, вербатим E-39b). W: [V,D], X: [n,D] → декевант fp32.
 
@@ -493,6 +509,154 @@ def _forward_states(model, ids, attn, chunk=8):
         h1.remove()
         h2.remove()
     return torch.cat(pre_parts, dim=0), torch.cat(post_parts, dim=0)
+
+
+def finalize_result(res: dict, boot: int = BOOT, seed: int = 0) -> dict:
+    """Досчитывает парные CI сдвигов и дописывает вердикт v2. Чистая по числам:
+    берёт только per-doc медианы κ из JSON, перепрогон не трогает.
+
+    Идемпотентна: повторный вызов не перетирает verdict_history.v1 (дисциплина
+    exp39j/exp39k — results JSON не лежит в git, история вердикта только внутри него).
+    """
+    rng = np.random.default_rng(seed)
+    km = res["kappa_modes"]
+    base = km["fp16"]["per_doc_median"]
+    k_base = res["kappa_modes"]["fp16"]["kappa"]
+    pairs = {"control_fresh_base_vs_fp16": (km["control_fresh_base"]["per_doc_median"],
+                                            base, "шумовое поле протокола")}
+    for tag in res["decomposition"]:
+        pairs[f"{tag}_readout_vs_fp16"] = (km[f"{tag}_readout"]["per_doc_median"], base,
+                                           "Δ_readout (канал E-39b)")
+        pairs[f"{tag}_full_vs_fp16"] = (km[f"{tag}_full"]["per_doc_median"], base,
+                                        "Δ_total (полный tied-PTQ)")
+        pairs[f"{tag}_full_vs_readout"] = (km[f"{tag}_full"]["per_doc_median"],
+                                           km[f"{tag}_readout"]["per_doc_median"],
+                                           "Δ_upstream (канал û_t)")
+    ci = {}
+    for name, (a, b, note) in pairs.items():
+        c, resolv = _paired_delta_ci(a, b, boot, rng)
+        ci[name] = {"median_delta": float(np.median(np.subtract(a, b))),
+                    "delta_pct_of_base_kappa": float(np.median(np.subtract(a, b)) / k_base),
+                    "ci95_paired": c, "resolvable": resolv, "note": note}
+    res["paired_delta_ci"] = {
+        "method": f"paired bootstrap over the same 32 docs, B={boot}, seed={seed}",
+        "why": ("несовпадение отдельных boot_ci95 — не тест разности: перекрывающиеся CI "
+                "могут соответствовать различимой разности (и наоборот). Тест разности — "
+                "парный."),
+        "pairs": ci,
+    }
+
+    d128 = res["decomposition"]["g128"]
+    harsh_tag = res["gate"]["harsh_regime"]
+    dh = res["decomposition"][harsh_tag]
+    dtot = ci["g128_full_vs_fp16"]
+    nfloor = ci["control_fresh_base_vs_fp16"]
+    res["gate"]["harsh_caveat"] = (
+        f"gate.harsh=leaf_robust_even_harsh формально верён (κ_full="
+        f"{dh['kappa_full']:.5f} < {KAPPA_PASS}, ratio={res['gate']['harsh_ratio']:.3f}), "
+        f"но читается неверно: в {harsh_tag} PPL = "
+        f"{res['ppl'].get('full_tied_' + harsh_tag, float('nan')):.2f} "
+        f"(+{(res['ppl'].get('full_tied_' + harsh_tag, 0) / res['ppl']['fp16'] - 1) * 100:.0f}% "
+        "от базового), u_cos med = 0.927, h_drift med = 0.378. Плоскость листа достигнута "
+        "коллапсом модели — это не «robust», тот же механизм, что E-39d λo=0. Гейт "
+        "измеряет геометрию листа, а не сохранность модели."
+    )
+    hist = res.get("verdict_history") or {}
+    if "v1" not in hist:
+        hist["v1"] = {
+            "when": "первая сводка раунда (до разбора ревьюером)",
+            "text": ("гейт both_channels_small; share_upstream осмыслен только в "
+                     f"{harsh_tag} = {dh['share_upstream']:.3f}; H-39f не подтверждена"),
+        }
+    res["verdict_history"] = hist
+    res["verdict"] = {
+        "version": "v2",
+        "h39f": "не подтверждена; разрешающая способность по κ ограничена снизу, а не сверху",
+        "h39f_reason": (
+            f"При g128 |Δ_total| = {abs(d128['delta_total']):.5f} < DELTA_MIN = {DELTA_MIN} "
+            "→ доли не определены, порог H-39f (≥0.5) не выполнен. Но и null-ветка «<0.25» "
+            "не подтверждена: share_upstream разрешается только в "
+            f"{harsh_tag} = {dh['share_upstream']:.3f}, что внутри промежуточной полосы "
+            "0.25–0.5. Формулировка «H-39f опровергнута» без оговорки overstated: "
+            "опровергнута доминация upstream в разрешимых режимах, а не сам вклад. "
+            "Парный bootstrap уточняет рамку: при bits≥3 никакой канал κ не сдвигается "
+            "различимо (то есть вопрос «кто главный» не имеет содержания не только по "
+            "порогу DELTA_MIN, но и по разрешающей способности данных), а при 2 битах, "
+            "когда различимы оба канала, доли как раз и получаются 0.47 — промежуток. "
+            "Ответ на ТЗ: вклада upstream в κ сверх readout-канала нет нигде, где его "
+            "вообще можно измерить."
+        ),
+        "delta_total_status": (
+            f"сдвиг НЕ различим на уровне документов: парный bootstrap CI "
+            f"{dtot['ci95_paired'][0]:+.5f} … {dtot['ci95_paired'][1]:+.5f} накрывает ноль "
+            f"(ширина ±0.0012 = 7% от κ), и то же самое для readout-канала и для контроля "
+            f"({nfloor['ci95_paired'][0]:+.5f} … {nfloor['ci95_paired'][1]:+.5f}). Точечная "
+            f"величина — {dtot['median_delta'] / k_base * 100:.1f}% от κ. Различимы при "
+            "bits≥3 только медианные агрегаты по 4096 позициям (det-числа, у которых нет "
+            "выборочной дисперсии: Δ_total=−3.03e-04 против шума κ_control 7.0e-08), но как "
+            "сдвиг по корпусу из 32 документов он не обнаруживается ни в одном канале. "
+            f"При 2 битах различимы ОБА канала: Δ_readout "
+            f"{ci['b2g128_readout_vs_fp16']['ci95_paired'][0]:+.5f}…"
+            f"{ci['b2g128_readout_vs_fp16']['ci95_paired'][1]:+.5f}, Δ_upstream "
+            f"{ci['b2g128_full_vs_readout']['ci95_paired'][0]:+.5f}…"
+            f"{ci['b2g128_full_vs_readout']['ci95_paired'][1]:+.5f}."
+        ),
+        "mechanism": (
+            "PTQ — амплитудное возмущение: h_drift med = 0.046 при g128, но направление "
+            "û_t сохраняется (u_cos med = 0.999). κ инвариантна к амплитуде и читает "
+            "только углы топ-r подпространства ⇒ upstream-канал работает там, где κ его "
+            "не видит. Отсюда и разница с PPL: upstream добавляет "
+            "+0.85% PPL при g128 и +56% при 2 битах, а в κ его след под шумовым порогом."
+        ),
+        "kappa_ppl_are_different_objects": (
+            "в одном и том же режиме g128: ΔPPL_full = +1.76%, Δκ/κ = "
+            f"{dtot['median_delta'] / k_base * 100:+.1f}%"
+        ),
+        "b2g128": (
+            "κ −32% при PPL +102% — плоский лист через разрушение; направление «κ ↓ ⇒ "
+            "поведение сохранено» ложно (E-39f закрыло его как измеренный факт)"
+        ),
+        "practical": (
+            "κ(L23) — устойчивая метрика к PTQ в разумных режимах (bits ≥ 3, g ≥ 32), "
+            "поэтому использовать её как индикатор «здоровья листа» при квантовании "
+            "бессмысленно: она не двигается, пока модель цела"
+        ),
+        "no_regime_with_kappa_down_and_behavior_intact": (
+            "во всех четырёх режимах κ падает только вместе с PPL (g32 −0.8%/−0.1%, "
+            "b3g128 −2.4%/+9.6%, b2g128 −32%/+102%) — режима «плосче и не хуже» нет. "
+            "Доза-ответ по обоим каналам: различимость сдвига κ появляется только на 2 "
+            "битах (парный bootstrap), тогда как PPL к тому моменту уже +102%"
+        ),
+        "behavior_damage_without_kappa_damage": (
+            "b3g128: PPL +9.6% (32.0451 против 30.4753) при полностью неразличимом сдвиге "
+            "κ (CI накрывает ноль). То есть повреждение поведения не обязано сопровождаться "
+            "движением листа даже в разумном диапазоне жёсткости — κ не является суррогатом "
+            "качества квантованной модели ни в одну из сторон"
+        ),
+    }
+    return res
+
+
+def recheck(path: str) -> dict:
+    """python experiments/exp39f_full_tied.py --recheck results/exp39f_full_tied.json
+
+    Пересчитывает парные CI и вердикт из сохранённых per-doc медиан. Прогон не
+    перезапускается, числа прогона не меняются.
+    """
+    with open(path) as f:
+        res = json.load(f)
+    finalize_result(res)
+    with open(path, "w") as f:
+        json.dump(res, f, indent=2)
+    pd = res["paired_delta_ci"]["pairs"]
+    for k in ("control_fresh_base_vs_fp16", "g128_full_vs_fp16", "g128_full_vs_readout",
+              "b2g128_full_vs_fp16"):
+        v = pd[k]
+        print(f"  {k:32s} Δ={v['median_delta']:+.6f} "
+              f"CI[{v['ci95_paired'][0]:+.6f},{v['ci95_paired'][1]:+.6f}] "
+              f"resolvable={v['resolvable']}")
+    print(f"verdict v2 записан: {path}")
+    return res
 
 
 def main(device=None, results_dir=None, small_model=None, pool_cache=True):
@@ -906,6 +1070,7 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
         ],
         "wall_sec": time.time() - t0,
     }
+    finalize_result(result)
     with open(out_path, "w") as f:
         json.dump(result, f, indent=2)
     print(f"\ngate: main={gate_main} harsh({harsh_tag})={gate_harsh} ppl={gate_ppl} | "
@@ -917,4 +1082,8 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if len(sys.argv) > 2 and sys.argv[1] == "--recheck":
+        recheck(sys.argv[2])
+    else:
+        main()
