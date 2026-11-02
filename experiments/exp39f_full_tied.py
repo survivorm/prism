@@ -20,11 +20,16 @@ PPL +0.90%) — но квантовал только `lm_head.weight`, а Qwen3.
 Диагностики: h_drift, û_cos, β/σ₁(M_K), J_rel_drift, PPL (fp16 / readout-only / full
 tied), null-модель (16 seeds Haar û; ТЗ §4.3: κ_null < 1.0 ⇒ декомпозиция невалидна).
 
-û для κ_full обязана сниматься ДО финальной RMSNorm: в факторе E-35
-J = c_t·W_K·diag(g)·(I − û ûᵀ) вектор û — направление output'а слоя 23 (кэш exp27b берёт
-`out.hidden_states[l+1]`, см. exp27b_dense._forward_dense), тогда как
-`model.model(...).last_hidden_state` — уже post-norm. Поэтому pre-norm состояние снимается
-хуком на последнем decoder-слое; post-norm берётся из того же forward для PPL.
+Конвенция H на L23 (важно для û, проверяется численно в Шаге 0): exp27b берёт
+`out.hidden_states[l+1]`, а в HF финальная RMSNorm применяется ПОСЛЕ цикла слоёв, поэтому
+для последнего слоя (l=23) `hidden_states[24]` — это **post-norm** состояние, тогда как
+для внутренних слоёв `hidden_states[l+1]` — обычный output слоя. E-35-фактор
+J = c·W_K·diag(g)·(I − û ûᵀ) со `û = H/‖H‖` воспроизводит кэшированный J на L23 до 7.8e-07
+ровно на этом post-norm H (E-39b self-check), значит это и есть тот объект, на котором
+все E-28/E-38/E-39 числа определены. Скрипт не угадывает конвенцию: он снимает хуками
+оба состояния (output последнего слоя и output norm'а), сравнивает каждое с кэшем и
+берёт совпавшее (`selfchecks.h_convention`). Ошибка здесь стоила бы Δ_upstream ~cos 0.956
+(угадать нельзя: g не константа, std/mean = 0.155 ⇒ pre и post различаются на 4.2°).
 
 Разрывы с ТЗ (записаны явно, D-номера попадают в JSON):
   D1 (ТЗ §4.2 шаг 0). `h_fresh` vs кэш: структурная проверка — `u_cos_min ≥ 0.9999`
@@ -130,9 +135,14 @@ BETA_BASE_REF, BETA_BASE_TOL = 0.882, 0.05
 KAPPA_PASS, KAPPA_MODERATE = 0.02, 0.10
 NULL_KAPPA_MIN, N_NULL_SEEDS = 1.0, 16
 DELTA_MIN = 1e-3               # ТЗ §2.3: доли определены только при |Δ_total| > 1e-3
-UCOS_MIN = 0.9999
+# Наблюдённый фон: верная конвенция при fp16 даёт u_cos_min ≈ 0.99997 (fp16 round-off),
+# неверная (output слоя вместо post-norm) — 0.734, чужие документы — 0.3–0.7.
+UCOS_MIN = 0.999
 BOOT = 1000
 POOL_ART = "exp39f_pool.pt"
+# build_kernel добавляет собственный id в kernel_sources, поэтому /kaggle/working
+# предыдущего прогона смонтирован здесь —reuse пула экономит ~6 минут стриминга C4.
+POOL_SELF_MOUNT = "/kaggle/input/e-39f-full-tied-ptq-kappa-decomposition/results"
 
 
 # ---------------------------------------------------------------- документы
@@ -213,19 +223,24 @@ def get_pool(model_name, results_dir, use_cache=True):
     Артефакт-кэш есть только локально; на Kaggle пул стримится заново, а идентичность
     документов всё равно проверяется assert'ом по h против кэша (Шаг 0).
     """
-    art = os.path.join(results_dir, POOL_ART)
-    if use_cache and os.path.exists(art):
-        blob = torch.load(art, map_location="cpu", weights_only=False)
-        print(f"pool: артефакт {art} fp={blob['pool_fp']}", flush=True)
-        return {"ids": blob["ids"], "attn": blob["attn"]}, blob["pool_fp"]
+    art_dirs = [results_dir]
+    if os.path.isdir(POOL_SELF_MOUNT):
+        art_dirs.append(POOL_SELF_MOUNT)
+    for d in art_dirs:
+        art = os.path.join(d, POOL_ART)
+        if use_cache and os.path.exists(art):
+            blob = torch.load(art, map_location="cpu", weights_only=False)
+            print(f"pool: артефакт {art} fp={blob['pool_fp']}", flush=True)
+            return ({"ids": blob["ids"], "attn": blob["attn"]}, blob["pool_fp"])
     pool = _load_pool(model_name, list(DOMAINS), N_PER_DOMAIN)
     fp = pool_fingerprint({d: pool[d] for d in DOMAINS})
     docs = [pool[d][i] for d in DOMAINS for i in range(N_PER_DOMAIN)]   # domain-major
     out = {"ids": torch.cat([x["input_ids"] for x in docs]),
            "attn": torch.cat([x["attention_mask"] for x in docs])}
     try:
-        torch.save({**out, "pool_fp": fp, "L": L_POOL}, art)
-        print(f"pool: кэш → {art} fp={fp}", flush=True)
+        torch.save({**out, "pool_fp": fp, "L": L_POOL},
+                   os.path.join(results_dir, POOL_ART))
+        print(f"pool: кэш → {os.path.join(results_dir, POOL_ART)} fp={fp}", flush=True)
     except OSError as e:
         print(f"pool: артефакт не сохранён ({e})", flush=True)
     return out, fp
@@ -241,6 +256,7 @@ def _procrustes_batched(V_a, V_b):
     return Rmat, res
 
 
+@torch.no_grad()   # входы — параметры модели; torch.sub(out=) и граф тут не нужны
 def _kappa_per_position(J, r, device, chunk_docs=4):
     """κ по тройкам (t,t+1,t+2) → массив [n, S−2]; медиана по нему = κ E-39b.
 
@@ -280,12 +296,14 @@ def _kappa_per_position(J, r, device, chunk_docs=4):
     return out.reshape(n, n_tr).cpu().numpy()
 
 
+@torch.no_grad()   # входы — параметры модели; torch.sub(out=) и граф тут не нужны
 def _hidden_to_u(H):
     """û = h/‖h‖ [n,S,D] и c = √D/‖h‖ [n,S] из pre-norm hidden states."""
     hn = H.norm(dim=2).clamp(min=1e-12)
     return H / hn.unsqueeze(2), (float(H.shape[-1]) ** 0.5) / hn
 
 
+@torch.no_grad()   # входы — параметры модели; torch.sub(out=) и граф тут не нужны
 def _J_from_u(M_K, U_hat, c, chunk_docs=8):
     """J = c_t·M_K·(I − û_t û_tᵀ), чанками по документам (память — как E-39b)."""
     n, S, Dd = U_hat.shape
@@ -305,6 +323,7 @@ def _J_from_u(M_K, U_hat, c, chunk_docs=8):
     return Jout
 
 
+@torch.no_grad()   # входы — параметры модели; torch.sub(out=) и граф тут не нужны
 def _beta_sigma1(M_K, U_hat):
     """β/σ₁(M_K) (E-38e): w = M_Kᵀ(1/√K), α_t = ûᵀw, β_t = ‖w − α_t û_t‖."""
     K = M_K.shape[0]
@@ -317,6 +336,7 @@ def _beta_sigma1(M_K, U_hat):
     return (float(np.median(v)) if v.size else float("nan")), int(v.size)
 
 
+@torch.no_grad()   # входы — параметры модели; torch.sub(out=) и граф тут не нужны
 def _drift_dMK(M_base, M_q, U_hat, c, chunk_docs=8):
     """J_rel_drift = ‖ΔJ‖_F/‖J‖_F по позициям, ΔJ = c(ΔM − (ΔM û)ûᵀ) — аналитически (D4)."""
     n = U_hat.shape[0]
@@ -341,6 +361,8 @@ def _drift_dMK(M_base, M_q, U_hat, c, chunk_docs=8):
 
 
 def _stats(v):
+    if torch.is_tensor(v):          # на Kaggle tensor живёт на GPU — np.asarray там падает
+        v = v.detach().cpu().numpy()
     v = np.asarray(v, dtype=float).flatten()
     v = v[np.isfinite(v)]
     if v.size == 0:
@@ -357,6 +379,7 @@ def _boot_ci_over_docs(per_doc, b, rng):
     return [float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5))]
 
 
+@torch.no_grad()   # входы — параметры модели; torch.sub(out=) и граф тут не нужны
 def _quantize_gptq(W, X, bits, group, damp_frac, device):
     """GPTQ (порт IST-DASLab/gptq, вербатим E-39b). W: [V,D], X: [n,D] → декевант fp32.
 
@@ -433,36 +456,38 @@ def _tied_pair(model):
     return lm_w, emb.weight
 
 
-def _forward_states(model, ids, attn, last_layer, chunk=8):
-    """(pre-norm, post-norm) hidden states [n,S,D] fp32 CPU за один проход по чанкам.
+def _forward_states(model, ids, attn, chunk=8):
+    """(output последнего слоя, output финальной RMSNorm) [n,S,D] fp32 CPU за проход.
 
-    pre-norm — output последнего decoder-слоя (хук), post-norm — last_hidden_state
-    (он же вход lm_head, проверено в E-39b P0.4). Оба из одного forward ⇒ одна и та же
-    (квантованная или базовая) модель.
+    Оба состояния снимаются хуками текстового корпуса (`_lm_module(model)(...)`, поэтому
+    lm_head не считается и logits не аллоцируется). Какое из них — тот объект, что лежит
+    в кэше exp27b на L23, решается численно в Шаге 0 (`selfchecks.h_convention`); для
+    PPL всегда берётся post-norm (он же вход lm_head, E-39b P0.4).
     """
+    text = _lm_module(model)
     pre_parts, post_parts = [], []
 
-    def hook(_m, _inp, out):
-        pre_parts.append((out[0] if isinstance(out, tuple) else out)
-                         .detach().float().cpu())
+    def _out(o):
+        return (o[0] if isinstance(o, tuple) else o).detach().float().cpu()
 
-    h = last_layer.register_forward_hook(hook)
+    h1 = text.layers[-1].register_forward_hook(lambda _m, _i, o: pre_parts.append(_out(o)))
+    h2 = text.norm.register_forward_hook(lambda _m, _i, o: post_parts.append(_out(o)))
     try:
         for c0 in range(0, ids.shape[0], chunk):
             c1 = min(c0 + chunk, ids.shape[0])
-            n_before = len(pre_parts)
+            n_pre, n_post = len(pre_parts), len(post_parts)
             with torch.no_grad():
-                o = model(input_ids=ids[c0:c1], attention_mask=attn[c0:c1])
-            if len(pre_parts) != n_before + 1:
-                raise RuntimeError("hook не сработал (слой не вызывался)")
+                text(input_ids=ids[c0:c1], attention_mask=attn[c0:c1])
+            if len(pre_parts) != n_pre + 1 or len(post_parts) != n_post + 1:
+                raise RuntimeError("хуки не сработали (последний слой/norm не вызывались)")
             pre_parts[-1] = pre_parts[-1].reshape(c1 - c0, ids.shape[1], -1)
-            post_parts.append(o.last_hidden_state.float().cpu())
-            del o
+            post_parts[-1] = post_parts[-1].reshape(c1 - c0, ids.shape[1], -1)
             if ids.device.type == "cuda":
                 torch.cuda.empty_cache()
     finally:
-        h.remove()
-    return torch.stack(pre_parts), torch.stack(post_parts)
+        h1.remove()
+        h2.remove()
+    return torch.cat(pre_parts, dim=0), torch.cat(post_parts, dim=0)
 
 
 def main(device=None, results_dir=None, small_model=None, pool_cache=True):
@@ -491,9 +516,10 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
     n_layers = len(layers)
     if L_TARGET >= n_layers:
         raise RuntimeError(f"L_TARGET={L_TARGET} >= n_layers={n_layers}")
-    last_layer = layers[n_layers - 1]
+    if not hasattr(_lm_module(model), "norm"):
+        raise RuntimeError("у текстового корпуса нет .norm — pre/post-norm не развести")
     W_base = lm_w.detach().clone().cpu()                     # model dtype, для restore
-    g = _lm_module(model).norm.weight.float().cpu() + 1      # [D] = 1 + w (не квантуется)
+    g = _lm_module(model).norm.weight.detach().float().cpu() + 1   # [D] = 1 + w
     W32 = W_base.float()
     print(f"tied OK: W {tuple(W32.shape)}, layers={n_layers}, g_min={g.min():.3f}",
           flush=True)
@@ -512,20 +538,30 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
     attn = pool["attn"][:, :S_PREFIX].to(dev)
 
     print("fresh base forward (32 docs × 128) ...", flush=True)
-    h_pre_base, _ = _forward_states(model, ids, attn, last_layer)
-    h_pre_base_t = h_pre_base.flip(1).contiguous()   # кэш: t считается ОТ КОНЦА префикса
-    rel = ((h_pre_base_t - H_cache).norm(dim=2)
-           / H_cache.norm(dim=2).clamp(min=1e-12)).flatten().numpy()
-    ucos_base = torch.nn.functional.cosine_similarity(
-        h_pre_base_t.flatten(0, 1), H_cache.flatten(0, 1), dim=1).numpy()
-    hcheck = {"max_rel": float(np.nanmax(rel)), "median_rel": float(np.nanmedian(rel)),
-              "u_cos_median": float(np.nanmedian(ucos_base)),
-              "u_cos_min": float(np.nanmin(ucos_base))}
-    print(f"  h_fresh vs кэш: max_rel={hcheck['max_rel']:.2e} "
-          f"u_cos_min={hcheck['u_cos_min']:.8f}", flush=True)
+    h_layer, h_norm = _forward_states(model, ids, attn)
+    # Конвенция H: берём то из двух состояний, что совпало с кэшем (t считается ОТ КОНЦА
+    # префикса → flip по оси позиций), и только его используем дальше для κ/drift/û.
+    conv_scores = {}
+    for k, X0 in (("layer", h_layer), ("norm", h_norm)):
+        X = X0.flip(1)
+        uc = torch.nn.functional.cosine_similarity(
+            X.flatten(0, 1), H_cache.flatten(0, 1), dim=1).numpy()
+        conv_scores[k] = {
+            "u_cos_min": float(np.nanmin(uc)), "u_cos_median": float(np.nanmedian(uc)),
+            "max_rel": float(np.nanmax(((X - H_cache).norm(dim=2)
+                                        / H_cache.norm(dim=2).clamp(min=1e-12)).numpy()))}
+    conv = max(conv_scores, key=lambda k: conv_scores[k]["u_cos_min"])
+    h_base_H = {"layer": h_layer, "norm": h_norm}[conv].flip(1).contiguous()
+    hcheck = dict(conv_scores[conv])
+    hcheck["chosen"] = conv
+    hcheck["candidates"] = conv_scores
+    print(f"  h_fresh vs кэш: выбран конвенция '{conv}' "
+          f"(u_cos_min={hcheck['u_cos_min']:.8f} max_rel={hcheck['max_rel']:.2e}); "
+          f"вторая: {conv_scores['norm' if conv == 'layer' else 'layer']['u_cos_min']:.6f}",
+          flush=True)
     assert hcheck["u_cos_min"] >= UCOS_MIN, (
-        f"Шаг 0 abort: u_cos_min = {hcheck['u_cos_min']:.8f} < {UCOS_MIN} — другие "
-        "документы или порядок позиций (пул не совпадает с кэшем)")
+        f"Шаг 0 abort: ни одна конвенция hidden states не совпала с кэшем "
+        f"(u_cos_min: {conv_scores}) — другие документы/порядок позиций/модель")
     if model_dtype == torch.float32:
         assert hcheck["max_rel"] < 1e-5, (
             f"Шаг 0 abort (fp32): max_rel = {hcheck['max_rel']:.2e} >= 1e-5 — forward "
@@ -558,7 +594,7 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
         f"(±{KAPPA_BASE_TOL}) — baseline не воспроизводится")
     assert abs(kap_fp16["beta_sigma1"] - BETA_BASE_REF) < BETA_BASE_TOL, (
         f"β/σ₁ fp16 = {kap_fp16['beta_sigma1']:.3f} != {BETA_BASE_REF} (E-38e)")
-    U_fresh, c_fresh = _hidden_to_u(h_pre_base_t.to(dev))
+    U_fresh, c_fresh = _hidden_to_u(h_base_H.to(dev))
     kap_control = kappa_of(M_base, U_fresh, c_fresh, "control/fresh-base")
     del U_fresh, c_fresh
 
@@ -567,10 +603,11 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
     ids_cal, attn_cal = _c4_docs(N_CAL, S_CAL, tok, skip=C4_CAL_SKIP)
     ids_cal, attn_cal = ids_cal.to(dev), attn_cal.to(dev)
     caps = []
+    text = _lm_module(model)
     for c0 in range(0, N_CAL, 16):
         c1 = min(c0 + 16, N_CAL)
         with torch.no_grad():
-            o = model.model(input_ids=ids_cal[c0:c1], attention_mask=attn_cal[c0:c1])
+            o = text(input_ids=ids_cal[c0:c1], attention_mask=attn_cal[c0:c1])
         caps.append(o.last_hidden_state.float().cpu())
         del o
         if dev.type == "cuda":
@@ -603,7 +640,7 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
         ppl_split = f"train skip {C4_PPL_SKIP}"
     ids_ppl, attn_ppl = ids_ppl.to(dev), attn_ppl.to(dev)
     print("base forward на PPL-документах ...", flush=True)
-    _, h_post_base = _forward_states(model, ids_ppl, attn_ppl, last_layer)
+    _, h_post_base = _forward_states(model, ids_ppl, attn_ppl)
 
     def ppl_from(post, W, label):
         """PPL = exp(ΣNLL/n_real) по готовым post-norm h (matmul, D3; маска E-39b)."""
@@ -636,8 +673,8 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
             lm_w.data.copy_(W_q.to(lm_w.dtype).to(lm_w.device))
         assert lm_w.data_ptr() == emb_w.data_ptr(), "tied разрушен после replace"
         print(f"[{tag}] quantized full forward (пул + PPL-документы) ...", flush=True)
-        h_pre_q, _ = _forward_states(model, ids, attn, last_layer)
-        _, h_post_q = _forward_states(model, ids_ppl, attn_ppl, last_layer)
+        h_layer_q, h_norm_q = _forward_states(model, ids, attn)
+        _, h_post_q = _forward_states(model, ids_ppl, attn_ppl)
         with torch.no_grad():
             lm_w.data.copy_(W_base.to(lm_w.device))
         if not torch.equal(lm_w[:8].detach().cpu(), W_base[:8]):
@@ -645,10 +682,10 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
         if dev.type == "cuda":
             torch.cuda.empty_cache()
 
-        h_pre_q_t = h_pre_q.flip(1).contiguous().to(dev)
-        U_q, c_q = _hidden_to_u(h_pre_q_t)
+        h_q_H = {"layer": h_layer_q, "norm": h_norm_q}[conv].flip(1).contiguous().to(dev)
+        U_q, c_q = _hidden_to_u(h_q_H)
         kap_full = kappa_of(M_q, U_q, c_q, f"full/{tag}")
-        h_drift = (h_pre_q_t - Hc).norm(dim=2) / Hc.norm(dim=2).clamp(min=1e-12)
+        h_drift = (h_q_H - Hc).norm(dim=2) / Hc.norm(dim=2).clamp(min=1e-12)
         u_cos = (U_q * U_cache).sum(dim=2)
         diag = {
             "h_drift": _stats(h_drift), "u_cos": _stats(u_cos),
@@ -657,7 +694,7 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
         }
         print(f"  h_drift median={diag['h_drift']['median']:.4f} "
               f"u_cos median={diag['u_cos']['median']:.6f}", flush=True)
-        del h_drift, u_cos, U_q, c_q, h_pre_q_t, M_q
+        del h_drift, u_cos, U_q, c_q, h_q_H, M_q
         if dev.type == "cuda":
             torch.cuda.empty_cache()
         return {"kappa_readout": kap_read, "kappa_full": kap_full,
@@ -772,6 +809,13 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
         "selfchecks": {
             "tied_data_ptr": True,
             "h_fresh_vs_cache": hcheck,
+            "h_convention": conv,
+            "h_convention_note": (
+                "'norm' = output финальной RMSNorm, 'layer' = output последнего decoder-"
+                "слоя; выбирается то, что совпало с кэшем exp27b (u_cos_min), и только оно "
+                "используется для κ_full/û_cos/h_drift — иначе Δ_upstream есть артефакт "
+                "конвенции, а не эффект квантования (cos между двумя состояниями ≈0.956)."
+            ),
             "h_rel_tol_applies_fp32_only": bool(model_dtype == torch.float32),
             "kappa_fp16_ref": KAPPA_BASE_REF, "kappa_fp16": kap_fp16["kappa"],
             "kappa_control_noise_floor": kap_control["kappa"],
