@@ -28,6 +28,7 @@ rank(p̄) (прирост сверх частоты токена; та же ди
 from __future__ import annotations
 
 import json
+import math
 import os
 import time
 
@@ -172,10 +173,17 @@ def measure(layer, w_lm, g, want):
     # относится к ESG `gauge_share` (§2.3), а не к `g_uni` — paper сам предупреждает.
     g_uni = float((J.double().sum(-2).pow(2).sum(-1).sum()
                    / (raw.sum() * J.shape[-2])).item())
+    # «P убивает 99.95% энергии» — это свойство матрицы P, а не факта gauge-
+    # доминирования: для изотропного J ожидание ‖PJ‖²/‖J‖² = ‖P‖²_F/K, а
+    # ‖P(p)‖²_F = Σp² − 2Σp³ + (Σp²)² ≈ 1/K при равномерном p ⇒ отношение ≈ 1/K².
+    # Отсюда after_P / ref_iso — во сколько раз реальный J дальше от изотропного.
+    ref_iso = _iso_P_reference(P)
     dom_of = np.repeat(np.arange(len(DOMAINS)), N_PER_DOMAIN)
     out = {
         "layer": layer,
         "energy_after_P_over_raw": after_P,
+        "ref_iso_ratio": ref_iso,
+        "after_P_over_iso": after_P / ref_iso,
         "g_uni_uniform_energy_share": g_uni,   # диагностика, ожиданий не было
         "p_normalized_max_dev": float((P.sum(-1) - 1.0).abs().max()),
         "n_positions": int(J.shape[0] * S),
@@ -196,19 +204,150 @@ def measure(layer, w_lm, g, want):
     return out
 
 
+@torch.no_grad()
+def _iso_P_reference(P, max_pos: int = 1024) -> float:
+    """E[‖P(p)J‖²_F / ‖J‖²_F] для изотропного J = ‖P(p)‖²_F / K, среднее по позициям.
+
+    При j ~ iid(σ²I) имеем E‖Pj‖² = σ²·tr(PᵀP), E‖j‖² = σ²K ⇒ отношение ‖P‖₂_F²/K, а
+    для P = diag(p) − ppᵀ (симметрична) tr(P²) = Σp² − 2Σp³ + (Σp²)². Смысл: это «сколько
+    P съедает энергии сама по себе, без всякого gauge», то есть знаменатель для
+    energy_after_P_over_raw. При равномерном p величина равна (K−1)/K³ ≈ 1/K².
+    """
+    Pd = P.double()[:max_pos]
+    s2 = Pd.pow(2).sum(-1)
+    s3 = Pd.pow(3).sum(-1)
+    return float(((s2 - 2 * s3 + s2.pow(2)) / Pd.shape[-1]).mean().item())
+
+
+def _phi(x):
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+
+def _rho_vs_threshold(rho, thr, n):
+    """Односторонний Fisher-z тест «ρ < thr» (p_perm отвечает на другой вопрос).
+
+    p_perm тестирует ρ ≠ 0; таблица §11.6 решает неравенством с порогом, поэтому для
+    строки таблицы нужен именно этот тест, а не p_perm.
+    """
+    if not (np.isfinite(rho) and 0.0 < thr < 1.0 and abs(rho) < 1.0):
+        return None
+    z, z_t, se = math.atanh(rho), math.atanh(thr), 1.0 / math.sqrt(n - 3)
+    p1 = _phi((z - z_t) / se)
+    return {"threshold": thr, "test": f"Fisher z, one-sided, n={n}",
+            "p_rho_below_threshold": p1,
+            "ci95_fisher": [math.tanh(z - 1.959963985 * se),
+                            math.tanh(z + 1.959963985 * se)]}
+
+
+def _final_verdict(res):
+    """Вердикт v2: строка таблицы §11.6 — не вывод, вывод делает incrementality.
+
+    Таблица читается как «ρ(s^gf, ‖W‖²) = …», но из одного лишь ρ < 0.5 следовало бы
+    «стандартную importance ошибочна, gauge-aware — кандидат на замену». Это чтение
+    неверно, потому что s^gf = p̄²·shape и ρ(p̄, s^gf) ≈ 1: сравнивается не «gauge против
+    ‖W‖», а «частота токена против ‖W‖». Поэтому вердикт строится по частному ρ.
+    """
+    corr = res["correlations_L23"]
+    prim = corr["primary_s_gf_vs_W2"]
+    part = corr["partial_s_gf_vs_W2_given_rank_mass"]
+    rho, n = prim["rho"], prim["n"]
+    v1 = res.get("verdict") or {}
+    vs05 = _rho_vs_threshold(rho, RHO_PASS, n)
+    vs08 = _rho_vs_threshold(rho, RHO_MODERATE, n)
+    mass = corr["mass_vs_s_gf"]["rho"]
+    shape_w = corr["shape_vs_W2"]["rho"]
+    res["verdict"] = {
+        "schema": "v2",
+        "rho_primary": rho, "p_perm": prim["p_perm"], "ci95": prim["ci95"],
+        "p_perm_question": "ρ ≠ 0 (не «ρ < 0.5»): на строку таблицы он не опирается",
+        "rho_vs_threshold_0.5": vs05,
+        "rho_vs_threshold_0.8": vs08,
+        "table_row": "ошибочна" if rho < RHO_PASS else (
+            "умеренно" if rho <= RHO_MODERATE else "случайно правильна"),
+        "table_row_status": "формально выполняется (односторонний p = "
+                            f"{vs05['p_rho_below_threshold']:.4f}), но строка не является "
+                            "вердиктом: см. decisive_test",
+        "decisive_test": "partial ρ(s^gf, ‖W‖² | rank p̄) — incrementality",
+        "rho_partial_given_mass": part["rho_partial"], "p_partial": part["p_perm"],
+        "text": (
+            "s_gf — это токен-частота, а не gauge-структура: ‖W‖² и s^gf ранжируют "
+            f"разное (ρ = {rho:.3f}, односторонний p < 0.5 = {vs05['p_rho_below_threshold']:.4f}), "
+            f"но s^gf ≈ p̄² (ρ = {mass:.3f}), shape ⊥ ‖W‖ (ρ = {shape_w:.3f}) и после "
+            f"контроля массы связь исчезает (partial ρ = {part['rho_partial']:.3f}, "
+            f"p = {part['p_perm']:.3f}) ⇒ «gauge-aware importance» из ТЗ не является "
+            "объектом, альтернативным ‖W‖²; заменять importance на s^gf не из чего"),
+        "incrementality": _incrementality_note(part["p_perm"]),
+        "ci_clears_band": bool(prim["ci95"][1] < RHO_PASS or prim["ci95"][0] > RHO_MODERATE),
+        "not_a_replacement_reasons": _reasons(res, corr),
+        "verdict_history": v1.get("verdict_history") or {"v1": v1.get("text", "(не записан)")},
+    }
+    res["verdict"]["verdict_history"].setdefault("v2", res["verdict"]["text"])
+    lim = res.setdefault("limitations", {})
+    lim["p_perm_vs_threshold"] = (
+        "p_perm в primary тестирует «ρ ≠ 0», а не «ρ < 0.5»; для строки таблицы нужен "
+        f"односторонний Fisher-z: p = {vs05['p_rho_below_threshold']:.4f} (то есть «ρ < 0.5» "
+        "значимо и на α = 0.01, хотя bootstrap CI [..] почти касается 0.5)")
+    lim["per_domain_spread"] = (
+        "ρ(s^gf, ‖W‖²) по доменам различается в разы ("
+        + ", ".join(f"{d} {v:.2f}" for d, v in res["per_domain_rho_gf_vs_W2_L23"].items())
+        + ") ⇒ величина ρ есть свойство данных калибровки, а не свойство модели")
+    lim["l18_not_in_report"] = (
+        "ρ(L18) = "
+        f"{res.get('secondary_L18', res.get('exploratory_L18', {})).get('s_gf_vs_W2', {}).get('rho', float('nan')):.3f} "
+        "не идёт в отчёт: J на L18 — слойный Якобиан, его строки не суть строки W_lm, "
+        "механизм неопределён; числу место только в exploratory")
+    d23 = res["layers_diag"][str(L_MAIN)]
+    if "ref_iso_ratio" in d23:
+        lim["P_energy_is_not_gauge_evidence"] = (
+            f"ТЗ/§2.5 формулировка «P убивает 98-99% энергии, потому что gauge доминирует» "
+            f"для этой величины неверна: ‖P(p)J‖²/‖J‖² = {d23['energy_after_P_over_raw']:.2e} "
+            f"при изотропном референсе {d23['ref_iso_ratio']:.2e} (отношение "
+            f"{d23['after_P_over_iso']:.2f}×) — то есть P съедает не меньше, чем съела бы на "
+            "случайном J, и в величине нет никакого свидетельства о gauge. Gauge-доля в "
+            f"собственном смысле — g_uni = {d23['g_uni_uniform_energy_share']:.3f}")
+    if "secondary_L18" in res:
+        res["exploratory_L18"] = res.pop("secondary_L18")
+        res["exploratory_L18"]["in_report"] = False
+    res.setdefault("field_history", {})['verdict_schema'] = "v2 (_final_verdict)"
+    return res
+
+
+def _reasons(res, corr):
+    ov, dr = res["top_overlap_L23"], res["dynamic_range"]
+    dom = res["per_domain_rho_gf_vs_W2_L23"]
+    return {
+        "dynamic_range": (
+            f"p90/p10 = {dr['s_gf_p90_over_p10']:.1f}× у s^gf против "
+            f"{dr['W2_p90_over_p10']:.2f}× у ‖W‖²: s^gf концентрирует защиту в верхних "
+            "процентах токенов, тогда как ‖W‖² ранжирует строки почти равномерно"),
+        "top_k": (
+            f"пересечение топ-{ov['gf_vs_W']['k']}: s^gf∩‖W‖ = {ov['gf_vs_W']['intersect']}"
+            f"/{ov['gf_vs_W']['k']} ({ov['gf_vs_W']['frac_of_k']:.1%}), а просто масса "
+            f"∩‖W‖ = {ov['mass_vs_W']['intersect']}/{ov['mass_vs_W']['k']}"
+            f" ({ov['mass_vs_W']['frac_of_k']:.1%}) — масса ближе к ‖W‖, чем s^gf, потому "
+            f"что shape антикоррелирует с массой (ρ = "
+            f"{corr['shape_vs_s_gf']['rho']:.3f}) и тянет s^gf от ‖W‖"),
+        "per_domain": f"разброс ρ по доменам {min(dom.values()):.2f}…{max(dom.values()):.2f}",
+        "incrementality": "нулевая (p_partial ≥ 0.05)",
+    }
+
+
+def recheck_verdict(path):
+    """Пересобрать вердикт v2 из уже посчитанных чисел (без прогона и без кэша).
+
+    Идемпотентен: v1 берётся из сохранённого verdict_history, если он там есть.
+    """
+    with open(path, encoding="utf-8") as fh:
+        res = json.load(fh)
+    _final_verdict(res)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(res, fh, ensure_ascii=False, indent=1)
+    print(json.dumps(res["verdict"], ensure_ascii=False, indent=1))
+    print(f"→ {path}")
+    return res
+
+
 # ---------------------------------------------------------------- вердикт
-def _verdict(rho):
-    if not np.isfinite(rho):
-        return "не определён (вырожденные данные)"
-    if rho < RHO_PASS:
-        return ("standard importance ошибочна: ‖W‖ плохо ранжирует gauge-free значимость "
-                "строк → gauge-aware — кандидат на замену (ТЗ §11.6, строка 1)")
-    if rho <= RHO_MODERATE:
-        return "умеренно: приближение ‖W‖ работает частично (ТЗ §11.6, строка 2)"
-    return ("standard importance случайно правильна: ‖W‖ воспроизводит порядок gauge-free "
-            "значимости → GPTQ не меняем (ТЗ §11.6, строка 3)")
-
-
 def _incrementality_note(p_partial):
     if p_partial is not None and p_partial >= 0.05:
         return ("прироста нет: после контроля rank(p̄) связь gauge-free importance с ‖W‖ не "
@@ -258,6 +397,10 @@ def main(device="cpu", results_dir="results", small_model=None, **kw):
             assert m["U128"] == ts_main, "U128 разошёлся между слоями"
         meas[L] = m
         diag = {"energy_after_P_over_raw": m["energy_after_P_over_raw"],
+                "ref_iso_ratio": m["ref_iso_ratio"],
+                "after_P_over_iso": m["after_P_over_iso"],
+                "ref_iso_note": "E[‖P J‖²/‖J‖²] для изотропного J = ‖P‖²_F/K; "
+                                "отношение after_P/ref_iso близко к 1 ⇒ «P убила энергию" "» ничего не говорит о gauge",
                 "g_uni_uniform_energy_share": m["g_uni_uniform_energy_share"],
                 "g_uni_note": "доля энергии сырого J на uniform-режиме токен-пространства "
                               "(paper §2.5); это НЕ ESG gauge_share из §2.3, с которым "
@@ -313,17 +456,6 @@ def main(device="cpu", results_dir="results", small_model=None, **kw):
                                     "отношения не имеет; слой = проверка устойчивости "
                                     "ранжировки по данным, не часть вердикта"}
 
-    prim, ci = corr["primary_s_gf_vs_W2"], corr["primary_s_gf_vs_W2"]["ci95"]
-    res["verdict"] = {
-        "rho_primary": prim["rho"], "p_perm": prim["p_perm"], "ci95": ci,
-        "table_row": ("ошибочна" if prim["rho"] < RHO_PASS else
-                      "умеренно" if prim["rho"] <= RHO_MODERATE else
-                      "случайно правильна"),
-        "text": _verdict(prim["rho"]),
-        "rho_partial_given_mass": partial, "p_partial": p_partial,
-        "incrementality": _incrementality_note(p_partial),
-        "ci_clears_band": bool(ci[1] < RHO_PASS or ci[0] > RHO_MODERATE),
-    }
     res["dynamic_range"] = {
         "s_gf_p90_over_p10": float(np.percentile(gf, 90) / max(np.percentile(gf, 10), 1e-300)),
         "W2_p90_over_p10": float(np.percentile(s_w, 90) / max(np.percentile(s_w, 10), 1e-300)),
@@ -348,6 +480,7 @@ def main(device="cpu", results_dir="results", small_model=None, **kw):
                              "есть ранжирование по ‖J_i‖ почти совпадает с ‖W_i‖ по "
                              "построению; значим ровно gauge-free контраст",
     }
+    _final_verdict(res)
     res["wall_s"] = round(time.time() - t0, 1)
 
     os.makedirs(results_dir, exist_ok=True)
@@ -360,4 +493,9 @@ def main(device="cpu", results_dir="results", small_model=None, **kw):
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if len(sys.argv) > 2 and sys.argv[1] == "--recheck":
+        recheck_verdict(sys.argv[2])   # пересобрать вердикт из JSON, прогон не трогать
+    else:
+        main()

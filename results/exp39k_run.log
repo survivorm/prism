@@ -19,3 +19,52 @@ Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF
  "ci_clears_band": true
 }
 → results/exp39k_gauge_aware_importance.json (wall 22.6 с)
+
+=== 2026-11-02 11:43 UTC — --recheck (вердикт v2 из JSON, прогон не тронут) ===
+{
+ "schema": "v2",
+ "rho_primary": 0.3106058872001465,
+ "p_perm": 0.001998001998001998,
+ "ci95": [
+  0.1390751331024765,
+  0.4678566028382549
+ ],
+ "p_perm_question": "ρ ≠ 0 (не «ρ < 0.5»): на строку таблицы он не опирается",
+ "rho_vs_threshold_0.5": {
+  "threshold": 0.5,
+  "test": "Fisher z, one-sided, n=128",
+  "p_rho_below_threshold": 0.005384184319476681,
+  "ci95_fisher": [
+   0.1448845968333225,
+   0.45937620605697466
+  ]
+ },
+ "rho_vs_threshold_0.8": {
+  "threshold": 0.8,
+  "test": "Fisher z, one-sided, n=128",
+  "p_rho_below_threshold": 0.0,
+  "ci95_fisher": [
+   0.1448845968333225,
+   0.45937620605697466
+  ]
+ },
+ "table_row": "ошибочна",
+ "table_row_status": "формально выполняется (односторонний p = 0.0054), но строка не является вердиктом: см. decisive_test",
+ "decisive_test": "partial ρ(s^gf, ‖W‖² | rank p̄) — incrementality",
+ "rho_partial_given_mass": 0.11879120124519318,
+ "p_partial": 0.2077922077922078,
+ "text": "s_gf — это токен-частота, а не gauge-структура: ‖W‖² и s^gf ранжируют разное (ρ = 0.311, односторонний p < 0.5 = 0.0054), но s^gf ≈ p̄² (ρ = 0.966), shape ⊥ ‖W‖ (ρ = 0.119) и после контроля массы связь исчезает (partial ρ = 0.119, p = 0.208) ⇒ «gauge-aware importance» из ТЗ не является объектом, альтернативным ‖W‖²; заменять importance на s^gf не из чего",
+ "incrementality": "прироста нет: после контроля rank(p̄) связь gauge-free importance с ‖W‖ не значима ⇒ gauge-aware importance = переименованная частота токена",
+ "ci_clears_band": true,
+ "not_a_replacement_reasons": {
+  "dynamic_range": "p90/p10 = 67.7× у s^gf против 1.67× у ‖W‖²: s^gf концентрирует защиту в верхних процентах токенов, тогда как ‖W‖² ранжирует строки почти равномерно",
+  "top_k": "пересечение топ-32: s^gf∩‖W‖ = 13/32 (40.6%), а просто масса ∩‖W‖ = 16/32 (50.0%) — масса ближе к ‖W‖, чем s^gf, потому что shape антикоррелирует с массой (ρ = -0.449) и тянет s^gf от ‖W‖",
+  "per_domain": "разброс ρ по доменам 0.09…0.41",
+  "incrementality": "нулевая (p_partial ≥ 0.05)"
+ },
+ "verdict_history": {
+  "v1": "standard importance ошибочна: ‖W‖ плохо ранжирует gauge-free значимость строк → gauge-aware — кандидат на замену (ТЗ §11.6, строка 1)",
+  "v2": "s_gf — это токен-частота, а не gauge-структура: ‖W‖² и s^gf ранжируют разное (ρ = 0.311, односторонний p < 0.5 = 0.0054), но s^gf ≈ p̄² (ρ = 0.966), shape ⊥ ‖W‖ (ρ = 0.119) и после контроля массы связь исчезает (partial ρ = 0.119, p = 0.208) ⇒ «gauge-aware importance» из ТЗ не является объектом, альтернативным ‖W‖²; заменять importance на s^gf не из чего"
+ }
+}
+→ results/exp39k_gauge_aware_importance.json
