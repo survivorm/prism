@@ -69,7 +69,10 @@ import time
 import numpy as np
 import torch
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
+try:                    # в ноутбуке Kaggle `__file__` не определён (upstream-краш v1)
+    _HERE = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    _HERE = os.getcwd()
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 # На Kaggle этого файла нет рядом: соседи берутся из датасета с кодом (обычный import,
@@ -139,14 +142,16 @@ def build_context():
     ck = torch.load(d39._jcache_l23_path(), map_location="cpu", weights_only=False)
     H_dict, U128, S = ck["H"], [int(t) for t in ck["U128"]], ck["S"]
     assert ck["D"] == d39.D
-    tok_ids = torch.tensor(U128, dtype=torch.long)
+    # всё, что участвует в матричных операциях, сразу на DEV: на GPU `matmul` CPU×CUDA
+    # падает (краш v1 на `u_all @ M_K_full.t()`), на CPU это no-op
+    tok_ids = torch.tensor(U128, dtype=torch.long, device=DEV)
     K = len(U128)
 
     docs = {}
     for (dom, si, t) in H_dict:
         docs.setdefault((dom, si), {})[int(t)] = H_dict[(dom, si, t)]
     all_keys = sorted(H_dict.keys())
-    H_all = torch.stack([H_dict[k].float() for k in all_keys])
+    H_all = torch.stack([H_dict[k].float() for k in all_keys]).to(DEV)
     N_total = H_all.shape[0]
 
     doc_ids = sorted(docs.keys())
@@ -163,9 +168,9 @@ def build_context():
     # ACTUAL logits через факторизацию E-38e (round 8 CRITICAL #1), вербатим exp39d
     u_all = H_all / H_all.norm(dim=-1, keepdim=True).clamp_min(1e-12)
     M_K_full = W_lm * g_base[None, :]
-    base_k_all = torch.empty(N_total, K)
-    lse_b_all = torch.empty(N_total)
-    raw_sum_all = torch.empty(N_total)
+    base_k_all = torch.empty(N_total, K, device=DEV)
+    lse_b_all = torch.empty(N_total, device=DEV)
+    raw_sum_all = torch.empty(N_total, device=DEV)
     SQRT_D = math.sqrt(d39.D)
     for i in range(0, N_total, 256):
         bl = SQRT_D * (u_all[i:i + 256] @ M_K_full.t())
@@ -272,14 +277,14 @@ def _corr_f(ctx, W_rows: torch.Tensor, n_pos: int = 512) -> float:
     Это главный контроль «плоскость не купена поведением»: PPL +1% не различает честный
     floor и rank-permutation (у обоих ≈ +1%), поэтому полагаться можно только на него.
     """
-    idx = np.linspace(0, ctx["N_total"] - 1, n_pos).astype(int)
+    idx = torch.as_tensor(np.linspace(0, ctx["N_total"] - 1, n_pos).astype(np.int64),
+                          device=DEV)
     u = ctx["H_all"][idx]
     u = u / u.norm(dim=-1, keepdim=True).clamp_min(1e-12)
     mk = (W_rows * ctx["g_base"][None, :]).t()
     lg = (math.sqrt(d39.D) * (u @ mk))[:, ctx["tok_ids"]].detach().cpu().numpy()
     bk = ctx["base_k_all"][idx].detach().cpu().numpy()
     return float(np.mean([_pearson(lg[i], bk[i]) for i in range(len(idx))]))
-
 
 # ---------------------------------------------------------------- метрики
 def kappa_of(ctx, W_rows: torch.Tensor) -> float:
