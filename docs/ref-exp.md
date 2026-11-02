@@ -1278,6 +1278,37 @@ Softmax-мост между оригиналом и каждой схемой к
 - α-blend (частичная ротация) **не спасает**: при α=0.01 (1% ротации) KL уже = 0.135 (2.7× бюджета) — embed-дрейф распространяется через 24 слоя даже при малом изменении W_lm. Пересечение KL-safe и κ'-safe множеств **пусто**.
 - Вывод для серии E-39: путь «surgery без тренировки» (E-39c) **закрыт**; следующий путь — E-39d/e (LoRA-тренировка с flatness-loss на intermediate layers, не трогающая embed).
 
+### E-39f. Полный tied-weight PTQ: декомпозиция Δκ(L23) на readout- и upstream-канал (exp39f, N=32 × S=128, r=16, 4 режима GPTQ; 0.8B, L23, Kaggle T4 fp16-forward/GPTQ fp32, wall 519 с)
+
+**Цель (ТЗ `docs/E39f.md`, переопределил `docs/E39.md` §6):** `lm_head.weight == embed_tokens.weight` (tied), поэтому реальный PTQ меняет оба конца сразу; E-39c_pre дал ≈80% стоимости KL на embed-канал. Вопрос: сдвигает ли полный tied-PTQ κ(L23) через upstream-канал (сдвиг û_t), и какая доля Δκ приходится на каждый канал. H-39f: `share_upstream ≥ 0.5`; нуль: `< 0.25`.
+
+**Постановка (четыре κ, иначе декомпозиция невоспроизводима):** κ_fp16 (M_K_fp16 + кэшированная û) · κ_control (M_K_fp16 + û свежего forward'а = шумовое поле) · κ_readout (M_K_q + кэшированная û = воспроизведение E-39b) · κ_full (M_K_q + û из forward'а квантованной модели). Δ_readout = κ_readout − κ_fp16, Δ_upstream = κ_full − κ_readout, доли определяются только при |Δ_total| > 1e-3.
+
+**Результаты (воспроизведение E-39b точное: κ_fp16 0.01623, κ_readout 0.01604, drift 0.12047, PPL readout 30.7498; v5 и v6 совпали побитово):**
+
+| режим | drift_J | κ_readout | κ_full | share_up | PPL readout | PPL full tied |
+|---|---|---|---|---|---|---|
+| base | 0 | 0.01623 | — | — | 30.4753 | 30.4753 |
+| control | — | 0.01623 | — | шум. поле ≈0 | — | — |
+| g128 (4bit) | 0.1205 | 0.01604 | **0.01593** | 0.372 | 30.7498 | **31.0125** |
+| g32 (4bit) | 0.0943 | 0.01607 | 0.01610 | 0.129 | 30.5977 | 30.5590 |
+| b3g128 (3bit) | 0.2603 | 0.01607 | 0.01585 | 0.576 | 32.0451 | 33.4041 |
+| b2g128 (2bit) | 0.6442 | 0.01353 | **0.01112** | 0.470 | 39.4470 | **61.5133** |
+
+Гейты: `main = both_channels_small` (|Δ_total| = 3e-04 < 1e-03), `harsh(b2g128) = leaf_robust_even_harsh` (ratio 0.685), `ppl = ppl_robust` (+1.76%). h_drift med = 0.046 / û_cos med = 0.99895 (g128) → 0.378 / 0.927 (b2g128).
+
+**Вердикт:** H-39f не подтверждена и не опровергнута в deployable-режиме — Δκ меньше разрешающей способности (оба канала); на дозе 2 бита, где Δκ разрешаемо, каналы сравнимы (share_up = 0.47, не ≥ 0.5). Граница E-39b «квантован только readout» **закрыта**: на 4 битах полный tied-PTQ лист не ломает (ratio 0.981) при удвоении PPL-ущерба.
+
+**Две инверсии ТЗ (записаны в JSON как D6/D7):** (1) «harsh» group=32 оказался мягче базового (drift 0.094 < 0.120) — жёсткость задают биты, добавлены 3/2-bit; (2) null-модель: κ_null(Haar) = 0.00086 вместо ожидавшихся ≈5, то есть в 19 раз МЕНЬШЕ реальной (в D=1024 случайное ранг-1 вычитание меняет оператор на ~1/D) ⇒ û-канал структурирован, гейт переписан в двусторонний.
+
+**Ограничения:** QA-accuracy не измерен (нет офлайн-датасетов); scatter не строится (все κ в полосе 0.011–0.016); g финальной RMSNorm не квантуется; KV-cache/activation quantization не тестировались; только L23, один чекпойнт, N=32×128; û для κ_full — post-norm H (конвенция кэша выбрана численно, `selfchecks.h_convention = "norm"`, u_cos_min = 0.99997 против 0.734 у неверной).
+
+**Артефакты:** `experiments/exp39f_full_tied.py`, `experiments/test_exp39f_math.py` (эквивалентность κ/J/drift/β эталону E-39b: J Δ=0, κ побитово, drift Δ=6e-08), `kaggle_kernel/kernel-exp39f/` (`voroninmichael/e-39f-full-tied-ptq-kappa-decomposition`, v7), `results/exp39f_full_tied.json`.
+
+**Выводы (для картины в целом):**
+- κ и поведение — разные оси, теперь и на полном tied-канале: PPL ×2 (30.5→61.5), а κ только упала на треть — и в сторону «плоскости». «κ ↓ ⇒ лучше» неверно как направление: разрушенная модель «плосче» живой.
+- Доза-ответ замкнут: 12%→26% ошибки J leaves κ интактной (≤1.2%), 64% сдвигает κ на −31%. Ветка «κ растёт ⇒ связана с PPL» так и не собрана (нет режима с ростом κ).
+
 ### E-39j. Sentinel-позиции как cheap uncertainty metric (exp39j, N=32 документов × S=128, U=U128, порог массы 0.5; 0.8B, L6–L23, CPU fp32/eager, 3121 с)
 
 **Цель (ТЗ `docs/E39.md` §10):** corr(per-doc доля sentinel-позиций, downstream confidence) — если сильно, sentinel становится дешёвой метрикой уверенности на инференсе.
@@ -1300,6 +1331,31 @@ Softmax-мост между оригиналом и каждой схемой к
 **Выводы (для картины в целом):**
 - «Дешевизна» sentinel (top-128 logprobs уже есть в ответе API, полный logit истинного токена — нет) не окупается: бинаризация по порогу теряет разрешение, и та же масса в непрерывном виде предсказывает PPL вдвое лучше.
 - Sentinel-масса и геометрия листа независимы на уровне документов → 50.7% sentinel (E-34) — свойство readout-массы, а не кривизны листа.
+
+### E-39k. Gauge-free норма строк J vs ‖W‖ как importance для квантизации (exp39k, K=128 строк 𝒮 × 4096 позиций; 0.8B, L23 + L18, CPU fp32, 20 с)
+
+**Цель (ТЗ `docs/E39.md` §11):** стандартная importance `‖W_i‖²` (GPTQ/AWQ) против gauge-free `s_i^gf = mean_t‖J^(p)_i‖²`, `J^(p) = P(p)J` — если корреляция низкая, standard importance ошибочна и gauge-aware — улучшение.
+
+**Постановка (как в E-39j/E-39l: одна корреляция не решение).** `s^gf = p̄²·shape` по построению, поэтому рядом измеряются оба множителя и **partial** Спирмен по rank(`p̄`): если прироста нет, «gauge-aware importance» = переименованная частота токена. Строки J обязаны быть выровнены со строками `W_lm` — на L23 это проверяется реконструкцией, а не принимается на веру.
+
+**Результаты (K = 128, перестановочный p и bootstrap CI B = 1000, seed = 0):**
+- **проверка выравнивания:** `J_i = c_t(M_i − (M_i·û_t)û_t)` из строк `W_lm` → rel err median **1.62e-07** (max 5.1e-07; воспроизведение самопроверки E-39b), `cos(M_i,J_j)` диагональ 0.996 против off-diag 0.130;
+- **первичная:** ρ(`s^gf`, `‖W‖²`) = **+0.311** (p = 0.002, CI [+0.139, +0.468] — целиком ниже 0.5);
+- `‖J‖²` raw ↔ `‖W‖²` = **+0.987** — но это структурная тождественность (общий пер-позиционный множитель + почти равное для всех строк вычитание компоненты по û), не свидетельство;
+- **прироста нет:** ρ(`p̄`, `s^gf`) = **+0.966**, partial ρ(`s^gf`, `‖W‖²` | rank `p̄`) = +0.119 (p = 0.208); ρ(shape, `‖W‖²`) = +0.119 (p = 0.170);
+- **практика:** пересечение топ-32 (квартиль) `s^gf` vs `‖W‖²` = **13/32** (Jaccard 0.25) — защита выбрала бы 59% других строк; динамический диапазон p90/p10: `s^gf` **67.7×**, `‖W‖²` **1.67×**;
+- робастность: по доменам +0.09/+0.41/+0.30/+0.14 (wiki/math/code/chat), L18 +0.372 [+0.206, +0.529]; `‖M_K‖²`-вариант (g = 1+w_norm) +0.274;
+- **побочно, первое измерение `g_uni`** (paper §2.5): **0.140** (L23) / **0.142** (L18) — это НЕ ESG `gauge_share` §2.3, с которым сопоставимы 98–99% E-33r.
+
+**Вердикт:** по таблице §11.6 — **строка 1, «standard importance ошибочна»**; по содержанию — «gauge-aware importance = переименованная частота токена»: направление вывода (менять row-importance есть на что) сохраняется, но ветка модификации **mass-aware**, а не «gauge-aware».
+
+**Ограничения:** K = 128 строк (V−K рядов недоступны, ТЗ §11.5); row-level утверждение, column-level (активационная) AWQ-importance не проверялась; квантование не запускалось — связь importance с фактической деградацией строки (`‖ΔW_i‖`, вклад в PPL) не измерена; n = 128 → широкое CI; вывод по L23.
+
+**Артефакты:** `experiments/exp39k_gauge_importance.py`, `results/exp39k_gauge_aware_importance.json` (+ `results/exp39k_run.log`).
+
+**Выводы (для картины в целом):**
+- «Gauge-структура» как источник нового сигнала importance не работает в том же смысле, что и sentinel-бинаризация (E-39j): величина, полученная перемножением известных компонент, не несёт прироста после контроля этих компонент.
+- Нормы строк readout на носителе 𝒮 почти одинаковы (p90/p10 = 1.67×) — любой row-level importance-критерий на `‖W‖` по определению почти ничего не различает; осмысленная дифференциация приходит только с массой токена (67×).
 
 ### E-39l. Drift листа vs поведение (v2, non-tautological; joined E-38i + E-16b, N=10 joined точек; 0.8B, L23, CPU)
 
@@ -1379,7 +1435,9 @@ Softmax-мост между оригиналом и каждой схемой к
 | E-39a | U-observability gate: ранг U_obs L23, dry-run M_K-surgery (VU-фикс: V_new = bottom-16 ⊥ û_t) | `experiments/exp39a_u_obs_rank.py` | N=32, S=128, r=16, r_pool=64, L23 (exp27b dense, CPU, fp64) | ✅ | `results/exp39a_u_obs_rank.json` | foundation | §ref-exp (блок 4.8) | U_obs полноранговая (r_obs=1024, точного null нет); r_eff(τ=0.05) = 178 (moderate; per-doc = 31); κ baseline 0.0162 (E-38d воспроизведён, noop 1.74e-9); dry-run κ' 0.0162→0.00030 (54× flattening, V_new ⊥ û_t); a_random < b_principal < c_balanced — все три пары значимы (Bonferroni α=0.05/3); ρ_noise ≈ 0.0002 (≈0.02%); κ' — превью (tied-веса), не E-39c [И] |
 | E-39b | PTQ perturbation gate: κ(L23)/M_K под GPTQ-4bit (readout-only) | `experiments/exp39b_ptq_perturbation.py` | N=32, S=128, r=16, L6–L23 (exp27b dense), GPTQ-4bit g128 desc_act + int8 RTN, 0.8B (Kaggle T4, 532 с) | ✅ | `results/exp39b_ptq_perturbation.json` | foundation | §ref-exp (блок 4.8) | **гейт `pass`**: κ(L23) base 0.016233 → gptq4 0.016043 (ratio 0.988), int8 0.016245; β/σ₁ 0.8821→0.8822, cos_ug_1k_proxy 0.9168→0.9171; J_rel_drift gptq4 = 0.1205 (int8 0.0058); PPL 30.4753→30.7498 (+0.90%) → 12%-ное возмущение J **калибровочно выровнено**, лист не перегнут; readout-PTQ не нужен flatness-регуляризатор; **вердикт только для readout-канала** (`readout_channel_only`), полный tied-PTQ не измерен (E-39c_pre: embed_only KL 5.23 vs head_only 1.36); точно только L23 — κ(L6)=0.0046 против E-28 κ(L6)=3.96, сравнимо только L23; `cos_ug_1k_proxy` ≠ E-38f exact (0.917 vs 0.862); int8 — control (≈lossless); ветка «κ ×10 ⇒ связь с PPL» не тестировалась [И] |
 | E-39c_pre | M_K-surgery KL pre-gate + α-sweep + tied-weight decomposition (pre-stage E-39c) | `experiments/exp39c_pre_kl_surgery.py` | N=8 C4 (skip 4096), S=128, r=16, L23, 0.8B (CPU, deterministic, seed=0; тот же VU-фикс) | ✅ | `results/exp39c_pre_kl_surgery.json` | foundation | §ref-exp (блок 4.8) | **REFUTED по KL**: full (α=1) KL = 6.31 nats/token (≈126× бюджета 0.05); α-sweep: **ни один α не проходит KL+κ'** (KL-safe ∅, κ'-safe [0.7,0.9,1.0], disjoint); embed_only KL = 5.23 (≈80% стоимости, upstream-пропагация), head_only = 1.36 (27× бюджета даже untied); ни одна V_new-стратегия не проходит KL → провал structural (V_new ⊥ V_top) [И] |
+| E-39f | Полный tied-weight PTQ: декомпозиция Δκ(L23) readout vs upstream | `experiments/exp39f_full_tied.py` | N=32×S=128, r=16, 4 режима GPTQ (4bit g128/g32, 3bit, 2bit), tied lm_head≡embed (0.8B, L23, Kaggle T4) | ✅ | `results/exp39f_full_tied.json` | foundation | §ref-exp (блок 4.8) | воспроизведение E-39b точное (κ_fp16 0.01623, κ_readout 0.01604, drift 0.12047, PPL 30.7498); **4 бит: κ_full 0.01593 (ratio 0.981) при PPL +1.76%** ⇒ `both_channels_small` (\|Δ_total\|=3e-04<1e-03), граница E-39b «только readout» закрыта; **2 бит: κ_full 0.01112 (−31%) при PPL 61.51 (+102%)** — лист становится ПЛОЩЕ при разрушении поведения, `leaf_robust_even_harsh`; share_up = 0.47 (не ≥0.5 ⇒ H-39f не подтверждена), вклад upstream в PPL-ущерб 49% (4бит) → 72% (2бит), согласуется с E-39c_pre; D6 «harsh g=32» инвертирован (drift 0.094<0.120), D7 κ_null(Haar)=0.00086 в 19 раз МЕНЬШЕ реальной ⇒ û-канал структурирован; QA не измерен [И] |
 | E-39j | Sentinel-позиции как cheap uncertainty metric (per-doc доля vs PPL) | `experiments/exp39j_sentinel_confidence.py` | N=32 док × S=128, U=U128, порог 0.5, L6–L23 (0.8B, CPU fp32/eager, 3121 с) | ✅ | `results/exp39j_sentinel.json` | diagnostic | §ref-exp (блок 4.8) | f_sent пересчитана независимо и совпала с E-32r.3 **побитово** (max\|Δ\|=0.0; среднее 0.507080078125 = 2077/4096 = якорь E-34); ρ_all = **+0.421** (p=0.023), p≥32: +0.564; непрерывные базлайны сильные: entropy **+0.905**, max-prob −0.895, p10 mass +0.636; **partial ρ = −0.106 (p=0.548)**, Δρ vs best baseline **−0.484 CI [−0.778,−0.229]** → вердикт «не метрика, а потеря версии базлайна»: бинаризация по порогу теряет разрешение, дешёвая метрика не используется; лист с f_sent не связан (all \|ρ\|≤0.33), но d3_gf↔PPL ρ=−0.569 (p=0.002, exploratory); QA accuracy не измерен [И] |
+| E-39k | Gauge-free норма строк J vs ‖W‖ как importance | `experiments/exp39k_gauge_importance.py` | K=128 строк 𝒮 × 4096 позиций, `J^(p)=P(p)J`, `p=P128`, L23 + L18 (0.8B, CPU fp32, 20 с) | ✅ | `results/exp39k_gauge_aware_importance.json` | diagnostic | §ref-exp (блок 4.8) | ρ(`s^gf`,‖W‖²) = **+0.311** (p=0.002, CI [+0.14,+0.47] < 0.5 ⇒ ТЗ-строка 1 «standard importance ошибочна»); но ρ(масса,`s^gf`) = **+0.966** и partial по rank(массы) = +0.119 (p=0.21) ⇒ gauge-aware = переименованная частота токена; топ-32 пересечение 13/32; диапазон `s^gf` 67.7× vs `‖W‖²` 1.67×; выравнивание J↔W проверено реконструкцией 1.62e-07; впервые измерен `g_uni` = 0.140/0.142 (не ESG gauge_share) [И] |
 | E-39l | Drift листа vs поведение (v2 non-tautological, v2.2 E39l_fixes р1+р2) | `experiments/exp39l_drift_behavior.py` | joined E-38i (drift) + E-16b (retention), 10 точек (2 measured, 8 interpolated), L23 (CPU) | ✅ | `results/exp39l_drift_behavior.json` | foundation | §ref-exp (блок 4.8) | ρ_res = −0.273 (p = 0.446), не значим (пермутационный null p95 = 0.636); **sign flip linear vs quadratic детренд → детренд-зависимый артефакт** (sign_consistent = false); monotonicity_ok = false; вердикт inconclusive (low); ρ_all = −0.758 тривиален; retention-кривая hardcoded (verified = False); каузальный тест — E-39d/e [И] |
 
 - E-12b: таблица — из JSON (N=4, K=32); скрипт обновлён до K=64.
