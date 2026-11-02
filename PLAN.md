@@ -50,7 +50,10 @@ sentinel 50.7 % в paper отдельной врезкой), спорить яв
 
 ## DOING / NEXT
 
-- [ ] E-39m: Kaggle v5 идёт (`voroninmichael/e-39m-flat-carrier-vs-ptq`); после успеха снять
+- [ ] E-39m: Kaggle **v6** идёт (`voroninmichael/e-39m-flat-carrier-vs-ptq`). v5 дошёл до фазы
+      quant (train: якоря κ'/PPL побитово, floor_pearson — единственный прошедший якорь E-39d) и
+      упал в `calib_activations` (CPU-`ids` в GPU-модель) — починено (`.to(DEV)`), локальный smoke
+      зелёный (якорь 34.3142, corr_f 1.0/−0.059, calib 128, GPTQ 43 с). После чистого v6 снять
       `CUDA_LAUNCH_BLOCKING=1` и разобрать `results/exp39m_flat_ptq_{train,quant}.json`.
 - [ ] E-40.1 (m) — `real/dir` на второй модели: GPU-профильщик exp27b + новый jcache, зависимость
       от E-41. Пререгистрирован в `docs/E40_tier0.md`.
