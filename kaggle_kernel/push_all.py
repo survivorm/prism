@@ -237,11 +237,10 @@ KERNELS = {
     },
     "exp39b": {
         "dir": "kernel-exp39b",
-        # Provisional id (never pushed): Kaggle derives the slug from the
-        # title. After the first successful push, verify the canonical slug
-        # (`kaggle kernels list`) and update here (re-push 409 otherwise).
-        "id": "voroninmichael/prism-exp39b-ptq-perturbation",
-        "title": "Prism: exp39b-ptq-perturbation",
+        # Canonical slug (derived from the title on the first push): a mismatched
+        # id here makes every `kaggle kernels push` fail with HTTP 409.
+        "id": "voroninmichael/e-39b-ptq-perturbation-gate-gptq-4-bit-lm-head",
+        "title": "E-39b PTQ perturbation gate (GPTQ 4-bit lm_head)",
         "exp_file": "experiments/exp39b_ptq_perturbation.py",
         "sources": ["voroninmichael/prism-exp27b-dense-profile"],
         # Same two datasets as exp38d (27b jcache: jca L6/12/18, jcb L19/22/23).

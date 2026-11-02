@@ -5,11 +5,11 @@
   "accelerator": "gpu",
   "language": "python",
   "code_file": "kernel.ipynb",
-  "id": "voroninmichael/prism-exp39b-ptq-perturbation",
-  "title": "Prism: exp39b-ptq-perturbation",
+  "id": "voroninmichael/e-39b-ptq-perturbation-gate-gptq-4-bit-lm-head",
+  "title": "E-39b PTQ perturbation gate (GPTQ 4-bit lm_head)",
   "kernel_sources": [
     "voroninmichael/prism-exp27b-dense-profile",
-    "voroninmichael/prism-exp39b-ptq-perturbation"
+    "voroninmichael/e-39b-ptq-perturbation-gate-gptq-4-bit-lm-head"
   ],
   "dataset_sources": [
     "voroninmichael/prism-exp27b-jcache-jca",
