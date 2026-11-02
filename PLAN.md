@@ -50,11 +50,17 @@ sentinel 50.7 % в paper отдельной врезкой), спорить яв
 
 ## DOING / NEXT
 
-- [ ] E-39m: Kaggle **v6** идёт (`voroninmichael/e-39m-flat-carrier-vs-ptq`). v5 дошёл до фазы
-      quant (train: якоря κ'/PPL побитово, floor_pearson — единственный прошедший якорь E-39d) и
-      упал в `calib_activations` (CPU-`ids` в GPU-модель) — починено (`.to(DEV)`), локальный smoke
-      зелёный (якорь 34.3142, corr_f 1.0/−0.059, calib 128, GPTQ 43 с). После чистого v6 снять
-      `CUDA_LAUNCH_BLOCKING=1` и разобрать `results/exp39m_flat_ptq_{train,quant}.json`.
+- [x] E-39m мини-тест (v5/v6, PPL-only): **flat_neutral**. base 29.55 → floor_pearson
+      30.02/30.45 (b3/b4), b3 32.23; инкрементальный урон +0.53pp не хватает порога ±0.5pp;
+      cheat +34.6 %/+31.8 % после PTQ, h_any_low_κ = false; pairwise коллапс (PPL 1090) —
+      отброшен `_pick_floor`. Показал только PPL: без fresh-forward κ_full/декомпозиции/null'ов
+      полный протокол E-39f не закрыт → мини-тест остановлен (v6), вердикт E-39m будет
+      по полному протоколу.
+- [ ] E-39f (полный протокол `exp39f_full_tied.py` на новом карриере): ядро **v8** запушено
+      (`voroninmichael/e-39f-full-tied-ptq-kappa-decomposition`), пересобрано
+      `build_kernel.py` из актуального скрипта (v7 нес устаревший 41KB вместо 54KB). Ждём
+      прогон: 5 моделей, fresh-forward κ_full, декомпозиция, h_drift/û_cos, κ_rand,
+      harsh g=32, PPL, null'ы — это и есть вердикт E-39m на новом носителе.
 - [ ] E-40.1 (m) — `real/dir` на второй модели: GPU-профильщик exp27b + новый jcache, зависимость
       от E-41. Пререгистрирован в `docs/E40_tier0.md`.
 - [ ] ТЗ E-44 — не начинать до stage 0 (п. 4 §10 ТЗ).
