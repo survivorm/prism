@@ -16,7 +16,8 @@ PTQ (GPTQ/AWQ) квантует lm_head.weight → M_K → J_t, при этом 
 Метрики (per layer L ∈ {6,12,18,19,22,23}, per level):
   * κ(L)      = ‖H_012 − I‖_F, top-16 right-singular bases (E-38d, r=16).
   * β/σ₁(M_K) — consistency (E-38e, baseline ≈ 0.9 ± 0.15).
-  * cos(u_g, 1/√K) — gauge-axis alignment (E-37).
+  * cos(u_g, 1/√K) — gauge-axis alignment, PROXY JJᵀ1 (E-37/E-33r; не сравним
+              с exact u_g из E-38f).
   * J_rel_drift = ‖J_q − J‖_F / ‖J‖_F (per (doc,t) median/p95/max).
   * PPL на C4 holdout (lm_head.replace не используется — tied weights;
     PPL readout-only: квантуется только W_lm, h от базовой модели — P0.5).
@@ -36,6 +37,24 @@ so base-vs-quantized is internally consistent.
 
 P1.3: sentinel-фильтра нет — κ/β/cos считаются на всех тройках/позициях
 для консистентности с E-39a (baseline 0.0162 тоже без фильтра).
+
+Как читать JSON (round 3, разбор `docs/E39b_fixes.md`) — числа корректны, но:
+  1. `readout_only_ptq` → verdict относится ТОЛЬКО к readout-каналу. Полный
+     tied-weight PTQ (квантуется `embed_tokens` → сдвиг h по 24 слоям → û_t)
+     не измерен; масштаб upstream-канала по E-39c_pre: embed_only KL 5.23 vs
+     head_only 1.36.
+  2. `kappa` при L ≠ 23 — синтетика: J readout-линеаризован (нет промежуточных
+     слоёв и D_l), поэтому κ(L6) ≈ 0.005 НЕ сравнимо с настоящей leaf-кривизной
+     E-28 (κ(L6) = 3.96, κ(L22) = 1.56 — на 3 порядка). Сравнивать с E-28/E-39a
+     можно только κ(L23).
+  3. `cos_ug_1k_proxy` — proxy (JJᵀ1), НЕ точный u_g = argmax|cos(u,1)| из E-38f
+     (там 0.862 на L23, здесь 0.917): разные объекты, не сравнимы.
+  4. `int8_rtn` — не baseline, а control: 8-bit RTN здесь практически lossless
+     (PPL −0.003%, drift 0.58%); сравнение по существу — fp16 vs gptq4.
+  5. Робастность κ к PTQ частично свойство самой метрики: κ = функционал от
+     углов подпространства (Procrustes-углы топ-r базиса), инвариантный к
+     амплитуде и гладким малым возмущениям M_K. Поэтому «12% ошибки веса →
+     0% изменения κ» — не парадокс, а следование определению.
 """
 
 import json
@@ -245,6 +264,10 @@ def _beta_sigma1(M_K, H):
 
 def _cos_ug_1k(J):
     """cos(u_g, 1/√K) where u_g = JJ^T 1 / ‖JJ^T 1‖ (K-dim token-space).
+
+    PROXY, не точный u_g: E-38f берёт u_g = argmax |cos(u, 1/√K)| по левым СВ J,
+    здесь это JJᵀ1 (один проход, без SVD). В E-33r align(u_top, u_g) = 0.85–0.99,
+    то есть числа НЕ сравнимы с E-38f (L23: 0.917 здесь против 0.862 там).
 
     J: [n, S, K, D]. Returns (median cos, n_valid).
     """
@@ -608,7 +631,7 @@ def main(device=None, results_dir=None, small_model=None):
                 "kappa": kap,
                 "beta_sigma1": beta_med,
                 "beta_n_valid": beta_n,
-                "cos_ug_1k": cos_med,
+                "cos_ug_1k_proxy": cos_med,
                 "cos_n_valid": cos_n,
                 "j_rel_drift_median": drift_med,
                 "j_rel_drift_p95": drift_p95,
@@ -685,6 +708,33 @@ def main(device=None, results_dir=None, small_model=None):
             "tol": SELFCHECK_TOL,
             "passed": bool(rel_arr.max() < SELFCHECK_TOL),
         },
+        # P0.4 was a print-only check; without the value in JSON there is no way
+        # to verify it ran. It raises on ref_err > 2.0, so reaching the output
+        # already implies passed=True — but the number is the evidence.
+        "p04_ref_err": float(ref_err),
+        "p04_passed": bool(ref_err <= 2.0),
+        # Round-3 разбор: κ для L≠23 считается на readout-линеаризованном J.
+        "warning_kappa_synthetic": (
+            "kappa at L != 23 is computed on the readout-linearized J "
+            "(c_t·M_K·(I−ûûᵀ), no intermediate layers, no D_l): it is NOT the leaf "
+            "curvature of E-28 (E-28: kappa(L6)=3.96, kappa(L22)=1.56 vs 0.0046/0.0098 "
+            "here — 3 orders apart). Only kappa(L23) is a real leaf kappa; compare "
+            "only L23 with E-28/E-39a."
+        ),
+        "kappa_semantics_note": (
+            "kappa is a Procrustes-angle functional of the top-r subspace of J: "
+            "invariant to amplitude and to smooth small perturbations of M_K. The "
+            "robustness of the leaf to readout-PTQ is therefore partly a property of "
+            "the metric, not only of the model."
+        ),
+        "levels_note": {
+            "fp16": "unquantized baseline (also the level the J-reconstruction self-check runs on)",
+            "int8_rtn": (
+                "control, not baseline: 8-bit RTN is effectively lossless here "
+                "(PPL −0.003%, drift 0.58%); the comparison of record is fp16 vs gptq4"
+            ),
+            "gptq4": "GPTQ 4-bit group 128 desc_act — the level the gate is read on",
+        },
         "ppl": ppl,
         "ppl_delta_pct_gptq4_vs_base": float(ppl_delta_pct),
         "kappa_l23": {
@@ -697,6 +747,16 @@ def main(device=None, results_dir=None, small_model=None):
             "threshold_pass": KAPPA_PASS,
             "threshold_moderate": KAPPA_MODERATE,
             "verdict": gate,
+            # The verdict must not be read as "PTQ is safe": only the lm_head
+            # channel was quantized, with h/û_t frozen at the base model.
+            "readout_channel_only": True,
+            "scope_note": (
+                "verdict covers quantization of lm_head.weight only (activations and "
+                "embed_tokens frozen at the base model). Full tied-weight PTQ also "
+                "quantizes embed_tokens → h shifts through 24 layers → û_t moves → κ "
+                "may move; not measured here. Upstream channel dominates per E-39c_pre "
+                "(embed_only KL 5.23 vs head_only 1.36)."
+            ),
         },
         "metrics": metrics,
         "wall_sec": time.time() - t0,
