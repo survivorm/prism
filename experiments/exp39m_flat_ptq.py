@@ -69,6 +69,10 @@ import time
 import numpy as np
 import torch
 
+# диагностика краша v3 на T4 (device-side assert без traceback'а): синхронный CUDA
+# убирает переупорядочивание ядер, цена ~2× на мелких операциях. Снять после отладки.
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+
 try:                    # в ноутбуке Kaggle `__file__` не определён (upstream-краш v1)
     _HERE = os.path.dirname(os.path.abspath(__file__))
 except NameError:
@@ -203,6 +207,10 @@ def build_context():
         M0 = (W_lm[tok_ids] * g_base[None, :])
         l_flat_base = float(d39.flatness_loss(M0, H_all[norm_idx], d39.R, d39.MB))
     ctx["l_flat_base"] = l_flat_base
+    # fail-loud на индексы: device-side assert без traceback'а (краш v3) ищется тяжело
+    assert int(tok_ids.max()) < W_lm.shape[0] and int(tok_ids.min()) >= 0
+    assert int(keep_idx.max()) < N_total and int(keep_idx.min()) >= 0
+    assert H_all.device.type == DEV.split(":")[0] and W_lm.device.type == DEV.split(":")[0]
     print(f"[ctx] N={N_total} docs={N_docs} sentinel={ctx['n_sent']} "
           f"l_flat_base={l_flat_base:.4f}", flush=True)
     return ctx
@@ -246,6 +254,9 @@ def train_carrier(ctx, lam_flat: float, lam_order: float, order_mode: str) -> di
         loss.backward()
         torch.nn.utils.clip_grad_norm_([W_rows], 1.0)
         opt.step()
+        if step <= 5 or step % 10 == 0:
+            print(f"    step {step}: loss={float(loss.detach()):.6f} "
+                  f"finite={bool(torch.isfinite(W_rows).all())}", flush=True)
         if step % d39.METRIC_EVERY == 0 or step == d39.N_STEPS:
             with torch.no_grad():
                 kp = d39._kappa_dryrun((W_rows * g[None, :]).double(), ctx["u64_docs"],
