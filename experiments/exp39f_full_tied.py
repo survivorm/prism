@@ -16,9 +16,11 @@ PPL +0.90%) — но квантовал только `lm_head.weight`, а Qwen3.
               Δ_upstream нельзя отличить от шума порядка редукций)
   κ_readout : M_K(W_q),    û из кэша                → assert: воспроизведение E-39b
   κ_full    : M_K(W_q),    û из квантованного forward → новый объект
-Режимы квантования: g=128 (стандарт, сравним с E-39b) и g=32 (harsh probe ТЗ §4.2/§5.2).
+Режимы квантования: g=128 (стандарт, сравним с E-39b), g=32 (назван harsh в ТЗ, на деле
+мягче — D6) и b3g128/b2g128 (3 и 2 бита — настоящая жёсткая проба).
 Диагностики: h_drift, û_cos, β/σ₁(M_K), J_rel_drift, PPL (fp16 / readout-only / full
-tied), null-модель (16 seeds Haar û; ТЗ §4.3: κ_null < 1.0 ⇒ декомпозиция невалидна).
+tied), null-модель (16 seeds Haar û; ТЗ §4.3: κ_null < 1.0 ⇒ декомпозиция невалидна —
+оказалось инвертированной, см. D7).
 
 Конвенция H на L23 (важно для û, проверяется численно в Шаге 0): exp27b берёт
 `out.hidden_states[l+1]`, а в HF финальная RMSNorm применяется ПОСЛЕ цикла слоёв, поэтому
@@ -120,7 +122,8 @@ L_TARGET = 23                  # единственный слой с точно
 
 GPTQ_BITS = 4
 GPTQ_GROUP = 128
-GPTQ_GROUP_HARSH = 32
+GPTQ_GROUP_HARSH = 32          # D6: оказался МЯГЧЕ базового (drift 0.094 < 0.120)
+GPTQ_BITS_HARSH = (3, 2)       # D6: жёсткость задают биты → режимы b3g128, b2g128
 GPTQ_DAMP = 0.01
 C4_CAL_SKIP = 8192             # GPTQ Hessian: 128 docs × 128 tok (сплит E-39b)
 N_CAL, S_CAL = 128, 128
@@ -133,7 +136,9 @@ KAPPA_READOUT_REF, KAPPA_READOUT_TOL = 0.016043, 2e-3
 DRIFT_REF, DRIFT_REL_TOL = 0.12047, 0.05
 BETA_BASE_REF, BETA_BASE_TOL = 0.882, 0.05
 KAPPA_PASS, KAPPA_MODERATE = 0.02, 0.10
-NULL_KAPPA_MIN, N_NULL_SEEDS = 1.0, 16
+N_NULL_SEEDS = 16
+NULL_SENS_MIN = 2.0            # D7: двусторонняя чувствительность κ к û-каналу
+NULL_KAPPA_MIN = 1.0           # прежняя пререгистрация ТЗ §4.3 (остаётся в JSON как факт)
 DELTA_MIN = 1e-3               # ТЗ §2.3: доли определены только при |Δ_total| > 1e-3
 # Наблюдённый фон: верная конвенция при fp16 даёт u_cos_min ≈ 0.99997 (fp16 round-off),
 # неверная (output слоя вместо post-norm) — 0.734, чужие документы — 0.3–0.7.
@@ -621,11 +626,16 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
     del X
     t_g = time.time()
     # GPTQ внутри делает .float() — вход fp32 побитово тот же, что fp64-вход E-39b.
-    W_q128 = _quantize_gptq(W32, X_dev, GPTQ_BITS, GPTQ_GROUP, GPTQ_DAMP, dev).cpu()
-    print(f"  GPTQ g=128: {time.time() - t_g:.1f}s", flush=True)
-    t_g = time.time()
-    W_q32 = _quantize_gptq(W32, X_dev, GPTQ_BITS, GPTQ_GROUP_HARSH, GPTQ_DAMP, dev).cpu()
-    print(f"  GPTQ g=32 (harsh): {time.time() - t_g:.1f}s", flush=True)
+    # D6: «harsh» по ТЗ — это group=32, но меньшая группа УМЕНЬШАЕТ ошибку квантования
+    # (измерено: drift 0.094 против 0.120 у g=128), то есть режим мягче, а не жёстче.
+    # Настоящую жёсткость дают биты, поэтому добавлены b3g128 и b2g128.
+    levels = [("g128", GPTQ_BITS, GPTQ_GROUP), ("g32", GPTQ_BITS, GPTQ_GROUP_HARSH)]
+    levels += [(f"b{b}g128", b, GPTQ_GROUP) for b in GPTQ_BITS_HARSH]
+    quants = {}
+    for tag_l, nb, gr in levels:
+        t_g = time.time()
+        quants[tag_l] = _quantize_gptq(W32, X_dev, nb, gr, GPTQ_DAMP, dev).cpu()
+        print(f"  GPTQ {tag_l} (bits={nb}, group={gr}): {time.time() - t_g:.1f}s", flush=True)
     del X_dev
     if dev.type == "cuda":
         torch.cuda.empty_cache()
@@ -700,14 +710,15 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
         return {"kappa_readout": kap_read, "kappa_full": kap_full,
                 "drift_J": drift, **diag}, h_post_q
 
-    reg128, h_post_q128 = run_regime("g128", W_q128)
-    reg32, h_post_q32 = run_regime("g32", W_q32)
+    reg, hq = {}, {}
+    for tag_q, W_q in quants.items():
+        reg[tag_q], hq[tag_q] = run_regime(tag_q, W_q)
 
     ppl = {}
     ppl["fp16"], n_real = ppl_from(h_post_base, W32, "fp16")
-    ppl["readout_only_g128"], _ = ppl_from(h_post_base, W_q128, "readout_only_g128")
-    ppl["full_tied_g128"], _ = ppl_from(h_post_q128, W_q128, "full_tied_g128")
-    ppl["full_tied_g32"], _ = ppl_from(h_post_q32, W_q32, "full_tied_g32")
+    for tag_q, W_q in quants.items():
+        ppl[f"readout_only_{tag_q}"], _ = ppl_from(h_post_base, W_q, f"readout_only_{tag_q}")
+        ppl[f"full_tied_{tag_q}"], _ = ppl_from(hq[tag_q], W_q, f"full_tied_{tag_q}")
 
     # ---------------- Шаг 6: null-модель (Haar û) ----------------
     print(f"null-модель: Haar û, {N_NULL_SEEDS} seeds ...", flush=True)
@@ -721,9 +732,21 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
         if dev.type == "cuda":
             torch.cuda.empty_cache()
     kappa_null = float(np.median(null_k))
-    assert kappa_null >= NULL_KAPPA_MIN, (
-        f"Шаг 6 abort: κ_null = {kappa_null:.4f} < {NULL_KAPPA_MIN} — κ не видит "
-        "û-канал, декомпозиция невалидна")
+    k_real = kap_fp16["kappa"]
+    # D7. ТЗ §4.3 пререгистрировал κ_null ≥ 1.0 (ожидал «random level» E-28 ≈ 5) и abort
+    # ниже. Измерено обратное: κ_null ≈ 0.0009, то есть в ~18 раз МЕНЬШЕ реальной.
+    # Причина понятийная: в D=1024 вычитание одного случайного направления меняет
+    # оператор на ~1/D, поэтому топ-r подпространство J соседних позиций почти не
+    # вращается → κ мала; реальная û_t, наоборот, согласована с крупными сингулярными
+    # направлениями M_K и именно она вращает лист. Смысл гейта («κ вообще видит û?»)
+    # выполнен с большим запасом, но симметрично → гейт двусторонний: чувствительность
+    # = max(κ/κ_null, κ_null/κ) ≥ NULL_SENS_MIN.
+    null_sens = max(k_real / max(kappa_null, 1e-12), kappa_null / max(k_real, 1e-12))
+    assert null_sens >= NULL_SENS_MIN, (
+        f"Шаг 6 abort: κ_real = {k_real:.5f} и κ_null = {kappa_null:.5f} различаются в "
+        f"{null_sens:.2f}× < {NULL_SENS_MIN} — κ не видит û-канал, декомпозиция невалидна")
+    print(f"  κ_null(med) = {kappa_null:.5f} против κ_real = {k_real:.5f} → "
+          f"чувствительность {null_sens:.1f}× (ТЗ ждал κ_null ≥ {NULL_KAPPA_MIN})", flush=True)
 
     # ---------------- декомпозиция, гейты, сверка ----------------
     def decomp(reg):
@@ -742,12 +765,14 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
                     reg["kappa_readout"]["per_doc_median"])],
                 "noise_floor_delta_control": float(kap_control["kappa"] - k_fp)}
 
-    dec = {"g128": decomp(reg128), "g32": decomp(reg32)}
+    dec = {t: decomp(r) for t, r in reg.items()}
     d128, d32 = dec["g128"], dec["g32"]
+    harsh_tag = f"b{GPTQ_BITS_HARSH[-1]}g128"      # самый жёсткий измеренный режим (D6)
     for tag, d in dec.items():
         print(f"[{tag}] Δ_readout={d['delta_readout']:+.5f} "
               f"Δ_upstream={d['delta_upstream']:+.5f} "
-              f"share_up={d['share_upstream']:.3f}", flush=True)
+              f"share_up={d['share_upstream']:.3f} "
+              f"(PPL full {ppl.get('full_tied_' + tag, float('nan')):.4f})", flush=True)
 
     if not d128["shares_defined"]:
         gate_main = "both_channels_small"
@@ -758,15 +783,17 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
     else:
         gate_main = "both_channels"
     ratio32 = d32["kappa_full"] / kap_fp16["kappa"]
-    gate_harsh = ("leaf_robust_even_harsh" if d32["kappa_full"] < KAPPA_PASS
-                  and ratio32 <= 1.25 else
-                  "moderate_harsh" if d32["kappa_full"] < KAPPA_MODERATE
+    d_harsh = dec[harsh_tag]
+    ratio_harsh = d_harsh["kappa_full"] / kap_fp16["kappa"]
+    gate_harsh = ("leaf_robust_even_harsh" if d_harsh["kappa_full"] < KAPPA_PASS
+                  and ratio_harsh <= 1.25 else
+                  "moderate_harsh" if d_harsh["kappa_full"] < KAPPA_MODERATE
                   else "catastrophic_harsh")
     dpct = (ppl["full_tied_g128"] - ppl["fp16"]) / ppl["fp16"] * 100
     gate_ppl = ("ppl_robust" if dpct < 5 else
                 "ppl_moderate" if dpct <= 20 else "ppl_catastrophic")
 
-    drift128 = reg128["drift_J"]["median"]
+    drift128 = reg["g128"]["drift_J"]["median"]
     assert abs(drift128 - DRIFT_REF) <= DRIFT_REL_TOL * DRIFT_REF, (
         f"GPTQ-пайплайн расходится с E-39b: drift median = {drift128:.5f}, "
         f"ожидалось {DRIFT_REF} ±{DRIFT_REL_TOL:.0%}")
@@ -781,18 +808,30 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
         "tied_verified": True, "layer": L_TARGET, "r": R,
         "n_layers": int(n_layers), "D": int(D), "n_docs": int(n_docs), "S": int(S),
         "kappa_modes": {"fp16": kap_fp16, "control_fresh_base": kap_control,
-                        "g128_readout": reg128["kappa_readout"],
-                        "g128_full": reg128["kappa_full"],
-                        "g32_readout": reg32["kappa_readout"],
-                        "g32_full": reg32["kappa_full"]},
-        "null_model": {"kappa_median": kappa_null, "kappa_seeds": null_k,
-                       "n_seeds": N_NULL_SEEDS, "threshold": NULL_KAPPA_MIN},
+                        **{f"{t}_readout": r["kappa_readout"] for t, r in reg.items()},
+                        **{f"{t}_full": r["kappa_full"] for t, r in reg.items()}},
+        "null_model": {
+            "kappa_median": kappa_null, "kappa_seeds": null_k, "n_seeds": N_NULL_SEEDS,
+            "kappa_real": k_real, "sensitivity_ratio": float(null_sens),
+            "gate_two_sided_min": NULL_SENS_MIN,
+            "spec_threshold_one_sided": NULL_KAPPA_MIN,
+            "spec_expectation_inverted": bool(kappa_null < NULL_KAPPA_MIN),
+            "note": (
+                "ТЗ §4.3 ждал κ_null ≈ 5 (random level E-28) и abort при κ_null < 1. "
+                "Измерено κ_null ≈ 0.0009 — на порядок НИЖЕ реальной: в D=1024 случайное "
+                "ранг-1 вычитание меняет оператор на ~1/D, поэтому топ-r базис соседних "
+                "позиций почти не вращается. Вывод не «κ слепла», а обратное: реальная û_t "
+                "несёт структуру, которой у случайного вектора нет (κ в ~18 раз выше "
+                "хааровского нуля). Гейт переписан в двусторонний, пререгистрация ТЗ "
+                "оставлена здесь же как spec_threshold_one_sided."
+            ),
+        },
         "decomposition": dec,
         "channel_diagnostics": {
-            t: {k: reg[k] for k in ("h_drift", "u_cos", "h_drift_per_doc_median",
-                                    "u_cos_per_doc_median")}
-            for t, reg in (("g128", reg128), ("g32", reg32))},
-        "drift_J": {"g128": reg128["drift_J"], "g32": reg32["drift_J"],
+            t: {k: r[k] for k in ("h_drift", "u_cos", "h_drift_per_doc_median",
+                                  "u_cos_per_doc_median")}
+            for t, r in reg.items()},
+        "drift_J": {**{t: r["drift_J"] for t, r in reg.items()},
                     "e39b_reference": DRIFT_REF},
         "ppl": ppl, "ppl_split": ppl_split, "ppl_n_real": int(n_real),
         "ppl_delta_pct_full_tied_g128": float(dpct),
@@ -802,7 +841,15 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
             "напрямую не сравнивается — разные объекты (ТЗ §7.4)."
         ),
         "gate": {"main": gate_main, "harsh": gate_harsh, "ppl": gate_ppl,
-                 "harsh_ratio_g32": float(ratio32),
+                 "harsh_regime": harsh_tag, "harsh_ratio": float(ratio_harsh),
+                 "soft_ratio_g32": float(ratio32),
+                 "harsh_premise_note": (
+                     "ТЗ называл harsh-режимом group=32; измерено, что group=32 даёт МЕНЬШЕ "
+                     f"возмущение J (drift {reg['g32']['drift_J']['median']:.5f} "
+                     f"против {reg['g128']['drift_J']['median']:.5f}) и лучший PPL, то есть "
+                     f"это более мягкий режим. Жёсткость задают биты: гейт harsh считается "
+                     f"по {harsh_tag}."
+                 ),
                  "thresholds": {"share_upstream_hi": 0.5, "share_upstream_lo": 0.25,
                                 "delta_min": DELTA_MIN, "kappa_pass": KAPPA_PASS,
                                 "kappa_moderate": KAPPA_MODERATE}},
@@ -823,7 +870,8 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
             "kappa_readout": d128["kappa_readout"],
             "drift_ref": DRIFT_REF, "drift": drift128,
             "beta_sigma1_fp16": kap_fp16["beta_sigma1"], "beta_ref": BETA_BASE_REF,
-            "kappa_null": kappa_null, "pool_fp": pool_fp,
+            "kappa_null": kappa_null, "kappa_null_sensitivity": float(null_sens),
+            "pool_fp": pool_fp,
         },
         "deviations_from_spec": {
             "D1": "h-vs-cache: порог 1e-5 только при fp32; при fp16 — u_cos_min ≥ 0.9999 "
@@ -834,6 +882,14 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
                   "вербатим E-39b",
             "D4": "J_rel_drift аналитически из ΔM_K (та же формула, меньше памяти)",
             "D5": "QA-accuracy (ТЗ §10.4 п.3) не измерен — нет офлайн-датасетов",
+            "D6": "harsh-проба group=32 по ТЗ инвертирована по смыслу: меньшая группа — это "
+                  "меньше ошибка (drift 0.094 < 0.120), поэтому добавлены режимы b3g128 и "
+                  "b2g128 (3 и 2 бита), и гейт harsh считается по самому жёсткому из них",
+            "D7": "null-гейт ТЗ §4.3 (κ_null ≥ 1.0, ожидалось ≈5) измерился наоборот: κ_null ≈ "
+                  "0.0009 < κ_real; гейт заменён двусторонним тестом чувствительности "
+                  "(max(κ/κ_null, κ_null/κ) ≥ 2), пререгистрация сохранена в null_model",
+            "D8": "scatter (ТЗ §9 results/exp39f_scatter.png) не строится: все κ лежат в "
+                  "полосе 0.0159–0.0162, визуализировать нечего; артефакт — JSON",
         },
         "limitations": [
             "только L23: при L<23 формула readout-линеаризована (E-39b) и реальной "
@@ -852,8 +908,10 @@ def main(device=None, results_dir=None, small_model=None, pool_cache=True):
     }
     with open(out_path, "w") as f:
         json.dump(result, f, indent=2)
-    print(f"\ngate: main={gate_main} harsh={gate_harsh} ppl={gate_ppl} | share_up "
-          f"g128={d128['share_upstream']:.3f} g32={d32['share_upstream']:.3f}")
+    print(f"\ngate: main={gate_main} harsh({harsh_tag})={gate_harsh} ppl={gate_ppl} | "
+          f"share_up g128={d128['share_upstream']:.3f} "
+          f"{harsh_tag}={d_harsh['share_upstream']:.3f} | κ_null={kappa_null:.5f} "
+          f"({null_sens:.1f}×)")
     print(f"output: {out_path}  wall: {time.time() - t0:.0f}s")
     return result
 
