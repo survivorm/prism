@@ -1,0 +1,17 @@
+{
+  "kernel_type": "notebook",
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "language": "python",
+  "code_file": "kernel.ipynb",
+  "id": "voroninmichael/e-39f-full-tied-ptq-kappa-decomposition",
+  "title": "E-39f full tied PTQ kappa decomposition",
+  "kernel_sources": [
+    "voroninmichael/prism-exp27b-dense-profile",
+    "voroninmichael/e-39f-full-tied-ptq-kappa-decomposition"
+  ],
+  "dataset_sources": [
+    "voroninmichael/prism-exp27b-jcache-jcb"
+  ]
+}
