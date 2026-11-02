@@ -39,6 +39,19 @@ Design (Reading A, docs/E39.md §4):
   - Verdict (E39d_fixes.md #3): SUCCESS requires κ'<0.005 AND PPL ≤+2% AND
     KL<0.05 (full-dataset, not last minibatch — #6).
 
+ROUND 10 — ORDERING EXPANSION (docs/E39d_fixes.md «Расширяем эксперимент»):
+flatness-only training can flatten M_K by PERMUTING the 128 tokens (κ' small,
+PPL exploded) — E-39d's binding failure was PPL, and PPL was not in the loss.
+This adds two ordering losses on the K=128 token logits (e = edited, b = base):
+    pearson  L_ord = E_t [1 − Pearson(e_k(t), b_k(t))]              O(P·K)
+    pairwise L_ord = mean_{i<j} softplus(−sign(b_i−b_j)·(e_i−e_j))  O(P·K²)
+    total    L = λ·L_flat/norm + λ_KL·KL + λ_order·L_ord
+Both use the ACTUAL logits √D·M_K·û (round-8 #1 factorization), so they live
+on the same scale as the KL leash. `ordering_corr` (= 1 − pearson-loss) is
+LOGGED IN EVERY RUN, mode=none included (fixes.md §6): corr > 0.95 with
+PPL +12% would prove PPL suffers from MORE than rank inversion. Defaults
+(mode=none, order_grid=[0.0]) reproduce the baseline bit-exactly.
+
 Round 8 (E39d_fixes.md): fixed the CRITICAL flatness_loss bug (#1a/#1b —
 bottom-r + row-flipped eigenvectors instead of top-r right SVs, which made
 the surrogate optimize a different subspace than the κ' metric), PPL on 8
@@ -323,11 +336,11 @@ def _selftest_flatness(device: str) -> bool:
     Dd2, K2 = D, 32   # Dd2 MUST == the module D: flatness_loss's SPP buffer is [D, D]
     H2 = torch.randn(8, Dd2, device=device)
     Mk0 = torch.zeros(K2, Dd2, device=device).clone().requires_grad_(True)
-    lf0 = float(flatness_loss(Mk0, H2, r, MB))                    # rank 0
+    lf0 = float(flatness_loss(Mk0, H2, r, MB).detach())           # rank 0
     Mk1 = torch.nn.functional.pad(
         torch.randn(r, Dd2, device=device), (0, 0, 0, K2 - r)
     ).clone().requires_grad_(True)                                 # rank r
-    lf1 = float(flatness_loss(Mk1, H2, r, MB))
+    lf1 = float(flatness_loss(Mk1, H2, r, MB).detach())            # round 11 §7.2: .detach()
     if not (math.isfinite(lf0) and math.isfinite(lf1)):
         print(f"[selftest-flatness] FAIL degenerate: rank0={lf0} rankr={lf1} not finite")
         return False
@@ -335,6 +348,93 @@ def _selftest_flatness(device: str) -> bool:
           f"(rank0={lf0:.4f}, rankr={lf1:.4f}): OK")
     print("[selftest-flatness] Vt = top-r right SVs, P_t rank-r projector: OK")
     return True
+
+
+# ---------------------------------------------------------------------------
+# Ordering losses (round 10, E39d_fixes.md): preserve the BASE RANK of the
+# K token logits. Flatness-only training can flatten M_K by permuting the
+# 128 tokens — κ' falls, PPL explodes. L_ord penalizes rank changes.
+# ---------------------------------------------------------------------------
+
+def ordering_corr(H_sub: torch.Tensor, W_rows: torch.Tensor,
+                  g: torch.Tensor, base_k: torch.Tensor):
+    """Per-position Pearson correlation of edited vs base K-logits.
+
+    Returns (e_k [P,K] differentiable via W_rows, corr [P]). ACTUAL logits
+    √D·M_K·û (round-8 #1 factorization) — same scale as the KL leash.
+    corr=1: base ranking preserved up to affine; corr≤0: uncorrelated
+    (constant-e edge ⇒ 0/(0+1e-12)=0, defined). Pearson is shift/scale
+    invariant: affine re-gradings of the 128 logits do NOT count as damage.
+    NOTE: corr has a strict max at e=b, so the Pearson gradient VANISHES at
+    init — the term acts as a restoring force once flatness breaks ranks.
+    """
+    Dd = H_sub.shape[-1]
+    u = H_sub / H_sub.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+    e_k = math.sqrt(Dd) * (u @ (W_rows * g[None, :]).t())   # [P, K]
+    ec = e_k - e_k.mean(1, keepdim=True)
+    bc = base_k - base_k.mean(1, keepdim=True)
+    corr = (ec * bc).sum(1) / (ec.norm(dim=1) * bc.norm(dim=1) + 1e-12)
+    return e_k, corr
+
+
+def ordering_loss_pearson(H_sub, W_rows, g, base_k):
+    """Variant A (fixes.md §2A): 1 − mean Pearson(e_k, b_k). ~64K ops/step.
+    Weakness: misses inversions inside the top-50 (corr can stay ≈0.95 with
+    the ranking broken) — variant B covers that."""
+    _, corr = ordering_corr(H_sub, W_rows, g, base_k)
+    return (1.0 - corr).mean(), corr
+
+
+def ordering_loss_pairwise(H_sub, W_rows, g, base_k, margin: float = 0.0):
+    """Variant B (fixes.md §2B): mean pairwise softplus hinge over i<j —
+    catches inversions at any level. O(P·K²)=8M ops (~0.8% of flatness).
+    Exact ties sign(b_i−b_j)=0 contribute softplus(0)=ln2 as a CONSTANT (no
+    gradient, no direction) — kept, matching the sketch."""
+    e_k, corr = ordering_corr(H_sub, W_rows, g, base_k)
+    K = e_k.shape[1]
+    e_diff = e_k.unsqueeze(2) - e_k.unsqueeze(1)      # [P,K,K]: e_i − e_j
+    b_diff = base_k.unsqueeze(2) - base_k.unsqueeze(1)
+    mask = torch.triu(torch.ones(K, K, device=e_k.device, dtype=torch.bool),
+                      diagonal=1)
+    hinge = F.softplus(-torch.sign(b_diff) * e_diff + margin) * mask
+    return hinge.sum() / mask.sum(), corr
+
+
+def _selftest_ordering(device: str) -> bool:
+    """fixes.md §6 diagnostics must be trustworthy: identity edit ⇒ corr=1,
+    pearson loss=0; sign-flipped edit ⇒ corr≈−1 and BOTH losses strictly
+    larger; pairwise matches the manual formula; grad flows to W_rows."""
+    torch.manual_seed(0)
+    P, Dd, K = 16, 32, 8
+    H = torch.randn(P, Dd, device=device)
+    W = torch.randn(K, Dd, device=device)
+    g = torch.rand(Dd, device=device) + 1.0
+    with torch.no_grad():
+        u = H / H.norm(dim=-1, keepdim=True)
+        base_k = math.sqrt(Dd) * (u @ (W * g[None, :]).t())
+    Wr = W.clone().requires_grad_(True)
+    lp, corr = ordering_loss_pearson(H, Wr, g, base_k)
+    lo, _ = ordering_loss_pairwise(H, Wr, g, base_k)
+    ok_id = float(lp) < 1e-5 and float(corr.mean()) > 1.0 - 1e-4
+    with torch.no_grad():
+        ed = base_k.unsqueeze(2) - base_k.unsqueeze(1)
+        m = torch.triu(torch.ones(K, K, device=H.device, dtype=torch.bool), 1)
+        ref = (F.softplus(-torch.sign(ed) * ed) * m).sum() / m.sum()
+    ok_ref = abs(float(lo) - float(ref)) < 1e-5
+    Wr2 = (-W).clone().requires_grad_(True)
+    lp2, corr2 = ordering_loss_pearson(H, Wr2, g, base_k)
+    lo2, _ = ordering_loss_pairwise(H, Wr2, g, base_k)
+    ok_adv = (float(corr2.mean()) < -0.99 and float(lp2) > float(lp)
+              and float(lo2) > float(lo))
+    lp2.backward()
+    ok_grad = (Wr2.grad is not None and bool(torch.isfinite(Wr2.grad).all())
+               and float(Wr2.grad.norm()) > 0)
+    ok = ok_id and ok_ref and ok_adv and ok_grad
+    print(f"[selftest-ordering] identity corr={float(corr.mean()):.6f} "
+          f"pearson={float(lp):.2e} pairwise={float(lo):.6f}(ref {float(ref):.6f}) "
+          f"| flip corr={float(corr2.mean()):.4f} lp={float(lp2):.4f} "
+          f"grad={ok_grad}: {'OK' if ok else 'FAIL'}")
+    return ok
 
 
 # ---------------------------------------------------------------------------
@@ -368,7 +468,20 @@ def _ppl(model, ids, attn) -> float:
 # main
 # ---------------------------------------------------------------------------
 
-def main(results_dir: str | None = None, device: str | None = None) -> dict:
+def main(results_dir: str | None = None, device: str | None = None,
+         order_mode: str = "none",
+         order_grid: list[float] | None = None,
+         lambda_grid: list[float] | None = None,
+         seeds: list[int] | None = None,
+         out_name: str | None = None) -> dict:
+    # round 10: order_mode "none"|"pearson"|"pairwise"; order_grid = λ_order
+    # values (0.0 ⇒ control, ordering_corr still logged). Defaults reproduce
+    # the baseline grid bit-exactly (κ' identical; PPL base may drift — C4
+    # streaming non-determinism, known).
+    assert order_mode in ("none", "pearson", "pairwise")
+    order_grid = order_grid if order_grid is not None else [0.0]
+    lambda_grid = lambda_grid if lambda_grid is not None else LAMBDA_GRID
+    seeds = seeds if seeds is not None else SEEDS
     if results_dir is None:
         results_dir = os.path.join(REPO, "results")
     os.makedirs(results_dir, exist_ok=True)
@@ -383,6 +496,9 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
     # E39d_fixes #1: selftest the flatness top-r eigenvector selection
     if not _selftest_flatness(device):
         raise RuntimeError("flatness_loss selftest failed — aborting")
+    # round 10: selftest the ordering losses (identity/flip/manual reference)
+    if not _selftest_ordering(device):
+        raise RuntimeError("ordering-loss selftest failed — aborting")
 
     print("loading model...", flush=True)
     # E39d_fixes #11: transformers <4.35 uses torch_dtype, >=4.35 uses dtype
@@ -497,8 +613,8 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
     # garbage Vt where P_t was not a projector — not the current code.)
     # E39d_fixes #8: normalizer on a RANDOM P_STEP subset (same distribution
     # as training), not the first P_STEP positions (≈ first 4 docs only).
-    # torch.manual_seed(SEEDS[0]): deterministic norm_idx across runs (round 9 #6).
-    torch.manual_seed(SEEDS[0])
+    # round 9 #6: deterministic norm_idx across runs.
+    torch.manual_seed(seeds[0])
     with torch.no_grad():
         norm_idx = keep_idx[torch.randint(0, keep_idx.numel(), (P_STEP,),
                                           device=device)]
@@ -508,13 +624,16 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
     print(f"flatness normalizer (base l_flat): {l_flat_base:.4f}")
 
     results = {
-        "experiment": "E-39d: L23 readout training with flatness regularizer",
+        "experiment": ("E-39d: L23 readout training with flatness regularizer"
+                       + (f" + {order_mode}-ordering" if order_mode != "none"
+                          else "")),
         "tz": "docs/E39.md §4",
         "params": {
             "model": MODEL, "r": R, "kappa_target": KAPPA_TARGET,
             "kl_pass": KL_PASS, "lambda_kl": LAMBDA_KL,
-            "lambda_grid": LAMBDA_GRID, "n_steps": N_STEPS, "lr": LR,
-            "seeds": SEEDS, "p_step": P_STEP, "micro_batch": MB,
+            "lambda_grid": lambda_grid, "n_steps": N_STEPS, "lr": LR,
+            "seeds": seeds, "p_step": P_STEP, "micro_batch": MB,
+            "order_mode": order_mode, "order_grid": order_grid,
             "n_total_pos": N_total, "n_docs": N_docs, "S": S,
             "vocab": W_lm.shape[0], "k_tokens": K, "device": str(device),
             "c4_skip": C4_SKIP, "n_docs_ppl": N_DOCS_PPL,
@@ -527,13 +646,16 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
         "runs": [],
     }
 
-    for lam in LAMBDA_GRID:
-        for seed in SEEDS:
+    for lam in lambda_grid:
+        # (λ_order, seed) pairs — lam_order=0.0 ⇒ control run, ordering_corr
+        # still logged (fixes.md §6). Order: order_grid outer, seeds inner.
+        for lam_order, seed in [(lo, sd) for lo in order_grid for sd in seeds]:
             torch.manual_seed(seed)
             np.random.seed(seed)
             W_rows = W_lm[tok_ids].to(device).detach().clone().requires_grad_(True)
             opt = torch.optim.Adam([W_rows], lr=LR)
-            run = {"lambda": lam, "seed": seed, "history": []}
+            run = {"lambda": lam, "lambda_order": lam_order, "seed": seed,
+                   "history": []}
             t0 = time.time()
 
             for step in range(1, N_STEPS + 1):
@@ -547,7 +669,24 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
 
                 l_flat = flatness_loss(M_K, H_sub, R, MB) / l_flat_base
                 l_kl = kl_leash(H_sub, W_rows, g_base.to(device), base_k_all[idx], lse_b_all[idx])
+                # round 10: ordering term (optional) + corr diagnostic (ALWAYS,
+                # mode=none included — fixes.md §6: corr>0.95 with PPL +12%
+                # would prove PPL suffers from more than rank inversion).
+                use_ord = (order_mode != "none" and lam_order > 0)
+                if use_ord:
+                    ord_fn = (ordering_loss_pearson if order_mode == "pearson"
+                              else ordering_loss_pairwise)
+                    l_order, corr_run = ord_fn(H_sub, W_rows,
+                                               g_base.to(device), base_k_all[idx])
+                else:
+                    with torch.no_grad():
+                        _, corr_run = ordering_corr(H_sub, W_rows.detach(),
+                                                    g_base.to(device),
+                                                    base_k_all[idx])
+                        l_order = 1.0 - corr_run.mean()
                 loss = lam * l_flat + LAMBDA_KL * l_kl
+                if use_ord:
+                    loss = loss + lam_order * l_order
                 # NaN/Inf guard BEFORE backward/step (round 8 MEDIUM #3):
                 # a non-finite loss must not corrupt W_rows / Adam state via
                 # opt.step() before it is detected.
@@ -581,10 +720,15 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                         "step": step, "loss": float(loss.item()),
                         "l_flat": float(l_flat.item()),
                         "l_kl": float(l_kl.item()),
+                        "l_order": float(l_order.item()),        # round 10
+                        "ordering_corr": float(corr_run.mean().item()),  # fix §6
                         "kappa": kap, "ppl": ppl,
                     })
-                    print(f"  λ={lam} s{seed} st{step}: loss={loss.item():.6f} "
+                    print(f"  λ={lam} λo={lam_order} s{seed} st{step}: "
+                          f"loss={loss.item():.6f} "
                           f"flat={l_flat.item():.6f} kl={l_kl.item():.6f} "
+                          f"ord={float(l_order.item()):.4f} "
+                          f"corr={float(corr_run.mean().item()):.4f} "
                           f"κ'={kap:.6f} PPL={ppl:.4f} "
                           f"({(time.time()-t0):.0f}s)", flush=True)
 
@@ -596,6 +740,7 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                     "kappa_improvement": None,
                     "delta_W_rel": float("nan"),
                     "kl_full": None,
+                    "ordering_corr_final": None,
                     "kl_last": run["history"][-1]["l_kl"] if run["history"] else None,
                     "elapsed_s": time.time() - t0,
                 }
@@ -635,8 +780,15 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
             # not an equality — the threshold below (max(0.05, 20%)) reflects
             # that, not a 1e-3 formula match. (round 9 LOW #5: the two numbers
             # are kept distinct so the paper reports them on their own data.)
+            # ROUND 11 (fixes.md §7.1): kl_f is on NON-SENTINEL jcache
+            # positions (44.6% of 4096, "confident" rows); kl_f_fwd is on ALL
+            # C4 doc positions INCLUDING sentinels — sentinel rows have more
+            # spread-out distributions → systematically larger KL. Observed
+            # ratio 2.4–3.3× across runs is a SAMPLING property, not a bug.
+            # The VERDICT uses kl_f (consistent with E-39c_pre); any report
+            # must label which population each number came from.
             kl_f_fwd = None
-            if lam == LAMBDA_GRID[0] and seed == SEEDS[0]:
+            if lam == lambda_grid[0] and seed == seeds[0]:
                 with torch.no_grad():
                     o_b = model(input_ids=ppl_ids, attention_mask=ppl_attn)
                     old = model.lm_head.weight.data[tok_ids].clone()
@@ -655,6 +807,13 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
             if kl_f_fwd is not None and abs(kl_f_fwd - kl_f) > max(0.05, 0.2 * max(kl_f, kl_f_fwd)):
                 print(f"  WARN: 2-forward KL diverges from cached-H KL — "
                       f"readout-only assumption violated? (round 8 #1)", flush=True)
+            with torch.no_grad():
+                # round 10: final ordering diagnostic on ALL kept positions
+                # (fixes.md §6): ordering_corr_final = 1 ⇒ rank fully preserved.
+                _, corr_f = ordering_corr(H_all[keep_idx], W_rows.detach(),
+                                          g_base.to(device),
+                                          base_k_all[keep_idx])
+            ord_corr_f = float(corr_f.mean().item())
             dw = (W_rows.detach() - W_lm[tok_ids].to(device)).norm() / \
                  W_lm[tok_ids].to(device).norm()
             run["final"] = {
@@ -665,22 +824,36 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                 "kl_full": kl_f,                        # fix #6; round 8 #1: ACTUAL-logit full-dataset KL
                 "kl_full_2forward_check": kl_f_fwd,     # round 8 #1: real 2-forward cross-check (first run only)
                 "kl_last": run["history"][-1]["l_kl"],   # fix #13 (was "kl_mean")
+                "ordering_corr_final": ord_corr_f,       # round 10 (fixes.md §6)
                 "elapsed_s": time.time() - t0,
             }
             kap_ok = kap_f < KAPPA_TARGET
             ppl_ok = ppl_f <= ppl_base * 1.02
             kl_ok = kl_f < KL_PASS
-            # E39d_fixes #3: SUCCESS requires ALL THREE criteria
-            run["verdict"] = ("SUCCESS" if (kap_ok and ppl_ok and kl_ok)
-                              else "PARTIAL" if kap_ok else "FAIL")
+            # E39d_fixes #3: SUCCESS requires ALL THREE criteria.
+            # ROUND 11 (fixes.md §6): finer taxonomy — the old "FAIL" for a
+            # behavior-preserving κ-miss (λo=1: PPL +0.99%, KL 0.004, κ=0.0092)
+            # read as "everything broke"; it is actually a clean run that
+            # simply misses the target. And the old "PARTIAL" for λo=0 paid
+            # PPL — that price should be in the name:
+            if kap_ok and ppl_ok and kl_ok:
+                run["verdict"] = "SUCCESS"
+            elif kap_ok:
+                # κ reached, but PPL/KL paid the price (rank-permutation cheat)
+                run["verdict"] = "PARTIAL_BEHAVIOR_COST"
+            elif ppl_ok and kl_ok:
+                # no behavior cost, κ floor above target (honest floor)
+                run["verdict"] = "TARGET_NOT_MET"
+            else:
+                run["verdict"] = "FAIL"
             run["verdict_detail"] = {
                 "kappa_target_met": kap_ok, "ppl_within_2pct": ppl_ok,
                 "kl_within_budget": kl_ok,
             }
             results["runs"].append(run)
-            print(f"λ={lam} s{seed}: κ'={kap_f:.6f} PPL={ppl_f:.4f} "
+            print(f"λ={lam} λo={lam_order} s{seed}: κ'={kap_f:.6f} PPL={ppl_f:.4f} "
                   f"({run['final']['ppl_delta_pct']:+.2f}%) "
-                  f"KL_full={kl_f:.4f} "
+                  f"KL_full={kl_f:.4f} corr_f={ord_corr_f:.4f} "
                   f"verdict={run['verdict']} ({run['final']['elapsed_s']:.0f}s)",
                   flush=True)
 
@@ -689,7 +862,10 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
     # also report the lowest-κ' run overall for reference.
     n_div = sum(1 for r in results["runs"] if r["verdict"] == "DIVERGED")
     n_success = sum(1 for r in results["runs"] if r["verdict"] == "SUCCESS")
-    n_partial = sum(1 for r in results["runs"] if r["verdict"] == "PARTIAL")
+    n_partial = sum(1 for r in results["runs"]
+                    if r["verdict"].startswith("PARTIAL"))   # round 11 §6
+    n_not_met = sum(1 for r in results["runs"]
+                    if r["verdict"] == "TARGET_NOT_MET")     # round 11 §6
     n_fail = sum(1 for r in results["runs"] if r["verdict"] == "FAIL")
     success = [r for r in results["runs"] if r["verdict"] == "SUCCESS"]
     finite = [r for r in results["runs"]
@@ -706,6 +882,7 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
             "best_kappa_improvement": best["final"]["kappa_improvement"],
             "n_success": n_success, "n_partial": n_partial,
             "n_fail": n_fail, "n_diverged": n_div,
+            "n_target_not_met": n_not_met,
             "total_time_s": time.time() - t_start,
             "interpretation": (
                 f"SUCCESS: κ'={best['final']['kappa']:.6f} "
@@ -730,6 +907,7 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
             "best_kappa_improvement": best_overall["final"]["kappa_improvement"],
             "n_success": n_success, "n_partial": n_partial,
             "n_fail": n_fail, "n_diverged": n_div,
+            "n_target_not_met": n_not_met,
             "total_time_s": time.time() - t_start,
             "interpretation": (
                 f"No run met all three criteria. Lowest κ' "
@@ -738,7 +916,8 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
                 f"seed={best_overall['seed']} (PPL "
                 f"{best_overall['final']['ppl_delta_pct']:+.2f}%, KL_full "
                 f"{best_overall['final']['kl_full']:.4f}). "
-                f"Verdicts: {n_success} SUCCESS / {n_partial} PARTIAL / "
+                f"Verdicts: {n_success} SUCCESS / {n_partial} "
+                f"PARTIAL_BEHAVIOR_COST / {n_not_met} TARGET_NOT_MET / "
                 f"{n_fail} FAIL / {n_div} DIVERGED."
             ),
         }
@@ -749,6 +928,7 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
             "best_kl_full": None, "best_kappa_improvement": None,
             "n_success": n_success, "n_partial": n_partial,
             "n_fail": n_fail, "n_diverged": n_div,
+            "n_target_not_met": n_not_met,
             "total_time_s": time.time() - t_start,
             "interpretation": (
                 f"All {n_div} runs diverged (non-finite loss) — training "
@@ -756,7 +936,8 @@ def main(results_dir: str | None = None, device: str | None = None) -> dict:
             ),
         }
     results["summary"] = summary
-    out_path = os.path.join(results_dir, "exp39d_l23_training.json")
+    out_name = out_name or "exp39d_l23_training.json"
+    out_path = os.path.join(results_dir, out_name)
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
     print(f"\nSaved: {out_path}")
@@ -769,5 +950,22 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--results-dir", default=None)
     ap.add_argument("--device", default=None)
+    # round 10 (E39d_fixes.md ordering expansion)
+    ap.add_argument("--order-mode", default="none",
+                    choices=["none", "pearson", "pairwise"])
+    ap.add_argument("--order-grid", default=None,
+                    help="comma floats, e.g. 0.0,1.0 (λ_order; 0.0 = control)")
+    ap.add_argument("--lambda-grid", default=None,
+                    help="comma floats (λ_flat), e.g. 0.01,0.1")
+    ap.add_argument("--seeds", default=None, help="comma ints, e.g. 0")
+    ap.add_argument("--out-name", default=None,
+                    help="results filename (default exp39d_l23_training.json "
+                         "— use a distinct name for expansion runs)")
     args = ap.parse_args()
-    main(results_dir=args.results_dir, device=args.device)
+    _fl = lambda s, f: [f(x) for x in s.split(",")] if s else None
+    main(results_dir=args.results_dir, device=args.device,
+         order_mode=args.order_mode,
+         order_grid=_fl(args.order_grid, float),
+         lambda_grid=_fl(args.lambda_grid, float),
+         seeds=_fl(args.seeds, int),
+         out_name=args.out_name)
