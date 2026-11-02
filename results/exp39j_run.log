@@ -1,0 +1,49 @@
+Loading pool (exp27b code path)...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+'The read operation timed out' thrown while requesting GET https://huggingface.co/datasets/HuggingFaceH4/ultrachat_200k/resolve/8049631c405ae6576f93f445c6b8166f76f5505a/data/train_sft-00000-of-00003-a3ecf92756993583.parquet
+Retrying in 1s [Retry 1/5].
+  pool wiki: 8 @ 256
+  pool math: 8 @ 256
+  pool code: 8 @ 256
+  pool chat: 8 @ 256
+pool_fp = {'wiki': '0cc16ec344e2', 'math': 'e71cc282c85d', 'code': '209e83b1898b', 'chat': '2afac288344a'}
+Loading Qwen/Qwen3.5-0.8B (fp32, eager — как в exp27b_dense)...
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<01:47,  2.96it/s]Loading weights:  26%|██▌       | 83/320 [00:00<00:01, 226.93it/s]Loading weights:  43%|████▎     | 138/320 [00:00<00:00, 317.85it/s]Loading weights:  57%|█████▊    | 184/320 [00:00<00:00, 323.97it/s]Loading weights:  70%|███████   | 225/320 [00:00<00:00, 304.22it/s]Loading weights:  82%|████████▏ | 261/320 [00:00<00:00, 303.12it/s]Loading weights:  92%|█████████▏| 295/320 [00:01<00:00, 293.12it/s]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 270.58it/s]
+  wiki/0: sent=0.477 (e32r3 0.477) ppl=16.40 ppl_late=19.40
+  wiki/1: sent=0.562 (e32r3 0.562) ppl=22.77 ppl_late=18.46
+  wiki/2: sent=0.594 (e32r3 0.594) ppl=37.96 ppl_late=30.07
+  wiki/3: sent=0.766 (e32r3 0.766) ppl=21.68 ppl_late=15.62
+  wiki/4: sent=0.500 (e32r3 0.500) ppl=43.85 ppl_late=34.40
+  wiki/5: sent=0.508 (e32r3 0.508) ppl=38.35 ppl_late=25.68
+  wiki/6: sent=0.539 (e32r3 0.539) ppl=28.31 ppl_late=25.37
+  wiki/7: sent=0.461 (e32r3 0.461) ppl=42.70 ppl_late=35.64
+  math/0: sent=0.422 (e32r3 0.422) ppl=2.07 ppl_late=1.81
+  math/1: sent=0.352 (e32r3 0.352) ppl=2.82 ppl_late=1.67
+  math/2: sent=0.578 (e32r3 0.578) ppl=8.77 ppl_late=12.45
+  math/3: sent=0.398 (e32r3 0.398) ppl=2.91 ppl_late=2.46
+  math/4: sent=0.594 (e32r3 0.594) ppl=11.59 ppl_late=12.19
+  math/5: sent=0.484 (e32r3 0.484) ppl=5.39 ppl_late=5.43
+  math/6: sent=0.406 (e32r3 0.406) ppl=2.93 ppl_late=2.63
+  math/7: sent=0.461 (e32r3 0.461) ppl=5.76 ppl_late=5.08
+  code/0: sent=0.305 (e32r3 0.305) ppl=13.76 ppl_late=6.35
+  code/1: sent=0.547 (e32r3 0.547) ppl=45.17 ppl_late=33.56
+  code/2: sent=0.477 (e32r3 0.477) ppl=18.34 ppl_late=11.87
+  code/3: sent=0.539 (e32r3 0.539) ppl=18.26 ppl_late=17.05
+  code/4: sent=0.656 (e32r3 0.656) ppl=25.99 ppl_late=19.21
+  code/5: sent=0.422 (e32r3 0.422) ppl=8.45 ppl_late=6.98
+  code/6: sent=0.398 (e32r3 0.398) ppl=7.87 ppl_late=4.55
+  code/7: sent=0.422 (e32r3 0.422) ppl=10.67 ppl_late=12.90
+  chat/0: sent=0.477 (e32r3 0.477) ppl=31.01 ppl_late=30.46
+  chat/1: sent=0.539 (e32r3 0.539) ppl=13.29 ppl_late=8.79
+  chat/2: sent=0.555 (e32r3 0.555) ppl=6.15 ppl_late=5.93
+  chat/3: sent=0.562 (e32r3 0.562) ppl=45.71 ppl_late=45.08
+  chat/4: sent=0.602 (e32r3 0.602) ppl=6.81 ppl_late=6.36
+  chat/5: sent=0.570 (e32r3 0.570) ppl=24.40 ppl_late=17.13
+  chat/6: sent=0.562 (e32r3 0.562) ppl=8.35 ppl_late=8.79
+  chat/7: sent=0.492 (e32r3 0.492) ppl=6.18 ppl_late=4.52
+
+verdict: промежуточный: часть связи снимается базлайном, остаток незначим
+rho_all = +0.421 | partial | mean-mass,entropy = -0.106 (p_perm = 0.5485) | best baseline mean entropy rho = +0.905
+Δρ vs best baseline = -0.484 CI [-0.7776313871186052, -0.22918179065674327]  beats=True
+output: results/exp39j_sentinel.json  wall: 3121s
