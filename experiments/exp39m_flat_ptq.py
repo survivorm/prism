@@ -391,6 +391,8 @@ def calib_activations(ctx) -> torch.Tensor:
     model = ctx["model"]
     tok = AutoTokenizer.from_pretrained(d39.MODEL)
     ids, attn = d39._c4_docs(N_CAL, S_CAL, tok, skip=C4_CAL_SKIP)
+    # v5 упало здесь: _c4_docs отдаёт CPU-тензоры, а модель на GPU (E-39f делал .to() сам).
+    ids, attn = ids.to(DEV), attn.to(DEV)
     caps = []
     text = model.model
     with torch.no_grad():
@@ -579,6 +581,9 @@ def run_quant(ctx, out_path: str) -> dict:
         nllq[name] = {"fp": nll_fp}
         for rname, (bits, group) in REGIMES.items():
             tq = time.time()
+            # ВЕРБАТИМ E-39f: квантуется ВСЯ tied-матрица [V, D] (у `_quantize_gptq` в
+            # докстринге «W: [V, D]»); W_rows — только 128 обученных строк U128, на них
+            # результат был бы несопоставим с якорями E-39f и упал бы по форме в ppl_docs_of.
             W_q = _quantize_gptq(W, X, bits, group, DAMP_FRAC, torch.device(DEV))
             k_q = kappa_of(ctx, W_q[ctx["tok_ids"]].clone())
             nll, _ = ppl_docs_of(ctx, W_q)
