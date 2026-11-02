@@ -15,6 +15,5 @@
     "voroninmichael/prism-exp-code",
     "voroninmichael/prism-exp27b-jcache-jcb"
   ],
-  "enable_internet": true,
-  "doc_tag": "experiment"
+  "enable_internet": true
 }

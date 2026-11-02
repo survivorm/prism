@@ -53,6 +53,16 @@ E33R_SURVIVE = (0.010, 0.023)   # docs/ref-exp.md, карточка E-33r
 E10A_TOP1_PROXY = {6: 0.620, 12: 0.474, 18: 0.349, 23: 0.165, 0: 0.111}
 ANCHOR_TOL = 0.05               # 5% на O1/iso, g_uni; E-39k считал iso по 1024 позициям
 GF_UNI_MAX = 1e-12              # «доля gauge» у J^gf обязана быть нулевой алгебраически
+NULL_STRIDE = 32                # позиций в null-контролях (4096/32 = 128)
+NULL_CHUNK = 32                 # позиций в чанке null-контроля
+NULL_SEED = 0
+
+
+def _spearman(x, y) -> float:
+    """Ранговая корреляция без scipy (128 строк, связей нет)."""
+    rx = np.argsort(np.argsort(np.asarray(x, dtype=np.float64)))
+    ry = np.argsort(np.argsort(np.asarray(y, dtype=np.float64)))
+    return float(np.corrcoef(rx, ry)[0, 1])
 
 
 def _layer_numbers(layer: int) -> dict:
@@ -64,11 +74,14 @@ def _layer_numbers(layer: int) -> dict:
     n_pos = n_docs * s_len
 
     e_raw_s, e_P_s, uni_s, iso_s = [], [], [], []          # per position (fp64 скаляры)
+    b_s, bc_s = [], []                                     # b_t = Σᵢ dᵢ,  b_t·Σp²
+    dev_row = torch.zeros(K, dtype=torch.float64)           # Σₜ ‖J_{t,i} − m_t‖²
+    p_row = torch.zeros(K, dtype=torch.float64)             # Σₜ p_{t,i}
     gf_uni_max = 0.0
     G_doc = torch.zeros(K, K, dtype=torch.float64)          # Σ_t J_t J_tᵀ по всем докам
-    per_doc = []                                            # (Σe_raw, Σe_P, Σuni, trG, 1ᵀG1)
+    per_doc = []                                            # (Σe_raw, Σe_P, Σuni, trG, 1ᵀG1, iso)
     for d in range(n_docs):
-        ed, ep, un = 0.0, 0.0, 0.0
+        ed, ep, un, isod = 0.0, 0.0, 0.0, 0.0
         G = torch.zeros(K, K, dtype=torch.float64)
         for c0 in range(0, s_len, CHUNK):
             js = slice(c0, min(c0 + CHUNK, s_len))
@@ -85,22 +98,84 @@ def _layer_numbers(layer: int) -> dict:
                                                 / raw.clamp_min(1e-300)).max()))
             s2 = Pc.pow(2).sum(-1)
             iso = (s2 - 2 * Pc.pow(3).sum(-1) + s2.pow(2)) / K   # ‖P(p)‖²_F / K
+            # точная форма действия P: (P(p)J)ᵢ = pᵢ(Jᵢ − m), m = ΣⱼpⱼJⱼ ⇒ ‖PJ‖² = Σᵢpᵢ²dᵢ
+            dev = (Jc - m.unsqueeze(1)).pow(2).sum(-1)      # [c, K] = dᵢ
+            b = dev.sum(1)                                   # [c]
+            dev_row += dev.sum(0); p_row += Pc.sum(0)
+            b_s.append(b); bc_s.append(b * s2)
             e_raw_s.append(raw); e_P_s.append(eP); uni_s.append(uni); iso_s.append(iso)
             ed += float(raw.sum()); ep += float(eP.sum()); un += float(uni.sum())
+            isod += float(iso.sum())
             # G = Σ_t J_t J_tᵀ одним BLAS-матмулом: A[k, (t,d)] = J[t,k,d]
             A = J[d][js].permute(1, 0, 2).reshape(K, -1).double()
             GG = A @ A.t()
             G += GG
             del Jc, Pc, PJ, A, GG
         G_doc += G
-        per_doc.append((ed, ep, un, float(G.trace()), float(G.sum())))
+        per_doc.append((ed, ep, un, float(G.trace()), float(G.sum()), isod / s_len))
     e_raw = torch.cat(e_raw_s); e_P = torch.cat(e_P_s)
     uni = torch.cat(uni_s); iso = torch.cat(iso_s)
+    b_all = torch.cat(b_s); bc_all = torch.cat(bc_s)
     assert e_raw.min() > 0
+    # (P J)ᵢ = pᵢ(Jᵢ − m) ⇒ Σ‖PJ‖² обязано совпасть с Σᵢ p²dᵢ — это и есть a_sum ниже
+    a_sum, b_sum, bc_sum = float(e_P.sum()), float(b_all.sum()), float(bc_all.sum())
 
     o1_corpus = float(e_P.sum() / e_raw.sum())
     o1_pos = (e_P / e_raw).numpy()
     iso_mean = float(iso.mean())
+    # изотропный референс считается дважды: inline и замкнутой формой из E-39k
+    iso_ref = _iso_P_reference(P.reshape(-1, K), max_pos=10 ** 9)
+    assert abs(iso_ref - iso_mean) <= 1e-9 * abs(iso_mean), \
+        f"L{layer}: iso {iso_mean!r} расходится с E-39k-версией {iso_ref!r}"
+    p_norm2 = iso_mean * K                                # средний ‖P(p)‖²_F
+    # точное (не приближённое) разложение: O1/iso = conc × V × sharpness
+    #   conc      = K·Σa/Σ(b·c) — где энергия отклонений строк относительно p² (=1 если ровно)
+    #   V         = Σb/Σe_raw  — энергия отклонений строк против сырой энергии
+    #   sharpness = c_eff/‖P‖²_F, c = Σp², c_eff = Σ(b·c)/Σb — насколько ‖P‖² ниже Σp²
+    conc = float(K * a_sum / bc_sum)
+    v_dev = float(b_sum / float(e_raw.sum()))
+    c_eff = float(bc_sum / b_sum)
+    sharp = c_eff / p_norm2
+    closure = conc * v_dev * sharp
+    assert abs(closure - o1_corpus / iso_mean) < 1e-9 * (o1_corpus / iso_mean), \
+        f"L{layer}: разложение O1/iso не замкнулось: {closure} vs {o1_corpus / iso_mean}"
+    rho_p_dev = _spearman((p_row / n_pos).numpy(), dev_row.numpy())
+    # два null-контроля на подвыборке позиций (шаг 32), со своими же p:
+    #  iid        — J ~ N(0,1), учебниковый изотропный null (O1/iso обязан выйти ~1)
+    #  direction  — направления случайны, нормы строк как у реального J: разделяет
+    #               «структуру направлений» и «структуру норм строк» как источник O1 < iso
+    idx = torch.arange(0, n_pos, NULL_STRIDE)
+    rr, cc = (idx // s_len).tolist(), (idx % s_len).tolist()
+    Ps_all = torch.stack([P[r, c] for r, c in zip(rr, cc)]).double()      # [n_null, K]
+    Js_norm_row = torch.stack([J[r, c] for r, c in zip(rr, cc)]).double()  # [n_null, K, D]
+    n_null = Ps_all.shape[0]
+    gen = torch.Generator(device="cpu").manual_seed(NULL_SEED)
+    nulls = {}
+    for kind in ("iid", "direction"):
+        a_n = b_n = bc_n = e_n = s_iso = 0.0
+        for c0 in range(0, n_null, NULL_CHUNK):
+            sl = slice(c0, min(c0 + NULL_CHUNK, n_null))
+            Pu, Ju = Ps_all[sl], Js_norm_row[sl]
+            g = torch.randn(Ju.shape, generator=gen, dtype=torch.float64)
+            if kind == "direction":      # сохраняем нормы строк реального J
+                g = g / g.norm(dim=-1, keepdim=True).clamp_min(1e-300) \
+                    * Ju.norm(dim=-1, keepdim=True)
+            mu = torch.einsum("sk,skd->sd", Pu, g)
+            dv = (g - mu.unsqueeze(1)).pow(2).sum(-1)
+            a_n += float((Pu.pow(2) * dv).sum())                # Σᵢ pᵢ² dᵢ
+            b_n += float(dv.sum()); e_n += float(g.pow(2).sum())
+            s2u = Pu.pow(2).sum(-1)
+            bc_n += float(dv.sum(1).mul(s2u).sum())
+            s_iso += float((s2u - 2 * Pu.pow(3).sum(-1) + s2u.pow(2)).sum())
+        iso_u = s_iso / n_null / K
+        cn, vn, sn = K * a_n / bc_n, b_n / e_n, (bc_n / b_n) / (iso_u * K)
+        nulls[kind] = {"n_positions": int(n_null), "conc": cn, "V": vn,
+                       "sharpness": sn, "O1_rel": cn * vn * sn}
+    del Ps_all, Js_norm_row
+    # эластичность: как быстро энергия отклонений строк растёт с p (а P взвешивает как p²)
+    _lp = np.log(np.maximum((p_row / n_pos).numpy(), 1e-12))
+    _ld = np.log(np.maximum(dev_row.numpy(), 1e-300))
+    alpha_dev = float(np.polyfit(_lp, _ld, 1)[0])
     g_uni_corpus = float(uni.sum() / (K * e_raw.sum()))
     # O3 по определению paper §2.3 на агрегированной ESG G = Σ_t J_t J_tᵀ
     tr_g, ones_g = float(G_doc.trace()), float(G_doc.sum())
@@ -114,9 +189,10 @@ def _layer_numbers(layer: int) -> dict:
     # (c) O1 vs (1 − g_uni)·O1_iso — «операторное» объяснение без данных
     pred = (1.0 - g_uni_corpus) * iso_mean
 
-    doc = np.array(per_doc, dtype=np.float64)               # [32, 5]
+    doc = np.array(per_doc, dtype=np.float64)               # [32, 6]
     per_doc_g_uni = doc[:, 2] / (K * doc[:, 0])
     per_doc_o1 = doc[:, 1] / doc[:, 0]
+    per_doc_o1_rel = per_doc_o1 / doc[:, 5]
     per_doc_o3 = doc[:, 4] / (K * doc[:, 3])
     survive = np.sqrt(o1_pos)
     dom_of = np.repeat(np.arange(len(DOMAINS)), N_PER_DOMAIN)
@@ -133,6 +209,23 @@ def _layer_numbers(layer: int) -> dict:
         "survive_frac_median": float(np.median(survive)),
         "survive_frac_doc_median_range": [float(np.sqrt(per_doc_o1).min()),
                                           float(np.sqrt(per_doc_o1).max())],
+        "O1_rel_doc_median": float(np.median(per_doc_o1_rel)),
+        "O1_rel_doc_min": float(per_doc_o1_rel.min()),
+        "O1_rel_doc_max": float(per_doc_o1_rel.max()),
+        "O1_rel_by_domain": {d: float(np.median(per_doc_o1_rel[dom_of == k]))
+                             for k, d in enumerate(DOMAINS)},
+        # --- точное разложение O1/iso (ассерт на замыкание, не приближение)
+        "O1_rel_closure": closure,
+        "O1_rel_factor_conc": conc,
+        "O1_rel_factor_V": v_dev,
+        "O1_rel_factor_sharpness": sharp,
+        "rho_pbar_row_deviation_energy": rho_p_dev,
+        "nulls": nulls,
+        "O1_rel_over_null_direction": o1_corpus / iso_mean / nulls["direction"]["O1_rel"],
+        "O1_rel_over_null_iid": o1_corpus / iso_mean / nulls["iid"]["O1_rel"],
+        "alpha_deviation_energy_vs_p": alpha_dev,
+        "pbar_row_range": [float((p_row / n_pos).min()), float((p_row / n_pos).max())],
+        "iso_cross_check_exp39k": {"inline": iso_mean, "closed_form": iso_ref},
         "O1_pred_no_data": pred,               # (1 − g_uni)·O1_iso
         "O1_over_pred": o1_corpus / pred,
         # --- O2: uniform-доля энергии сырого J
@@ -146,6 +239,7 @@ def _layer_numbers(layer: int) -> dict:
         # --- O3: ESG gauge_share
         "gauge_share_ESG": o3_corpus,
         "gauge_share_top1_proxy": top1_proxy,
+        "top1_proxy_over_g_uni": top1_proxy / g_uni_corpus,
         "gauge_share_doc_median": float(np.median(per_doc_o3)),
         "ESG_lambda1": lam1, "ESG_uniformity_u1": unif_u1,
         "ESG_r_stable": tr_g / lam1, "ESG_PR": float(tr_g ** 2 / (lam ** 2).sum()),
@@ -156,7 +250,10 @@ def _layer_numbers(layer: int) -> dict:
         # --- распределения по докам (для CI в будущих сводках)
         "per_doc": {"sum_e_raw": doc[:, 0].tolist(), "sum_e_P": doc[:, 1].tolist(),
                     "sum_uni": doc[:, 2].tolist(), "tr_G": doc[:, 3].tolist(),
-                    "ones_G_ones": doc[:, 4].tolist()},
+                    "ones_G_ones": doc[:, 4].tolist(), "iso_mean": doc[:, 5].tolist()},
+        "per_doc_usage": "per-doc суммы — заготовка под парный bootstrap (сравнения слоёв и "
+                         "режимов по одним и тем же документам); сами по себе цитируются "
+                         "только как разброс, не как CI",
     }
     del ck, J, P
     return out
@@ -164,7 +261,8 @@ def _layer_numbers(layer: int) -> dict:
 
 def _selfcheck(res: dict, p_identical: bool) -> dict:
     """Сверка с E-39k / E-33r / алгеброй. Ничего не подгоняем: пишем факт."""
-    chk = {"anchor_e39k": {}, "e33r_survive_in_range": {}, "algebra": {}}
+    chk = {"anchor_e39k": {}, "e33r_survive_in_range": {}, "no_anchor_band": {},
+           "algebra": {}}
     field_of = {"o1": "O1_corpus", "iso": "O1_iso_mean", "g_uni": "g_uni_corpus"}
     for lay in LAYERS:
         r = res["layers"][str(lay)]
@@ -180,6 +278,13 @@ def _selfcheck(res: dict, p_identical: bool) -> dict:
             "e33r_ref": [lo, hi],
             "e10a_top1_proxy_ref": E10A_TOP1_PROXY.get(lay),
         }
+        if lay not in ANCHOR_E39K:
+            # якоря для этого слоя нет — минимум: грубая граница + структура «ниже iso»
+            assert 1e-5 < r["O1_corpus"] < 1e-2, f"L{lay}: O1 = {r['O1_corpus']} вне правдоподобного"
+            chk["no_anchor_band"][str(lay)] = {
+                "O1": r["O1_corpus"], "below_iso": bool(r["O1_corpus"] < r["O1_iso_mean"]),
+                "closure_rel_err": abs(r["O1_rel_closure"] - r["O1_rel"]) / r["O1_rel"],
+            }
     chk["p_is_readout_level"] = {
         "identical_across_layers": bool(p_identical),
         "note": ("если p одинаков во всех слоях, то P(p) и его изотропный референс — одна "
@@ -204,6 +309,15 @@ def _selfcheck(res: dict, p_identical: bool) -> dict:
                 f"L{lay} {k}: измерено {v['measured']:.6g}, якорь E-39k {v['ref']:.6g} "
                 f"(rel {v['rel_err']:.3%} > {ANCHOR_TOL:.0%}) — протокол разъехался")
     assert chk["algebra"]["O2_equals_O3_max_rel"] <= 1e-4, "тождество O2=O3 не подтвердилось"
+    chk["null_iid_control"] = {
+        "O1_rel_iid_by_layer": {str(l): res["layers"][str(l)]["nulls"]["iid"]["O1_rel"]
+                                for l in LAYERS},
+        "tol": 0.25,
+        "note": ("на изотропном J отношение O1/iso обязано быть ~1: это проверка всего "
+                 "механизма разложения, а не данных")}
+    for l, v in chk["null_iid_control"]["O1_rel_iid_by_layer"].items():
+        assert abs(v - 1.0) <= chk["null_iid_control"]["tol"], \
+            f"L{l}: изотропный null дал O1/iso = {v} — разложение или iso неверны"
     assert chk["algebra"]["g_uni_gauge_free_max"] <= GF_UNI_MAX, (
         "у J^gf осталась uniform-компонента — p не нормирован или P не тот")
     return chk
