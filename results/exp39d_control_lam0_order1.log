@@ -1,0 +1,30 @@
+/home/survivor/work/prism/experiments/exp39d_l23_training.py:418: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:822.)
+  ok_id = float(lp) < 1e-5 and float(corr.mean()) > 1.0 - 1e-4
+device=cpu
+[selftest] KL brute=0.676355  logsumexp=0.676355  diff=6.56e-07  OK
+[selftest] KL p_topK~0.5 (real L23 regime): mass=0.547  brute=0.838613 logsumexp=0.838651  OK
+[selftest-flatness] degenerate rank cases finite (rank0=0.0000, rankr=0.0064): OK
+[selftest-flatness] Vt = top-r right SVs, P_t rank-r projector: OK
+[selftest-ordering] identity corr=1.000000 pearson=-2.24e-08 pairwise=1.016328(ref 1.016328) | flip corr=-1.0000 lp=2.0000 grad=True: OK
+loading model...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  36%|███▌      | 114/320 [00:00<00:00, 1095.71it/s]Loading weights:  70%|███████   | 224/320 [00:00<00:00, 740.92it/s] Loading weights:  95%|█████████▌| 305/320 [00:00<00:00, 647.62it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 694.98it/s]
+V=248320 D=1024  g_base norm=139.5439
+loading jcache: /home/survivor/work/prism/kaggle_kernel/results/exp27b_jcache_L23.pt
+H_all: (4096, 1024)  (4096 positions, 32 docs)
+computing base logits cache (actual logits, lse_b, base_k, sentinel)...
+sentinel excluded: 2271/4096 (55.4%)  [raw sum < 0.5]
+PPL base: 34.3142
+κ' base (E-39a dry-run): 0.015923  (CI [0.013719908665637872, 0.022509675020409493])  target <0.005
+flatness normalizer (base l_flat): 0.1869
+  λ=0.0 λo=1.0 s0 st20: loss=0.007725 flat=0.996699 kl=0.038672 ord=0.0039 corr=0.9961 κ'=0.016470 PPL=34.6362 (276s)
+  λ=0.0 λo=1.0 s0 st40: loss=0.002311 flat=1.007704 kl=0.014407 ord=0.0009 corr=0.9991 κ'=0.016345 PPL=34.4785 (605s)
+  λ=0.0 λo=1.0 s0 st60: loss=0.000658 flat=1.003796 kl=0.004069 ord=0.0003 corr=0.9997 κ'=0.016049 PPL=34.4116 (901s)
+  λ=0.0 λo=1.0 s0 st80: loss=0.000349 flat=0.994888 kl=0.002117 ord=0.0001 corr=0.9999 κ'=0.015967 PPL=34.4161 (1228s)
+  λ=0.0 λo=1.0 s0 st100: loss=0.000233 flat=0.997066 kl=0.001430 ord=0.0001 corr=0.9999 κ'=0.016010 PPL=34.3486 (1500s)
+  KL cross-check (real 2-forward, C4 docs): 0.000645 vs cached-H verdict 0.001584 (diff 9.39e-04)
+λ=0.0 λo=1.0 s0: κ'=0.016010 PPL=34.3486 (+0.10%) KL_full=0.0016 corr_f=0.9999 verdict=TARGET_NOT_MET (1638s)
+
+Saved: /home/survivor/work/prism/results/exp39d_control_lam0_order1.json
+Total: 51.2 min

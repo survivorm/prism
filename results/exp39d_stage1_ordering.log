@@ -1,0 +1,35 @@
+/home/survivor/work/prism/experiments/exp39d_l23_training.py:339: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:822.)
+  lf0 = float(flatness_loss(Mk0, H2, r, MB))                    # rank 0
+device=cpu
+[selftest] KL brute=0.676355  logsumexp=0.676355  diff=6.56e-07  OK
+[selftest] KL p_topK~0.5 (real L23 regime): mass=0.547  brute=0.838613 logsumexp=0.838651  OK
+[selftest-flatness] degenerate rank cases finite (rank0=0.0000, rankr=0.0064): OK
+[selftest-flatness] Vt = top-r right SVs, P_t rank-r projector: OK
+[selftest-ordering] identity corr=1.000000 pearson=-2.24e-08 pairwise=1.016328(ref 1.016328) | flip corr=-1.0000 lp=2.0000 grad=True: OK
+loading model...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<04:52,  1.09it/s]Loading weights:  54%|█████▍    | 173/320 [00:01<00:00, 227.62it/s]Loading weights:  81%|████████▏ | 260/320 [00:01<00:00, 232.96it/s]Loading weights:  99%|█████████▉| 318/320 [00:01<00:00, 243.46it/s]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 199.16it/s]
+V=248320 D=1024  g_base norm=139.5439
+loading jcache: /home/survivor/work/prism/kaggle_kernel/results/exp27b_jcache_L23.pt
+H_all: (4096, 1024)  (4096 positions, 32 docs)
+computing base logits cache (actual logits, lse_b, base_k, sentinel)...
+sentinel excluded: 2271/4096 (55.4%)  [raw sum < 0.5]
+PPL base: 34.3142
+κ' base (E-39a dry-run): 0.015923  (CI [0.013719908665637872, 0.022509675020409493])  target <0.005
+flatness normalizer (base l_flat): 0.1869
+  λ=0.01 λo=0.0 s0 st20: loss=0.009942 flat=0.409834 kl=0.058438 ord=0.1822 corr=0.8178 κ'=0.008013 PPL=35.7451 (250s)
+  λ=0.01 λo=0.0 s0 st40: loss=0.007040 flat=0.238936 kl=0.046507 ord=0.2737 corr=0.7263 κ'=0.006252 PPL=36.9210 (467s)
+  λ=0.01 λo=0.0 s0 st60: loss=0.004644 flat=0.140030 kl=0.032441 ord=0.3364 corr=0.6636 κ'=0.005614 PPL=36.9732 (847s)
+  λ=0.01 λo=0.0 s0 st80: loss=0.004373 flat=0.095034 kl=0.034231 ord=0.3849 corr=0.6151 κ'=0.004860 PPL=38.5539 (1254s)
+  λ=0.01 λo=0.0 s0 st100: loss=0.003575 flat=0.069594 kl=0.028787 ord=0.4102 corr=0.5898 κ'=0.004443 PPL=38.4368 (1510s)
+  KL cross-check (real 2-forward, C4 docs): 0.067715 vs cached-H verdict 0.028575 (diff 3.91e-02)
+λ=0.01 λo=0.0 s0: κ'=0.004443 PPL=38.4368 (+12.01%) KL_full=0.0286 corr_f=0.5936 verdict=PARTIAL (1757s)
+  λ=0.01 λo=1.0 s0 st20: loss=0.012212 flat=0.714537 kl=0.028479 ord=0.0022 corr=0.9978 κ'=0.013208 PPL=34.7552 (241s)
+  λ=0.01 λo=1.0 s0 st40: loss=0.008456 flat=0.626315 kl=0.011294 ord=0.0011 corr=0.9989 κ'=0.011657 PPL=34.5676 (440s)
+  λ=0.01 λo=1.0 s0 st60: loss=0.006884 flat=0.565344 kl=0.004551 ord=0.0008 corr=0.9992 κ'=0.010654 PPL=34.4753 (635s)
+  λ=0.01 λo=1.0 s0 st80: loss=0.006356 flat=0.502847 kl=0.005400 ord=0.0008 corr=0.9992 κ'=0.009824 PPL=34.4564 (881s)
+  λ=0.01 λo=1.0 s0 st100: loss=0.005752 flat=0.458881 kl=0.003769 ord=0.0008 corr=0.9992 κ'=0.009206 PPL=34.6523 (1106s)
+  KL cross-check (real 2-forward, C4 docs): 0.014113 vs cached-H verdict 0.004265 (diff 9.85e-03)
+λ=0.01 λo=1.0 s0: κ'=0.009206 PPL=34.6523 (+0.99%) KL_full=0.0043 corr_f=0.9992 verdict=FAIL (1287s)
+  λ=0.1 λo=0.0 s0 st20: loss=0.030388 flat=0.201277 kl=0.102602 ord=0.3344 corr=0.6656 κ'=0.005469 PPL=47.0926 (304s)
