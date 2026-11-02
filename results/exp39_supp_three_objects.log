@@ -4,4 +4,4 @@ L18: O1 0.0002057 (iso 0.0006901, rel 0.298×) survive 0.0108 | g_uni 0.1425 = E
 L22: O1 0.0001719 (iso 0.0006901, rel 0.249×) survive 0.0103 | g_uni 0.1258 = ESG 0.1258 (top1-прокси 0.1158) | g_uni(J^gf) 1.7e-16
 L23: O1 0.0004725 (iso 0.0006901, rel 0.685×) survive 0.0224 | g_uni 0.1403 = ESG 0.1403 (top1-прокси 0.1305) | g_uni(J^gf) 5.5e-16
 
-→ results/exp39_supp_three_objects.json (wall 65.1 с)
+→ results/exp39_supp_three_objects.json (wall 52.4 с)

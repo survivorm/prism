@@ -292,8 +292,12 @@ def _corr_f(ctx, W_rows: torch.Tensor, n_pos: int = 512) -> float:
                           device=DEV)
     u = ctx["H_all"][idx]
     u = u / u.norm(dim=-1, keepdim=True).clamp_min(1e-12)
-    mk = (W_rows * ctx["g_base"][None, :]).t()
-    lg = (math.sqrt(d39.D) * (u @ mk))[:, ctx["tok_ids"]].detach().cpu().numpy()
+    mk = (W_rows * ctx["g_base"][None, :]).t()          # [D, K], колонки = строки U128 по порядку
+    assert mk.shape[1] == ctx["K"] == ctx["base_k_all"].shape[1], \
+        f"corr_f: {mk.shape[1]} колонок против K={ctx['K']}"
+    # ВАЖНО: tok_ids — это id в словаре (до 151k), а не столбцы mk; повторная индексация
+    # столбцов давала device-side assert на T4 (краш v3/v4). Порядок столбцов уже U128.
+    lg = (math.sqrt(d39.D) * (u @ mk)).detach().cpu().numpy()
     bk = ctx["base_k_all"][idx].detach().cpu().numpy()
     return float(np.mean([_pearson(lg[i], bk[i]) for i in range(len(idx))]))
 
@@ -417,6 +421,13 @@ def phase_smoke(out_path: str) -> dict:
     chk = ppl_from(*ppl_docs_of(ctx, None), first=d39.N_DOCS_PPL)
     assert abs(chk - ppl_log) < 1e-9
     assert abs(ppl_log - PPL_BASE_ANCHOR) < 0.02, f"шкала E-39d не сошлась: {ppl_log}"
+    # self-check канала corr_f: на T4 он падал на индексации (краш v3/v4), ловить до GPTQ
+    cf_self = _corr_f(ctx, ctx["W_lm"][ctx["tok_ids"]].detach().clone(), n_pos=16)
+    assert abs(cf_self - 1.0) < 1e-6, f"corr_f(base, base) = {cf_self} — канал сломан"
+    Wp = ctx["W_lm"][ctx["tok_ids"]].detach().clone()
+    cf_perm = _corr_f(ctx, Wp[torch.randperm(ctx["K"], device=Wp.device)], n_pos=16)
+    print(f"[corr_f] base-vs-base {cf_self:.6f}, perm-stub {cf_perm:.4f}", flush=True)
+    assert cf_perm < 0.9, f"corr_f на перемешанных строках = {cf_perm} — метрика пуста"
     X = calib_activations(ctx)
     t1 = time.time()
     W_q = _quantize_gptq(ctx["W_lm"], X[:4096], GPTQ_BITS, GPTQ_GROUP, DAMP_FRAC,

@@ -165,7 +165,7 @@ re.sub(r"\n?\s*from prism\.\w+ import [^\n]*\n?", "", code)
 
 ### 12. log_probs = torch.zeros(1) → device mismatch
 
-**Симптом**: `cuda:X and cpu!` при累加 log_probs.
+**Симптом**: `cuda:X and cpu!` при накоплении log_probs.
 
 **Фикс**: `torch.zeros(1, device=model.device)`.
 
