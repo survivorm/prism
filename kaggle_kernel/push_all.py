@@ -235,6 +235,26 @@ KERNELS = {
                 "experiment needing Kaggle (38a/b/c/e/g/h/i run in seconds "
                 "on CPU — docs/E38_fixes2.md).",
     },
+    "exp39m": {
+        "dir": "kernel-exp39m",
+        "id": "voroninmichael/e-39m-flat-carrier-vs-ptq",
+        "title": "E-39m flat carrier vs PTQ",
+        "exp_file": "experiments/exp39m_flat_ptq.py",
+        "sources": ["voroninmichael/prism-exp27b-dense-profile"],
+        # prism-exp-code = обычные импорты соседей (exp39d/exp39a/exp39f/_e38_cache + пакет
+        # prism): инлайнить их через --extra-local нельзя, у них `if __name__ == "__main__"`
+        #выполнился бы прямо в ноутбуке.
+        "datasets": [
+            "voroninmichael/prism-exp-code",
+            "voroninmichael/prism-exp27b-jcache-jcb",
+        ],
+        "note": "E-39m (docs/E39m.md, разбор docs/E39m_critique.md): носитель честного floor "
+                "E-39d (λ=0.01, λo=1.0, seed 0, κ'=0.009206 при corr_f 0.9992) против базы, "
+                "обеих через один и тот же tied GPTQ (4-bit g128 + 3-bit g128). Гейт на "
+                "СУММАРНЫЙ урон: cmp(floor)=PPL(floor+Q)/PPL(base+Q) и d_inc, оба по верхней "
+                "границе парного bootstrap CI на 32 документах, порог 0.5 п.п. cheat "
+                "(λo=0) — разделитель H_flat / H_any_low_κ, не sanity.",
+    },
     "exp39b": {
         "dir": "kernel-exp39b",
         # Canonical slug (derived from the title on the first push): a mismatched

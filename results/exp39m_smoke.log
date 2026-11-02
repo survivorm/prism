@@ -1,0 +1,39 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  34%|███▍      | 109/320 [00:00<00:00, 1068.85it/s]Loading weights:  68%|██████▊   | 216/320 [00:00<00:00, 960.16it/s] Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1028.50it/s]
+[ctx] N=4096 docs=32 sentinel=2271 l_flat_base=0.1869
+[base] κ'=0.015923 PPL=29.5432 (якорная шкала 8 доков 34.3142)
+  calib 8/128
+  calib 16/128
+  calib 24/128
+  calib 32/128
+  calib 40/128
+  calib 48/128
+  calib 56/128
+  calib 64/128
+  calib 72/128
+  calib 80/128
+  calib 88/128
+  calib 96/128
+  calib 104/128
+  calib 112/128
+  calib 120/128
+  calib 128/128
+[gptq] wall 41s
+{
+  "device": "cpu",
+  "ppl_docs": 32,
+  "base": {
+    "kappa": 0.015922669259010876,
+    "ppl": 29.54318782941339,
+    "ppl_log_scale": 34.31424576068774,
+    "n_sent": 2271,
+    "l_flat_base": 0.18691539764404297
+  },
+  "quant_small_calib": {
+    "kappa": 0.015964007417965893,
+    "ppl": 29.92061425623395,
+    "ppl_delta_pct": 1.27754130326041
+  },
+  "gptq_wall_sec": 156.29381585121155,
+  "wall_sec": 574.901186466217
+}

@@ -1,0 +1,20 @@
+{
+  "kernel_type": "notebook",
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "language": "python",
+  "code_file": "kernel.ipynb",
+  "id": "voroninmichael/e-39m-flat-carrier-vs-ptq",
+  "title": "E-39m flat carrier vs PTQ",
+  "kernel_sources": [
+    "voroninmichael/prism-exp27b-dense-profile",
+    "voroninmichael/e-39m-flat-carrier-vs-ptq"
+  ],
+  "dataset_sources": [
+    "voroninmichael/prism-exp-code",
+    "voroninmichael/prism-exp27b-jcache-jcb"
+  ],
+  "enable_internet": true,
+  "doc_tag": "experiment"
+}
