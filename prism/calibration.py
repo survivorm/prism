@@ -145,7 +145,18 @@ def build_global_token_set(
     calibration_samples: list[dict[str, torch.Tensor]],
     K: int = 64,
 ) -> list[int]:
-    """Build global token set from top-K logits across all samples."""
+    """Frequency token set: the K tokens that most often appear in the per-sample
+    top-K of the LAST position (`logits[:, -1]`) across the calibration pool.
+
+    One basis for every position, so a stored p-row is SUB-stochastic (~half of the
+    exp27b positions carry < 0.5 of the softmax mass) — that basis is what all
+    published Jacobian numbers sit on. The positional convention (each position gets
+    its own top-K, so p is a real truncation) is produced by
+    `experiments/exp27b_dense.py: column_mode="positional"` (cache exp27c), not here;
+    "union top-K at fixed K" is not definable, since the union of per-position top-K
+    exceeds K (audit4 Q10 verdict round). Never mix numbers from the two bases:
+    the basis belongs in the ChannelTag slice.
+    """
     token_counter: Counter[int] = Counter()
     model.eval()  # type: ignore[attr-defined]
 
