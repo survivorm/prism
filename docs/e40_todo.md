@@ -1,0 +1,759 @@
+# ТЗ: фаза 1 экспериментов (E-40.0 – E-40.8)
+
+**Кому:** исполнителю с репозиторием `https://github.com/survivorm/prism` (папка `prism/`, `experiments/`, `results/`).
+**Что это:** standalone исполняемая спецификация фазы 1. Контекста обсуждения не требует. Все входы — существующие кэши и артефакты в репозитории.
+
+---
+
+## §0. Область и цель
+
+**Фаза 1 — наблюдательные эксперименты** на существующих кэшах (`exp27b`, `exp31`, `exp30_full_spectrum`, `exp32tail_hessian_modes`, `exp28`, `exp33r`, `exp39_supp_three_objects`). **Ни одного нового forward pass.** GPU — 0.
+
+**Цель:** до запуска E-41 (фаза 2) получить:
+1. Разрешение известных неоднозначностей объектов (что именно измерено в E-27.6, E-33r, E-39k).
+2. Разрешение E6 — несогласованность тройки `(c, s, frac_K)` в опубликованной таблице.
+3. **A4-gate** — `p_slice` спектров E-27.5/27.6.
+4. Базовые эксперименты **0.2, 0.4, 0.5, 0.6, 0.7**.
+5. **FFT остатка** (0.3, зависит от 0.2).
+6. Синтез **6×6** (0.8, после 0.2–0.7).
+
+**Что НЕ входит в фазу 1:** E-44 (требует Qwen 4B-кэш), E-41 (кэшевые дискриминаторы), E-42, E-43, правки paper (по отдельному ТЗ). `behavior.py` — gate, не импортируется из tier-0.
+
+---
+
+## §1. Общий протокол
+
+### §1.1. ChannelTag — обязательный контракт
+
+```python
+ChannelTag = namedtuple(
+    "ChannelTag",
+    ["protocol", "slice", "window", "side",
+     "p_mode", "p_slice", "aggregation",
+     "layer", "rank", "norm_type", "source", "status"]
+)
+```
+
+- `protocol ∈ {"natural", "deltaW"}` — в фазе 1 только `natural`.
+- `slice ∈ {"raw", "gf", "fixP"}` — дефолт `gf` (канонический `J^(p_t)`).
+- `window ∈ {"top", "tail", "full"}`.
+- `side ∈ {"left", "right", "mixed"}`.
+- **`p_mode ∈ {"truncated_U128", "full_softmax"}`** — в фазе 1 всегда `truncated_U128`.
+- **`p_slice ∈ {"p_t", "p_0"}`** — обязательно для `P(p)`-зависимых величин.
+- **`aggregation ∈ {"ratio_of_means", "mean", "median", "energy_weighted"}`** — обязательно для отношений.
+- `layer`, `rank`, `norm_type ∈ {"norm", "energy", "angle"}`, `source ∈ {"cache", "recomputed", "audit-only"}`, `status ∈ {"measured", "inferred", "not_testable"}`.
+
+**Стоп-правила:**
+- Отсутствие любого identity-relevant поля → `ValueError` при сериализации.
+- Третье значение `p_mode`/`p_slice` → `ValueError` (не легальный тег).
+- В фазе 1 артефактах `p_mode = truncated_U128` обязательно; появление `full_softmax` = смешение срезов → стоп.
+
+### §1.2. Sentinel
+
+**Порог 0.5 сохраняется** (`Σ P128_RAW < 0.5`). Согласовано с E-34, E-33r, E-39k.
+
+- Дефолт — срез `all` (все позиции).
+- Где применимо — параллельно `alive` (без sentinel).
+- Кривая массы — **дополнительное поле** артефакта, не замена порога.
+
+**Числа:**
+- Доля sentinel-позиций: **0.5071** (2077/4096), одинаково по слоям.
+- `Σp²` — **три значения** в зависимости от `p_mode`:
+    - ренормированный: `0.4686` (all mean), `0.4739` (energy-weighted), `0.5708` (alive mean);
+    - **raw (без ренормировки): `0.2380` (all), `0.4666` (alive)**.
+- Устаревшие `0.415/0.557` — **не использовать** (это медиана референса `(I−P)`, не прямое измерение `Σp²`).
+
+Поле артефакта `Σp²` без `p_mode` → `ValueError` при сериализации. Текстовые ссылки в документах автоматически не ловятся — это проверка ревью, не рантайм-исключение.
+
+### §1.3. Изотропный референс и два null'а
+
+Для любой величины `‖OX‖²/‖X‖²` (X — поле J, O — оператор):
+
+- отчитывать **абсолютное значение**;
+- отчитывать **изотропный референс** `‖O‖²_F/K`;
+- отчитывать **отношение** `real/iso`.
+
+Правило 23 из paper §6: **два нуля** — `operator-null` (`iid`) + `dir_null` (раньше называлось `content-matched`) — обязательно для операторных величин.
+
+**Исключение:** `g_uni = ‖Jᵀ1‖²/(K‖J‖²)` **не зависит от `p`** ни в одной ветке (raw — `p` в формуле нет; gf — ≡0). Для `g_uni` — только `slice`, без `p_slice`/`aggregation`.
+
+### §1.4. Статистика
+
+- **Bootstrap B=1000**, percentile, **paired по документам** (N=32) для разностей, marginal для уровней. Не блок по `Δ`, не блочный.
+- **Permutation tests B=1000** где применимо.
+- **Resolution floor:** `1.253·IQR/√n` из per-doc IQR (зафиксировано в `exp40_1_audit.py::_floor`). Вердикты — **только по этому флору**; subsample-вариант `[8, 16, 32]` — дополнительное поле.
+- **Правило:** эффект ниже флора → `not_testable`, **никогда** `refuted`.
+- **MP-скобки:** `λ+ = (1+√(p/n))²`:
+    - `6×6` (`p=6`): `n=32 → 2.0535`, `n=192 → 1.3848`;
+    - `8×8` (`p=8`): `n=32 → 2.2500`, `n=192 → 1.4499` (не `1.4425` — отозванное число патча v2).
+- Монте-Карло калибровка в `nulls_and_stats.mp_lambda_max_mc` — отдельный тест.
+
+### §1.5. Артефакты
+
+Каждый эксперимент:
+- `experiments/exp40_x_<name>.py` — скрипт со стилем `main(results_dir) -> dict`, поля `observational: True`, `new_forwards: 0`.
+- `results/E40_x_<name>.json` — сериализация через `json_utils` (inf → null + флаг).
+- В шапке JSON: `core_version`, `timestamp`, `inputs` (пути к кэшам + хеши), `channel_tags` (список всех тегов).
+
+Правило: числа-якоря (7.7e-16, 2.2e-15 и т.д.) в схемах артефактов — **`null`**, не значения прошлых прогонов.
+
+---
+
+## §2. E-40.0 — A4-gate (пререквизит для 0.2)
+
+**Цель:** определить `p_slice` для спектров E-27.5/27.6. Прямое требование `results/E40_1_audit.json::gate_open_items_for_E40_2`.
+
+**Вход:** `results/exp27_jcache.pt` (v11: `JR/P128/H/U128`; `P128` по ключу `(dom, si, layer, S, POS)` — один вектор p на (документ, слой) на позиции окна) + `exp27b_jcache_L*.pt` для сверки.
+
+**Процедура (редакция 2: `p_checksum` неработоспособен и удалён):**
+1. **Код-аудит (минуты, решают).** Зафиксировать `(S, K, POS)` каждой серии по коду продуцента. Факты, уже проверенные: `experiments/exp27.5_pair_matrix.py:28` — `S, K, POS = 64, 64, 0`; «p0» в имени файла — **индекс позиции POS=0**, а не «фиксированная p₀» (гадание аудита A4 неверно). E-27.6 (`exp27_6_isolation.py`): `p128[(d, si, l, S, POS)]`, T5-срезы — `POS=32`.
+2. **Вывод:** `p_slice = "p_t"` (per-position p readout-level, общая по слоям; на одну позицию на документ: `p_position = 0` (E-27.5), `32` (E-27.6 T5)).
+3. **Векторная сверка (диагностика, не гейт).** `P128` E-27 ренормирован (строка = 1) ⇒ сверять с **`P128`** exp27b (не с `P128_RAW`), с реверсом `token_idx = S − 1 − t` (`exp31:convention`). Побитовое совпадение осмысленно только на пересечении сеток `(S, POS)`; у E-27.5 `S=64`, у exp27b `S=128` (последние токены разные), слой 19 есть только в E-27 — при пустом пересечении `matches_exp27b = null`, это не failure. Gate решает пункт 1 (он детерминирован).
+4. **Почему удалён checksum:** `p_checksum = Σ‖p_t‖₁ ≈ число позиций` (4096.000009) — константа для **любой** ренормированной p, и `p_t`, и `p_0`; на побазовом exp27b (который `p_t`) он тоже одинаков по слоям, — старое правило «checksum одинаков ⇒ `p_0`» даёт неверный ответ уже на нём.
+
+**Выход:** `results/E40_0_gate.json` (схема — `null` по §1.5):
+```json
+{
+  "E27_5_6_p_slice": null,
+  "p_position": null,
+  "T5_p_position": null,
+  "source": null,
+  "matches_exp27b": null,
+  "reversal_confirmed": null,
+  "gate_pass": null,
+  "E40_2_can_start": null
+}
+```
+
+**Стоп-условие:** `p_slice` не определён однозначно → E-40.2 стоп, эскалация.
+
+**Стоимость:** минуты, ноль форвардов.
+
+---
+
+## §3. E-40.1 — Аудит + T4a + манифест ядра v1
+
+**Цель:** разрешить известные неоднозначности, разобрать E6, сериализовать манифест, прогнать invariants.
+
+### §3.1. Подпункты аудита (a1)–(l1)
+
+| # | Проверить | Источник | Что записать |
+|---|---|---|---|
+| **(a1)** | Для каждого документированного «98–99%»: `‖PJ‖/‖J‖` (норма) vs `‖PJ‖²/‖J‖²` (энергия) vs `iso`-referenced | E-33r | Три поля: `(operator, normalization, slice)` |
+| **(a2)** | `g_uni = ESG gauge_share` (одна величина) vs `O1` (оператор) | E-33r, E-39k | Две величины; «третьего объекта нет» |
+| **(a3)** | Identity-asserts на `exp27b`: `O2 ≡ O3` (rel < 1e-12); `g_uni(J^gf) < 1e-12`; `iso_inline ≡ iso_closed` (rel < 1e-9) | все | Три assert в этом прогоне, fail-loud |
+| **(b)** | `r_eff` — на raw или canonical?; «98–99%» — какой объект? | E-27.6 T6, E-33r | Срез для каждого; если raw — пересчёт (не рефит) |
+| **(c)** | `Δ_gf` — объект: слой, сторона, срез, `r`, тип угла | E-33r.2, `exp33r` | Ожидание: L23/правая/`P(p_t)J`/`Δ_SVD`/`r=16`; проверить по коду |
+| **(d)** | `Δ_fixP/Δ_raw` per layer: только L23 или все? | E-33r.2, E-32r.3 | Список слоёв; критично для E-40.7 |
+| **(e)** | L0 в кэше? | exp27b | Да/нет; критично для E-40.6 |
+| **(f)** | Порог левого канала: `max(0.05·E_right, Q_95(E_left^null))`; нуль `E_left^null` — **Haar-конъюгация фактической `M`** (`M' = O M Oᵀ`, `O ∈ Haar(128)`), при сохранённых спектре `M` и σ-спектрах `Σ_t, Σ_{t+1}`; `B=1000` | — | Порог + `unstable_left` правило; полностью Haar-вращение нулём быть **не** может (недостижимый масштаб, см. §7.4 5e) |
+| **(g)** | `exp31` — срез `C_F`/`C_top16` (raw vs canonical) | exp31 | Если raw — пересчёт (не рефит) |
+| **(h)** | `exp30b` — моды какой матрицы и `l`-сетка | exp30b | Запись |
+| **(i)** | `exp32-tail` — база мод `b_off` | exp32-tail | Запись |
+| **(j)** | `exp27b` — покрытие позиций и S-сетка | exp27b | Запись |
+| **(k)** | per-layer наличие `Δ_raw/Δ_fixP` | — | Список |
+| **(l1)** | Заморозка 8 summary-статистик: формулы, per-(doc,layer), стандартизация, кластеры C1–C4, правила R1–R3 | — | Ноль вычислений, только сериализация |
+
+### §3.2. T4a — разрешение E6 (сетка 8 ячеек)
+
+**Цель:** определить семантику опубликованной таблицы E-39-supplement §2.2.1 через замыкание тождества. **Указатель:** `docs/E39_supplement.md` удалён коммитом 153d297 — опубликованная таблица в git-истории, числа продублированы в `docs/E40_math_core.md` §I.5 и `docs/E40_math_core_answers.md` §1 (T4b сверять оттуда).
+
+**Вход:** кэш `exp39_supp_three_objects.json` (поля `c_cross`, `s_agg`, `frac_K_energy_agg`) + пересчёт на свежих данных.
+
+**Тождество (при одной агрегации, одном срезе, одном `p_slice`):**
+```
+frac_K = 1 − 2c + s²
+эквивалентно: c = (1 + s² − frac_K) / 2
+```
+(Обратная формула — с **плюсом** `s²` и **минусом** `frac_K`, не наоборот.)
+
+**Процедура:**
+Для каждой из 8 ячеек `{p_slice: p_t, p_0} × {aggregation: mean, ratio_of_means} × {slice: all, alive}` — вычислить `c`, `s`, `frac_K`, проверить тождество (tol 1e-12).
+
+**Ожидаемое поведение:**
+- ячейки `{ratio_of_means, mean} × {all, alive} × p_t` **обязаны замкнуться**: тождество позипозиционное (общий знаменатель `‖J_t‖²`), а обе агрегации линейны по позициям;
+- mean-ячейка замыкается только при `s² = mean_t(O1_t)` (среднее попозиционных энергий) и `s = √(mean_t O1_t)`; `s = mean_t(√O1_t)` в квадрате — другая величина (≤ по Йенсену), и тогда ячейка **не** замкнётся — это ошибка реализации, а не свойство данных;
+- `alive` замыкается по тем же алгебраическим основаниям — при условии, что все три величины считаются на одном срезе (к «p одинаков по слоям» это отношения не имеет);
+- `median` — **не замкнётся** (медиана суммы ≠ сумма медиан) — не дефект, ожидаемое.
+
+**g_uni как контрольная точка** (не зависит от `p`, не зависит от `aggregation`): сравнить с `results/exp39k_gauge_aware_importance.json` (`layers_diag.g_uni`) по **всем 5 слоям L6/L12/L18/L22/L23**, не по одному L6. Если совпали → данные корректны, несогласованность только агрегационная.
+
+**T4b** (кросс-проверка опубликованной таблицы): ожидаемо **красный** (смешанные агрегации), фиксируется в `deviations_from_spec`.
+
+**Выход:** `results/E40_1_T4a.json`:
+```json
+{
+  "cells": {
+    "p_t_mean_all": {"c": ..., "s": ..., "frac_K": ..., "residual": ..., "closed": true},
+    "p_t_mean_alive": {...},
+    "p_t_median_all": {"closed": false, "reason": "median ≠ ratio of sums"},
+    ...
+  },
+  "g_uni_checkpoint": {"layers": [6, 12, 18, 22, 23], "cached": null, "recomputed": null, "matches": null,
+                        "cached_source": "results/exp39k_gauge_aware_importance.json"},
+  "T4b_published_mixed": {"s2_values": [...], "all_negative": true},
+  "resolved_cell": "p_t_ratio_of_means_all",
+  "E6_status": "resolved",
+  "deviations_from_spec": [{"id": "D7_T4b", "description": "published table mixed aggregation"}]
+}
+```
+
+**Стоп:** если **ни одна** mean/ratio_of_means-ячейка не замкнулась → численный баг или кэш-ошибка; стоп до ремонта.
+
+### §3.3. Манифест ядра v1 (n)
+
+**Сериализовать в `results/E40_1_core_manifest.json`:**
+
+```json
+{
+  "core_version": "v1.0.0",
+  "modules": [
+    "p_algebra", "svd_bundle", "transport", "kinetic",
+    "operator_checks", "cheap_invariants", "nulls_and_stats",
+    "invariants", "tag", "behavior"
+  ],
+  "invariants_registry": {
+    "O2_eq_O3": {"status": "passing", "value": null, "tol_abs_fp64": 7.7e-16, "note": "fp32 fails"},
+    "g_uni_gf_zero": {"status": "passing", "tol_abs": 1e-12},
+    "P_properties": {"status": "passing", "note": "interior only; vertex P=0 idempotent"},
+    "iso_inline_eq_closed": {"status": "passing", "tol_rel": 1e-9},
+    "p_tilde_sum": {"status": "passing", "tol_abs": 1e-12},
+    "secular_equation": {"status": "passing", "tol_abs": 1e-10},
+    "trace_identities": {"status": "passing", "tol_abs": 1e-12},
+    "kappa_curv_algebra": {"status": "passing", "tol_abs": 1e-10, "unconditional": true},
+    "kappa_curv_spectral": {"status": "passing", "precondition": "парный спектр", "unconditional": false},
+    "kappa_cond_invariance": {"status": "passing", "tol_abs": 1e-8},
+    "H_orthogonal": {"status": "passing", "tol_abs": 1e-9},
+    "channels_sum": {"status": "passing", "tol_rel": 1e-2, "note": "ключ реестра — channels_sum; содержательная проверка — 5×5 Gram = ‖ΔJ_proj‖² (exact), eps3 ≡ ‖ΔJ‖² − Σ6 по определению (тавтология, критерием не является)"},
+    "r1_cross_zero": {"status": "passing", "tol_abs": 1e-12},
+    "O1_eq_s2": {"status": "unverified", "note": "проверяется в этом прогоне"},
+    "b_lin_r1": {"status": "passing", "gate": "behavior", "not_blocking_tier0": true},
+    "triple_identity": {"status": "passing", "note": "только ratio_of_means, один p_slice, один slice"},
+    "same_slice_aggregation": {"status": "passing"}
+  },
+  "unit_tests": {
+    "note": "реальные имена тестов (манифест сериализует результат прогона)",
+    "tests/test_nulls_tag_gate.py": [
+      "test_tag_identity_fields_enforced", "test_mp_brackets_monte_carlo_is_plaintiff",
+      "test_operator_nulls", "test_reduction_control_and_bootstrap_and_floor", "test_profiles",
+      "test_all_invariants_pass", "test_behavior_gate_no_import_in_kernel_and_tier0"
+    ],
+    "tests/test_operator_invariants.py": [
+      "test_triple_grid_8_cells", "test_triple_identity_one_aggregation",
+      "test_O1_eq_s2_and_energy_vs_norm", "test_apply_P_matches_dense_product",
+      "test_operator_fraction_matches_iso_on_iid", "test_c_pred_and_A",
+      "test_lq_coupling_and_eps3_order", "test_b_mag_is_square_and_b_res",
+      "test_b_lin_corollary_v1", "test_KL_lin_fisher_factor_not_identity"
+    ],
+    "tests/test_transport_kinetic.py": [
+      "test_polar_log_roundtrip_known_Q", "test_align_signs_and_columns_recovers_flips_and_perm",
+      "test_align_refuses_orthogonal_pair", "test_transport_log_refuses_branch_cut",
+      "test_r1_cross_zero_and_no_angular", "test_six_channel_closure_and_independence",
+      "test_channel_energy_matrix_closes_exactly", "test_holonomy_and_kappa",
+      "test_invalid_regime_reports_only_safe_channels"
+    ],
+    "note2": "(a3.1)-(a3.3) и (p̃) на реальном exp27b — identity-asserts прогона E-40.1 (test_all_invariants_pass + assert'ы скрипта), не отдельные функции"
+  },
+  "prereg_schema_check": {"all_8_tests_filled": true, "e44_draft_filled": true},
+  "timestamp": "...",
+  "inputs": {"exp27b": {"path": ..., "hash": ...}, ...}
+}
+```
+
+**Правило:** статусы в манифесте — **результат прогона**, не декларация. При объявлении — `unverified`; прогон выставляет `passing`/`failing`; в артефакте — `timestamp` + `inputs`.
+
+### §3.4. Что умирает при провале
+
+| Сценарий | Что умирает |
+|---|---|
+| Identity-assert (a3) red на реальном кэше | Численный баг пайплайна; **стоп** до ремонта |
+| `g_uni` checkpoint не совпал | Данные или срез `J` некорректны; T4a стоп |
+| `r_eff` на raw, «98–99%» на canonical | «Плоский спектр ESG» как физическое утверждение |
+| `Δ_gf` — не тот объект | H5 в сильной форме (только «одно число») |
+| `Δ_fixP/Δ_raw` только на L23 | E-40.7 даунгрейд до `G(L23)` |
+| T4a: ни одна mean-ячейка не замкнулась | Баг или кэш-ошибка; **стоп** |
+
+**Стоимость:** часы.
+
+---
+
+## §4. E-40.2 — Двойной фит `C_F` / `C_top16`
+
+**Гейт:** E-40.0 (A4-gate) + E-40.1.
+
+**Вход:** `results/exp31_correlation_function.json` (или пересчёт на canonical, если в E-40.1(g) выявлен raw).
+
+**Канал:** `natural × canonical × {C_F: full (L+R); C_top16: top-16 right} × both`.
+
+**Процедура:** сетка `Δ` начинается с **`Δ ≥ 1`** (степенная форма расходится при `Δ = 0`; сетка иначе dyadic). Для каждого слоя и каждой наблюдаемой (`C_F`, `C_top16` **отдельно**) фитим 4 формы:
+
+| Форма | Уравнение | Параметры |
+|---|---|---|
+| Экспонента | `C(Δ) = A·exp(−Δ/ℓ) + c0` | 3 |
+| Степень | `C(Δ) = A·Δ^(−α) + c0` | 3 |
+| Растянутая экспонента | `C(Δ) = A·exp(−(Δ/ℓ)^β) + c0` | 4 |
+| Степень × лог-периодика | `C(Δ) = A·Δ^(−α)(1 + B·cos(2π·log Δ/log λ + φ)) + c0` | 6 |
+
+**Метрики:** AICc, BIC. **Bootstrap: реземпл документов** (N=32), рефит на каждом → percentile CI параметров. **Не блочный bootstrap по Δ.**
+
+**Pre-registered outcomes (4):**
+
+| Исход | Условие | Что умирает |
+|---|---|---|
+| 1. **Two-channel** | Экспонента/растянутая для `C_F` (`β≈1`, `ℓ≈1.4`); степень/лог-периодика для `C_top16` | Полимер для скалярной; связность для подпространственной |
+| 2. **Both exp** | Экспонента для обеих | Полимер усилен; `τ = ℓ_p` подтверждён |
+| 3. **Both power** | Степень для обеих | `τ = ℓ_p` **мёртв**; WLC-термодинамизация **мертва** |
+| 4. **Unstable** | Формы нестабильны по слоям | Нет единого закона; режимная картина |
+
+**Якорь E-39d (L23-only):** в интерпретацию входит как `[κ_floor, κ_baseline] = [0.0092, 0.016]` **на L23 только**; другие слои `not_testable`. Не измерение (нет форвардов).
+
+**`corr_f` не применим** (наблюдательный канал).
+
+**Resolution floor:** AICc-delta < 10 → `not_distinguishable_at_Δ_grid` (различимость форм идёт по точкам кривой `Δ`; документы `N=32` входят только через bootstrap-дисперсию параметров — старое имя `at_N32` вводило в заблуждение).
+
+**Выход:** `results/E40_2_double_fit.json`:
+```json
+{
+  "per_layer": {
+    "6": {
+      "C_F": {"AICc": {...}, "best_form": "...", "params": {...}, "bootstrap_CI": {...}, "labels": "natural × canonical × full × both"},
+      "C_top16": {...}
+    },
+    ...
+  },
+  "outcome": "two_channel" | "both_exp" | "both_power" | "unstable",
+  "E39d_anchor_L23_only": {"kappa_floor": 0.0092, "kappa_baseline": 0.016, "corr_f": 0.9992, "source": "E-39d"},
+  "corr_f_applicable": false
+}
+```
+
+**Стоимость:** часы–день CPU.
+
+---
+
+## §5. E-40.3 — FFT остатка после вычета периодичностей
+
+**Гейт:** E-40.2 (нужна корректная огибающая; иначе FFT видит артефакты неправильного фита).
+
+**Вход:** остаток `C_res(Δ)` из E-40.2.
+
+**Процедура:**
+1. Проверить dyadic-сетку `Δ`; записать `is_dyadic`.
+2. Регрессия на позиционные индикаторы: sentinel-доля, позиция, длина, домен, слой.
+3. **FFT по `log Δ`** → пик на `ω = 2π/log 2 ≈ 9.0647`.
+4. Сравнить `S=64` vs `S=128`.
+
+**Null:**
+- перестановка `Δ` (разрушает лог-периодику);
+- конвейерный суррогат (случайный объект через тот же пайплайн);
+- равномерная сетка.
+
+**Порог:** пик значим, если амплитуда `> 3σ` над нулём (B=1000) после вычета известных периодичностей.
+
+**Pre-registered outcomes (4):**
+
+| Исход | Что | Что умирает |
+|---|---|---|
+| Пик на `ω ≈ 9.06`, устойчив | Лог-периодичность реальна | — |
+| Пики на фиксированных Δ | Локальный фильтр | — |
+| Пики исчезают после вычета | Артефакт известных периодичностей | **Лог-периодика мёртв** |
+| S=64 vs S=128 расходятся | Решёточная дисперсия | Не фундаментальная шкала |
+
+**Выход:** `results/E40_3_fft.json`:
+```json
+{
+  "grid_is_dyadic": true,
+  "fft_residual": {
+    "C_F": {"peak_freq": ..., "amplitude": ..., "sigma_vs_null": ..., "passes_3sigma": true|false},
+    "C_top16": {...}
+  },
+  "S_effect": "same_peaks" | "different_peaks",
+  "verdict": "log_periodic" | "local_filter" | "artifact" | "lattice_dispersion"
+}
+```
+
+**Стоимость:** часы.
+
+---
+
+## §6. E-40.4 — Пересечение `r_cross(l)`
+
+**Гейт:** E-40.1.
+
+**Вход:** `results/exp30_full_spectrum.json` (off² по модам ESG), `results/exp32tail_hessian_modes.json` (`b_off` по модам Hessian).
+
+**Канал:** `natural × canonical × {off²: r∈[119,128] tail; b_off: k∈[1,6] top} × both`.
+
+**Процедура:**
+1. `C_off²(l,r)` и `C_b(l,r)` на все доступные слои (L6–L23).
+2. `r_cross(l)` — где кривые пересекаются.
+3. **Нуль — независимая перестановка значений внутри каждой кривой** (не «между кривыми»: разные базы). B=1000, двусторонний.
+4. Pre-registered ставка: `r_cross(L22) ≈ 60`.
+
+**Pre-registered outcomes (3):**
+
+| Исход | Что | Что умирает |
+|---|---|---|
+| Пересечение устойчиво, `r_cross(L22) ≈ 60` | Фазовая интерпретация L22 жива | — |
+| Пересечение устойчиво, `r_cross ≠ 60` | Фазовый кандидат жив, ставка провалена | — |
+| Пересечение плавает / не отличимо от нуля | Монотонный своп | **H4 в сильной форме мёртв** |
+
+**Выход:** `results/E40_4_intersection.json`:
+```json
+{
+  "per_layer": {
+    "6": {"r_cross": null, "null_95": ..., "stable": false, "label": "natural × canonical × off²-tail/b_off-top"},
+    "22": {"r_cross": ..., "null_95": ..., "stable": true, "bootstrap_CI": [...]},
+    ...
+  },
+  "prediction_check": {"predicted": 60, "observed": ..., "verdict": "hit|miss|inconclusive"},
+  "H4_strong_status": "alive" | "dead"
+}
+```
+
+**Стоимость:** часы.
+
+---
+
+## §7. E-40.5 — Шестиканальная кинетическая декомпозиция
+
+**Гейт:** E-40.1.
+
+**Вход:** кэш `exp27b` (`J_t`, `J_{t+1}`, SVD).
+
+**Канал:** `natural × canonical × window=full × both`. `window ∈ {"top", "tail", "full"}`; метка — `full` (не «top+tail»): декомпозиция покрывает всё `‖ΔJ‖²` пятью каналами + `E_off_manifold` + диагностикой; `Σ5` — топ-r проекция, `E_off_manifold` — комплемент.
+
+### §7.1. Транспортная рецептура (обязательно, дословно)
+
+```
+1. SVD обоих полей без пред-вращения:
+   J_t = U_t Σ_t V_tᵀ, J_{t+1} = U_{t+1} Σ_{t+1} V_{t+1}ᵀ
+2. align_signs_and_columns (E5, обязательно):
+   - знаки: sign(u_j(t)ᵀ·u_j(t+1)) → +1 до polar;
+   - столбцы: венгерское на |U_tᵀU_{t+1}|, не по σ; флаг order_cross;
+   - proximity: ‖log Q_U‖_F мал, спектр Q_U вдали от −1; иначе unstable_transport.
+3. Q_U = polar(U_tᵀ U_{t+1}); Q_V = polar(V_tᵀ V_{t+1})
+4. M = log Q_U; N = log Q_V (главная ветвь)
+5. Σ̄ = (Σ_t + Σ_{t+1})/2
+6. ΔJ_lin = ΔΣ + M Σ̄ − Σ̄ N
+```
+
+### §7.2. Шесть каналов + диагностика
+
+| Канал | Формула | Что замыкает |
+|---|---|---|
+| `E_radial` | `‖ΔΣ‖²` | — |
+| `E_right` | `‖Σ̄ N‖²` | — |
+| `E_left` | `‖M Σ̄‖²` | — |
+| `E_cross` | `2 tr(Σ̄ M Σ̄ N)` — **signed** | — |
+| `E_resid` | `‖U_tᵀ ΔJ V_t − ΔJ_lin‖²` — **независимо** | — |
+| `E_off_manifold` | `‖ΔJ − U_t U_tᵀ ΔJ V_t V_tᵀ‖²` — **независимо** | — |
+| `Σ5_diag` = `E_radial + E_right + E_left + E_cross + E_resid` | — | приближение `‖ΔJ_proj‖²` с ошибкой `2⟨ΔΣ, MΣ̄−Σ̄N⟩ + 2⟨ΔJ_lin, resid⟩` — **не тождество** |
+| `eps3_correction` | `‖ΔJ‖² − Σ5_diag − E_off_manifold` | диагностика нелинейности, **не** канал; по определению `eps3 ≡ разрыв замыкания` (`‖ΔJ‖² = Σ5 + E_off + eps3` — тавтология, не критерий) |
+
+**Точное замыкание:** 5×5 Gram `channel_energy_matrix`: `Σ_{ij} G_{ij} = ‖ΔJ_proj‖²` — алгебраическое тождество, tol `1e-10`, все слои (`E_off = 0` ⇒ `‖ΔJ‖²`; тест `test_channel_energy_matrix_closes_exactly`).
+**Эмпирическое замыкание:** на `linearization_valid` слоях отчитывается `eps3/‖ΔJ‖²` (пререг. `≤ 1e-2` — проверка линеаризации, не декомпозиции). На `linearization_valid = False` (L6–L22) каналы и `eps3` равны `None` (`test_invalid_regime_reports_only_safe_channels`).
+
+### §7.3. Флаги и pre-registered ожидание
+
+- `linearization_valid = (Δ_SVD < π/2 − 0.3)` рад.
+- `rotation_unique = (min_{i≠j} |σᵢ² − σⱼ²| > 1e-2 · σ₁²)` — обе стороны в единицах σ² (`kinetic.py:20`); формулировка «min σ-gap > 1e-2·σ₁²» размерностно несогласована.
+- `order_cross_U`, `order_cross_V`, `unstable_transport`.
+
+**Ожидаемое поведение:**
+- **L6–L22:** `linearization_valid = False` (`Δ_SVD ≈ 1.4–1.5 rad > 1.27`); отчитывается **только** `E_radial` и `E_off_manifold`. `E_right`, `E_left`, `E_cross`, `E_resid` — не интерпретируются (log Q не в главной ветви).
+- **L23:** `linearization_valid = True` (`Δ_SVD = 0.27 rad < 1.27`); `rotation_unique = False`; E-38c: `gap_min(L23) = 0.0092` в единицах σ, в σ²-мере кода это ratio < 1e-2); `E_radial`, `E_resid`, `E_off_manifold` — интерпретируемы без оговорок; `E_right`, `E_left`, `E_cross` — с пометкой `ambiguous` (базис-dependent).
+
+> **Дискламб двух 0.0092:** `gap_min(L23) = 0.0092` (E-38c, единицы σ) и `κ_flat = 0.009275` (E-39d, кривизна Procrustes) — разные объекты с разной размерностью; совпадение значений случайно, склеивать их в тексте нельзя.
+
+### §7.4. Пять подпунктов (параллельно)
+
+- **(5a)** Пять каналов на `‖ΔJ_proj‖²`.
+- **(5b)** Шестой канал `E_off_manifold` — отдельно; сравнение с `‖ΔJ‖²/2` на L6–L22.
+- **(5c)** Ранг канальной корреляционной матрицы **5×5 по энергиям** (не долям — доли композиционны, ранг ≤ 4 по построению, критерий «rank ≥ 4» вакуумный). Равнокорреляционное чтение `ρ̂` + отклонения пар + перестановочный нуль + MP-скобка.
+- **(5d)** `E_cross` в двух формах: `signed` + `|E_cross|`.
+- **(5e)** Левый канал с двухчастным порогом `max(0.05·E_right, Q_95(E_left^null))`. Ниже — `unstable_left` (доля отчитывается отдельно). Нулевой ансамбль заморожен: **Haar-конъюгация `M' = O M Oᵀ`** (`O ∈ Haar(128)`; величина/спектр `M` и σ-спектры сохранены), `B=1000`. Превышение нуля = вращение выровнено действовать на спектр (левый канал содержателен); полное Haar-вращение в качестве нуля отвергнуто: `‖log Q_Haar‖ ~ O(1)·√K ≫ фактический ‖M‖ ~ 0.01–1.5`, порог недостижим и правило вырождалось (тот же класс вакуумности, что удалённый §14.6).
+
+**Выход:** `results/E40_5_kinetic.json`:
+```json
+{
+  "per_layer": {
+    "6": {
+      "E_radial": ..., "E_right": ..., "E_left": ...,
+      "E_cross_signed": ..., "E_cross_abs": ...,
+      "E_resid": ..., "E_off_manifold": ..., "eps3_correction": ...,
+      "flags": {"linearization_valid": false, "rotation_unique": false, "order_cross_U": false, "unstable_transport": false},
+      "diag": {"max_principal_angle": ..., "‖M‖_F": ..., "min_sigma_gap_ratio": ...},
+      "channel_matrix_5x5": {...},
+      "rank_estimate": {"rank": ..., "PR": ..., "rho_hat": ...}
+    },
+    ...
+  },
+  "channel_matrix_summary": {
+    "rank_per_layer": [...],
+    "interpretation": "two_axes" | "one_axis" | "intermediate"
+  },
+  "pre_registered_off_manifold": "expected ≈ 0.5·‖ΔJ‖² on L6–L22, confirmed/failed"
+}
+```
+
+**Что умирает:**
+- `ρ̂ → 1` — пять каналов суть одна ось; кросс-член как напарник запирания отпадает.
+- Пре-ожидание `E_off ≈ 0.5·‖ΔJ‖²` на L6–L22 не выполнилось — `Δ_SVD` там не π/2 (баг или иное поведение); стоп-условие (см. §14).
+
+**Стоимость:** день CPU.
+
+---
+
+## §8. E-40.6 — `R_can(l)` и `R_raw(l)`
+
+**Гейт:** E-40.1.
+
+**Вход:** кэш `exp27b`.
+
+### §8.1. Процедура
+
+1. `R_can(l) = λ_max(E_K)/tr(E_K)`, `E_K = J^(p)(J^(p))ᵀ` (канонический срез).
+2. `R_raw(l) = λ_max(JJᵀ)/tr(JJᵀ)` (**диагностика** амплитуды, **не** параметр порядка).
+3. Профиль по слоям.
+4. **Partial-out по частоте токена** для `R_raw − R_can` (E-39k: `ρ(p̄, s^gf) = 0.966`).
+
+### §8.2. Критерий «фаза vs монотонный»
+
+- **(a′):** `R_can(L23) = max_l R_can(l)` по доступным слоям;
+- **(a):** `min_body R_can ≤ 0.5 · R_can(L23)` — пре-регистрированная константа `0.5`;
+- **(b):** парный бутстрап `P(R_can(peak) − R_can(trough) > 0) ≥ 0.95`, где `trough = argmin_body` **пересчитывается в каждой реплике** (селекция внутри реплики, не снаружи);
+- **(c):** вердикт **инвариантен** к срезу (с/без удаления топ-gauge-моды).
+
+**Без L0:** критерий односторонний, `not_testable_no_L0`. Любые три из четырёх → `ambiguous` (валидный исход, не failure).
+
+### §8.3. Pre-registered outcomes
+
+| Исход | Что | Что умирает |
+|---|---|---|
+| (a′)∧(a)∧(b)∧(c) | `phase` | — |
+| Три из четырёх | `ambiguous` (валидно) | — |
+| Монотонный/плоский `R_can` | `monotone_or_flat` | «Радиальный нуль как фаза» |
+| `corr(R_can, κ)` **высокая** | Разделение «радиальное/угловое» неверно | **Консенсусный каркас** |
+| `corr(R_can, κ)` **низкая** | Подтверждение ортогональности | — (**положительный результат**) |
+
+**Важно:** `R_can` — параметр порядка **радиального канала**; `corr(R, κ)` **низкая** = подтверждение ортогональности, не провал.
+
+**Выход:** `results/E40_6_R_profile.json`:
+```json
+{
+  "per_layer": {
+    "6": {"R_can": ..., "R_raw": ..., "difference": ..., "label": "natural × canonical/raw × top × right"},
+    ...
+  },
+  "profile_can": "non_monotone" | "monotone" | "flat",
+  "criteria": {"a_prime": true, "a": true, "b": true, "c": true},
+  "verdict": "phase" | "ambiguous" | "monotone_or_flat" | "not_testable_no_L0",
+  "corr_Rcan_kappa": ...,
+  "interpretation": "radial_and_angular_orthogonal" | "channels_not_separable"
+}
+```
+
+**Стоимость:** часы.
+
+---
+
+## §9. E-40.7 — Профиль `G(l)`
+
+**Гейт:** E-40.1 (пункт (d): наличие `Δ_fixP/Δ_raw` per layer).
+
+**Вход:** `results/exp33r_gauge_anatomy.json`, `results/exp32r3_layer_profile.json`.
+
+### §9.1. Процедура
+
+1. `G(l) = 1 − Δ_fixP(l)/Δ_raw(l)` — «доля p-индуцированной декорреляции» (не «доля калибровки»).
+2. Корреляции с `|Δp|`, энтропией, `C_a`, `C_top16`.
+3. **Partial-out по частоте токена** (E-39k).
+
+**Даунгрейд при отсутствии данных per layer:** если `Δ_fixP/Δ_raw` есть только на L23 → `G(L23) + корреляции`; слой-обобщение получает метку `not_testable`.
+
+### §9.2. Pre-registered outcomes
+
+| Исход | Что | Что умирает |
+|---|---|---|
+| Плоский `G(l)` | Динамическая калибровка не систематична | — |
+| Немонотонный без корреляции с `\|Δp\|` | Динамика не через `p` | H5 переопределяется |
+
+**Выход:** `results/E40_7_G_profile.json`:
+```json
+{
+  "per_layer": {
+    "23": {"G": null, "delta_fixP": null, "delta_raw": null,
+            "source": "exp33r_gauge_anatomy / exp32r3_layer_profile"},
+    ...
+  },
+  "correlations": {"delta_p": ..., "entropy": ..., "C_a": ..., "C_top16": ...},
+  "profile": "monotone" | "non_monotone" | "flat" | "L23_only",
+  "verdict": "systematic" | "flat" | "decoupled_from_p" | "not_testable_per_layer"
+}
+```
+
+**Стоимость:** часы.
+
+---
+
+## §10. E-40.8 — Синтез 6×6 (после 0.2–0.7)
+
+**Гейт:** 0.2, 0.4, 0.5, 0.6, 0.7 завершены.
+
+**Вход:** шесть per-(doc, layer) summary-статистик от 0.2–0.7, **формулы заморожены в (l1)** E-40.1.
+
+### §10.1. Носитель
+
+- **Первичный:** per-(doc, layer), `n = 32 × 6 = 192`.
+- **Сопровождающий:** per-doc скаляры, `n = 32`.
+- Наивный per-layer (6 наблюдений, 8 переменных) — **вырожден** (ранг ≤ 5); не использовать как первичный.
+
+### §10.2. Критерий ранга
+
+- **Перестановочный нуль** (метки документов независимо по переменным): ранг = число собственных значений выше 95-го перцентиля нуля.
+- **MP-скобки:** `λ+(n=32) = 2.0535` для `p=6`; `λ+(n=192) = 1.3848`.
+- **Participation ratio:** `PR = (Σλ)²/Σλ² ∈ [1, 6]`.
+- Отчёт: `[rank, PR]` с bootstrap CI.
+
+### §10.3. Априорная кластеризация (заморожена в (l1))
+
+- **C1 = {0.2, 0.3, 0.4}** — временная корреляционная структура; внутрикластерные связи **дефинициональны**, не информативны.
+- **C2 = {0.5, 0.6, 0.7}** — кинетика каналов; предсказание внутри: радиальная доля 0.5 ↔ `R_can` 0.6 (амплитудная ось).
+- **C3, C4** — **пусты** до 8×8 (E-41.4, E-44).
+
+### §10.4. Асимметричные правила R1–R3
+
+- **R1:** rank ≥ 5 или PR ≥ 5 → рамка «один объект» **умирает**; каждый тест отчитывается независимо.
+- **R2:** rank ≤ 1 при PR ≤ 2.5 → сильная унификация; ссылки на когерентность **с оговоркой** об общем провенансе.
+- **R3:** промежуточное → отчёт о числе осей с CI; ссылки только на конкретные оси.
+
+**Выход:** `results/E40_8_synthesis.json`:
+```json
+{
+  "carrier_primary": "per_(doc,layer)",
+  "n_primary": 192,
+  "matrix_6x6": [...],
+  "rank_estimate": {"rank": ..., "PR": ..., "bootstrap_CI": ...},
+  "clusters": {"C1": [...], "C2": [...], "C3": [], "C4": []},
+  "inter_cluster_correlations": {...},
+  "R1_R2_R3_outcome": "R1" | "R2" | "R3",
+  "framework_single_object": "dead" | "alive_weak" | "indeterminate"
+}
+```
+
+**Стоимость:** часы.
+
+---
+
+## §11. Зависимости и порядок
+
+```
+E-40.0 (A4-gate)  ─┐
+                   ├─→ E-40.2 (double fit) ─→ E-40.3 (FFT)
+E-40.1 (audit+T4a) ┤
+                   ├─→ E-40.4 (intersection)
+                   ├─→ E-40.5 (kinetic)
+                   ├─→ E-40.6 (R_can)
+                   └─→ E-40.7 (G(l))
+
+Все 0.2, 0.4, 0.5, 0.6, 0.7 ─→ E-40.8 (6×6 synthesis)
+```
+
+**Критический путь:** A4-gate → E-40.1 → {0.2, 0.4, 0.5, 0.6, 0.7 параллельно} → 0.3 (после 0.2) → 0.8 (после всех).
+
+**Ожидаемое время:**
+- A4-gate: минуты.
+- E-40.1: часы (включая T4a и манифест).
+- E-40.2: часы–день.
+- E-40.4, 0.6, 0.7: часы.
+- E-40.5: день.
+- E-40.3, E-40.8: часы.
+- **Итого: 2–3 дня CPU, ноль GPU.**
+
+---
+
+## §12. Критерии приёмки
+
+Каждый артефакт `results/E40_x_*.json` должен:
+
+1. Иметь `ChannelTag` для каждого результата (полные 12 полей, §1.1).
+2. Иметь `core_version = "v1.0.0"` в шапке.
+3. Иметь поля `observational: true`, `new_forwards: 0`.
+4. Иметь `resolution_floor` (полуширина CI) для каждой метрики.
+5. Иметь `not_testable_at_N32` флаг, если эффект ниже флора.
+6. Иметь `deviations_from_spec` (D-список) — если применялись.
+7. Пройти `json_roundtrip` (inf → null + флаг).
+8. Пройти self-check (identity-asserts для 0.1; для 0.5 — 5×5 Gram `channel_energy_matrix` = `‖ΔJ_proj‖²` (tol 1e-10, все слои) плюс `eps3/‖ΔJ‖² ≤ 1e-2` на `linearization_valid` слоях; замыкание triple_identity для 0.1(T4a) — где применимо).
+
+**Общий чек-лист:**
+
+- [ ] `E-40.0`: `p_slice` для E-27.5/27.6 определён.
+- [ ] `E-40.1`: identity-asserts зелёные; T4a — замкнувшаяся ячейка записана; манифест ядра сериализован; `O1_eq_s2` unverified → passing/failing.
+- [ ] `E-40.2`: `outcome` из {two_channel, both_exp, both_power, unstable}; якорь E-39d зафиксирован.
+- [ ] `E-40.4`: `r_cross(L22)` с CI; ставка `60` проверена.
+- [ ] `E-40.5`: `linearization_valid`, `rotation_unique` отчитаны по слоям; `E_off_manifold/‖ΔJ‖²` на L6–L22 ≥ 0.3 (ожидание); 5×5 Gram замыкается (tol 1e-10, все слои); `eps3/‖ΔJ‖² ≤ 1e-2` на L23.
+- [ ] `E-40.6`: `R_can` критерий зафиксирован; `corr(R_can, κ)` отчитан.
+- [ ] `E-40.7`: профиль отчитан, или даунгрейд до `G(L23)`.
+- [ ] `E-40.3`: FFT-пик (или его отсутствие) с CI.
+- [ ] `E-40.8`: `rank`, `PR` отчитаны; правила R1–R3 применены.
+
+---
+
+## §13. Что НЕ входит в фазу 1
+
+| Серия | Что | Фаза |
+|---|---|---|
+| **E-44** | Кросс-позиционный якобиан (b_mag, b_qual), требует Qwen 4B кэш и форварды | 1.5 |
+| **E-41** | Token/neural IPR, κ_fixP, lock, log κ vs log Δ, two-axis gaps, U(2)-triple, cross-doc regressions | 2 |
+| **E-42** | F_lt, vertical transport, master-curve | 2 |
+| **E-43** | Tail protection, balanced coordinates, multipoint loss, dose-to-knee | 3 |
+| **`behavior.py`** | b_mag, b_lin, b_res, KL_lin, b_qual — gate | Не импортируется из tier-0 (CI import-check) |
+
+**Правки статьи** — по отдельному ТЗ после завершения фазы 1.
+
+---
+
+## §14. Стоп-условия (stop-don't-continue)
+
+Фаза 1 **останавливается** (не продолжается до решения):
+
+1. **Identity-assert (a3) красный** на реальном кэше (не в тестовой среде) — стоп до ремонта.
+2. **`g_uni` checkpoint не совпал** — данные или срез `J` некорректны; T4a стоп.
+3. **T4a: ни одна mean/ratio_of_means-ячейка не замкнулась** — баг декомпозиции или кэша.
+4. **`unstable_transport > 5%`** позиций на любом слое в E-40.5 — стоп до анализа (возможно, не баг, но требует решения).
+5. **Третье значение `p_mode` или `p_slice`** в артефакте — `ValueError` при сериализации.
+6. **Сумма 5×5 Gram `≠ ‖ΔJ_proj‖²`** (tol > 1e-10) в E-40.5 — баг декомпозиции в `kinetic.py`. (Прежняя формулировка «Σ6 + eps3 не замыкает» удалена как вакуумная: `eps3` определён как разрыв замыкания и не может его не замкнуть.)
+7. **`E_off_manifold/‖ΔJ‖² < 0.1` на L6–L22** в E-40.5 — **не стоп**, но требует объяснения: `Δ_SVD` там не π/2 (противоречие с E-28).
+8. **`corr(R_can, κ)` высокая** в E-40.6 — не стоп, но **флаг**: разделение «радиальное/угловое» под вопросом, консенсусный каркас требует пересмотра.
+
+---
+
+## §15. Формат отчёта
+
+В конце фазы 1:
+
+- **`docs/E40_phase1_summary.md`** — сводный markdown: ключевые числа, статусы pre-registered outcomes, deviations, критические результаты.
+- **`results/E40_phase1_all.json`** — словарь `{"E40_0": {...}, "E40_1": {...}, ..., "E40_8": {...}}` с полными артефактами (для быстрой проверки без загрузки 9 файлов).
+- **Опционально:** дополнительный md-отчёт `docs/E40_phase1_review.md` — что удалось / что упало / что осталось.
+
+---
+
+$$\boxed{\text{Фаза 1 = E-40.0 (A4-gate) + E-40.1 (audit+T4a+manifest) + }\{0.2, 0.4, 0.5, 0.6, 0.7\} \to 0.3 \to 0.8.}$$
+
+**Что читать перед запуском:**
+
+- `prism/tag.py` — `ChannelTag` контракт (после патча v2: `p_mode`, `p_slice`, `aggregation`).
+- `prism/invariants.py` — M0 реестр (после патча v2: `κ_curv`/`κ_cond` split, `triple_identity` passing).
+- `prism/kinetic.py` — шестиканальная декомпозиция (после патча v2).
+- `results/E40_1_audit.json` — если существует, обновить; если нет — создать в E-40.1.
+- `results/exp39_supp_three_objects.json` — источник для T4a (`c_cross`, `s_agg`, `frac_K_energy_agg`).
+- Опубликованная таблица E-39-supplement §2.2.1 (кросс-проверка T4b): `docs/E39_supplement.md` удалён коммитом 153d297 — читать из git-истории либо из копии в `docs/E40_math_core.md` §I.5 + `docs/E40_math_core_answers.md` §1.
+- `docs/E40_tier0.md` — пререгистрация (если существует; иначе создать в E-40.1(l1)).
+
+**Что отчитывать:**
+- Все артефакты в `results/E40_*.json`.
+- Один сводный markdown + один совмещённый JSON.
+- В шапке каждого JSON: `core_version`, `timestamp`, `inputs`, `channel_tags`.
+
+**Готовность:** после чтения этого ТЗ и `prism/tag.py` — запускается E-40.0 (A4-gate, минуты).
