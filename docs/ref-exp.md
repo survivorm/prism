@@ -497,7 +497,7 @@ $$\mathrm{overlap}(U_1, U_2) = \frac{\|U_1^T U_2\|_F^2}{r}$$
 
 **Цель:** структура спектра ESG по глубине — SNR, effective rank (PR), gauge share.
 
-Все 24 слоя, полный спектр (n_components=K). Точный gauge_share (`u^T G u / trace`), leave-one-out SNR, r_eff (PR). Слой 23 — full attention, остальные — mixed (linear_attention / full_attention).
+Все 24 слоя, полный спектр (n_components=K). Точный gauge_share (`u^T G u / trace`), SNR по сэмплам (не leave-one-out — термин отозван, `docs/audit3_math.md` п. В), r_eff (PR). Слой 23 — full attention, остальные — mixed (linear_attention / full_attention).
 
 > Condition number Gramian κ(E^T E) = 1684 — умеренный для 1024×1024 матрицы. Все eigenvalues > 0 (полный ранг).
 

@@ -114,3 +114,43 @@ def test_p_validation_trust_boundary():
         P_matrix(np.array([0.5, -0.5]))              # negative
     with pytest.raises(ValueError):
         P_matrix(np.full(1, 1.0))                    # K < 2
+
+
+def test_p_tolerance_accepts_float32_rows_and_rejects_truncated():
+    """Допуск Σp — по точности входа (K·eps32), а не фиксированный 1e-8.
+
+    Реальный кэш exp27b хранит P128 как float32: после построчной ренормировки
+    |Σp−1| доходит до 2.8e-07, и фиксированный 1e-8 отвергал 88 % настоящих
+    позиций (docs/audit3_math.md п. 2Б, самопроверка). Обрезанная строка
+    (P128_RAW, Σp ≈ 0.49) обязана отклоняться по-прежнему."""
+    K = 128
+    rng = np.random.default_rng(3)
+    p32 = np.exp(rng.standard_normal(K) * 2.0)
+    # нормировка выполнена В FLOAT32 (как в продюсере кэша), затем приведена к fp64:
+    # дополнительная нормировка в fp64 убрала бы ровно тот шум, который проверяется
+    p32 = (p32 / p32.sum()).astype(np.float32).astype(np.float64)
+    assert abs(p32.sum() - 1.0) > 1e-8, "тест бессилен: нет fp32-шума"
+    P_matrix(p32)                                    # не должно падать
+    with pytest.raises(ValueError, match="normalized"):
+        P_matrix(p32 * 0.49)                         # усечённая строка
+
+
+def test_secular_roots_match_eigvalsh_or_refuse_loudly():
+    """Реалистичный срез softmax: корни обязаны сойтись с ``eigvalsh``; вырожденный
+    вход — отказать ГРОМКО с именем замены, а не выдать молча неверные числа.
+    Предел бисекции на реальных данных измерен: 11.4 % позиций отказывают
+    честно, на остальных 88.6 % расхождение с ``eigvalsh`` 8.7e-12
+    (`docs/audit3_math.md` п. 2Б)."""
+    K = 128
+    rng = np.random.default_rng(5)
+    for _ in range(20):
+        p = np.exp(rng.standard_normal(K) * 2.0)
+        p = p / p.sum()
+        lam = np.sort(secular_roots(p))[::-1]
+        ref = np.linalg.eigvalsh(P_matrix(p))
+        ref = np.sort(ref[ref > 1e-16])[::-1]
+        m = min(len(lam), len(ref))
+        assert np.max(np.abs(lam[:m] - ref[:m])) / max(ref[0], 1e-30) < 1e-8
+    deg = np.full(8, 1.0 / 8)                       # ровно вырожденный спектр
+    with pytest.raises(ValueError, match="eigvalsh"):
+        secular_roots(deg)
