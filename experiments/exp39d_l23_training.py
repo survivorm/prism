@@ -145,16 +145,17 @@ def kl_leash(H_sub: torch.Tensor,
 
     (E39d_fixes #12: the tok_ids param was unused — removed.)
 
-    ROUND 8 CRITICAL #1: ACTUAL logits via the E-38e factorization (L23-only):
-        logit = √D · M_K · û,   û = h/‖h‖,   M_K = W_rows · diag(g),
-    where g = 1 + RMSNorm weight (frozen). The old H_sub @ W_rowsᵀ were
-    pseudo-logits — off by the per-position/per-token factor ‖h‖/(√D·g) —
-    so their KL was a temperature-scaled proxy, NOT comparable to
-    E-39c_pre's real-forward KL. The logsumexp form was verified OFFLINE during
-    development: √D·(û·(W·diag g)ᵀ) matched model.lm_head(model.model.norm(h))
-    to 9.5e-6 (the old H@Wᵀ form was off by 2.69 nats). The RUNTIME checks verify
-    the FORMULA against a full-softmax KL (_selftest) and the MAGNITUDE on held-out
-    C4 docs (kl_f_fwd); they do not re-prove the 9.5e-6 factorization.
+    ROUND 8 CRITICAL #1 называл ACTUAL logits формулу √D·M_K·û, û = h/‖h‖. Для КЭША
+    это неверно: поле `H` в exp27b — уже выход финальной RMSNorm с множителем
+    (замер 2026-11-04, `exp39d_head_route_probe.py` / сверка с реальным моделью:
+    cos = 1.000000, max|Δ| 2e-05 против `model.norm(h_pre)`; cos с pre-norm 0.979).
+    Значит логики считывания = `H @ W_rowsᵀ` (max|Δ| 1.3e-05 против реальных `logits`
+    форварда), а прежний маршрут нормировал post-norm вектор и применял (1+w) второй раз:
+    max|Δ| 2.86 / mean 0.53 по логикам, доля sentinel 50.71 % → 55.44 %.
+    Множитель g остаётся правильным в ЯКОБИАНЕ: кэшевый `J` слоя 23 = c_t·M_K(I − ûûᵀ)
+    при û = H/‖H‖ с точностью max|Δ/c| = 1e-07 (с pre-norm направлением — 0.05…0.12).
+    `g` оставлен в сигнатуре: зовущий код передаёт его из того же контекста.
+    
     base_k / lse_b are the ACTUAL base logits (from W_lm·diag g).
 
     Derivation (b=base logits, e=edit logits; e_v=b_v for v∉K, e_k=edit
@@ -169,10 +170,7 @@ def kl_leash(H_sub: torch.Tensor,
     base_k: [P, K] base logits for the K tokens (cached, no grad).
     lse_b: [P] logsumexp of base logits over full vocab (cached, no grad).
     """
-    Dd = H_sub.shape[-1]
-    u = H_sub / H_sub.norm(dim=-1, keepdim=True).clamp_min(1e-12)  # [P, D]
-    SQRT_D = math.sqrt(Dd)
-    e_k = SQRT_D * (u @ (W_rows * g[None, :]).t())   # [P, K] grad via W_rows
+    e_k = H_sub @ W_rows.t()                          # [P, K] grad via W_rows
     b_k = base_k                                          # [P, K] (no grad)
     # max-trick stabilisation (round 7 §1): raw exp(e_k) overflows to Inf
     # once logit drift exceeds ~88 (observed: NaN crash at lambda=0.01 s2
@@ -190,9 +188,9 @@ def kl_leash(H_sub: torch.Tensor,
 def _selftest_kl(device: str) -> bool:
     """Verify the logsumexp KL against a brute-force full-softmax KL.
 
-    ROUND 8 CRITICAL #1: exercises the ACTUAL-logit form (√D·(û·(W·diag g)ᵀ)).
-    base and edit share the same Wlm/g (edit perturbs only the K rows) — the
-    exact readout-only swap the loss uses.
+    Маршрут логиков — тот же, что в `kl_leash`: `H @ Wᵀ` (кэшевый `H` уже post-norm,
+    см. `exp39d_head_route_probe.py`). base и edit делят один и тот же `Wlm`, edit меняет
+    только K строк — ровно тот readout-only swap, который стоит в лоссе.
     """
     torch.manual_seed(0)
     P, Dd, K, Vv = 32, 32, 8, 64
@@ -200,15 +198,12 @@ def _selftest_kl(device: str) -> bool:
     Wlm = torch.randn(Vv, Dd, device=device)
     W_rows = Wlm[:K].clone() + 0.5 * torch.randn(K, Dd, device=device)
     g = torch.rand(Dd, device=device) + 1.0
-    SQRT_D = math.sqrt(Dd)
-    u = H / H.norm(dim=-1, keepdim=True).clamp_min(1e-12)
-    M_K_full = Wlm * g[None, :]                     # [V, D] base
-    base_logits = SQRT_D * (u @ M_K_full.t())       # [P, V] actual base
+    base_logits = H @ Wlm.t()                       # [P, V] логики считывания
     lse_b = torch.logsumexp(base_logits, dim=-1)    # [P]
     base_k = base_logits[:, :K]                     # [P, K]
     # brute force
     edit_logits = base_logits.clone()
-    edit_logits[:, :K] = SQRT_D * (u @ (W_rows * g[None, :]).t())
+    edit_logits[:, :K] = H @ W_rows.t()
     pe = torch.softmax(edit_logits, dim=-1)
     pb = torch.softmax(base_logits, dim=-1)
     kl_ref = (pe * (torch.log(pe + 1e-30) - torch.log(pb + 1e-30))).sum(-1).mean()
@@ -227,14 +222,13 @@ def _selftest_kl(device: str) -> bool:
     H2 = torch.randn(16, Dd, device=device)
     Wlm2 = torch.randn(Vv, Dd, device=device)
     g2 = torch.rand(Dd, device=device) + 1.0
-    u2 = H2 / H2.norm(dim=-1, keepdim=True).clamp_min(1e-12)
-    base2 = SQRT_D * (u2 @ (Wlm2 * g2[None, :]).t())
+    base2 = H2 @ Wlm2.t()
     base2[:, :K] = base2[:, :K] + 5.0                     # push p_topK → ~0.5
     lse_b2 = torch.logsumexp(base2, dim=-1)
     base_k2 = base2[:, :K]
     W2 = Wlm2[:K].clone()                                  # edit = base rows
     edit2 = base2.clone()
-    edit2[:, :K] = SQRT_D * (u2 @ (W2 * g2[None, :]).t())
+    edit2[:, :K] = H2 @ W2.t()
     pe2 = torch.softmax(edit2, dim=-1)
     pb2 = torch.softmax(base2, dim=-1)
     mass = float(pb2[:, :K].sum(-1).mean())
@@ -360,17 +354,16 @@ def ordering_corr(H_sub: torch.Tensor, W_rows: torch.Tensor,
                   g: torch.Tensor, base_k: torch.Tensor):
     """Per-position Pearson correlation of edited vs base K-logits.
 
-    Returns (e_k [P,K] differentiable via W_rows, corr [P]). ACTUAL logits
-    √D·M_K·û (round-8 #1 factorization) — same scale as the KL leash.
+    Returns (e_k [P,K] differentiable via W_rows, corr [P]). Логика считывания
+    = H @ W_rowsᵀ (H в кэше уже post-norm, см. `kl_leash` и
+    `exp39d_head_route_probe.py`) — тот же масштаб, что у KL-леважа.
     corr=1: base ranking preserved up to affine; corr≤0: uncorrelated
     (constant-e edge ⇒ 0/(0+1e-12)=0, defined). Pearson is shift/scale
     invariant: affine re-gradings of the 128 logits do NOT count as damage.
     NOTE: corr has a strict max at e=b, so the Pearson gradient VANISHES at
     init — the term acts as a restoring force once flatness breaks ranks.
     """
-    Dd = H_sub.shape[-1]
-    u = H_sub / H_sub.norm(dim=-1, keepdim=True).clamp_min(1e-12)
-    e_k = math.sqrt(Dd) * (u @ (W_rows * g[None, :]).t())   # [P, K]
+    e_k = H_sub @ W_rows.t()                          # [P, K]
     ec = e_k - e_k.mean(1, keepdim=True)
     bc = base_k - base_k.mean(1, keepdim=True)
     corr = (ec * bc).sum(1) / (ec.norm(dim=1) * bc.norm(dim=1) + 1e-12)
@@ -410,8 +403,7 @@ def _selftest_ordering(device: str) -> bool:
     W = torch.randn(K, Dd, device=device)
     g = torch.rand(Dd, device=device) + 1.0
     with torch.no_grad():
-        u = H / H.norm(dim=-1, keepdim=True)
-        base_k = math.sqrt(Dd) * (u @ (W * g[None, :]).t())
+        base_k = H @ W.t()                       # логики считывания (H post-norm)
     Wr = W.clone().requires_grad_(True)
     lp, corr = ordering_loss_pearson(H, Wr, g, base_k)
     lo, _ = ordering_loss_pairwise(H, Wr, g, base_k)
@@ -553,25 +545,24 @@ def main(results_dir: str | None = None, device: str | None = None,
     u64_docs = torch.stack(u64_docs).to(device)           # [N_docs, S, D] (round 8 #2: on device — _kappa_dryrun's einsum(M_kp, u_t) crashed cuda×cpu on T4)
     N_docs = u64_docs.shape[0]
 
-    # ---- base logits cache (one-time): ACTUAL logits via the E-38e
-    # factorization (round 8 CRITICAL #1). L23-only:
-    #   logit_v = √D · (W_lm·diag g_base)[v,:] · û_t,   û_t = h_t/‖h_t‖.
-    # The old H@W_lmᵀ were pseudo-logits (off by ‖h‖/(√D·g), position- and
-    # token-dependent) → temperature-scaled KL + biased sentinel mask.
-    # Verified against the real model.lm_head(model.model.norm(h)) to 9.5e-6.
-    print("computing base logits cache (actual logits, lse_b, base_k, "
-          "sentinel)...", flush=True)
-    with torch.no_grad():
-        u_all = H_all / H_all.norm(dim=-1, keepdim=True).clamp_min(1e-12)  # [N, D]
-        M_K_full = (W_lm * g_base.to(device)[None, :]).to(device)          # [V, D] frozen base
+    # ---- base logits cache (one-time): логики считывания = H @ W_lmᵀ.
+    # ПОЧЕМУ НЕ √D·(H/‖H‖)·(W_lm·diag g)ᵀ (как было до 2026-11-04): поле `H` в кэше
+    # exp27b — уже выход финальной RMSNorm с множителем (замер против реальной модели:
+    # cos = 1.000000, max|Δ| 2e-05 против `model.norm(h_pre)`), поэтому `H @ W_lmᵀ`
+    # совпадает с настоящими логиками (max|Δ| 1.3e-05), а прежний маршрут применял
+    # нормировку и (1+w) второй раз: max|Δ| 2.86 / mean 0.53 по логикам и sentinel
+    # 50.71 % → 55.44 %. Артефакты до этой правки получены уплощённым маршрутом: KL
+    # в них занижен примерно на 12 % (замер на носителе E-39m), маска позиций — на
+    # +4.7 п.п.; κ, κ′ и PPL не затронуты. Скрипт: `exp39d_head_route_probe.py`.
+    print("computing base logits cache (readout logits, lse_b, base_k, sentinel)...", flush=True)
     base_k_all = torch.empty(N_total, K, dtype=torch.float32, device=device)
     lse_b_all = torch.empty(N_total, dtype=torch.float32, device=device)
     raw_sum_all = torch.empty(N_total, dtype=torch.float32, device=device)
     B = 256
-    SQRT_D = math.sqrt(D)
+    Wt = W_lm.to(device).t()                        # [D, V] frozen base
     for i in range(0, N_total, B):
         Hb = H_all[i:i+B]
-        bl = SQRT_D * (u_all[i:i+B] @ M_K_full.t())      # [B, V] actual logits
+        bl = Hb @ Wt                                # [B, V] логики считывания
         lse_b_all[i:i+B] = torch.logsumexp(bl, dim=-1)
         base_k_all[i:i+B] = bl[:, tok_ids]
         # E-34 sentinel: SUB-STOCHASTIC mass Σ_k p_k over U128 (= P128_RAW row
