@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install -e ".[dev]" 2>/dev/null || pip install -e . pytest
+      - run: pip install -e . pytest
       - name: Test
         run: python -m pytest tests -q
         env:
