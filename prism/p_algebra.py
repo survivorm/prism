@@ -40,11 +40,17 @@ def _check_p(p: np.ndarray) -> np.ndarray:
         raise ValueError("p has non-finite entries")
     if (p < 0).any():
         raise ValueError("p has negative entries (not a probability vector)")
-    if abs(p.sum() - 1.0) > 1e-8:
+    # Допуск нормировки — по точности входа, не фиксированный 1e-8: float32-строка,
+    # нормированная на 1, несёт |Σp−1| до ~K·eps32 (на кэше exp27b замер: медиана
+    # 4.0e-08, p99 1.7e-07, max 2.8e-07 при K=128), поэтому фиксированный 1e-8
+    # отвергал 88 % реальных позиций (docs/audit3_math.md п. 2Б + самопроверка).
+    # Обрезанную строку (P128_RAW, Σp ≈ 0.49) этот допуск по-прежнему ловит.
+    tol = max(1e-8, p.size * np.finfo(np.float32).eps)
+    if abs(p.sum() - 1.0) > tol:
         raise ValueError(
-            f"p must be normalized (Σp=1); got Σp={p.sum():.12g}. Truncated/raw "
-            "rows (P128_RAW) must be renormalized upstream and tagged "
-            "p_mode in the ChannelTag (ТЗ §II.1).")
+            f"p must be normalized (Σp=1); got Σp={p.sum():.12g} (tol {tol:.1e}, "
+            f"= K·eps32 for float32-sourced p). Truncated/raw rows (P128_RAW) must "
+            "be renormalized upstream and tagged p_mode in the ChannelTag (ТЗ §II.1).")
     return p
 
 
@@ -134,6 +140,18 @@ def secular_roots(p: np.ndarray) -> np.ndarray:
     ``−∞`` at the lower pole to ``+∞`` at the upper one). Falls back loudly if
     p has duplicates within 1e-12 — the secular form degenerates there
     (deflated block), and ``np.linalg.eigvalsh(P_matrix(p))`` is the right tool.
+
+    ПОТОЛОК (измерено на реальном срезе softmax, exp27b, K=128, 1580 позиций):
+    на 11.4 % позиций полюса неразрешимы в fp64 и функция отказывается — это
+    честный предел метода бисекции, а не баг; для них — ``eigvalsh``. На
+    остальных 88.6 % корни сходятся с ``eigvalsh(P_matrix(p))`` до 8.7e-12
+    (тезис `docs/audit3_math.md` п. 2Б: падать на реальных данных действительно
+    будет, но по причине разрешения полюсов, а не «одинаковых softmax-значений»;
+    вторая половина тезиса — «заменить на eigvalsh» — не принята, см.
+    `docs/audits_answers.md` §9).
+    Абсолютный порог здесь сознательный: относительный («от p_max») ломает
+    бисекцию, когда зазор оказывается меньше ulp верхнего полюса (проверено —
+    даёт 100 % отказов «корень совпал с полюсом»).
     """
     p = np.sort(_check_p(p))[::-1]                    # descending p_1 > p_2 > …
     K = p.size

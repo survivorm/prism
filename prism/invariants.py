@@ -343,6 +343,42 @@ def _chk_mp_edge_labelled(rng):
     assert abs(mp_upper_edge(8, 192) - 1.449915) < 1e-6
 
 
+def _chk_svd_bundle_contract(rng):
+    """`svd_bundle` величин фазы (E-40.2/0.4 их отчитывают), а их в реестре не
+    было — пробел M13. Пиним: бандл реконструирует J, `energy` = доля топ-r, нулевой
+    спектр имеет ранг 0 (Q1), `principal_angles` требует ортонормированный фрейм
+    (M10), и `stable` — σ-форма, а НЕ σ²-форма `kinetic.rotation_unique` (M9)."""
+    from .svd_bundle import effective_rank, principal_angles, svd_bundle
+    K, D, p, J = _fixtures(rng)
+    Jm = J[0]
+    b = svd_bundle(Jm, rank=4)
+    full = svd_bundle(Jm, rank=min(K, D))            # ранг = полная размерность ⇒ J точно
+    rec = (full["U"] * full["Sigma"]) @ full["V"].T
+    assert np.linalg.norm(Jm - rec) / np.linalg.norm(Jm) < 1e-10, "bundle must rebuild J"
+    assert b["energy"] < 1.0 - 1e-9, "top-r energy share of a full-rank J must be < 1"
+    s_full = np.linalg.svd(Jm, compute_uv=False)
+    want = float((b["Sigma"] ** 2).sum() / (s_full ** 2).sum())
+    assert abs(b["energy"] - want) < 1e-12, "energy must be the top-r σ² share"
+    assert effective_rank(np.zeros(5)) == 0, "zero spectrum must report rank 0"
+    V = full["V"]
+    ang = principal_angles(V, V)
+    assert np.all(ang > 1 - 1e-9), "principal_angles(V, V) must be ~1"
+    try:
+        principal_angles(V * 2.0, V)                 # non-orthonormal frame
+        raise AssertionError("principal_angles accepted a non-orthonormal frame")
+    except ValueError:
+        pass
+    # M9: на [1.0, 0.991] конвенции σ и σ² расходятся по построению — это пинит,
+    # что `stable` остаётся σ-формой (E-38c gap_min), а не тихой σ²-формой.
+    Jn = np.zeros((8, 8))
+    Jn[0, 0], Jn[1, 1] = 1.0, 0.991
+    st = svd_bundle(Jn, rank=2)["stable"]
+    sigma_form = abs(1.0 - 0.991) > 1e-2                        # False
+    sigma2_form = abs(1.0 - 0.991 ** 2) / 1.0 > 1e-2            # True
+    assert st == sigma_form and sigma_form != sigma2_form, \
+        "svd_bundle.stable must stay the σ-form (M9 conventions must not merge)"
+
+
 INVARIANTS: dict[str, Invariant] = {
     "O2_eq_O3": Invariant("g_uni(J) == gauge_share(G=ΣJJᵀ)", ("p_algebra",),
                           _chk_O2_eq_O3),
@@ -394,6 +430,12 @@ INVARIANTS: dict[str, Invariant] = {
     "mp_edge_labelled": Invariant("MP edges pinned with explicit n (2.0535/2.25/1.3848/1.4499)",
                                   ("nulls_and_stats",), _chk_mp_edge_labelled,
                                   note="NEW audit M8"),
+    "svd_bundle_contract": Invariant("svd_bundle rebuilds J; energy = top-r σ² share; "
+                                     "rank(0)=0; principal_angles needs an orthonormal "
+                                     "frame; stable is the σ-form",
+                                     ("svd_bundle",), _chk_svd_bundle_contract,
+                                     note="NEW audit_core_math_v1 M13 (closes the last "
+                                          "phase-magnitude module without registry cover)"),
 }
 
 
