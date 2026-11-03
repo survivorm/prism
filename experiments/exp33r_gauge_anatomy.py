@@ -32,6 +32,7 @@ import argparse
 import gc
 import json
 import os
+import sys
 import time
 
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
@@ -60,8 +61,12 @@ FLAT_REL = RANK_EPS
 
 # ---------------- data ----------------
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _e38_cache as _ec  # noqa: E402  (cache_id + где лежит P128_RAW)
+
+
 def load_layer(ckpt_dir, layer):
-    path = os.path.join(ckpt_dir, f"exp27b_jcache_L{layer}.pt")
+    path = os.path.join(ckpt_dir, f"{_ec.CACHE_ID}_jcache_L{layer}.pt")
     ck = torch.load(path, map_location="cpu", weights_only=False)
     ck["S"] = int(ck["S"]); ck["n_samples"] = int(ck["n_samples"])
     k0 = next(iter(ck["JR"].values()))
@@ -465,7 +470,7 @@ def aggregate_layer(rows, l, a, ds_l, dS23):
 
 def main():
     a = argparse.ArgumentParser()
-    a.add_argument('--ckpt-dir', default='/data/prism_kernels/exp27b/results')
+    a.add_argument('--ckpt-dir', default=os.path.dirname(_ec.raw_jcache_path(6)))
     a.add_argument('--out', default='results/exp33r_gauge_anatomy.json')
     a.add_argument('--layers', default='6,12,18,22,23')
     a.add_argument('--r', type=int, default=R_MAIN)

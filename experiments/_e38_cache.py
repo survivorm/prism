@@ -147,6 +147,22 @@ def jcache_path(layer: int) -> str:
     return canonical          # canonical repo path, so torch.load reports something meaningful
 
 
+# Где лежит файл кэша, в котором ЕСТЬ поле P128_RAW (raw-масса выбранных столбцов).
+# exp27b: в файлах под kaggle_kernel/results его нет, оно дописано E-37 в копию (рядом
+# лежат *.pre_raw.bak). exp27c: поле родное => пустой кортеж, берём jcache_path.
+RAW_CACHE_DIRS = {"exp27b": ("/data/prism_kernels/exp27b/results", "/data/stage/jc_a"),
+                  "exp27c": ()}
+
+
+def raw_jcache_path(layer: int) -> str:
+    """Путь к файлу текущего cache_id с полем P128_RAW (для sentinel-маски E-34/E-37)."""
+    for d in RAW_CACHE_DIRS.get(CACHE_ID, ()):
+        cand = os.path.join(d, f"{CACHE_ID}_jcache_L{layer}.pt")
+        if os.path.exists(cand):
+            return cand
+    return jcache_path(layer)
+
+
 def _check_basis(ck: dict, layer: int) -> None:
     """A positional-basis number must never be compared with a frequency-basis one:
     the columns of J are different objects, not a different slice of the same thing."""

@@ -38,6 +38,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
+import _e38_cache as _ec                                  # noqa: E402  (cache_id)
 from _e38_cache import DOMAINS, N_PER_DOMAIN, S, load_layer  # noqa: E402
 from exp39k_gauge_importance import _iso_P_reference  # noqa: E402  (та же замкнутая форма)
 
@@ -65,7 +66,7 @@ BOOT = 2000                     # парный bootstrap по документа
 SENT_RAW_MASS = 0.5
 # Kопия кэша с полем P128_RAW (его дописывал E-37; рядом лежат *.pre_raw.bak). В файлах под
 # kaggle_kernel/results поля P128_RAW нет, так что sentinel-маска берётся отсюда.
-RAW_CACHE_DIR = "/data/prism_kernels/exp27b/results"
+# Путь к файлу с P128_RAW для текущего cache_id даёт _e38_cache.raw_jcache_path.
 # frac_K_from_J = ‖K‖²_F/‖J‖²_F (ЭНЕРГИЯ, не норма: exp37_p_sensitivity.py:248),
 # медиана по alive-позициям; снято с results/exp37_A1_K_anatomy.json : <L>/frac_K_from_J_perP/med
 E37_FRAC_K_ENERGY = {6: 0.996558, 12: 0.996758, 18: 0.998127, 22: 0.998288, 23: 0.993934}
@@ -104,7 +105,7 @@ def _sentinel_mask(layer: int, P: torch.Tensor, J: torch.Tensor) -> torch.Tensor
     употреблением проверяем, что это ТОТ ЖЕ кэш: P128 совпадает с загруженным, JR —
     побитово на 8 детерминированно выбранных ключах.
     """
-    path = os.path.join(RAW_CACHE_DIR, f"exp27b_jcache_L{layer}.pt")
+    path = _ec.raw_jcache_path(layer)
     if not os.path.exists(path):
         raise FileNotFoundError(f"L{layer}: нет копии кэша с P128_RAW ({path})")
     raw = torch.load(path, map_location="cpu", weights_only=False)

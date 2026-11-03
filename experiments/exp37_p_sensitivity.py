@@ -38,7 +38,14 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 import numpy as np
 import torch
 
-CKPT_DIR = "/data/prism_kernels/exp27b/results"
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _e38_cache as _ec  # noqa: E402  (cache_id + где лежит P128_RAW)
+
+# Кэш берётся по PRISM_JCACHE (по умолчанию exp27b); каталог — тот, где у этого cache_id
+# есть поле P128_RAW (для exp27b это дописанная копия, для exp27c — сам файл).
+CKPT_DIR = os.path.dirname(_ec.raw_jcache_path(6))
 MODEL = "/data/Qwen/Qwen3.5-0.8B"
 LAYERS = [6, 12, 18, 19, 22, 23]
 C_LAYERS = [18, 19, 22, 23]   # диагностика C
@@ -55,7 +62,7 @@ RESULTS = "results"
 # ---------------- data (самодостаточный загрузчик — не зависит от версии exp33r) ----------------
 
 def load_layer(layer):
-    path = os.path.join(CKPT_DIR, f"exp27b_jcache_L{layer}.pt")
+    path = os.path.join(CKPT_DIR, f"{_ec.CACHE_ID}_jcache_L{layer}.pt")
     ck = torch.load(path, map_location="cpu", weights_only=False)
     ck["S"] = int(ck["S"]); ck["n_samples"] = int(ck["n_samples"])
     k0 = next(iter(ck["JR"].values()))
