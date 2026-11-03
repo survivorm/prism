@@ -1,0 +1,167 @@
+[{"stream_name":"stderr","time":6.161947766,"data":"/usr/local/lib/python3.13/dist-packages/nbformat/validator.py:434: MissingIDFieldWarning: Cell is missing an id field, this will become a hard error in future nbformat versions. You may want to use `normalize()` on your notebooks before validations (available since nbformat 5.1.4). Previous versions of nbformat are fixing this issue transparently, and will stop doing so in the future.\n"}
+,{"stream_name":"stderr","time":6.161989215,"data":"  _validate(nbdict, ref, version, version_minor, relax_add_props)\n"}
+,{"stream_name":"stderr","time":7.053659667,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":7.053706805,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":7.05371341,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":7.053718223,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stderr","time":7.696970111,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":7.697023854,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":7.697030667,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":7.697035132,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stdout","time":28.568819426,"data":"\u001b[33mWARNING: Skipping cudf as it is not installed.\u001b[0m\u001b[33m\r\n"}
+,{"stream_name":"stdout","time":44.975439504,"data":"\u001b[0m\u001b[33mWARNING: Skipping cuml as it is not installed.\u001b[0m\u001b[33m\r\n"}
+,{"stream_name":"stdout","time":44.975472011,"data":"\u001b[0m\u001b[33mWARNING: Skipping libcuml as it is not installed.\u001b[0m\u001b[33m\r\n"}
+,{"stream_name":"stdout","time":45.023094033,"data":"\u001b[0m\u001b[33mWARNING: Skipping libcuvs as it is not installed.\u001b[0m\u001b[33m\r\n"}
+,{"stream_name":"stdout","time":45.076288009,"data":"\u001b[0m\u001b[33mWARNING: Skipping libraft as it is not installed.\u001b[0m\u001b[33m\r\n"}
+,{"stream_name":"stdout","time":57.125946283,"data":"\u001b[0m\u001b[31mERROR: Could not find a version that satisfies the requirement torchvision==0.20.1+cu121 (from versions: 0.1.6, 0.2.0)\u001b[0m\u001b[31m\r\n"}
+,{"stream_name":"stdout","time":57.125987858,"data":"\u001b[0m\u001b[31mERROR: No matching distribution found for torchvision==0.20.1+cu121\u001b[0m\u001b[31m\r\n"}
+,{"stream_name":"stdout","time":163.141297925,"data":"\u001b[0m\u001b[31mERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\r\n"}
+,{"stream_name":"stdout","time":163.14133853,"data":"fastai 2.8.8 requires torchvision\u003e=0.11, which is not installed.\r\n"}
+,{"stream_name":"stdout","time":163.141345507,"data":"cudf-cu12 26.2.1 requires cuda-python\u003c13.0,\u003e=12.9.2, which is not installed.\r\n"}
+,{"stream_name":"stdout","time":163.141351286,"data":"cudf-cu12 26.2.1 requires numba\u003c0.62.0,\u003e=0.60.0, which is not installed.\r\n"}
+,{"stream_name":"stdout","time":163.141357027,"data":"cudf-cu12 26.2.1 requires numba-cuda[cu12]\u003c0.23.0,\u003e=0.22.2, which is not installed.\r\n"}
+,{"stream_name":"stdout","time":163.141362698,"data":"cudf-cu12 26.2.1 requires pylibcudf-cu12==26.2.*, which is not installed.\r\n"}
+,{"stream_name":"stdout","time":163.141368212,"data":"cudf-cu12 26.2.1 requires rmm-cu12==26.2.*, which is not installed.\r\n"}
+,{"stream_name":"stdout","time":163.141384658,"data":"timm 1.0.29 requires torchvision, which is not installed.\r\n"}
+,{"stream_name":"stdout","time":163.141389375,"data":"libcuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.2.2 which is incompatible.\r\n"}
+,{"stream_name":"stdout","time":163.141393924,"data":"cudf-cu12 26.2.1 requires cuda-toolkit[nvcc,nvrtc]==12.*, but you have cuda-toolkit 13.2.2 which is incompatible.\r\n"}
+,{"stream_name":"stdout","time":163.141398552,"data":"libcuvs-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.2.2 which is incompatible.\r\n"}
+,{"stream_name":"stdout","time":163.141403063,"data":"libraft-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.2.2 which is incompatible.\u001b[0m\u001b[31m\r\n"}
+,{"stream_name":"stdout","time":191.640711991,"data":"\u001b[0mGPU: Tesla T4\n"}
+,{"stream_name":"stdout","time":191.640752208,"data":"torch 2.15.0+cu132 | L=cuda:0, S=cuda:1\n"}
+,{"stream_name":"stdout","time":191.640757171,"data":"resolve Qwen/Qwen3.5-0.8B: slugs=['datasets', 'notebooks', 'e-39m-flat-carrier-vs-ptq']\n"}
+,{"stream_name":"stdout","time":191.699369639,"data":"Need to download Qwen/Qwen3.5-0.8B from HF\n"}
+,{"stream_name":"stdout","time":191.699406415,"data":"resolve Qwen/Qwen3.5-4B: slugs=['datasets', 'notebooks', 'e-39m-flat-carrier-vs-ptq']\n"}
+,{"stream_name":"stdout","time":191.699412775,"data":"Need to download Qwen/Qwen3.5-4B from HF\n"}
+,{"stream_name":"stderr","time":209.736906925,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":209.736957195,"data":"\n"}
+,{"stream_name":"stderr","time":209.73696251,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stdout","time":209.769793563,"data":"cuda:0 alloc=0.0GiB reserved=0.0GiB\n"}
+,{"stream_name":"stdout","time":209.769830671,"data":"cuda:1 alloc=0.0GiB reserved=0.0GiB\n"}
+,{"stream_name":"stdout","time":245.850194442,"data":"[ctx] N=4096 docs=32 sentinel=2271 l_flat_base=0.1869\n"}
+,{"stream_name":"stderr","time":441.494175334,"data":"/usr/local/lib/python3.13/dist-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.\n"}
+,{"stream_name":"stderr","time":441.494231049,"data":"  warn_once(FP_FUSION_DEFAULT_WARNING)\n"}
+,{"stream_name":"stderr","time":441.494236866,"data":"\n"}
+,{"stream_name":"stderr","time":441.494257232,"data":"/usr/local/lib/python3.13/dist-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.\n"}
+,{"stream_name":"stderr","time":441.494264757,"data":"  warn_once(FP_FUSION_DEFAULT_WARNING)\n"}
+,{"stream_name":"stdout","time":447.383743558,"data":"[base] κ'=0.015923 PPL=34.3173 (8-док шкала) / 29.5458 (рабочая, 32 доков)\n"}
+,{"stream_name":"stdout","time":447.384802472,"data":"=== carrier cheat (λ=0.01, λo=0.0, pearson)\n"}
+,{"stream_name":"stdout","time":447.751889545,"data":"    step 1: loss=0.010000 finite=True\n"}
+,{"stream_name":"stdout","time":448.027300754,"data":"    step 2: loss=0.018518 finite=True\n"}
+,{"stream_name":"stdout","time":448.313605029,"data":"    step 3: loss=0.016915 finite=True\n"}
+,{"stream_name":"stdout","time":448.602707038,"data":"    step 4: loss=0.019014 finite=True\n"}
+,{"stream_name":"stdout","time":448.884981073,"data":"    step 5: loss=0.017085 finite=True\n"}
+,{"stream_name":"stdout","time":450.306483201,"data":"    step 10: loss=0.013244 finite=True\n"}
+,{"stream_name":"stdout","time":453.148212696,"data":"    step 20: loss=0.010405 finite=True\n"}
+,{"stream_name":"stdout","time":649.769961491,"data":"  [pearson λo=0.0] st20: κ'=0.008088 corr_run=0.8044 corr_f=0.7825\n"}
+,{"stream_name":"stderr","time":649.960870117,"data":"/tmp/ipykernel_22/985876644.py:185: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\n"}
+,{"stream_name":"stderr","time":649.960907248,"data":"Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)\n"}
+,{"stream_name":"stderr","time":649.960913909,"data":"  \"corr_f\": corr_f, \"l_flat\": float(l_flat), \"l_kl\": float(l_kl)})\n"}
+,{"stream_name":"stderr","time":649.960919871,"data":"\n"}
+,{"stream_name":"stderr","time":649.960924714,"data":"/tmp/ipykernel_22/985876644.py:185: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\n"}
+,{"stream_name":"stderr","time":649.960930028,"data":"Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)\n"}
+,{"stream_name":"stderr","time":649.960935341,"data":"  \"corr_f\": corr_f, \"l_flat\": float(l_flat), \"l_kl\": float(l_kl)})\n"}
+,{"stream_name":"stdout","time":652.59997793,"data":"    step 30: loss=0.009264 finite=True\n"}
+,{"stream_name":"stdout","time":655.438590215,"data":"    step 40: loss=0.007040 finite=True\n"}
+,{"stream_name":"stdout","time":852.435022088,"data":"  [pearson λo=0.0] st40: κ'=0.006190 corr_run=0.7202 corr_f=0.6975\n"}
+,{"stream_name":"stdout","time":855.252865644,"data":"    step 50: loss=0.006684 finite=True\n"}
+,{"stream_name":"stdout","time":858.089285215,"data":"    step 60: loss=0.006162 finite=True\n"}
+,{"stream_name":"stdout","time":1055.373658078,"data":"  [pearson λo=0.0] st60: κ'=0.005420 corr_run=0.6560 corr_f=0.6300\n"}
+,{"stream_name":"stdout","time":1058.163536434,"data":"    step 70: loss=0.004631 finite=True\n"}
+,{"stream_name":"stdout","time":1060.957100888,"data":"    step 80: loss=0.005075 finite=True\n"}
+,{"stream_name":"stdout","time":1258.802660357,"data":"  [pearson λo=0.0] st80: κ'=0.004808 corr_run=0.6207 corr_f=0.5884\n"}
+,{"stream_name":"stdout","time":1261.687858932,"data":"    step 90: loss=0.004422 finite=True\n"}
+,{"stream_name":"stdout","time":1264.64563585,"data":"    step 100: loss=0.004817 finite=True\n"}
+,{"stream_name":"stdout","time":1462.570319409,"data":"  [pearson λo=0.0] st100: κ'=0.004436 corr_run=0.5915 corr_f=0.5624\n"}
+,{"stream_name":"stdout","time":1466.865664427,"data":"  → κ'=0.004436 PPL=38.4446 (+12.03%) corr_f=0.5624 anchor_ok=True\n"}
+,{"stream_name":"stdout","time":1466.868399194,"data":"=== carrier floor_pearson (λ=0.01, λo=1.0, pearson)\n"}
+,{"stream_name":"stdout","time":1467.150525576,"data":"    step 1: loss=0.010000 finite=True\n"}
+,{"stream_name":"stdout","time":1467.429612003,"data":"    step 2: loss=0.029190 finite=True\n"}
+,{"stream_name":"stdout","time":1467.707353048,"data":"    step 3: loss=0.030873 finite=True\n"}
+,{"stream_name":"stdout","time":1467.986760659,"data":"    step 4: loss=0.028280 finite=True\n"}
+,{"stream_name":"stdout","time":1468.267084755,"data":"    step 5: loss=0.021669 finite=True\n"}
+,{"stream_name":"stdout","time":1469.652869859,"data":"    step 10: loss=0.017712 finite=True\n"}
+,{"stream_name":"stdout","time":1472.448717305,"data":"    step 20: loss=0.012009 finite=True\n"}
+,{"stream_name":"stdout","time":1668.492260079,"data":"  [pearson λo=1.0] st20: κ'=0.013241 corr_run=0.9978 corr_f=0.9967\n"}
+,{"stream_name":"stdout","time":1671.507719677,"data":"    step 30: loss=0.010013 finite=True\n"}
+,{"stream_name":"stdout","time":1674.541349513,"data":"    step 40: loss=0.008560 finite=True\n"}
+,{"stream_name":"stdout","time":1871.205252344,"data":"  [pearson λo=1.0] st40: κ'=0.011656 corr_run=0.9989 corr_f=0.9980\n"}
+,{"stream_name":"stdout","time":1873.979106076,"data":"    step 50: loss=0.007675 finite=True\n"}
+,{"stream_name":"stdout","time":1876.791565815,"data":"    step 60: loss=0.006921 finite=True\n"}
+,{"stream_name":"stdout","time":2072.613771984,"data":"  [pearson λo=1.0] st60: κ'=0.010648 corr_run=0.9992 corr_f=0.9981\n"}
+,{"stream_name":"stdout","time":2075.469595701,"data":"    step 70: loss=0.006594 finite=True\n"}
+,{"stream_name":"stdout","time":2078.306427346,"data":"    step 80: loss=0.006346 finite=True\n"}
+,{"stream_name":"stdout","time":2274.512981023,"data":"  [pearson λo=1.0] st80: κ'=0.009950 corr_run=0.9992 corr_f=0.9977\n"}
+,{"stream_name":"stdout","time":2277.278083553,"data":"    step 90: loss=0.006248 finite=True\n"}
+,{"stream_name":"stdout","time":2280.104998008,"data":"    step 100: loss=0.005987 finite=True\n"}
+,{"stream_name":"stdout","time":2475.885580001,"data":"  [pearson λo=1.0] st100: κ'=0.009324 corr_run=0.9992 corr_f=0.9975\n"}
+,{"stream_name":"stdout","time":2480.209243533,"data":"  → κ'=0.009324 PPL=34.4916 (+0.51%) corr_f=0.9975 anchor_ok=True\n"}
+,{"stream_name":"stdout","time":2480.211868366,"data":"=== carrier floor_pairwise (λ=0.01, λo=1.0, pairwise)\n"}
+,{"stream_name":"stdout","time":2480.498258239,"data":"    step 1: loss=61.354912 finite=True\n"}
+,{"stream_name":"stdout","time":2480.784497062,"data":"    step 2: loss=83.444725 finite=True\n"}
+,{"stream_name":"stdout","time":2481.07727927,"data":"    step 3: loss=73.391235 finite=True\n"}
+,{"stream_name":"stdout","time":2481.379455269,"data":"    step 4: loss=65.782043 finite=True\n"}
+,{"stream_name":"stdout","time":2481.672390542,"data":"    step 5: loss=62.328751 finite=True\n"}
+,{"stream_name":"stdout","time":2483.089795281,"data":"    step 10: loss=54.709450 finite=True\n"}
+,{"stream_name":"stdout","time":2485.930405482,"data":"    step 20: loss=48.957767 finite=True\n"}
+,{"stream_name":"stdout","time":2681.400333669,"data":"  [pairwise λo=1.0] st20: κ'=0.019471 corr_run=0.9948 corr_f=0.9933\n"}
+,{"stream_name":"stdout","time":2684.234560876,"data":"    step 30: loss=44.762341 finite=True\n"}
+,{"stream_name":"stdout","time":2687.069697111,"data":"    step 40: loss=41.428375 finite=True\n"}
+,{"stream_name":"stdout","time":2882.429088903,"data":"  [pairwise λo=1.0] st40: κ'=0.019880 corr_run=0.9955 corr_f=0.9928\n"}
+,{"stream_name":"stdout","time":2885.352422858,"data":"    step 50: loss=39.014561 finite=True\n"}
+,{"stream_name":"stdout","time":2888.241071866,"data":"    step 60: loss=37.303452 finite=True\n"}
+,{"stream_name":"stdout","time":3083.363945807,"data":"  [pairwise λo=1.0] st60: κ'=0.019820 corr_run=0.9960 corr_f=0.9927\n"}
+,{"stream_name":"stdout","time":3086.188317348,"data":"    step 70: loss=35.379902 finite=True\n"}
+,{"stream_name":"stdout","time":3089.027534258,"data":"    step 80: loss=33.930870 finite=True\n"}
+,{"stream_name":"stdout","time":3284.117921944,"data":"  [pairwise λo=1.0] st80: κ'=0.019727 corr_run=0.9964 corr_f=0.9928\n"}
+,{"stream_name":"stdout","time":3287.129154753,"data":"    step 90: loss=32.677113 finite=True\n"}
+,{"stream_name":"stdout","time":3290.120194797,"data":"    step 100: loss=31.814867 finite=True\n"}
+,{"stream_name":"stdout","time":3485.698705248,"data":"  [pairwise λo=1.0] st100: κ'=0.019463 corr_run=0.9968 corr_f=0.9930\n"}
+,{"stream_name":"stdout","time":3489.973515133,"data":"  → κ'=0.019463 PPL=1036.7116 (+2920.96%) corr_f=0.9930 anchor_ok=False\n"}
+,{"stream_name":"stdout","time":3489.976756355,"data":"output: /kaggle/working/results/exp39m_flat_ptq_train.json wall 3244s\n"}
+,{"stream_name":"stdout","time":3688.106760318,"data":"[quant] база: κ'=0.015923 PPL=29.5458  holdout 32 доков × 112 ток.\n"}
+,{"stream_name":"stdout","time":3688.107832541,"data":"[quant] GPTQ-калибровка (общая для всех носителей)...\n"}
+,{"stream_name":"stdout","time":3691.008154834,"data":"  calib 8/128\n"}
+,{"stream_name":"stdout","time":3691.68047398,"data":"  calib 16/128\n"}
+,{"stream_name":"stdout","time":3692.337092606,"data":"  calib 24/128\n"}
+,{"stream_name":"stdout","time":3692.991025941,"data":"  calib 32/128\n"}
+,{"stream_name":"stdout","time":3693.644199734,"data":"  calib 40/128\n"}
+,{"stream_name":"stdout","time":3694.300942943,"data":"  calib 48/128\n"}
+,{"stream_name":"stdout","time":3694.956866068,"data":"  calib 56/128\n"}
+,{"stream_name":"stdout","time":3695.610106789,"data":"  calib 64/128\n"}
+,{"stream_name":"stdout","time":3696.261415756,"data":"  calib 72/128\n"}
+,{"stream_name":"stdout","time":3696.924117788,"data":"  calib 80/128\n"}
+,{"stream_name":"stdout","time":3697.580580869,"data":"  calib 88/128\n"}
+,{"stream_name":"stdout","time":3698.240675146,"data":"  calib 96/128\n"}
+,{"stream_name":"stdout","time":3698.898541644,"data":"  calib 104/128\n"}
+,{"stream_name":"stdout","time":3699.55335888,"data":"  calib 112/128\n"}
+,{"stream_name":"stdout","time":3700.205525297,"data":"  calib 120/128\n"}
+,{"stream_name":"stdout","time":3700.861198224,"data":"  calib 128/128\n"}
+,{"stream_name":"stdout","time":3700.956777373,"data":"  X: (14661, 1024)\n"}
+,{"stream_name":"stdout","time":3902.787097053,"data":"  [base           g128_b4] κ 0.015923→0.016002 (+0.5%)  PPL→29.8189  inc +0.92%  total +0.92%\n"}
+,{"stream_name":"stdout","time":4104.500352144,"data":"  [base           g128_b3] κ 0.015923→0.015329 (-3.7%)  PPL→31.7571  inc +7.48%  total +7.48%\n"}
+,{"stream_name":"stdout","time":4309.759635343,"data":"  [cheat          g128_b4] κ 0.004436→0.004336 (-2.3%)  PPL→40.1398  inc +2.69%  total +35.86%\n"}
+,{"stream_name":"stdout","time":4514.034734208,"data":"  [cheat          g128_b3] κ 0.004436→0.004404 (-0.7%)  PPL→41.8412  inc +7.04%  total +41.61%\n"}
+,{"stream_name":"stdout","time":4717.959962461,"data":"  [floor_pearson  g128_b4] κ 0.009324→0.009275 (-0.5%)  PPL→30.4533  inc +1.46%  total +3.07%\n"}
+,{"stream_name":"stdout","time":4921.895013533,"data":"  [floor_pearson  g128_b3] κ 0.009324→0.009038 (-3.1%)  PPL→32.2312  inc +7.38%  total +9.09%\n"}
+,{"stream_name":"stdout","time":5124.004155521,"data":"  [floor_pairwise g128_b4] κ 0.019463→0.019292 (-0.9%)  PPL→809.3974  inc -25.78%  total +2639.47%\n"}
+,{"stream_name":"stdout","time":5326.718915019,"data":"  [floor_pairwise g128_b3] κ 0.019463→0.018811 (-3.3%)  PPL→1722.5945  inc +57.97%  total +5730.25%\n"}
+,{"stream_name":"stdout","time":5327.057209077,"data":"gate(g128_b4)=flat_neutral | gate_by_regime={'g128_b4': 'flat_neutral', 'g128_b3': 'flat_neutral'} (floor=floor_pearson)\n"}
+,{"stream_name":"stdout","time":5327.057243366,"data":"output: /kaggle/working/results/exp39m_flat_ptq_quant.json wall 1837s\n"}
+,{"stream_name":"stdout","time":5327.060459884,"data":"[OK] exp39m_flat_ptq 5117s\n"}
+,{"stream_name":"stdout","time":5327.060483763,"data":"\n"}
+,{"stream_name":"stdout","time":5327.060488356,"data":"Results:\n"}
+,{"stream_name":"stdout","time":5327.060492126,"data":"  exp39m_carrier_cheat.pt 527,556 bytes\n"}
+,{"stream_name":"stdout","time":5327.060497971,"data":"  exp39m_carrier_floor_pairwise.pt 527,683 bytes\n"}
+,{"stream_name":"stdout","time":5327.060507125,"data":"  exp39m_carrier_floor_pearson.pt 527,676 bytes\n"}
+,{"stream_name":"stdout","time":5327.060510483,"data":"  exp39m_flat_ptq_quant.json 10,138 bytes\n"}
+,{"stream_name":"stdout","time":5327.060533345,"data":"  exp39m_flat_ptq_train.json 5,934 bytes\n"}
+,{"stream_name":"stderr","time":5333.117844838,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":5333.117882775,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":5333.294401553,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":5333.294430841,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":5334.125055112,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to notebook\n"}
+,{"stream_name":"stderr","time":5334.255645069,"data":"[NbConvertApp] Writing 323020 bytes to __notebook__.ipynb\n"}
+,{"stream_name":"stderr","time":5337.051965771,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to html\n"}
+,{"stream_name":"stderr","time":5338.098494408,"data":"[NbConvertApp] Writing 862476 bytes to __results__.html\n"}
+]
