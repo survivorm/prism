@@ -191,7 +191,9 @@ def main(
     # Save
     os.makedirs(results_dir, exist_ok=True)
     json_path = os.path.join(results_dir, "exp14_snr_pr.json")
-    all_results["params"] = {model: model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length, device: device, sample_layers: sample_layers}
+    all_results["params"] = {"model": model, "n_samples": n_samples, "K": K,
+                             "max_length": max_length, "min_length": min_length,
+                             "device": device, "sample_layers": sample_layers}
     with open(json_path, "w") as f:
         json.dump(all_results, f, indent=2)
 

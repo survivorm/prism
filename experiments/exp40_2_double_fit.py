@@ -236,7 +236,7 @@ def main(results_dir: str = None) -> dict:
             fits_ok = {k: v for k, v in fits.items() if v is not None}
             order = sorted(fits_ok.items(), key=lambda kv: kv[1]["AICc"])
             best_name, best = order[0]
-            gap = order[1]["AICc"] - best["AICc"] if len(order) > 1 else np.inf
+            gap = order[1][1]["AICc"] - best["AICc"] if len(order) > 1 else np.inf
             flag = None if gap >= 10 else "not_distinguishable_at_Δ_grid"
             # bootstrap: медианная кривая на ре выборке документов, рефит лучшей формы
             rng = np.random.default_rng(40)

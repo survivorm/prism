@@ -43,12 +43,18 @@ LAYERS = ["6", "12", "18", "22", "23"]
 CARD_GAIN = {"6": 0.404, "12": 0.442, "18": 0.444, "22": 0.380, "23": -1.270}
 
 
-def _floor(iqr_pair, n: int) -> float:
-    """Half-width CI of a median-of-n-medians, normal approx:
-    floor = 1.253 * IQR / sqrt(n).  (1.253 = sqrt(2*pi)/2, sd = 1.349*IQR/2 for
-    normal; half-width 1.96*sd/sqrt(n)/... -> 1.253*IQR/sqrt(n) upper bound.)"""
+def _floor(iqr_pair, n: int, level: str = "se") -> float:
+    """Разрешающий флор медианы из per-doc IQR (ТЗ §1.4, ред. v2).
+
+    SE(median) = 1.2533*sigma/sqrt(n), sigma = IQR/1.349 =>
+      level="se":  1.253*IQR/sqrt(n) = 1.349*SE  => полуширина ~82%-CI,
+      level="95":  1.96*SE = 1.821*IQR/sqrt(n)   => настоящий 95%-CI.
+    Раньше это называлось «полушириной CI», что завышало уровень уверенности
+    (review v2 §A11). Вердикты фазы 1 выносятся по se-флору и это название
+    обязано звучать в поле."""
     lo, hi = iqr_pair
-    return 1.253 * (hi - lo) / math.sqrt(max(n, 2))
+    k = 1.253 if level == "se" else 1.821
+    return k * (hi - lo) / math.sqrt(max(n, 2))
 
 
 def main(results_dir: str | None = None) -> dict:
@@ -56,7 +62,7 @@ def main(results_dir: str | None = None) -> dict:
     dev = []          # D7 deviations_from_spec
 
     # ---- A1/A2/A5: E-33r variants ------------------------------------------
-    variants, gain_grid, floors = {}, {}, {}
+    variants, gain_grid, floors, floors95 = {}, {}, {}, {}
     for name, rel in FILES.items():
         path = os.path.join(REPO, rel)
         if not os.path.exists(path):
@@ -88,8 +94,12 @@ def main(results_dir: str | None = None) -> dict:
                 for dt, v in L[l]["delta"].items():
                     for key in ("raw", "gf", "gain"):
                         if "iqr" in v.get(key, {}):
-                            floors[f"{l}|{dt}|{key}"] = round(
+                            kk = f"{l}|{dt}|{key}"
+                            floors[kk] = round(
                                 _floor(v[key]["iqr"], v[key].get("n_docs", 31)), 5)
+                            floors95[kk] = round(
+                                _floor(v[key]["iqr"], v[key].get("n_docs", 31),
+                                       level="95"), 5)
 
     # A2 verdict: card signs vs artifacts
     prim = gain_grid.get("e33r2", {})
@@ -146,24 +156,38 @@ def main(results_dir: str | None = None) -> dict:
               all(0.977 <= v <= 0.990 for v in kills.values())}
 
     # A4: r_eff object collision
-    a4 = {"E-27.6_T6": "r_eff = exp(-sum p ln p), ENTROPY participation ratio of "
-                       "the ESG (JJ^T) spectrum over K=128 modes, per-sample, "
-                       "range 24.4-31.6 — mode-spectrum object",
+    a4 = {"E-27.6_T6": "r_eff = exp(-sum p ln p) of the symmetrized 32x32 "
+                       "CROSS-DOCUMENT cosine matrix K^F (n=32 docs). K^F is built "
+                       "from Jb = p_i(J_i - sum_j p_j J_j) = P(p_t)J "
+                       "(exp27_6_isolation.py:72-73) => slice CANONICAL, not raw, and "
+                       "it is NOT the ESG (JJ^T) spectrum over K=128 modes "
+                       "(self-correction, review v2 N3): it is a document-similarity "
+                       "spectrum, and paper.md 2.3 declares cross-sample pools invalid "
+                       "(C_b ~ 0.003-0.05), so it is not an ESG dimension estimate. "
+                       "Observed range 24.4-31.6 (max = n_docs = 32)",
           "E-39a": "r_eff(tau) = threshold participation ratio of U_obs "
                    "(hidden covariance): body r_eff(0.05)=178, per-doc 31 — "
                    "observation-space object",
-          "collision": "two different objects share the name r_eff; the '98-99% "
+          "collision": "two different objects share the name r_eff (neither is an "
+                       "ESG spectrum: T6 is doc-similarity, E-39a is observation "
+                       "space); the '98-99% "
                        "vs r_eff=24-31' contradiction was ALREADY dissolved by "
                        "E-39-suppl (norm vs energy); tier-0 must always name "
                        "the subscript: r_eff^ESG vs r_eff^U(tau)",
-          "open": "which p-slice the E-27.5/27.6 spectra used (filename "
-                  "'S64K64p0' suggests fixed p0) — follow-up before E-40.2 "
-                  "consumes C_F/C_top16 lineage"}
+          "open": "закрыто в этом же прогоне: p_slice спектров E-27.5/27.6 = p_t "
+                  "(POS=0 основной срез, POS=32 T5) — «p0» в имени S64K64p0 это индекс "
+                  "позиции, не фиксированная p0 (код-аудит, E40_0_gate); НОВОЕ "
+                  "следствие: срез T6 = canonical (P(p_t)J), т.е. ответ на §3.1(b) "
+                  "изменён на canonical; lineage C_F/C_top16 = exp31 raw => пересчёт "
+                  "в E-40.2"}
 
     # A5: floors + significance of the gain statement (D4 discipline)
-    a5 = {"method": "floor = 1.253*IQR/sqrt(n_docs), from stored per-doc IQR "
-                    "(e34 protocol); effect < floor => not_testable, not refuted",
-          "floors": floors}
+    a5 = {"method": "se_floor = 1.253*IQR/sqrt(n_docs) (≈82%-CI полуширина, НЕ 95%) "
+                    "из stored per-doc IQR (e34 protocol); effect < floor => "
+                    "not_testable, not refuted. floor_95 = 1.821*IQR/sqrt(n) — "
+                    " companion 95%-мерка (review v2 §A11)",
+          "floors": floors,
+          "floors_95": floors95}
     gain_sig = {}
     for l in LAYERS:
         v = prim.get(l, {}).get("1", {})

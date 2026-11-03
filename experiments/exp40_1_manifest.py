@@ -67,14 +67,26 @@ ITEMS = {
             "третьего объекта нет (E-39 suppl §2)",
     "(a3)": "identity-asserts на реальном кэше — см. results/E40_1_T4a.json "
             "a3_identity_asserts (O2≡O3 ≤7.1e-15, g_uni(J^gf) ≤5.2e-17, iso inline=closed)",
-    "(b)": "r_eff E-27.6 T6 — ESG-спектр от raw JR (в конвейере exp27_6 нет P); "
-           "коллизия имён с r_eff^U(τ)=178 E-39a закрыта субскриптом (A4 аудита); "
-           "p_slice спектров E-27.5/27.6 — p_t, POS=0/T5=32 (E40_0_gate)",
+    "(b)": "ОТВЕТ ПОСЛЕ САМОКОРРЕКЦИИ (review v2 §N3): r_eff E-27.6 T6 — НЕ ESG и НЕ "
+           "raw. _gram (exp27_6_isolation.py:65-80) строит Jb = p_i(J_i − Σ_j p_j J_j) "
+           "= P(p_t)J, т.е. срез canonical, а r_eff = exp(−Σp ln p) берётся от спектра "
+           "симметризованной 32×32 кросс-документной косинусной матрицы K^F (n=32 "
+           "документа), не от грамиана JJᵀ по K=128 модам ⇒ это спектр сходства "
+           "документов, а не спектр ESG; меж-сэмпловые пулы paper.md §2.3 объявлены "
+           "невалидными (C_b ≈ 0.003–0.05) ⇒ r_eff^T6 не оценка размерности ESG и в "
+           "носители E-40.8 не входит. Коллизия имён с r_eff^U(τ)=178 (E-39a) закрыта "
+           "субскриптом; p_slice спектров E-27.5/27.6 — p_t, POS=0/T5=32 (E40_0_gate)",
     "(c)": "Δ_gf E-33r.2 — L23, правый, срез gf, r=16, Δ=1, Δ_SVD (max principal "
            "angle), med по документам — E40_1_audit.A1",
     "(d)": "Δ_raw — все 5 слоёв (layers.*.delta); Δ_fixP — в основном JSON только L23, "
            "в exp33r_gauge_anatomy_strict(_diag).json — все 5 слоёв (diag.E_fixed_p) "
-           "⇒ E-40.7 без даунгрейда",
+           "⇒ E-40.7 без даунгрейда. ОПЕРАТОРЫ РАЗНЫЕ (review v2 §N4): strict = "
+           "pair_mean (p0_t = norm(p_t+p_{t+Δt})/2 на пару, meta.p0_method), exp32r3 = "
+           "позиция у медианной p, S07/E-40.7 per-doc = P(p̄) с p̄ = среднее по корпусу. "
+           "Носитель E-40.8 — S07 (p̄); слойные med'ы strict помечаются p_slice=p_0 + "
+           "method=pair_mean и с S07 в одной таблице не смешиваются. strict-JSON лежат "
+           "в results/ и вне git (results/*.json в .gitignore — как и все артефакты "
+           "E-1…E-39), provenance = sha256_16 в шапке артефакта",
     "(e)": "L0 в exp27b НЕТ (слои 6/12/18/22/23) ⇒ E-40.6 критерий односторонний, "
            "not_testable_no_L0 по построению",
     "(f)": "порог левого канала max(0.05·E_right, Q_95(E_left^null)); нуль — Haar-"
@@ -171,8 +183,11 @@ def main(results_dir: str = None) -> dict:
         {"exp27b_jcache_L23": "/data/prism_kernels/exp27b/results/exp27b_jcache_L23.pt",
          "E40_1_T4a": os.path.join(results_dir, "E40_1_T4a.json"),
          "E40_0_gate": os.path.join(results_dir, "E40_0_gate.json")},
-        channel_tags=[],
-        extra={"invariants_registry": registry,
+        channel_tags=[],   # мета-артефакт: ни одной измеренной канал-величины
+        extra={"channel_tags_note": "манифест регистрирует реестр инвариантов "
+                                    "(синтетика) и аудит-ответы; канал-величин не "
+                                    "содержит — теги носят измерительные 0.0–0.8",
+               "invariants_registry": registry,
                "audit_items": ITEMS,
                "l1_summary_stats_freeze": L1_FREEZE,
                "unit_tests": pytest_res,

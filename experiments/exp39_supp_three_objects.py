@@ -236,6 +236,11 @@ def _layer_numbers(layer: int) -> dict:
         fr, ir = frac_pos[mask], ip_ref_pos[mask]
         return {"c_cross": xp / er,                        # ⟨J,PJ⟩/‖J‖²
                 "cos_J_PJ": xp / float(np.sqrt(er * ep_)),  # угол между J и PJ
+                # E6: агрегатные s и frac на том же знаменателе Σ‖J‖², что и c_cross/cos —
+                # тройка (c, s, cos, frac_agg) самосогласованна; медиана/среднее позиций —
+                # другие агрегаты, тождество frac=1−2c+s² для них не обязательно.
+                "s_agg": float(np.sqrt(ep_ / er)),          # ‖PJ‖/‖J‖ (агрегат)
+                "frac_K_energy_agg": (er - 2.0 * xp + ep_) / er,  # = 1 − 2c + s² точно
                 "frac_K_energy_median": float(fr.median()),
                 "frac_K_energy_mean": float(fr.mean()),
                 "ip_ref_energy_median": float(ir.median()),

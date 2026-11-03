@@ -68,7 +68,17 @@ def token_set_from(model, samples: list[dict], K: int) -> list[int]:
 
 def gauge_free_J(model, L: int, ids, mask, ts: list[int],
                  h: torch.Tensor | None, p: torch.Tensor) -> torch.Tensor:
-    """Gauge-free J^(p) [K, D] at the last position; h (optional) = [D]."""
+    """Gauge-free J^(p) [K, D] at the LAST position of ``ids``; h = [D].
+
+    ``compute_jacobian_for_tokens`` linearizes at ``len(ids) - 1`` (prefix
+    ``ids[:, :-1]``, RoPE position ``len(ids) - 1``). To linearize at a position
+    ``t < S - 1`` the caller must pass the PREFIX ``ids[:, :t+1]`` /
+    ``mask[:, :t+1]`` together with ``h[t]`` — passing the full sequence with
+    ``h[t]`` leaks tokens ``t..S-2`` into the KV cache and stamps position
+    ``S-1`` (audit docs/audit4.pdf B2: J off by 18.7 % at t=S-2, 28.7 % at
+    t=S-3). ``p[t]`` needs no slicing: the model is causal, so position t's
+    logits never saw tokens > t (padding must be absent — jacobian.py asserts
+    ``attention_mask.all()``)."""
     J = compute_jacobian_for_tokens(model, L, ids, mask, ts, h_override=h)
     return softmax_jacobian(J.float(), p)
 
@@ -85,7 +95,7 @@ def top_r_basis(model, samples, ts: list[int], L: int, r: int, n_pos: int = 8) -
     for t in range(S - n_pos, S):
         h = out.hidden_states[L + 1][0, t, :].float().cpu()
         p = torch.softmax(out.logits[0, t].float()[ts], dim=-1).cpu()
-        js.append(gauge_free_J(model, L, ids, mask, ts, h, p))
+        js.append(gauge_free_J(model, L, ids[:, :t + 1], mask[:, :t + 1], ts, h, p))
     _, evec = compute_esg(js, n_components=r)
     return evec.T.contiguous()  # [K, r], orthonormal columns
 
@@ -141,7 +151,10 @@ def doc_js(model, L: int, s: dict, ts: list[int], h: torch.Tensor,
     S = s["input_ids"].shape[1]
     js = []
     for t in range(S - n_pos, S):
-        js.append(gauge_free_J(model, L, ids, mask, ts, h[t], p[t]))
+        # prefix through t, so the linearization point (position + KV cache)
+        # is t and not S-1 — see gauge_free_J docstring (audit B2)
+        js.append(gauge_free_J(model, L, ids[:, :t + 1], mask[:, :t + 1],
+                               ts, h[t], p[t]))
     return js
 
 

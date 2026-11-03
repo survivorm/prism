@@ -58,8 +58,8 @@ def vector_reconcile(ck27: dict) -> dict:
     combo = sorted({(k[3], k[4]) for k in ck27["P128"]})
     inter = [(s, p) for (s, p) in combo if s == 128]
     if not inter:
-        return {"intersecting_grid": [], "matches_exp27b": None,
-                "reversal_confirmed": None,
+        return {"intersecting_grid": [], "n_compared": 0, "covered_slice": None,
+                "matches_exp27b": None, "reversal_confirmed": None,
                 "note": "пересечение (S,POS)-сеток пусто — сверка невозможна, не failure"}
     dev_rev, dev_wrong, n = 0.0, 0.0, 0
     for L in LAYERS:
@@ -71,15 +71,25 @@ def vector_reconcile(ck27: dict) -> dict:
                 if l != L or S_ != s_len or POS != pos:
                     continue
                 p27 = ck27["P128"][k27].double()
-                p_right = ck["P128"][(dom, si, POS)].double()       # token_idx = S-1-POS совпадает
-                p_wrong = ck["P128"][(dom, si, 127 - POS)].double()  # неверная конвенция
+                # оба продюсента индексируют от конца => верное отображение ТОЖДЕСТВЕННОЕ
+                p_right = ck["P128"][(dom, si, POS)].double()        # POS <-> POS
+                p_wrong = ck["P128"][(dom, si, 127 - POS)].double()  # двойной реверс (контроль)
                 dev_rev = max(dev_rev, float((p27 - p_right).abs().max()))
                 dev_wrong = max(dev_wrong, float((p27 - p_wrong).abs().max()))
                 n += 1
+    if n == 0:
+        # пересечение сеток непустое, но ни одного общего ключа нет — сверки не было
+        return {"intersecting_grid": [[s, p] for (s, p) in inter], "n_compared": 0,
+                "covered_slice": "S=128", "matches_exp27b": None,
+                "reversal_confirmed": None,
+                "note": "общих ключей (dom,si,L,S,POS) не найдено — сверка не выполнена, "
+                        "это не подтверждение и не опровержение"}
     return {"intersecting_grid": [[s, p] for (s, p) in inter], "n_compared": n,
+            "covered_slice": "S=128 (срез E-27.6 T5); срез E-27.5 S=64 сверке не "
+                             "подлежит: у exp27b плотный кэш только S=128",
             "max_abs_dev_reversed": dev_rev, "max_abs_dev_wrong_pairing": dev_wrong,
             "matches_exp27b": bool(dev_rev < 1e-6),
-            "reversal_confirmed": bool(dev_rev < dev_wrong / 10.0)}
+            "reversal_confirmed": bool(dev_wrong > 0 and dev_rev < dev_wrong / 10.0)}
 
 
 def main(results_dir: str = "results") -> dict:
@@ -91,6 +101,19 @@ def main(results_dir: str = "results") -> dict:
     assert ck27["pool_fp"] == ck6["pool_fp"], "пул E-27 ≠ пул exp27b — сверка бессмысленна"
     assert ck27["U128"] == ck6["U128"], "база U128 расходится"
     vec = vector_reconcile(ck27)
+    # ТЗ §11 (правка раунда v2): гейт обязан отдать незакрытые пункты аудита,
+    # иначе «прямое требование» (gate_open_items_for_E40_2) никем не прочитано.
+    audit_path = os.path.join(results_dir, "E40_1_audit.json")
+    if os.path.exists(audit_path):
+        open_items = json.load(open(audit_path)).get("gate_open_items_for_E40_2", [])
+        audit_source = "results/E40_1_audit.json"
+    else:
+        # E-40.1 ещё не гонялся — открытыми остаются известные ей пункты
+        open_items = ["p_slice E-27.5/27.6 (решается этим гейтом)",
+                      "линия C_F/C_top16: exp31 = raw => пересчёт (E-40.1(g), E-40.2)"]
+        audit_source = "fallback (E40_1_audit.json ещё не создан)"
+    gate_pass = all(f["found"] for f in audit)
+    e40_2_can_start = gate_pass
     rep = header(
         "E-40.0", "docs/e40_todo.md §2 (редакция 2)",
         {"exp27_jcache": E27_CACHE,
@@ -105,8 +128,12 @@ def main(results_dir: str = "results") -> dict:
                "source": "code_audit(exp27.5_pair_matrix.py:28, exp27_6_isolation.py:38,58)",
                "matches_exp27b": vec["matches_exp27b"],
                "reversal_confirmed": vec["reversal_confirmed"],
-               "gate_pass": True,
-               "E40_2_can_start": True,
+               "gate_open_items_for_E40_2": open_items,
+               "gate_open_items_source": audit_source,
+               "gate_pass": gate_pass,
+               "E40_2_can_start": e40_2_can_start,
+               "gate_pass_note": "гейт = код-аудит (все факты найдены); векторная "
+                                 "сверка — диагностика и в вердикт не входит",
                "wall_sec": round(time.time() - t0, 1)},
     )
     out = os.path.join(results_dir, "E40_0_gate.json")

@@ -49,14 +49,17 @@ def triple_from_chunk(J: torch.Tensor, p: torch.Tensor) -> dict:
     K = J - pd
     k2_direct = K.pow(2).sum(dim=(-1, -2))
     k2 = e - 2 * cross + a
-    # тождество ‖K‖² = ‖J‖² − 2⟨J,PJ⟩ + ‖PJ‖² против прямого вычитания
+    # тождество ‖K‖² = ‖J‖² − 2⟨J,PJ⟩ + ‖PJ‖² против прямого вычитания.
+    # В ячейки ниже frac_K идёт k2_direct (НЕ k2 из тождества): иначе линейность
+    # агрегаций делает замыкание алгебраической тавтологией и стоп-условие ТЗ §14.3
+    # не может сработать никогда (review v2 §N2). err — отдельное поле identity_gap_rel.
     err = float(((k2 - k2_direct).abs() / e).max())
     assert err < 1e-9, f"тождество K не замкнулось: rel {err:.3e}"
     gf1 = pd.sum(dim=1)                                     # (P(p)J)ᵀ1 = Σ_i p_i d_i
     gf1_rel = float((gf1.norm(dim=-1) / J.sum(dim=1).norm(dim=-1).clamp_min(1e-30)).max())
-    return {"c_t": cross / e, "s2_t": a / e, "frac_t": k2 / e,
-            "a": a, "cross": cross, "k2": k2, "e": e,
-            "gf1_rel_max": gf1_rel}
+    return {"c_t": cross / e, "s2_t": a / e, "frac_t": k2_direct / e,
+            "a": a, "cross": cross, "k2": k2_direct, "k2_from_identity": k2, "e": e,
+            "identity_gap_rel": err, "gf1_rel_max": gf1_rel}
 
 
 def main(results_dir: str = "results") -> dict:
@@ -90,6 +93,7 @@ def main(results_dir: str = "results") -> dict:
         ratios: dict[str, dict[str, list]] = {pv: {k: [] for k in ("c_t", "s2_t", "frac_t")}
                                               for pv in ("p_t", "p_0")}
         gf_rel_max = 0.0
+        idgap_max = 0.0
         g_num = 0.0      # Σ_t ‖J_tᵀ 1‖²  (1ᵀG1 для G = Σ_t J_t J_tᵀ, не квадрат суммы)
         E_tot = 0.0
         CH = 64
@@ -100,6 +104,7 @@ def main(results_dir: str = "results") -> dict:
             for pv, p in (("p_t", Pc), ("p_0", p_bar.expand_as(Pc))):
                 r = triple_from_chunk(Jc, p.clone())
                 gf_rel_max = max(gf_rel_max, r["gf1_rel_max"])
+                idgap_max = max(idgap_max, r["identity_gap_rel"])
                 for k in ("c_t", "s2_t", "frac_t"):
                     ratios[pv][k].append(r[k].numpy())
                 if pv == "p_t":
@@ -165,6 +170,8 @@ def main(results_dir: str = "results") -> dict:
             f"L{L}: негативный контроль median замкнулся — сломался контроль"
         per_layer[str(L)] = {
             "cells": cells,
+            "identity_gap_rel": idgap_max,
+            "frac_K_source": "прямое ‖J−PJ‖², не из тождества (ТЗ §3.2, ред. v2)",
             "g_uni_recomputed_corpus": g_uni_recomputed,
             "g_uni_cached_supp": supp["layers"][str(L)]["g_uni_corpus"],
             "g_uni_cached_e39k": (e39k["layers_diag"].get(str(L), {}).get(
@@ -175,6 +182,30 @@ def main(results_dir: str = "results") -> dict:
         print(f"L{L}: cells closed, g_uni {g_uni_recomputed:.6f} vs "
               f"{supp['layers'][str(L)]['g_uni_corpus']:.6f}, gf1_rel {gf_rel_max:.2e}")
         del ck, J_all, P_all
+
+    # внешняя контрольная точка (review v2 §N2): rom-ячейки p_t против артефакта
+    # E-39-supplement — те же 4096 позиций, тот же rom. Без неё «ячейка замкнулась»
+    # ничего не утверждает про данные (замыкание алгебраично).
+    frac_checkpoint = {}
+    for L in LAYERS:
+        kb = supp["layers"][str(L)]["K_from_I_minus_P"]
+        cl = per_layer[str(L)]["cells"]
+        frac_checkpoint[str(L)] = {
+            "all": {"t4a": cl["p_t_ratio_of_means_all"]["frac_K"],
+                    "supp": kb["all_positions"]["frac_K_energy_agg"],
+                    "abs_dev": abs(cl["p_t_ratio_of_means_all"]["frac_K"]
+                                   - kb["all_positions"]["frac_K_energy_agg"])},
+            "alive": {"t4a": cl["p_t_ratio_of_means_alive"]["frac_K"],
+                      "supp": kb["alive_non_sentinel"]["frac_K_energy_agg"],
+                      "abs_dev": abs(cl["p_t_ratio_of_means_alive"]["frac_K"]
+                                     - kb["alive_non_sentinel"]["frac_K_energy_agg"])},
+            "c_all": {"t4a": cl["p_t_ratio_of_means_all"]["c"],
+                      "supp": kb["all_positions"]["c_cross"]},
+        }
+        # 5e-3: дополнение держит p в fp32 без fp64-ренормировки строк, ячейки T4a — с нею
+        assert frac_checkpoint[str(L)]["all"]["abs_dev"] < 5e-3, \
+            f"L{L}: frac_K(T4a) != frac_K(E-39-suppl): {frac_checkpoint[str(L)]}"
+    frac_external_ok = all(v["all"]["abs_dev"] < 5e-3 for v in frac_checkpoint.values())
 
     # g_uni-чекпоинт по 5 слоям — суммарный вердикт
     g_ok = all(v["g_uni_matches"] for v in per_layer.values())
@@ -191,8 +222,9 @@ def main(results_dir: str = "results") -> dict:
                               + 2 * kb["alive_non_sentinel"]["c_cross"])
     t4b_all_negative = all(v < 0 for v in s2_implied.values())
 
-    tag_list = [tag(slice="gf", p_slice="p_t", aggregation=a_, window="full", side="right",
+    tag_list = [tag(slice=sl, p_slice=pv, aggregation=a_, window="full", side="right",
                     norm_type="energy", layer=None, rank=None)
+                for sl, pv in (("gf", "p_t"), ("fixP", "p_0"))
                 for a_ in ("ratio_of_means", "mean", "median")]
     rep = header("E-40.1-T4a", "docs/e40_todo.md §3.2",
                  {"exp39_supp_three_objects": SUPP,
@@ -202,6 +234,8 @@ def main(results_dir: str = "results") -> dict:
                  channel_tags=tag_list,
                  extra={"per_layer": per_layer,
                         "a3_identity_asserts": a3,
+                        "frac_K_external_checkpoint": frac_checkpoint,
+                        "frac_K_external_matches": bool(frac_external_ok),
                         "g_uni_checkpoint": {
                             "layers": LAYERS, "cached": "см. per_layer.g_uni_cached_*",
                             "recomputed": "см. per_layer.g_uni_recomputed_corpus",
