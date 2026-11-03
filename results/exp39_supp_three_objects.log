@@ -9,4 +9,4 @@ L22: O1 0.0001719 (iso 0.0006901, rel 0.249×) survive 0.0103 | g_uni 0.1258 = E
 L23: O1 0.0004725 (iso 0.0006901, rel 0.685×) survive 0.0224 | g_uni 0.1403 = ESG 0.1403 (top1-прокси 0.1305) | g_uni(J^gf) 5.5e-16
     K=(I−P)J: ‖K‖²/‖J‖² alive 0.996302 (E-37 0.993934) all 0.994275 | референс (I−P) 0.993768 | c=2.087e-03 cos(J,PJ)=0.108 | sent 0.507 | real/dir(тот же срез) 0.623
 
-→ ../results/exp39_supp_three_objects.json (wall 284.4 с)
+→ ../results/exp39_supp_three_objects.json (wall 356.6 с)
