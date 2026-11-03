@@ -4,9 +4,13 @@ Every artifact number must say HOW it was produced before it says HOW MUCH.
 Three fields are ``identity-relevant``: two results may only be compared when
 they agree on them.
 
-- ``p_provenance`` — absolute values of ``tr P``, ``iso``, ``O1`` change when p
+- ``p_mode`` — absolute values of ``tr P``, ``iso``, ``O1`` change when p
   changes (renormalized P128 vs raw P128_RAW moved L6 O1/iso 0.511 → 0.322);
-  ``g_uni`` does not depend on p at all (``p_algebra.g_uni``).
+  ``g_uni`` does not depend on p at all (``p_algebra.g_uni``). Unknown mode is
+  a stop condition, not a legal tag value (``other`` removed, патч v2 §1.6).
+- ``p_slice`` — ``p_t`` (per-position) vs ``p_0`` (fixP) are DIFFERENT operators
+  ``P(p)``; triple numbers without ``p_slice`` are not comparable. ``g_uni``
+  needs no ``p_slice`` (p-free in both branches: raw has no p; gf ≡ 0).
 - ``norm_type`` — norm vs energy differ by a square (E-33r's «98–99 %» was a
   norm labelled as energy; paper §6 item 19).
 - ``slice`` — identities hold inside a slice only; ``g_uni(J^gf) ≡ 0`` is true
@@ -17,11 +21,13 @@ they agree on them.
 
 Usage::
 
-    from prism.tag import ChannelTag, make_tag
+    from prism.tag import ChannelTag, make_tag, require_triple_tag
     t = make_tag(protocol="natural", slice="raw", window="full", side="right",
-                 p_provenance="truncated_U128", layer=23, rank=16,
+                 p_mode="truncated_U128", p_slice="p_t", layer=23, rank=16,
                  norm_type="energy", source="cache", status="measured")
     # aggregation defaults to "ratio_of_means"; any real/null ratio must set it.
+    require_triple_tag(t)   # ValueError if a triple number would be reported
+                            # without slice/aggregation/p_slice (патч v2 §1.6.5)
 
 An artifact without a ``ChannelTag`` is invalid (ТЗ §II.1 rules).
 """
@@ -30,7 +36,8 @@ from __future__ import annotations
 
 from collections import namedtuple
 
-__all__ = ["ChannelTag", "make_tag", "IDENTITY_FIELDS", "TAG_DOMAINS"]
+__all__ = ["ChannelTag", "make_tag", "IDENTITY_FIELDS", "TRIPLE_EXTRA_FIELDS",
+           "require_triple_tag", "TAG_DOMAINS"]
 
 #: Allowed values per field (fail-loud membership, trust-boundary style).
 TAG_DOMAINS: dict[str, tuple[str, ...]] = {
@@ -38,7 +45,8 @@ TAG_DOMAINS: dict[str, tuple[str, ...]] = {
     "slice": ("raw", "gf", "fixP"),
     "window": ("top", "tail", "full"),
     "side": ("left", "right", "mixed"),
-    "p_provenance": ("truncated_U128", "full_softmax", "other"),
+    "p_mode": ("truncated_U128", "full_softmax"),
+    "p_slice": ("p_t", "p_0"),
     "aggregation": ("ratio_of_means", "mean", "median", "energy_weighted"),
     "norm_type": ("norm", "energy", "angle"),
     "source": ("cache", "recomputed", "audit-only"),
@@ -46,13 +54,29 @@ TAG_DOMAINS: dict[str, tuple[str, ...]] = {
 }
 
 #: Fields two results must agree on before numbers are comparable (ТЗ §II.1).
-IDENTITY_FIELDS = ("p_provenance", "norm_type", "slice", "aggregation")
+IDENTITY_FIELDS = ("p_mode", "norm_type", "slice", "aggregation")
+#: Extra fields mandatory when reporting a triple number (c, s, cos, frac_K);
+#: g_uni does NOT need them (p-free), патч v2 §1.6 rules 4–5.
+TRIPLE_EXTRA_FIELDS = ("p_slice",)
 
 ChannelTag = namedtuple(
     "ChannelTag",
-    ["protocol", "slice", "window", "side", "p_provenance", "aggregation",
+    ["protocol", "slice", "window", "side", "p_mode", "p_slice", "aggregation",
      "layer", "rank", "norm_type", "source", "status"],
 )
+
+
+def require_triple_tag(tag: "ChannelTag") -> "ChannelTag":
+    """Fail loud if ``tag`` may not back a triple/real-null number: slice,
+    aggregation and p_slice must all be set (патч v2 §1.6.5)."""
+    missing = [f for f in ("slice", "aggregation", "p_slice")
+               if getattr(tag, f) is None]
+    if missing:
+        raise ValueError(
+            f"ChannelTag: triple/real-null reporting requires {missing} "
+            f"(p_t vs p_0 are different operators P(p); median ≠ ratio; "
+            f"identities are slice-local)")
+    return tag
 
 
 def make_tag(**kwargs) -> ChannelTag:

@@ -27,7 +27,7 @@ from .p_algebra import (
     P_matrix, g_uni, gauge_share, isotropic_reference, secular_residual,
     secular_roots, trace_P, trace_P2,
 )
-from .transport import holonomy, kappa
+from .transport import holonomy
 
 __all__ = ["INVARIANTS", "Invariant", "run_invariants"]
 
@@ -136,12 +136,53 @@ def _chk_H_orthogonal(rng):
     assert np.abs(H @ H.T - np.eye(H.shape[0])).max() < 1e-10, "holonomy not orthogonal"
 
 
-def _chk_kappa_invariant(rng):
+def _blkrot(theta: float) -> np.ndarray:
+    """2×2 rotation by θ — a paired-spectrum building block with det = +1."""
+    return np.array([[np.cos(theta), -np.sin(theta)],
+                     [np.sin(theta), np.cos(theta)]])
+
+
+def _chk_kappa_curv_algebra(rng):
+    """κ_curv² = 2r − 2 tr H — UNCONDITIONAL for any H ∈ O(r) (патч v2 §1.4).
+    Small-angle holonomy H and large-angle H both pass — no spectral guard."""
     V0, V1 = _frames(rng)
-    V2 = V1 @ _rot(rng, 4, 0.25)
-    H = holonomy(V0, V1, V2)
-    O, _ = np.linalg.qr(rng.standard_normal((4, 4)))
-    assert abs(kappa(O.T @ H @ O) - kappa(H)) < 1e-10, "κ not similarity-invariant"
+    V2 = V1 @ _rot(rng, V1.shape[1], 2.1)
+    for H in (holonomy(V0, V1, V2), np.eye(2)):        # large-angle + H = I (κ=0)
+        r = H.shape[0]
+        lhs = float(np.linalg.norm(H - np.eye(r), "fro") ** 2)
+        rhs = 2.0 * r - 2.0 * float(np.trace(H))
+        assert abs(lhs - rhs) < 1e-10 * max(1.0, rhs), f"κ_curv algebra: {lhs} vs {rhs}"
+
+
+def _chk_kappa_curv_spectral(rng):
+    """κ_curv² = 4Σ(1−cosθⱼ) — CONDITIONAL: needs paired spectrum
+    (r even, det H = +1, no eigenvalues ±1). Guarded precondition (патч v2 §1.4)."""
+    thetas = rng.uniform(0.05, 2.5, size=3)            # strictly inside (0, π)
+    H = np.zeros((6, 6))
+    for j, th in enumerate(thetas):
+        H[2 * j:2 * j + 2, 2 * j:2 * j + 2] = _blkrot(th)
+    r = H.shape[0]
+    assert r % 2 == 0 and abs(np.linalg.det(H) - 1.0) < 1e-10
+    ev = np.linalg.eigvals(H)
+    assert np.min(np.abs(np.abs(ev) - 1.0)) < 1e-9      # all on unit circle
+    assert np.min(np.abs(ev - 1.0)) > 1e-6 and np.min(np.abs(ev + 1.0)) > 1e-6
+    lhs = float(np.linalg.norm(H - np.eye(r), "fro") ** 2)
+    rhs = 4.0 * float(np.sum(1.0 - np.cos(thetas)))
+    assert abs(lhs - rhs) < 1e-10 * max(1.0, rhs)
+    # negative control: the identity FAILS for H with a −1 eigenvalue
+    Hbad = np.diag([-1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) @ H
+    bad = float(np.linalg.norm(Hbad - np.eye(6), "fro") ** 2) - 4.0 * float(
+        np.sum(1.0 - np.cos(np.concatenate([thetas, [0.0]]))))
+    assert abs(bad) > 1e-6, "spectral identity must NOT close through θ=0/π"
+
+
+def _chk_kappa_cond_invariance(rng):
+    """κ_cond(OᵀGO) = κ_cond(G) for orthogonal O (патч v2 §1.4). Tautological
+    for exact arithmetic (σ(OᵀGO)=σ(G)); guards our cond usage, not the math."""
+    A = rng.standard_normal((8, 8))
+    G = A @ A.T + 1e-3 * np.eye(8)
+    O, _ = np.linalg.qr(rng.standard_normal((8, 8)))
+    assert abs(np.linalg.cond(O.T @ G @ O) - np.linalg.cond(G)) < 1e-8
 
 
 def _kin_pair(rng, K=12, D=24, r=4, angle=0.12):
@@ -211,17 +252,34 @@ def _chk_triple_identity(rng):
 def _chk_same_slice_aggregation(rng):
     """ТЗ §II.2 (ревизия 2): slice+aggregation identity-relevant in the tag; the
     triple identity must NOT close across mixed aggregations (test IV.6)."""
-    t = make_tag(protocol="natural", slice="raw", p_provenance="truncated_U128",
-                 norm_type="energy")
+    t = make_tag(protocol="natural", slice="raw", p_mode="truncated_U128",
+                 p_slice="p_t", norm_type="energy")
     assert t.aggregation == "ratio_of_means", "default must be the identity-closing one"
     assert t.slice == "raw"
     try:
-        make_tag(protocol="natural", slice="raw", p_provenance="truncated_U128",
+        make_tag(protocol="natural", slice="raw", p_mode="truncated_U128",
                  norm_type="energy", aggregation=None)
     except ValueError:
         pass
     else:
         raise AssertionError("aggregation=None must be rejected (identity-relevant)")
+    # патч v2 §1.6: p_mode has no "other"; triple reporting needs p_slice.
+    try:
+        make_tag(protocol="natural", slice="raw", p_mode="other",
+                 norm_type="energy")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("p_mode='other' must be a stop condition, not a tag")
+    from .tag import require_triple_tag
+    try:
+        require_triple_tag(make_tag(protocol="natural", slice="raw",
+                                    p_mode="truncated_U128", norm_type="energy"))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("triple number without p_slice must be rejected")
+    require_triple_tag(t)
     # negative half (IV.6): mixing median c/s with aggregated frac_K breaks the identity
     K, D, p, J = _fixtures(rng)
     mixed = 1.0 - 2.0 * c(J, p, "median") + s(J, p, "median") ** 2
@@ -243,7 +301,16 @@ INVARIANTS: dict[str, Invariant] = {
     "trace_identities": Invariant("tr P = 1−Σp²; tr P² = Σp²−2Σp³+(Σp²)²", ("p_algebra",),
                                   _chk_trace_identities),
     "H_orthogonal": Invariant("H Hᵀ = I", ("transport",), _chk_H_orthogonal),
-    "kappa_invariant": Invariant("κ(OᵀHO) = κ(H)", ("transport",), _chk_kappa_invariant),
+    "kappa_curv_algebra": Invariant("κ_curv² = 2r − 2trH (любая H ∈ O(r))",
+                                    ("transport",), _chk_kappa_curv_algebra),
+    "kappa_curv_spectral": Invariant("κ_curv² = 4Σ(1−cosθ) (парный спектр: r чётн., det +1, ±1 нет)",
+                                     ("transport",), _chk_kappa_curv_spectral,
+                                     note="патч v2 §1.4: условное; precondition guard + "
+                                          "negative control θ=0/π"),
+    "kappa_cond_invariance": Invariant("κ_cond(OᵀGO) = κ_cond(G), O орт.",
+                                       ("p_algebra", "spectral"), _chk_kappa_cond_invariance,
+                                       note="vacuous-by-invariance check kept per патч v2; "
+                                            "κ(OᵀHO)=κ(H) запись удалена по его же требованию"),
     "channels_sum": Invariant("Σ6 channels + eps3 = ‖ΔJ‖², E_resid/E_off independent",
                               ("kinetic",), _chk_channels_sum,
                               note="6 channels per docs/E40_ans.md, not the ТЗ's 5"),
