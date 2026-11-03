@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, ".."))
 
-from exp40_common import LAYERS, dump_json, header, sha16  # noqa: E402
+from exp40_common import LAYERS, dump_json, header  # noqa: E402
 
 ROOT = os.path.join(HERE, "..")
 E27_CACHE = os.path.join(ROOT, "results", "exp27_jcache.pt")
@@ -67,8 +67,8 @@ def vector_reconcile(ck27: dict) -> dict:
                         map_location="cpu", weights_only=False)
         for (s_len, pos) in inter:
             for k27 in ck27["P128"]:
-                dom, si, l, S_, POS = k27
-                if l != L or S_ != s_len or POS != pos:
+                dom, si, lay, S_, POS = k27
+                if lay != L or S_ != s_len or POS != pos:
                     continue
                 p27 = ck27["P128"][k27].double()
                 # оба продюсента индексируют от конца => верное отображение ТОЖДЕСТВЕННОЕ
@@ -92,6 +92,21 @@ def vector_reconcile(ck27: dict) -> dict:
             "reversal_confirmed": bool(dev_wrong > 0 and dev_rev < dev_wrong / 10.0)}
 
 
+def cache_invariants(ck: dict) -> dict:
+    """Инварианты кэша числами, а не литералами (правка ревью §4, строка 2):
+    со-индексация `p`↔`J` и нормировка `p` на K-срезе."""
+    ks_p, ks_j = set(ck["P128"]), set(ck["JR"])
+    dev = max(abs(float(v.sum()) - 1.0) for v in ck["P128"].values())
+    k0, d0 = ck["JR"][next(iter(ks_j))].shape
+    bad = sum(1 for v in ck["JR"].values() if tuple(v.shape) != (k0, d0))
+    return {"keysets_equal": ks_p == ks_j, "n_keys_p": len(ks_p), "n_keys_j": len(ks_j),
+            "p_sum_max_dev": dev, "p_normalized": bool(dev < 1e-5),
+            "j_shape": [int(k0), int(d0)], "j_shape_mismatch": bad,
+            "note": "P128 ренормирована per-position (Σ = 1) — сверять с ней, а не с "
+                    "P128_RAW; несогласованность ключей означала бы, что p и J читаются "
+                    "из разных позиций"}
+
+
 def main(results_dir: str = "results") -> dict:
     t0 = time.time()
     audit = code_audit()
@@ -101,6 +116,7 @@ def main(results_dir: str = "results") -> dict:
     assert ck27["pool_fp"] == ck6["pool_fp"], "пул E-27 ≠ пул exp27b — сверка бессмысленна"
     assert ck27["U128"] == ck6["U128"], "база U128 расходится"
     vec = vector_reconcile(ck27)
+    inv = cache_invariants(ck6)
     # ТЗ §11 (правка раунда v2): гейт обязан отдать незакрытые пункты аудита,
     # иначе «прямое требование» (gate_open_items_for_E40_2) никем не прочитано.
     audit_path = os.path.join(results_dir, "E40_1_audit.json")
@@ -112,7 +128,7 @@ def main(results_dir: str = "results") -> dict:
         open_items = ["p_slice E-27.5/27.6 (решается этим гейтом)",
                       "линия C_F/C_top16: exp31 = raw => пересчёт (E-40.1(g), E-40.2)"]
         audit_source = "fallback (E40_1_audit.json ещё не создан)"
-    gate_pass = all(f["found"] for f in audit)
+    gate_pass = all(f["found"] for f in audit) and inv["keysets_equal"] and inv["p_normalized"]
     e40_2_can_start = gate_pass
     rep = header(
         "E-40.0", "docs/e40_todo.md §2 (редакция 2)",
@@ -120,6 +136,7 @@ def main(results_dir: str = "results") -> dict:
          "exp27b_L6": os.path.join(EXP27B_DIR, "exp27b_jcache_L6.pt")},
         channel_tags=[],
         extra={"code_audit": audit, "vector_reconcile": vec,
+               "cache_invariants": inv,
                "p_checksum_note": "удалён: Σ‖p_t‖₁ ≈ 4096.000009 — константа для любой "
                                   "ренормированной p, и p_t, и p_0 (ТЗ §2.4)",
                "E27_5_6_p_slice": "p_t",
