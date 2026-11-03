@@ -43,6 +43,28 @@ def _fsq(A: np.ndarray) -> float:
     return float((A ** 2).sum())
 
 
+def _check_svd(triple, J: np.ndarray, name: str):
+    """Validate a caller-supplied ``np.linalg.svd`` triple against ``J`` — a
+    stale or swapped ``svds`` must fail loud, not silently renumber channels.
+    Shape check alone cannot see a swap of same-shaped inputs, so the triple is
+    checked by reconstruction (one matmul, ~10× cheaper than the SVD)."""
+    U, S, W = triple
+    U = np.asarray(U, dtype=np.float64)
+    S = np.asarray(S, dtype=np.float64)
+    W = np.asarray(W, dtype=np.float64)
+    K, D = J.shape
+    if U.shape != (K, min(K, D)) or S.shape != (min(K, D),) or W.shape != (min(K, D), D):
+        raise ValueError(f"{name}: SVD shapes {U.shape}/{S.shape}/{W.shape} "
+                         f"do not match [K,D]=[{K},{D}] (full_matrices=False)")
+    rec = float(np.linalg.norm((U * S) @ W - J)
+                / max(np.linalg.norm(J), 1e-300))
+    if rec > 1e-8:
+        raise ValueError(f"{name}: U diag(S) Vᵀ ≠ J (rel {rec:.2e}) — stale or "
+                         "swapped svds (swapping two same-shaped triples is "
+                         "otherwise undetectable)")
+    return U, S, W
+
+
 def _min_gap_ratio(S: np.ndarray) -> float:
     if S.size < 2:
         return 1.0
@@ -52,7 +74,8 @@ def _min_gap_ratio(S: np.ndarray) -> float:
 
 
 def kinetic_decomposition(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
-                          eps_angle: float = 0.3, eps_gap: float = 1e-2) -> dict:
+                          eps_angle: float = 0.3, eps_gap: float = 1e-2,
+                          svds: tuple | None = None) -> dict:
     """Six-channel kinetic accounting between consecutive Jacobians.
 
     ``J_t``, ``J_t1``: ``[K, D]`` in a common transport frame (the E-40.5
@@ -60,6 +83,12 @@ def kinetic_decomposition(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
     Returns every field listed in E40_ans §7/§8; when a flag invalidates a
     channel the number is still computed (if real) for diagnostics, but the
     flags tell the report what may be interpreted.
+
+    ``svds=((U0,S0,W0),(U1,S1,W1))``: precomputed ``np.linalg.svd(...,
+    full_matrices=False)`` of the two fp64 inputs, for callers that sweep a
+    chain of positions where each ``J`` appears in two consecutive pairs — a
+    full [K,D] SVD is the whole cost of this function. Bit-identical to the
+    internal call when the cached triple came from the same fp64 array.
     """
     J_t = np.asarray(J_t, dtype=np.float64)
     J_t1 = np.asarray(J_t1, dtype=np.float64)
@@ -69,8 +98,12 @@ def kinetic_decomposition(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
     if not (0 < r <= min(K, D)):
         raise ValueError(f"r must be in (0, {min(K, D)}], got {r}")
 
-    U0, S0, W0 = np.linalg.svd(J_t, full_matrices=False)
-    U1, S1, W1 = np.linalg.svd(J_t1, full_matrices=False)
+    if svds is None:
+        U0, S0, W0 = np.linalg.svd(J_t, full_matrices=False)
+        U1, S1, W1 = np.linalg.svd(J_t1, full_matrices=False)
+    else:
+        (U0, S0, W0) = _check_svd(svds[0], J_t, "svds[0]")
+        (U1, S1, W1) = _check_svd(svds[1], J_t1, "svds[1]")
     V0, V1 = W0[:r].T, W1[:r].T                       # [D, r]
     U0a = U0[:, :r]
     U1a = U1[:, :r]
@@ -78,10 +111,16 @@ def kinetic_decomposition(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
     U0a, U1a, fU = align_signs_and_columns(U0a, U1a)
     V0, V1, fV = align_signs_and_columns(V0, V1)
     order_cross = bool(fU["order_cross"] or fV["order_cross"])
+    # M2 fix (audit_core_math_v1): σ must travel WITH the matched columns —
+    # column j of the aligned t+1 frame is S1[perm[j]], not S1[j]. σ follows
+    # the U-side perm; a U/V perm disagreement means the singular triplets
+    # themselves split (near-degenerate block) and is flagged.
+    permU, permV = fU["perm"], fV["perm"]
+    sigma_perm_mismatch = bool(permU != permV)
 
     dJ = J_t1 - J_t
     Sig_t = np.diag(S0[:r])
-    Sig_t1 = np.diag(S1[:r])
+    Sig_t1 = np.diag(np.asarray(S1[:r])[permU])
     dSig = Sig_t1 - Sig_t
     Sb = 0.5 * (Sig_t + Sig_t1)
 
@@ -100,6 +139,11 @@ def kinetic_decomposition(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
             M = transport_log(polar_factor(U0a.T @ U1a))
             N = transport_log(polar_factor(V0.T @ V1))
         except ValueError:
+            # Either side may fail (U-transport is computed first): the linearization is
+            # rejected as a whole, so BOTH must go to None — leaving `M` set while `N` is
+            # None makes the `M is not None` branch below compute `Sb @ None` (TypeError on
+            # a 0-dim object array) instead of reporting the rejected cell.
+            M = N = None
             unstable_transport = True
     # r = 1: after alignment Q = {+1}, log = 0 — exact, no try needed
     if r == 1:
@@ -116,7 +160,10 @@ def kinetic_decomposition(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
                            "order_cross_V": fV["order_cross"],
                            "unstable_transport": unstable_transport,
                            "sign_flips_U": fU["sign_flips"],
-                           "sign_flips_V": fV["sign_flips"]}}
+                           "sign_flips_V": fV["sign_flips"],
+                           "perm_U": permU,
+                           "perm_V": permV,
+                           "sigma_perm_mismatch": sigma_perm_mismatch}}
     dJ_proj = U0a @ (U0a.T @ dJ @ V0) @ V0.T
     E_off = _fsq(dJ - dJ_proj)
     E_radial = _fsq(dSig)
@@ -144,6 +191,12 @@ def kinetic_decomposition(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
         "eps3_correction": (_fsq(dJ) - six_sum) if six_sum is not None else None,
         "diag": {"normM_fro": float(np.linalg.norm(M, "fro")) if M is not None else None,
                  "normN_fro": float(np.linalg.norm(N, "fro")) if N is not None else None},
+        # The transport objects themselves. Consumers that build a NULL over the
+        # left channel must perturb the ACTUAL M at the ACTUAL Σ̄ — re-deriving
+        # them in the script duplicates the pipeline and silently loses the
+        # σ↔column permutation (the M2 lesson), so they are exposed here.
+        "M_transport": None if M is None else np.array(M),
+        "sigma_bar": np.array(Sb),
     })
     # reportable set (E40_ans §5.3/§8)
     if not linearization_valid:
@@ -158,10 +211,17 @@ def kinetic_decomposition(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
         # non-vacuous closure: eps3 is a DIAGNOSTIC residual, not a channel —
         # the assertion bounds it, it never redefines E_resid (E40_ans §4).
         out["closure_rel"] = abs(_fsq(dJ) - six_sum) / max(_fsq(dJ), _EPS)
+    if sigma_perm_mismatch and "ambiguous" not in out:
+        out["ambiguous"] = []
+    if sigma_perm_mismatch:
+        out["ambiguous"].append("E_radial")
+        if "E_radial" in out["channels_reportable"]:
+            out["channels_reportable"].remove("E_radial")
     return out
 
 
-def channel_energy_matrix(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16) -> np.ndarray:
+def channel_energy_matrix(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
+                          svds: tuple | None = None) -> np.ndarray:
     """5×5 Gram of the vector components ``A1..A5`` with
     ``ΔJ = A1 + A2 + A3 + A4 + A5``:
     ``radial`` = ΔΣ embedded, ``left`` = U M Σ̄ Vᵀ, ``right`` = −U Σ̄ N Vᵀ,
@@ -181,12 +241,16 @@ def channel_energy_matrix(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16) -> np.
     J_t = np.asarray(J_t, dtype=np.float64)
     J_t1 = np.asarray(J_t1, dtype=np.float64)
     K, D = J_t.shape
-    U0, S0, W0 = np.linalg.svd(J_t, full_matrices=False)
-    U1, S1, W1 = np.linalg.svd(J_t1, full_matrices=False)
+    if svds is None:
+        U0, S0, W0 = np.linalg.svd(J_t, full_matrices=False)
+        U1, S1, W1 = np.linalg.svd(J_t1, full_matrices=False)
+    else:
+        (U0, S0, W0) = _check_svd(svds[0], J_t, "svds[0]")
+        (U1, S1, W1) = _check_svd(svds[1], J_t1, "svds[1]")
     U0a, S0r, V0 = U0[:, :r], S0[:r], W0[:r].T
-    U1a = align_signs_and_columns(U0a, U1[:, :r])[1]
+    U1a, _, fU = align_signs_and_columns(U0a, U1[:, :r])
     V1 = align_signs_and_columns(V0, W1[:r].T)[1]
-    S1r = S1[:r]
+    S1r = S1[:r][fU["perm"]]                      # σ follows the frame (M2)
     dJ = J_t1 - J_t
     M = transport_log(polar_factor(U0a.T @ U1a))
     N = transport_log(polar_factor(V0.T @ V1))
