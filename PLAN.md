@@ -1,4 +1,54 @@
-# PLAN — активно: ревью-раунды дополнения E-39 (`docs/E39+.md`); ответы — `docs/E39+_answers.md`
+# PLAN — активно: ТЗ `docs/E40_math_core.md` (код ядра v1 + E6; статья — вторым заходом)
+
+## Запрос 2 (2026-11-03, активно): E40_math_core
+
+ТЗ `docs/E40_math_core.md` + рецептурное дополнение пользователя `docs/E40_ans.md` (кинетика:
+6 каналов, `E_resid=‖U_tᵀΔJ V_t−ΔJ_lin‖²`, `E_off_manifold`, флаги валидности). Решения
+пользователя: (1) **E6 закрыть сейчас** (таблица §2.2.1 смешивала срезы, данные согласованы);
+(2) **объём прохода — код+тесты, статья вторым заходом**; (3) кинетика по `E40_ans.md`;
+(4) MP-скобки: Монте-Карло истец, числа ТЗ — ориентир.
+
+### DOING / NEXT (E40)
+
+- [x] **DONE 2026-11-03: правки архитектора (`docs/E40_math_fixes.md`) внесены в оригинал
+      `docs/E40_math_core.md` (ревизия 2): §I.5 переписан на самосогласованную тройку
+      (таблица сверена бит-в-бит с `results/exp39_supp_three_objects.json` K_from_I_minus_P/alive),
+      §I.7 — рецептура ΔJ_lin + шестой канал + условия валидности A/B, ChannelTag + поле
+      `aggregation`, `triple_identity`→passing + `same_slice_aggregation`, §II.8 разстейджирован,
+      §III.13–15, тесты IV.4–6, снятие запретов §V, §VI спорные (с моими замечаниями: λ_max ≤ p_max,
+      P²=P при one-hot p), §VII порядок работ. Фикс-файл пользователь удалит. НЕ коммитить
+      `docs/E40_math_fixes.md` — он умрёт.**
+- [x] **DONE P0 — E6**: закрыт; `s_agg`/`frac_K_energy_agg` в K-блоке и JSON, таблица supplement
+      §2.2.1 перемаркирована по срезам; несогласия (λmax ≤ p_max; P²=P в вершине p=e_i) —
+      в `docs/E40_math_core_answers.md`, позиция архитектора — §VI ТЗ.
+- [ ] **NEXT §VII (код, малый дифф)**: (1) `prism/tag.py` — поле `aggregation` в ChannelTag
+      (обязательное, дефолт `ratio_of_means`); (2) `prism/cheap_invariants.py` + `operator_checks` —
+      явный параметр `aggregation` у `c/s/cos/frac_K` (median — diagnostics-only); (3)
+      `prism/invariants.py` — запись `same_slice_aggregation` + негативный тест на смешанные
+      агрегации (тест IV.6). Тройка/тесты IV.1–3 уже в реестре — не переделывать.
+- [ ] **P1 — алгебра**: `prism/tag.py` (ChannelTag + валидация), `prism/p_algebra.py`,
+      `prism/operator_checks.py`, `prism/cheap_invariants.py` + тесты IV.1–3, IV.7, MP-Монте-Карло IV.6.
+- [ ] **P1 — алгебра**: `prism/tag.py` (ChannelTag + валидация), `prism/p_algebra.py`,
+      `prism/operator_checks.py`, `prism/cheap_invariants.py` + тесты IV.1–3, IV.7, MP-Монте-Карло IV.6.
+- [ ] **P2 — транспорт**: `prism/svd_bundle.py` (поглощает principal_angles из exp28/31/39a),
+      `prism/transport.py` (align_signs_and_columns + polar; polar уже есть в holonomy.procrustes_align)
+      + тест IV.5 (синтетическая Q с известным log).
+- [ ] **P3 — кинетика**: `prism/kinetic.py` строго по `E40_ans.md` §8 (сигнатура, 6 каналов,
+      eps3_correction, флаги linearization_valid/rotation_unique; r=1 контроль IV). Пререгистрация:
+      L6–L22 linearization_valid=false — ожидаемый результат, не провал.
+- [ ] **P4 — реестр**: `prism/invariants.py` (M0) + тест-драйвер всех записей; статусы
+      {passing, failing, blocked}; тройная запись `triple_identity` после E6 → passing.
+- [ ] **P5 — периферия**: `prism/nulls_and_stats.py` (консолидация noise/permutation), `prism/behavior.py`
+      + pytest-gate (tier-0 не импортирует behavior), `prism/profiles.py` (recipes).
+- [ ] **P6 — CI зелёный**, коммиты явными путями; потом (следующий заход) правки `paper.md`/`ref-math`/`ref-impl`.
+
+### Границы (E40)
+
+- `paper.md` в этом проходе не правится (решение пользователя).
+- Ядро на numpy (по сигнатурам ТЗ); torch-модули не трогаем, интеграция — потом.
+- Числа-ссылки не пересчитывать; E-39 якоря не трогать.
+
+---
 
 ## Запрос (фиксация)
 
@@ -78,9 +128,8 @@ E-39f, когда не было ограничения, что частичны�
       самокоррекция карты E-39m (семантика `h_any_low_kappa`/`discriminates` — PPL-гейт, не κ);
       §2.2.5 supplement (cos по слоям + операторный базис 0.154–0.158, real/iid 0.42–0.87),
       D13; заметка cos/b_lin/sentinel в `E44.md` §2.2; децили массы в `exp39_supp_pscale_probe.py`.
-- [ ] DOING: `exp39d_floor_seeds12` (seeds 1,2, pearson, λ=0.01 λo=1.0, CPU ~1 ч) — итог внести
-      в карту E-39m/E-39d и в ответ ревьюеру (устойчив ли floor вне seed 0); децили подставить
-      в §2.2.5 после перепрогона зонда.
+- [x] `exp39d_floor_seeds12` завершён (34.2 мин CPU, results/exp39d_floor_seeds12 сохранён) —
+      итоги (карта E-39m/E-39d, децили §2.2.5) внести в следующем доходе к E-39-линии.
 - [ ] Ревизия `paper.md`: что из реф-деталей (числа по слоям, CI, история раундов) вынести в
       `ref-exp.md`/supplement — см. отдельный разбор ниже.
 - [ ] E-40.1 (m) — `real/dir` на второй модели: GPU-профильщик exp27b + новый jcache, зависимость
