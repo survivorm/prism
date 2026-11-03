@@ -46,7 +46,10 @@ def header(exp: str, tz: str, inputs: dict[str, str],
         "observational": True,
         "new_forwards": 0,
         "inputs": {k: {"path": v, "sha256_16": sha16(v)} for k, v in inputs.items()},
-        "channel_tags": [t._asdict() for t in channel_tags],
+        # ChannelTag (namedtuple) или свободный dict — мета-артефакты (E-40.0/0.1/0.8)
+        # несут не канал-величины, а примечание о тегах источников.
+        "channel_tags": [t._asdict() if hasattr(t, "_asdict") else dict(t)
+                         for t in channel_tags],
     }
     if extra:
         rep.update(extra)
