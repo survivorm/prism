@@ -113,16 +113,11 @@ def _agg(num: float | np.ndarray, den: float | np.ndarray, aggregation: str,
         val = float(num.sum() / den.sum())
         return val ** 0.5 if root else val
     if aggregation == "energy_weighted":
-        # Energy-weighted mean of the per-position ratios with the energies as
-        # weights is the ratio of sums by construction:
-        #   Σ den_t·(num_t/den_t) / Σ den_t == Σ num_t / Σ den_t.
-        # The ТЗ vocabulary (E40_math_core §II, e40_todo §1.1, paper §6) allows
-        # the name, so it is accepted here as an ALIAS instead of being rejected
-        # while `tag.TAG_DOMAINS` admitted it (audit4 Q3). Any OTHER weight
-        # (‖J_t‖ instead of ‖J_t‖², an external covariate) is a different
-        # number — name that aggregation when it is needed.
-        val = float(num.sum() / den.sum())
-        return val ** 0.5 if root else val
+        raise ValueError(
+            "aggregation='energy_weighted' was removed (audit4 Q3): the energy-weighted "
+            "mean of per-position ratios IS the ratio of sums — pass 'ratio_of_means'. "
+            "A genuinely different weighting (‖J_t‖ instead of ‖J_t‖², an external "
+            "covariate) is a different number and needs its own name and tag value.")
     r = num / den
     if aggregation == "mean":
         return float((np.sqrt(r) if root else r).mean())
@@ -131,8 +126,7 @@ def _agg(num: float | np.ndarray, den: float | np.ndarray, aggregation: str,
     if aggregation == "per_position":   # RAW energy ratios (root is a property of the
         return r                        # aggregate; frac = 1 − 2c + O1 closes positionally)
     raise ValueError(
-        f"aggregation={aggregation!r} not in ratio_of_means|energy_weighted"
-        "|mean|median|per_position")
+        f"aggregation={aggregation!r} not in ratio_of_means|mean|median|per_position")
 
 
 def c(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",

@@ -47,7 +47,12 @@ TAG_DOMAINS: dict[str, tuple[str, ...]] = {
     "side": ("left", "right", "mixed"),
     "p_mode": ("truncated_U128", "full_softmax"),
     "p_slice": ("p_t", "p_0"),
-    "aggregation": ("ratio_of_means", "mean", "median", "energy_weighted"),
+    # The vocabulary the aggregator actually implements — the two lists must agree
+    # exactly. `energy_weighted` used to be listed here and was an ALIAS of
+    # `ratio_of_means` (energy-weighted mean of per-position ratios = ratio of sums),
+    # i.e. a fourth name for a third thing: removed, and `per_position`, which really
+    # is a different number and was implemented but untaggable, is in (audit4 Q3).
+    "aggregation": ("ratio_of_means", "mean", "median", "per_position"),
     "norm_type": ("norm", "energy", "angle"),
     "source": ("cache", "recomputed", "audit-only"),
     "status": ("measured", "inferred", "not_testable"),

@@ -802,6 +802,31 @@ def _forward_h_norm(
     return h, h_norm
 
 
+def bridge_objective(cos: torch.Tensor, w: torch.Tensor) -> torch.Tensor:
+    """The bridge objective `Σ_k w_k (1 − cos_k)` — ONE formula for the thing that is
+    OPTIMIZED and the thing that is REPORTED (audit4 M1).
+
+    Before this, `bridge_rows_backward` minimized the unweighted mean `(1−cos).mean()`
+    while `bridge._weighted_cosine_loss` reported `Σ w(1−cos)` with `w = p_L/Σp_L`, so
+    ""gap improved"" was not a statement about the trained objective. Both sides call
+    this function now.
+
+    `w` is used AS GIVEN: it must be a probability vector over the rows you pass in, and
+    the CALLER normalizes. Deliberate — the chunked path normalizes `p` once and then
+    slices, so per-chunk losses add up to the global objective. Normalizing inside here
+    would renormalize every chunk by its own weight mass: chunk-size dependent, and it
+    quietly changes the objective (this is exactly what the chunk-invariance test caught).
+
+    The objective stays a convex combination like the old mean — same scale, no LR
+    retuning — but concentrated: on sharp `p` the top token carries most of the gradient,
+    by design. Rows dropped by a validity mask must enter with `w = 0` (the metric masks
+    them at its caller; on unmasked rows the two sides are identical).
+    """
+    if cos.shape != w.shape:
+        raise ValueError(f"bridge_objective: cos {tuple(cos.shape)} vs w {tuple(w.shape)}")
+    return (w.reshape(-1).to(cos.dtype) * (1.0 - cos)).sum()
+
+
 def bridge_rows_backward(
     model,
     layer_idx: int,
@@ -819,11 +844,14 @@ def bridge_rows_backward(
     """v23 A4: chunked bridge backward (the v22 OOM fix).
 
     Forward once + J_bar once, then build each chunk of K rows and backprop
-    its (1 - cos) bridge loss immediately (extra_loss — the KL — is
+    its `bridge_objective` loss immediately (extra_loss — the KL — is
     backproped with the first chunk). Backproping per chunk frees that
     chunk's 2nd-order row-graphs at once, so peak = chunk_size + 1 (the
     shared J_bar) second-order graphs, not K. Per-chunk gradients are
-    identical to a single backward on the total (1 - cos).mean() loss.
+    identical to a single backward on the total weighted loss
+    `Σ_k (p_k/Σp)(1 − cos_k)` — the SAME functional `bridge.jacobian_gap`
+    reports (audit4 M1: the objective must be the metric; it used to be the
+    unweighted mean).
 
     Gradients reach W_rows (live lm_head + B_lh @ A_lh) and o_proj (HVP
     through h). Returns (J_S_p [K, D] detached, bridge_loss scalar).
@@ -835,6 +863,7 @@ def bridge_rows_backward(
     import time as _time
 
     K = len(token_set)
+    w_obj = p.reshape(-1) / p.reshape(-1).sum()          # metric weights, Σw = 1
     h, h_norm = _forward_h_norm(
         model, layer_idx, input_ids, attention_mask, h=h
     )
@@ -866,7 +895,7 @@ def bridge_rows_backward(
         )
         tgt_c = J_tgt_p[c:hi].float()
         cos_c = torch.nn.functional.cosine_similarity(rows_c.float(), tgt_c, dim=1)
-        chunk_loss = (1.0 - cos_c).sum() / K
+        chunk_loss = bridge_objective(cos_c, w_obj[c:hi])
         # retain_graph on all-but-last keeps the ONE shared h forward graph
         # alive so the next chunk can still build its rows; the chunk's
         # 2nd-order row-graph is released by refcounting once we del it

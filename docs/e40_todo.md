@@ -40,7 +40,11 @@ ChannelTag = namedtuple(
 - `side ∈ {"left", "right", "mixed"}`.
 - **`p_mode ∈ {"truncated_U128", "full_softmax"}`** — в фазе 1 всегда `truncated_U128`.
 - **`p_slice ∈ {"p_t", "p_0"}`** — обязательно для `P(p)`-зависимых величин.
-- **`aggregation ∈ {"ratio_of_means", "mean", "median", "energy_weighted"}`** — обязательно для отношений.
+- **`aggregation ∈ {"ratio_of_means", "mean", "median", "per_position"}`** — обязательно для
+  отношений. `energy_weighted` удалён из словаря (аудит 4, Q3): взвешенное энергиями
+  среднее per-position отношений тождественно `ratio_of_means`, то есть это четвёртое имя
+  для третьего значения; `per_position` добавлен, потому что это другое число и оно
+  реализовано в агрегаторе, но не помечалось тегом (правка раунда v3).
 - `layer`, `rank`, `norm_type ∈ {"norm", "energy", "angle"}`, `source ∈ {"cache", "recomputed", "audit-only"}`, `status ∈ {"measured", "inferred", "not_testable"}`.
 
 **Стоп-правила:**

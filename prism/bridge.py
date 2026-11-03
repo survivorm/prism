@@ -144,10 +144,14 @@ def _weighted_cosine_loss(
     probs: torch.Tensor,
     mask: torch.Tensor,
 ) -> float:
-    """Weighted cosine dissimilarity loss."""
+    """The reported bridge metric (LOWER = WORSE alignment): `Σ_k w_k(1−cos_k)`,
+    `w = probs/Σprobs` over the valid rows. This is THE SAME functional that
+    `jacobian.bridge_objective` optimizes — one formula for objective and metric
+    (audit4 M1), so ""gap improved"" means the trained loss improved.
+    """
+    from .jacobian import bridge_objective      # local: keep bridge import-light
+
     cos_sim = torch.nn.functional.cosine_similarity(
         J_S.float()[mask], J_target[mask], dim=1
     )
-    w = probs[mask]
-    w = w / (w.sum() + 1e-8)
-    return (w * (1.0 - cos_sim)).sum().item()
+    return bridge_objective(cos_sim, probs[mask] / probs[mask].sum()).item()

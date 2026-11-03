@@ -57,6 +57,7 @@ from prism.cache_io import find_targets_dir
 from prism.layer_selection import classify_pair, get_layer_types
 from prism.jacobian import (
     _extract_hidden_state,
+    bridge_objective,
     bridge_rows_backward,
     compute_hidden_jacobian,
     compute_hidden_jacobian_rows,
@@ -639,12 +640,14 @@ def main(
                             if refresh_step and J_S_p is not None:
                                 # J_S_p already detached by bridge_rows_backward
                                 # (graph consumed by the per-chunk backward). Its
-                                # (1-cos) + KL backward ran there; only recompute
-                                # the metric scalar here for logging.
+                                # bridge_objective (p-weighted) + KL backward ran
+                                # there; only recompute the metric scalar here for
+                                # logging — same weighting, or the log would not be
+                                # the thing that was optimized (audit4 M1).
                                 cos_sim = torch.nn.functional.cosine_similarity(
                                     J_S_p.float(), J_tgt_p.float(), dim=1
                                 )
-                                bridge_loss = (1.0 - cos_sim).mean()
+                                bridge_loss = bridge_objective(cos_sim, p_L)
                             elif J_norms.get(si) is not None:
                                 # stale: held dense J_norm @ live W_eff rows ->
                                 # lm_head bridge gradient only (o_proj is refresh-only
@@ -655,7 +658,7 @@ def main(
                                 cos_sim = torch.nn.functional.cosine_similarity(
                                     J_S_p.float(), J_tgt_p.float(), dim=1
                                 )
-                                bridge_loss = (1.0 - cos_sim).mean()
+                                bridge_loss = bridge_objective(cos_sim, p_L)
                                 loss = loss + bridge_loss
                                 total_bridge += bridge_loss.item()
                                 n_bridge += 1

@@ -8,9 +8,12 @@ and can backprop on its own. This is what lets the chunked path work.
 
 Checks:
   * param grads (A_lh, B_lh, A_attn, B_attn, lm_head) from the chunked
-    per-chunk backward == a single dense one-shot backward,
+    per-chunk backward == a single dense one-shot backward **on the same
+    (p-weighted) objective** — audit4 M1 made the objective the reported
+    metric `Σ_k (p_k/Σp)(1−cos_k)`, not the unweighted mean,
   * the returned detached J_S_p rows match the dense gauge,
-  * the scalar bridge loss matches,
+  * the scalar bridge loss matches the metric AND differs from the old
+    unweighted mean (otherwise the M1 fix is not observable here),
   * chunk_size invariance (C=8 vs C=K).
 """
 
@@ -18,6 +21,7 @@ import torch
 
 from prism.jacobian import (
     _lm_module,
+    bridge_objective,
     bridge_rows_backward,
     compute_hidden_jacobian,
 )
@@ -83,7 +87,8 @@ def test_bridge_rows_backward_grads_match_dense():
     J_S = W_rows @ J_norm            # [K, D]  (J_i = W_rows[i] @ J_norm)
     J_bar = (p @ W_rows) @ J_norm    # [D]     (the softmax-gauge mean row)
     J_S_p = p[:, None] * (J_S - J_bar)  # [K, D]  row_i = p_i*(J_i - J_bar)
-    br_ref = (1 - torch.nn.functional.cosine_similarity(J_S_p, J_tgt, 1)).mean()
+    br_ref = bridge_objective(
+        torch.nn.functional.cosine_similarity(J_S_p, J_tgt, 1), p)
     (br_ref + KL_W * kl).backward()  # single one-shot
     g_ref = {n: getattr(x, "grad").clone() for n, x in [
         ("A_lh", A_lh), ("B_lh", B_lh), ("A_attn", A_attn), ("B_attn", B_attn)]}
@@ -116,9 +121,15 @@ def test_bridge_rows_backward_grads_match_dense():
     rel = (out.float() - J_ref.float()).norm().item() / max(J_ref.norm().item(), 1e-12)
     assert rel < 1e-3, f"J_S_p rows rel err {rel:.3e}"
 
-    # 3. scalar bridge loss matches
-    br_ref2 = (1 - torch.nn.functional.cosine_similarity(J_ref, J_tgt, 1)).mean()
+    # 3. scalar bridge loss == the p-weighted metric, and != the old unweighted
+    # mean (the M1 objective change must be observable in this test).
+    cos_ref = torch.nn.functional.cosine_similarity(J_ref, J_tgt, 1)
+    br_ref2 = bridge_objective(cos_ref, p2)
+    br_unw = (1.0 - cos_ref).mean()
     assert abs(br2 - br_ref2.item()) < 1e-5, f"bridge loss {br2} vs {br_ref2}"
+    assert abs(br2 - br_unw.item()) > 1e-3, (
+        f"weighted objective collapsed onto the unweighted mean ({br2} vs "
+        f"{br_unw.item()}) — M1 fix is not in effect")
 
     # 4. A_lh is DEAD at init (B_lh=0 -> W_eff=W; standard LoRA). Both the
     # dense reference and the chunked candidate give dL/dA_lh == 0 here, so

@@ -91,7 +91,11 @@ sharpness = c_eff / ‖P‖²_F,    c_eff = Σ(b·c)/Σb,  c = Σ_i p_i².
 **Правило для статьи и артефактов:**
 Для любой величины из тройки `(c, s, cos, frac_K)` **обязательно указывать**:
 1. **Срез** (`all` / `alive` / другой);
-2. **Агрегацию** (`ratio_of_means` / `mean` / `median` / `energy_weighted`).
+2. **Агрегацию** (`ratio_of_means` / `mean` / `median` / `per_position`).
+   `energy_weighted` из словаря удалён: среднее per-position отношений с весами
+   `‖J_t‖²` — это и есть отношение сумм, то есть `ratio_of_means` под другим именем
+   (аудит 4, Q3). Другая весовая схема (например `‖J_t‖`) — другое число, для неё
+   нужно собственное имя. (правка раунда v3)
 
 Медиана отношения и отношение сумм — разные объекты; для тождества `frac_K = 1 − 2c + s²` требуется **одна агрегация** (`ratio_of_means`); при `median_per_position` тождество не держится (ожидаемо).
 
@@ -182,7 +186,7 @@ ChannelTag = namedtuple(
 # side ∈ {"left", "right", "mixed"}
 # p_mode ∈ {"truncated_U128", "full_softmax"}                    # патч v2 §1.6: без "other" — неизвестный режим стоп-условие
 # p_slice ∈ {"p_t", "p_0"}                                        # NEW (патч v2 §1.6): per-position vs fixP — разные P(p); None допустим только для p-свободных объектов (g_uni)
-# aggregation ∈ {"ratio_of_means", "mean", "median", "energy_weighted"}   # identity-relevant, NEW
+# aggregation ∈ {"ratio_of_means", "mean", "median", "per_position"}   # identity-relevant, NEW
 # norm_type ∈ {"norm", "energy", "angle"}   # identity-relevant
 # source ∈ {"cache", "recomputed", "audit-only"}
 # status ∈ {"measured", "inferred", "not_testable"}
