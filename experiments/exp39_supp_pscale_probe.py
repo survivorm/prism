@@ -40,6 +40,8 @@ def sentinel_probe(L):
     assert col <= 1e-4, f"L{L}: P128_RAW не является перенормировкой P128 (rel {col:.3g})"
     di = torch.tensor([DOMAINS.index(x) for x in np.repeat(DOMAINS, N_PER_DOMAIN)])[:, None].expand(-1, S)
     rec = {"collinearity_rel": col, "raw_mass_mean": float(s.mean()), "raw_mass_median": float(s.median()),
+           "raw_mass_percentiles": {f"p{q:02d}": float(s.quantile(q / 100.0))
+                                    for q in (5, 10, 25, 50, 75, 90, 95)},
            "raw_mass_p10": float(s.quantile(.1)), "raw_mass_p90": float(s.quantile(.9)),
            "frac_below_half": float((s < .5).double().mean()),
            "raw_mass_by_domain": {dm: float(s[di == k].mean()) for k, dm in enumerate(DOMAINS)},
