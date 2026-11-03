@@ -165,7 +165,7 @@ def test_gauge_share_matches_direct_formula():
     lam = torch.rand(K) + 0.5
     uniform = torch.ones(K) / math.sqrt(K)
     got = gauge_share(lam, Q)
-    direct = sum(lam[k].item() * (Q[:, k] @ uniform) ** 2 for k in range(K)) / lam.sum().item()
+    direct = float(sum(lam[k].item() * (Q[:, k] @ uniform) ** 2 for k in range(K)) / lam.sum().item())
     assert got == pytest.approx(direct, rel=1e-6)
     # TZ literal case (corrected expectation: 1/K, not 1.0 — see module docstring)
     got_eyeq = gauge_share(torch.ones(K), torch.eye(K))
@@ -204,7 +204,7 @@ def test_gauge_share_with_esg_convention():
     # direct check on the pooled Gramian (esg convention: rows = eigenvectors)
     G = sum(J.float() @ J.float().T for J in Js) / len(Js)
     u = torch.ones(16) / 4.0
-    direct = sum(ev[k].item() * (eig[k] @ u) ** 2 for k in range(16)) / ev.sum().item()
+    direct = float(sum(ev[k].item() * (eig[k] @ u) ** 2 for k in range(16)) / ev.sum().item())
     assert gauge_share(ev, eig.T) == pytest.approx(direct, rel=1e-5)
     assert gauge_share_top1(ev, eig.T) == pytest.approx(
         ev[0].item() * (eig[0] @ u) ** 2 / ev.sum().item(), rel=1e-5
