@@ -21,11 +21,18 @@
 - [x] **DONE P0 — E6**: закрыт; `s_agg`/`frac_K_energy_agg` в K-блоке и JSON, таблица supplement
       §2.2.1 перемаркирована по срезам; несогласия (λmax ≤ p_max; P²=P в вершине p=e_i) —
       в `docs/E40_math_core_answers.md`, позиция архитектора — §VI ТЗ.
-- [ ] **NEXT §VII (код, малый дифф)**: (1) `prism/tag.py` — поле `aggregation` в ChannelTag
-      (обязательное, дефолт `ratio_of_means`); (2) `prism/cheap_invariants.py` + `operator_checks` —
-      явный параметр `aggregation` у `c/s/cos/frac_K` (median — diagnostics-only); (3)
-      `prism/invariants.py` — запись `same_slice_aggregation` + негативный тест на смешанные
-      агрегации (тест IV.6). Тройка/тесты IV.1–3 уже в реестре — не переделывать.
+- [x] **DONE второй заход (статья, §VII.4–5): paper.md §2.5 — блоки «Тройка (c,s,frac_K)
+      и правило срез-агрегации [L-triple]» и «Геометрический смысл cos(J,PJ)»; футер §6
+      п. 24 (отношение — только со срезом и агрегацией); §2.5 п. 2 и ref-math — вершинная
+      оговорка P²≠P; ref-math — строка тройки в таблице символов. §VI ТЗ закрыт:
+      §VI.1 принят (6 каналов), §VI.2 принят (p=6), §VI.3 принята граница λ_max ≤ p_max
+      (§I.1 ТЗ переписан), §VI.4 принята оговорка о вершине p=e_i.**
+- [x] **DONE §VII (код, закоммичено в a10f497)**: (1) `prism/tag.py` — поле `aggregation`
+      в ChannelTag (identity-relevant, дефолт `ratio_of_means`); (2) `operator_checks.py` —
+      параметр `aggregation` у `c/s/cos/frac_K` (`ratio_of_means|mean|median|per_position`;
+      per_position = сырые энергетические доли, корень — свойство агрегата);
+      (3) `invariants.py` — `same_slice_aggregation` с негативной половиной (IV.6).
+      300 passed, реестр 15/15.
 - [ ] **P1 — алгебра**: `prism/tag.py` (ChannelTag + валидация), `prism/p_algebra.py`,
       `prism/operator_checks.py`, `prism/cheap_invariants.py` + тесты IV.1–3, IV.7, MP-Монте-Карло IV.6.
 - [ ] **P1 — алгебра**: `prism/tag.py` (ChannelTag + валидация), `prism/p_algebra.py`,
