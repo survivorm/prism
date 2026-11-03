@@ -67,6 +67,25 @@ def test_transport_log_refuses_branch_cut():
         transport_log(np.diag([1.0, -1.0, 1.0]))     # eig = −1 ⇒ log undefined
 
 
+def test_sigma_follows_matched_frame():
+    """M2: when Hungarian crosses the columns, σ must travel WITH them —
+    otherwise E_radial compares rank-ordered pairs and the real radial change
+    silently leaks into E_resid (audit_core_math_v1 §2, ~300× error)."""
+    J_t = np.diag([1.0, 0.2])
+    U = np.array([[0.0, -1.0], [1.0, 0.0]])           # columns: e2, −e1
+    J_t1 = U @ np.diag([0.9, 0.15]) @ U.T             # σ multiset {0.9, 0.15}, frames crossed
+    out = kinetic_decomposition(J_t, J_t1, r=2)
+    assert out["flags"]["order_cross_U"]
+    assert not out["flags"]["sigma_perm_mismatch"]
+    matched = (0.15 - 1.0) ** 2 + (0.9 - 0.2) ** 2    # frame-matched pairs
+    rank_ordered = (0.9 - 1.0) ** 2 + (0.15 - 0.2) ** 2   # what the buggy code gave
+    assert out["E_radial"] == pytest.approx(matched)
+    assert out["E_radial"] > 10 * rank_ordered         # not the rank-ordered number
+    # accounting still closes on this pair (M=N=0, resid=off=0)
+    assert out["E_radial"] + out["E_resid"] + out["E_off_manifold"] == pytest.approx(
+        float(((J_t1 - J_t) ** 2).sum()))
+
+
 def test_r1_cross_zero_and_no_angular():
     rng = np.random.default_rng(23)
     Jt, J1 = _kin_pair(rng)

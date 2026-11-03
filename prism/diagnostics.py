@@ -1,6 +1,7 @@
 """Diagnostics: per-layer bridge loss heatmaps and baselines."""
 
 import json
+import math
 import os
 from typing import Any
 
@@ -43,9 +44,19 @@ def run_layer_diagnostics(
 
             with torch.no_grad():
                 logits_L = model_large(input_ids=ids).logits[:, -1, :]
+                # softmax over the token_set SUBSET (renormalized), not the full-
+                # vocab probs at those columns. Harmless numerically: weights enter
+                # _weighted_cosine_loss normalized (w/w.sum), so the subset
+                # renormalization cancels — but do not read `probs` as p(token).
                 probs = torch.softmax(logits_L[0, token_set], dim=-1)
 
+            # jacobian_gap returns the GAP (lower = better), NOT bridge = 1 − gap
+            # (bridge.py docstring v4.0; E-16a/b report bridge by inverting).
             loss = jacobian_gap(J_L, J_S, E_L, E_S, probs)
+            if not math.isfinite(loss):
+                raise FloatingPointError(
+                    f"non-finite gap for layer pair {l_L}->{l_S} (sample "
+                    f"{len(losses)}) — refusing to average NaN into the JSON")
             losses.append(loss)
 
         avg_loss = sum(losses) / len(losses)

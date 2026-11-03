@@ -216,6 +216,15 @@ def holonomy_spectrum(
         {e^{iθ}, e^{−iθ}} of R_total; +1-axes dropped; odd r leaves a
         trivial +1 axis); R_total — [r, r] float64.
 
+        NOT a reconstruction recipe for κ: when ``det R_total = −1`` (a
+        Procrustes step may be a reflection) one real eigenvalue −1 exists, is
+        reported as a π angle, and contributes 4 to ``‖H − I‖_F²`` while the
+        ``4·Σ(1 − cos θ)`` form implies 8 — so that identity closes only when
+        summed over ALL r eigenvalues, ``‖H − I‖_F² = Σ_j 2(1 − cos ang_j)``
+        (audit docs/audit3_math.md п. А; the convention is a warning at runtime,
+        and no consumer in the repo derives κ from these angles — κ comes from
+        ``holonomy_accumulate``).
+
     Uses ``torch.linalg.eigvals`` (complex) — ``spectrum_from_gramian`` /
     ``eigvalsh`` CANNOT be used: R_total is orthogonal, not symmetric.
 

@@ -156,10 +156,24 @@ def make_readout_pull(
         (reused from jacobian.py — the only create_graph site; its inner
         _clone_gdn_states_on_entry handles the GDN state),
       - cos — per-row F.cosine_similarity,
-      - KL — over the token_set distributions (p_base computed ONCE up
-        front, never re-normalized per step),
-      - p_edit = softmax(lm_head(h_t)[:, token_set]) at the last position
-        (E-16a protocol: last-position token_set distribution).
+      - KL — FULL-vocabulary KL(p_edit ‖ p_base) at the last position (same
+        operand order as the Kaggle kernel: input = log p_base, target =
+        log p_edit), with the
+        base computed ONCE up front (ref-math «leash»: a K-subset KL renormalized
+        to 1 is blind to mass leaking out of the token set). Weight semantics are
+        literal: KL is a sum, not a mean, so kl_leash_weight=0.1 means 0.1
+        (audit B3 — the previous 1-D batchmean divided it by K),
+      - the J-term keeps the E-16 gauge: p = softmax over the token_set, and
+        p_edit is the model's own last-position distribution.
+
+    PROTOCOL DIFFERENCE from kaggle_kernel/exp16_tpu/exp16_readout_pull.py
+    (which produced the published E-16a numbers): that kernel does NOT mask
+    gradients, so Adam moves all V rows of lm_head and α* = ‖ΔW‖/‖W‖ is measured
+    on the full W; here the TZ masking restricts Adam to the K token_set rows.
+    Same loss and same KL direction as that kernel; the only difference is the
+    optimizer support — not interchangeable, and this is
+    why E-16a numbers must not be reproduced through this function expecting a
+    match (audit B3, third defect).
 
     Determinism: torch.manual_seed(seed); torch.use_deterministic_
     algorithms is NOT enabled (Adam on GDN models may raise).
@@ -217,10 +231,16 @@ def make_readout_pull(
         ts_mask = torch.zeros(weight.shape[0], dtype=torch.bool, device=weight.device)
         ts_mask[ts] = True
 
-        # p_base: once, under no_grad, over the K-subset (E-16 gauge).
+        # p_base: once, under no_grad, over the K-subset (E-16 gauge) — this p
+        # is the gauge of the J-term. The KL leash is NOT computed on it: see
+        # the leash block (full vocabulary, audit B3).
         with torch.no_grad():
             out = model(input_ids=input_ids, attention_mask=attention_mask, use_cache=False)
             p_base = F.softmax(out.logits[0, -1, ts].float(), dim=-1)
+            # Full-vocab log-probs of the base distribution, [1, V] — the leash
+            # must see mass leaking OUT of the token set (ref-math "leash"/
+            # E-16a), which a renormalized K-subset KL is structurally blind to.
+            log_p_base_full = torch.log_softmax(out.logits[0, -1].float(), dim=-1)[None]
 
         opt = torch.optim.Adam(params, lr=lr)
         for step in range(n_steps):
@@ -238,8 +258,22 @@ def make_readout_pull(
             # (2) KL leash on the token_set distribution at the last pos.
             # h_t is recomputed every step so the leash tracks the edit.
             out = model(input_ids=input_ids, attention_mask=attention_mask, use_cache=False)
-            p_edit = F.softmax(out.logits[0, -1, ts].float(), dim=-1)
-            kl = F.kl_div(p_edit.log(), p_base, reduction="batchmean")
+            log_p_edit_full = torch.log_softmax(out.logits[0, -1].float(), dim=-1)[None]
+            # KL(base || edit) over the FULL vocabulary, [1, V] with
+            # batchmean → divided by batch size 1 → the true KL. The previous
+            # one-liner had two defects (audit docs/audit4.pdf B3): it fed a 1-D
+            # [K] tensor to batchmean, which divides by K=128 (leash 128×
+            # weaker than the nominal weight — 0.1 became 7.8e-4), and it
+            # measured KL on the renormalized K-subset, blind to mass leaving
+            # the token set. Matches kaggle_kernel/exp16_tpu/exp16_readout_pull
+            # (batchmean on [1, V], log_target=True); the remaining protocol
+            # difference is deliberate and stated in the docstring: Adam here is
+            # restricted to the token_set rows, the Kaggle kernel moves all V.
+            # Operand order matches the kernel: input = log p_base (no grad),
+            # target = log p_edit (grad) → Σ p_edit(log p_edit − log p_base)
+            # = KL(edit ‖ base), the direction the published E-16a used.
+            kl = F.kl_div(log_p_base_full, log_p_edit_full,
+                          reduction="batchmean", log_target=True)
 
             loss = j_loss + kl_leash_weight * kl
             loss.backward()
@@ -248,7 +282,13 @@ def make_readout_pull(
             # everything outside the token_set slice so Adam moves only the
             # K rows (zero grad → zero Adam update for the other rows).
             if weight.grad is not None:
-                weight.grad.data[~ts_mask].zero_()
+                # ASSIGNMENT, not ``weight.grad.data[~ts_mask].zero_()``: boolean
+                # indexing returns a COPY, so ``t[mask].zero_()`` mutates the copy
+                # and leaves the gradient untouched (it went unnoticed while the
+                # K-subset KL produced exactly zero gradient outside the token
+                # set; the full-vocab leash makes it nonzero, and a no-op mask
+                # then moves all V rows).
+                weight.grad.data[~ts_mask] = 0.0
             opt.step()
 
             if verbose:
@@ -550,7 +590,11 @@ def apply_edit_and_cache(
 
     J is NOT cached (decision #4): reconstruct via
     compute_jacobian_for_tokens(h_override=h_t[l][t]) + SVDCache in the
-    experiment — ~30× less disk, any r without recompute.
+    experiment — ~30× less disk, any r without recompute. ``h_t[l][t]`` is the
+    OUTPUT of layer l (hidden_states[l+1]) at position t, which is exactly what
+    ``compute_jacobian_for_tokens(layer_idx=l)`` takes; it is only consistent
+    with ``input_ids`` at position ``t = S-1`` — for other positions pass a
+    prefix (see experiments/_exp_common.py, audit B2).
 
     No _clone_gdn_states_on_entry here: no_grad, no backward — in-place
     lm_head mutation is safe for the GDN recurrent state.
@@ -623,7 +667,14 @@ def _cache_edit(model, edit, samples, layers, ts, S, D_S, K, edit_root,
             # P(p) = diag(p) − pp^T (P(p)·1 = 0 iff Σp = 1).
             p_t = F.softmax(out.logits[0][:, ts].float(), dim=-1)  # [S, K]
             for L in layers:
-                h_t = h_states[L][0].float()                # [S, D_S] float32
+                # hidden_states[0] = embeddings, hidden_states[l+1] = OUTPUT of
+                # layer l. The consumer contract (docstring: reconstruct via
+                # compute_jacobian_for_tokens(layer_idx=L), which reads
+                # hidden_states[L+1]) needs the OUTPUT of L. Writing h_states[L]
+                # cached the INPUT of L = output of L-1, i.e. the linearization
+                # point of the neighbouring layer, while the tail replay skipped
+                # L entirely (audit docs/audit4.pdf B1: J off by 10.7 %).
+                h_t = h_states[L + 1][0].float()            # [S, D_S] float32
                 layer_dir = os.path.join(edit_root, f"L{L:02d}")
                 meta = {
                     "edit": edit.name,
@@ -636,6 +687,11 @@ def _cache_edit(model, edit, samples, layers, ts, S, D_S, K, edit_root,
                     "torch": torch.__version__,
                     "transformers": _transformers_version(),
                     "seed": edit.seed,
+                    # Cache-layout marker: caches written before the B1 fix
+                    # carry h = hidden_states[L] (input of L). They have no
+                    # "h_source" key, so the meta check below rejects them
+                    # instead of silently feeding layer-L-1 activations.
+                    "h_source": "hidden_states[L+1]",
                 }
                 h_path = os.path.join(layer_dir, f"doc{doc_idx:04d}_h.pt")
                 p_path = os.path.join(layer_dir, f"doc{doc_idx:04d}_p.pt")
@@ -684,7 +740,7 @@ def _check_meta_consistency(meta_path: str, expected: dict) -> None:
     # mix stale and fresh cache files without any error, since
     # overwrite=False only writes missing files.
     for key in ("edit", "layer", "doc", "S", "D_S", "K",
-                "model_dtype", "torch", "transformers"):
+                "model_dtype", "torch", "transformers", "h_source"):
         if existing.get(key) != expected[key]:
             raise RuntimeError(
                 f"cache meta mismatch for {meta_path}: {key} = "

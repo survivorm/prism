@@ -2,7 +2,8 @@
 
 Gate: tier-0 (``E40_*.py`` carriers, and the kernel modules) must NOT import
 this module — behavior lives with E-42/E-43/E-44 (interventional/behavioral
-tiers). A pytest (``tests/test_behavior_gate.py``) enforces it: CI is
+tiers). A pytest (``tests/test_nulls_tag_gate.py::
+test_behavior_gate_no_import_in_kernel_and_tier0``) enforces it: CI is
 pytest-only, so a CI import-check is a test that greps sources.
 
 Boundary conditions baked into the API (ТЗ §III.9/§III.10):
@@ -96,6 +97,10 @@ def KL_lin(J: np.ndarray, p: np.ndarray, eps: float, v: np.ndarray) -> float:
         raise ValueError(f"p [K] must match J token axis {J.shape}")
     if abs(p.sum() - 1.0) > 1e-8:
         raise ValueError("KL_lin: p must be normalized (Σp = 1)")
-    Jv = J @ (v / np.linalg.norm(v))
+    nv = float(np.linalg.norm(v))
+    if nv <= 0:
+        raise ValueError("KL_lin: v must be non-zero (same guard as b_lin; "
+                         "a zero v used to return NaN silently)")
+    Jv = J @ (v / nv)
     # xᵀPx = Σ_i p_i x_i² − (Σ_i p_i x_i)² = Var_p(x) — closed form, P never materialized
     return 0.5 * float(eps) ** 2 * (float(np.dot(p, Jv ** 2)) - float(np.dot(p, Jv)) ** 2)

@@ -105,6 +105,13 @@ def load_calibration_data(
     dataset = load_dataset(ds_id, **kw)  # type: ignore[call-overload]
 
     samples = []
+    # NOTE (audit4 Q9): the offset-mapping path tokenizes with
+    # add_special_tokens=False, the plain path with the tokenizer default (True).
+    # Deliberate, not a bug: offset_mapping must stay aligned 1:1 with the text
+    # span (special tokens carry no span), and the two paths feed different
+    # consumers. Consequence to keep in mind: a token set / calibration built
+    # through the offset path is NOT the same sequence as the mainline E-16
+    # calibration of the same text — do not mix their token sets.
     for raw in dataset:
         text = _extract_text_from_sample(raw, field)
         if not text:

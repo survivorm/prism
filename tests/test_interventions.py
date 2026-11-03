@@ -375,3 +375,110 @@ def test_apply_edit_and_cache_errors(tmp_path):
     with pytest.raises(ValueError, match="layer"):
         apply_edit_and_cache(model, edit, [_sample(model)], layers=[99],
                              cache_dir=str(tmp_path))
+
+
+# --- 21: the cached h must be the OUTPUT of layer L (audit4 B1) -----------
+
+
+def test_apply_edit_and_cache_stores_layer_output(tmp_path):
+    """Hidden-states indexing: hidden_states[0] = embeddings, [l+1] = output of
+    layer l. The consumer contract (``compute_jacobian_for_tokens(layer_idx=L)``
+    reads ``hidden_states[L+1]`` and replays L+1…n) therefore needs
+    ``h_states[L+1]``. Writing ``h_states[L]`` cached the INPUT of L (= output of
+    L−1) while the replay skipped L — a J built from the neighbouring layer
+    (audit docs/audit4.pdf B1, 10.7 % relative on a check model)."""
+    model = _tiny_model()
+    edit = make_base(TS)
+    sample = _sample(model, S=6)
+    apply_edit_and_cache(model, edit, [sample], layers=[2], cache_dir=str(tmp_path))
+    h = torch.load(tmp_path / "base" / "L02" / "doc0000_h.pt",
+                   weights_only=False)["h"]
+    model.eval()
+    with torch.no_grad():
+        out = model(**sample, output_hidden_states=True, use_cache=False)
+    out_L = out.hidden_states[3][0].float()      # output of layer 2
+    in_L = out.hidden_states[2][0].float()       # what the buggy line stored
+    assert torch.allclose(h, out_L, atol=1e-6, rtol=1e-5), \
+        "cached h is not hidden_states[L+1]"
+    assert float((h - in_L).norm() / in_L.norm()) > 0.02, \
+        "the check is blind: input and output of layer 2 are indistinguishable"
+
+
+def test_apply_edit_and_cache_rejects_pre_B1_cache(tmp_path):
+    """Caches written before the B1 fix have no ``h_source`` key — reusing them
+    would silently feed layer-L-1 activations, so the meta check must reject."""
+    model = _tiny_model()
+    edit = make_base(TS)
+    apply_edit_and_cache(model, edit, [_sample(model, S=6)], layers=[2],
+                         cache_dir=str(tmp_path))
+    meta_path = tmp_path / "base" / "L02" / "doc0000_meta.json"
+    meta = json.loads(meta_path.read_text())
+    assert meta["h_source"] == "hidden_states[L+1]"
+    meta.pop("h_source")
+    meta_path.write_text(json.dumps(meta))
+    with pytest.raises(RuntimeError, match="meta mismatch"):
+        apply_edit_and_cache(model, edit, [_sample(model, S=6)], layers=[2],
+                             cache_dir=str(tmp_path))
+
+
+# --- 22: KL leash weight is literal, full-vocabulary (audit4 B3) ----------
+
+
+def test_kl_leash_reduction_is_a_sum_over_the_full_vocabulary():
+    """``F.kl_div(..., reduction="batchmean")`` divides by the size of dim 0.
+
+    The old leash fed a 1-D ``[K]`` tensor, so the KL came out as KL/K — with
+    K=128 in production a nominal weight of 0.1 acted as 7.8e-4. The fix feeds
+    ``[1, V]`` log-probs with ``log_target=True``: batch size 1 → the true KL,
+    and over the full vocabulary so mass leaking out of the token set is visible
+    (ref-math «leash»). This pins the exact convention the code now relies on."""
+    import torch.nn.functional as F
+
+    logits = torch.randn(1, 200)
+    log_edit = torch.log_softmax(logits, dim=-1)
+    log_base = torch.log_softmax(torch.randn(1, 200), dim=-1)
+    # F.kl_div(input, target) is TARGET-weighted: Σ p_target(log p_target − input)
+    # = KL(edit ‖ base) with input = log p_base — the operand order of both the
+    # core leash and kaggle_kernel/exp16_tpu/exp16_readout_pull.py.
+    manual = float((log_edit.exp() * (log_edit - log_base)).sum())
+    got = float(F.kl_div(log_base, log_edit, reduction="batchmean", log_target=True))
+    assert abs(got - manual) < 1e-6, "[1,V] batchmean must equal the KL sum"
+    # the reverted form (1-D over a K-subset) is K times smaller — the bug
+    K = 8
+    got_1d = float(F.kl_div(log_base[0, :K], log_edit[0, :K],
+                            reduction="batchmean", log_target=True))
+    sub_manual = float((log_edit[0, :K].exp()
+                        * (log_edit[0, :K] - log_base[0, :K])).sum())
+    assert abs(got_1d - sub_manual / K) < 1e-9, "batchmean on 1-D divides by K"
+
+
+# --- 23: the Adam row mask must write through ------------------------------
+
+
+def test_readout_pull_grad_mask_is_not_a_noop():
+    """``t[~mask].zero_()`` is a silent no-op: boolean indexing returns a COPY.
+
+    The mask that keeps Adam inside ``lm_head.weight[token_set]`` must assign
+    (``grad[~mask] = 0``), which goes through ``index_put_``. While the leash was
+    a K-subset KL the gradient outside the token set was exactly zero, so the no-op
+    was invisible; the full-vocabulary KL (audit4 B3) makes every row of lm_head
+    gradient-bearing, and a no-op mask then silently optimizes all V rows — which
+    is also what broke ``test_readout_pull_shape_and_restoration`` when the KL was
+    fixed."""
+    import inspect
+
+    from prism import interventions as _iv
+
+    t = torch.arange(12.0).reshape(6, 2)
+    m = torch.zeros(6, dtype=torch.bool)
+    m[:2] = True
+    copy_form = t.clone()
+    copy_form.data[~m].zero_()
+    assign_form = t.clone()
+    assign_form.data[~m] = 0.0
+    assert float(copy_form[2:].abs().sum()) > 0, "copy trap changed behaviour"
+    assert float(assign_form[2:].abs().sum()) == 0.0
+
+    src = inspect.getsource(_iv.make_readout_pull)
+    assert "grad.data[~ts_mask] = 0.0" in src, \
+        "row mask must assign (index_put_), not .zero_() on a boolean-indexed copy"

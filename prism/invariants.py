@@ -228,7 +228,8 @@ def _chk_O1_eq_s2(rng):
 
 def _chk_b_lin_r1(rng):
     # lazy import: the behavioral module is GATED out of tier-0 kernel imports
-    # (tests/test_behavior_gate.py); the hub may execute it without importing
+    # (tests/test_nulls_tag_gate.py::test_behavior_gate_no_import_in_kernel_and_tier0);
+    # the hub may execute it without importing
     # it into the kernel namespace at load time.
     from .behavior import b_lin
     K, D, p, J = _fixtures(rng)
@@ -286,6 +287,62 @@ def _chk_same_slice_aggregation(rng):
     assert abs(frac_K(J, p) - mixed) > 1e-9, "mixed aggregations must NOT close the identity"
 
 
+def _chk_r_can_definition(rng):
+    """R_can must be the λ-share of the CANONICAL slice E_K = (PJ)(PJ)ᵀ
+    (ТЗ §8.1, paper §2.11.1) — not of (I−P)J, which is ≈ raw J (audit M1)."""
+    from .profiles import R_can
+    K, D, p, J = _fixtures(rng)
+    Jm = J[0]
+    PJ = apply_P(Jm, p)
+    G = PJ @ PJ.T
+    want = float(np.linalg.eigvalsh(G)[-1] / np.trace(G))
+    got = R_can(Jm, p)
+    assert abs(got - want) < 1e-12, f"R_can: {got} vs {want}"
+    # negative half: the (I−P)J slice is a DIFFERENT object and must not agree
+    Kc = Jm - PJ
+    Gc = Kc @ Kc.T
+    other = float(np.linalg.eigvalsh(Gc)[-1] / np.trace(Gc))
+    assert abs(got - other) > 1e-6, "R_can collapsed onto the (I−P)J slice again"
+
+
+def _chk_agg_closure_matrix(rng):
+    """Documented closure matrix (audit M3): the triple identity closes for
+    ratio_of_means and per-position, NOT for mean (Jensen on s) — the kernel
+    must behave as its docstrings claim. The two closures are written with
+    DIFFERENT members on purpose: ``per_position`` deliberately ignores ``root``
+    and returns RAW energy ratios (``s(..., "per_position") == O1(...)``), so
+    positionally the identity is ``frac_t = 1 − 2c_t + O1_t``, while pooled it is
+    ``frac = 1 − 2c + s²`` with s the root of the pooled ratio."""
+    K, D, p, J = _fixtures(rng)
+    got = frac_K(J, p, "ratio_of_means")
+    want = 1.0 - 2.0 * c(J, p, "ratio_of_means") + s(J, p, "ratio_of_means") ** 2
+    err = float(np.abs(got - want).max())
+    assert err < 1e-12, f"ratio_of_means must close, err={err}"
+    got = frac_K(J, p, "per_position")
+    want = (1.0 - 2.0 * c(J, p, "per_position")
+            + O1(J, p, "per_position"))
+    err = float(np.abs(got - want).max())
+    assert err < 1e-12, f"per_position must close, err={err}"
+    assert float(np.abs(s(J, p, "per_position")
+                       - O1(J, p, "per_position")).max()) < 1e-15, \
+        "per_position must stay root-free (raw energy ratios)"
+    # mean: s(mean) is the mean of the per-position ROOT — Jensen gap is real
+    assert s(J, p, "mean") ** 2 <= O1(J, p, "mean") + 1e-15, "Jensen direction flipped"
+    assert abs(frac_K(J, p, "mean") - (1.0 - 2.0 * c(J, p, "mean")
+                                       + s(J, p, "mean") ** 2)) > 1e-12, \
+        "mean closure must NOT hold silently (it would mask the Jensen gap)"
+
+
+def _chk_mp_edge_labelled(rng):
+    """MP edges under the XᵀX/n convention, pinned with n (ТЗ §III.11; the
+    retracted 1.4425/1.45 pair must not creep back — audit M8)."""
+    from .nulls_and_stats import mp_upper_edge
+    assert abs(mp_upper_edge(6, 32) - 2.053525) < 1e-6
+    assert abs(mp_upper_edge(8, 32) - 2.250000) < 1e-6
+    assert abs(mp_upper_edge(6, 192) - 1.384803) < 1e-6
+    assert abs(mp_upper_edge(8, 192) - 1.449915) < 1e-6
+
+
 INVARIANTS: dict[str, Invariant] = {
     "O2_eq_O3": Invariant("g_uni(J) == gauge_share(G=ΣJJᵀ)", ("p_algebra",),
                           _chk_O2_eq_O3),
@@ -326,6 +383,17 @@ INVARIANTS: dict[str, Invariant] = {
                                         ("tag", "cheap_invariants"),
                                         _chk_same_slice_aggregation,
                                         note="NEW ТЗ §II.2 ревизия 2"),
+    "R_can_definition": Invariant("R_can = λshare((PJ)(PJ)ᵀ), ≠ λshare(((I−P)J)…) ",
+                                  ("profiles", "operator_checks"), _chk_r_can_definition,
+                                  note="NEW audit_core_math_v1 M1 (critical): wrong slice "
+                                       "made R_can ≈ R_raw and E-40.6 blind"),
+    "agg_closure_matrix": Invariant("triple closes for rom/per_position, Jensen gap for "
+                                    "mean is real and documented", ("operator_checks",),
+                                    _chk_agg_closure_matrix,
+                                    note="NEW audit M3"),
+    "mp_edge_labelled": Invariant("MP edges pinned with explicit n (2.0535/2.25/1.3848/1.4499)",
+                                  ("nulls_and_stats",), _chk_mp_edge_labelled,
+                                  note="NEW audit M8"),
 }
 
 

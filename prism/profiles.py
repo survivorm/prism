@@ -34,11 +34,16 @@ def R_raw(J: np.ndarray) -> float:
 
 
 def R_can(J: np.ndarray, p: np.ndarray) -> float:
-    """``λ_max(E_K)/tr(E_K)`` with ``E_K = K Kᵀ`` on the canonical slice
-    ``K = (I − P(p)) J``. The slice must be named in the ChannelTag — R-values
-    from different slices are not comparable (slice-locality, ТЗ §I.2)."""
+    """``λ_max(E_K)/tr(E_K)`` with ``E_K = J^(p)(J^(p))ᵀ`` on the canonical
+    slice ``J^(p) = P(p) J`` (ТЗ E40_math_core §I «Определение», paper §2.11.1,
+    e40_todo §8.1). The slice must be named in the ChannelTag — R-values from
+    different slices are not comparable (slice-locality, ТЗ §I.2).
+
+    NOT ``(I − P)J``: that complement is the E-37 ``K`` object (frac_K) and is
+    ≈ J in norm (P kills 98–99 % of it), which made an ``R_can`` built on it
+    indistinguishable from ``R_raw`` (audit_core_math_v1 M1, fixed 2026-11-03)."""
     J = np.asarray(J, dtype=np.float64)
-    Kmat = J - apply_P(J, p)
+    Kmat = apply_P(J, p)
     return _lam_share(Kmat @ Kmat.T)
 
 

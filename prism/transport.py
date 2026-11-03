@@ -55,9 +55,12 @@ def align_signs_and_columns(U0: np.ndarray, U1: np.ndarray,
     """Match columns of ``U1`` to ``U0`` (Hungarian on ``|U0ᵀU1|``), then fix
     signs so the matched diagonal overlaps are ``≥ 0``.
 
-    Returns ``(U0, U1_aligned, flags)``. Matching by ``|U0ᵀU1|`` — NOT by rank
-    ``σ`` — is the ТЗ requirement; disagreement with σ-order is reported as
-    ``order_cross`` (a fact about Σ reordering, not an error).
+    Returns ``(U0, U1_aligned, flags)`` with ``flags["perm"]`` — the column
+    matching (``U1a[:, j]`` came from ``U1[:, perm[j]]``), so consumers can
+    carry per-column quantities (σ!) along with the frame (M2 fix). 
+    Matching by ``|U0ᵀU1|`` — NOT by rank ``σ`` — is the ТЗ requirement;
+    disagreement with σ-order is reported as ``order_cross`` (a fact about
+    Σ reordering, not an error).
     """
     U0 = _check_frame(U0, "U0")
     U1 = _check_frame(U1, "U1")
@@ -68,6 +71,7 @@ def align_signs_and_columns(U0: np.ndarray, U1: np.ndarray,
     flags = {
         "order_cross": bool(np.any(perm != np.arange(perm.size))),
         "sign_flips": [],
+        "perm": [int(k) for k in perm],
     }
     U1a = U1[:, perm]
     diag = np.einsum("ij,ij->j", U0, U1a)             # u_j(t)ᵀ u_j(t+1)
