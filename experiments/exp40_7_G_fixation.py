@@ -116,6 +116,27 @@ def main(results_dir: str = None) -> dict:
         print(f"L{L}: Δ_raw {dr:.4f} (E-33r {e33r_raw[str(L)]:.4f}), "
               f"Δ_fixP {df:.4f} → G={1.0 - df / dr:.3f}")
 
+    # Парный бутстрап по документам НА ТОМ ЖЕ оценщике (отношение медиан), что и точечная
+    # оценка: n=5 слоёв не даёт ни силы, ни независимости, так что единственная честная
+    # неопределённость здесь — разброс по документам.
+    rng = np.random.default_rng(0)
+    for L in LAYERS:
+        dv = list(per_doc[str(L)].values())
+        raw = np.array([v["delta_raw"] for v in dv])
+        fix = np.array([v["delta_fixP"] for v in dv])
+        draws = []
+        for _ in range(2000):
+            idx = rng.integers(0, len(dv), len(dv))
+            den = float(np.median(raw[idx]))
+            if den > 0:
+                draws.append(1.0 - float(np.median(fix[idx])) / den)
+        lo, med, hi = np.percentile(draws, [2.5, 50.0, 97.5])
+        per_layer[str(L)]["G_doc_bootstrap"] = {
+            "ci_lo": float(lo), "ci_hi": float(hi), "median": float(med),
+            "n_boot": len(draws), "n_docs": len(dv),
+        }
+        print(f"L{L}: G-бутстрап по документам [{lo:.3f}, {hi:.3f}] (медиана {med:.3f})")
+
     # корреляции с каноническими C(1) и κ
     e402 = json.load(open(E402))
     e38d = json.load(open(E38D))
