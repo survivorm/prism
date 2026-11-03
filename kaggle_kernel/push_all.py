@@ -196,6 +196,24 @@ KERNELS = {
         "runner_extra": "",
         "note": "Exp 27: noise-floor calibration (r_eff -> F) + S/K/position sweeps, layers {6,12,18,19,22,23} (19,23 full-attention), 256-token pool, nested U128. ~5.4k J, ~2.5-3h T4.",
     },
+    # exp27c = the SAME producer as exp27b with column_mode="positional"
+    # (audit4 Q10, strict): every position's J columns are ITS OWN top-128, so `p`
+    # is a real softmax truncation instead of a corpus-frequency basis. Writes
+    # exp27c_jcache_L*.pt (never touches the published exp27b cache) and carries
+    # UTOP [(dom,si)] -> [S,K] plus column_mode for fail-loud reader checks.
+    # Expect several pushes: ~12-16 h of T4 total, per-layer ckpts + self-source
+    # mount make each push resume where the previous one was cut off.
+    "exp27c": {
+        "dir": "kernel-exp27c",
+        "slug": "prism-exp27c-positional-cache",
+        "id": "voroninmichael/prism-exp27c-positional-cache",
+        "title": "Prism: exp27c-positional-cache",
+        "exp_file": "experiments/exp27b_dense.py",
+        "runner_extra": "kwargs['column_mode'] = 'positional'\n",
+        "note": "Q10 strict: per-position top-K columns (new basis). Gate for the "
+                "whole cache-dependent recompute: sentinel rate must collapse and "
+                "g_uni must become 'uniform over this position's top-K'.",
+    },
     "exp27b": {
         "dir": "kernel-exp27b",
         "slug": "exp27b-dense-profile",
@@ -329,7 +347,10 @@ def build(exp_name: str):
         "--title",
         meta_dict["title"],  # type: ignore[index]
     ]
-    cmd += ["--sources"] + meta_dict.get("sources", [])  # type: ignore[arg-type]
+    # An empty nargs="+" flag would swallow the NEXT flag as its value (same trap
+    # the --datasets comment below documents) — so only pass --sources when set.
+    if meta_dict.get("sources"):  # type: ignore[arg-type]
+        cmd += ["--sources"] + list(meta_dict["sources"])  # type: ignore[union-attr]
     if meta_dict.get("datasets"):  # type: ignore[arg-type]
         cmd += ["--datasets"] + list(meta_dict["datasets"])  # type: ignore[arg-type]
     # NB: an EMPTY --datasets flag (nargs="+") would swallow the NEXT flag

@@ -92,27 +92,39 @@ def _load_pool(model_name: str, domains: list[str], n: int, L: int = 256) -> dic
         per[dom] = data
     return per
 
-def _forward_dense(m, s: dict, S: int, layers: list[int], U128: list) -> dict:
+def _forward_dense(m, s: dict, S: int, layers: list[int], U128: list | None,
+                   k_cols: int = 128) -> dict:
     """One forward on the S-prefix: p128 [S, 128] + hidden states at ALL
     positions (from the end, p=0..S-1) for each layer.
 
     RAM (review pt 2): keep p128 [S, 128] per sample, NOT [S, V] logits —
     32 samples x [128, 151936] f32 = 244MB vs [S,128] x1000 smaller.
-    U128 is a LIST of token ids (top-128 by frequency) — gather columns
-    by id (same as exp27 softmax(...)[U128]), NOT the first 128 vocab ids.
+
+    Two column conventions (audit4 Q3/Q10 round):
+      * `U128` a LIST of token ids — the global frequency basis (exp27b): the same
+        128 columns at every position, so the row is only SUB-stochastic and half the
+        positions carry < 50 % of the softmax mass.
+      * `U128 = None` — POSITIONAL top-K (exp27c): each position gets its own K columns,
+        `utop [S, K]` stores which. Then p128 is a real truncation of the softmax (its
+        mass is a property of the model's confidence, not of a corpus-frequency set).
+    In both modes the stored p128 is RAW (sub-stochastic, sum ≤ 1); callers MUST
+    re-normalize before use (the J-cache P128 stores the NORMALIZED version).
     """
     ids = s["input_ids"][:, :S].to(m.device)
     attn = s["attention_mask"][:, :S].to(m.device)
     with torch.no_grad():
         out = m(input_ids=ids, attention_mask=attn, output_hidden_states=True)
-    u = torch.as_tensor(U128, dtype=torch.long, device=out.logits.device)
-    # NOTE: p128 here is RAW (sub-stochastic, sum < 1 over U128). Callers MUST
-    # re-normalize before use (the J-cache P128 stores the NORMALIZED version).
-    p128 = torch.softmax(out.logits[0].float(), dim=-1)[:, u].cpu()  # [S, 128]
+    lg = torch.softmax(out.logits[0].float(), dim=-1)          # [S, V]
+    if U128 is None:
+        p128, utop = lg.topk(k_cols, dim=-1)                   # (values, indices) [S,K]
+        p128, utop = p128.cpu(), utop.cpu()
+    else:
+        u = torch.as_tensor(U128, dtype=torch.long, device=lg.device)
+        p128, utop = lg[:, u].cpu(), None                      # [S, 128] by id
     hs = {}
     for l in layers:
         hs[l] = out.hidden_states[l + 1][0].float().cpu()  # [S, D], all pos
-    return {"p128": p128, "hs": hs}
+    return {"p128": p128, "utop": utop, "hs": hs}
 
 def main(
     model="Qwen/Qwen3.5-0.8B",
@@ -123,7 +135,18 @@ def main(
     domains=("wiki", "math", "code", "chat"),
     seed: int = 42,
     s_dense: int = S_DENSE,
+    column_mode: str = "freq",
+    k_cols: int = 128,
 ):
+    """column_mode="freq" (default) — the published exp27b cache: J columns are the
+    global top-`k_cols` tokens by frequency, one basis for all positions.
+    column_mode="positional" — exp27c (audit4 Q10 strict): each position's J columns are
+    ITS OWN top-`k_cols`, so `p` is a real softmax truncation; written to
+    `exp27c_jcache_L*.pt` and never overwrites the freq cache.
+    """
+    if column_mode not in ("freq", "positional"):
+        raise ValueError(f"column_mode={column_mode!r} not in freq|positional")
+    tag = "exp27b" if column_mode == "freq" else "exp27c"
     S = s_dense
     torch.manual_seed(seed)
     if device == "auto":
@@ -156,6 +179,8 @@ def main(
     print(f"Pool OK: {n} samples")
 
     # U_128: top-128 by final-logit frequency at S=256 (identical to exp27 v11).
+    # Positional mode has no global basis at build time — it is derived from the
+    # forward cache below (union of the per-position top-K, provenance only).
     counts: dict[int, int] = {}
     for dom in domains:
         for si, s in enumerate(pool[dom]):
@@ -163,10 +188,16 @@ def main(
                 out = m(input_ids=s["input_ids"].to(m.device),
                         attention_mask=s["attention_mask"].to(m.device))
             p = torch.softmax(out.logits[0, -1].float(), dim=-1)
-            for t in p.topk(128).indices.tolist():
+            for t in p.topk(k_cols).indices.tolist():
                 counts[t] = counts.get(t, 0) + 1
-    U128 = sorted([t for t, _ in sorted(counts.items(), key=lambda x: -x[1])[:128]])
-    print(f"U_128 built fresh ({len(U128)} tokens)")
+    U128 = sorted([t for t, _ in sorted(counts.items(), key=lambda x: -x[1])[:k_cols]])
+    if column_mode == "positional":
+        freq_basis = U128
+        U128 = None
+        print(f"column_mode=positional: freq basis kept only as reference "
+              f"({len(freq_basis)} tokens); J columns will be per-position top-{k_cols}")
+    else:
+        print(f"U_128 built fresh ({len(U128)} tokens)")
 
     pool_fp = {}
     for d in domains:
@@ -179,12 +210,25 @@ def main(
     fwd: dict[tuple, dict] = {}
     for dom in domains:
         for si in range(n_samples):
-            fwd[(dom, si)] = _forward_dense(m, pool[dom][si], S, layers, U128)
+            fwd[(dom, si)] = _forward_dense(m, pool[dom][si], S, layers, U128, k_cols)
     print(f"Forward cache: {len(fwd)} forwards")
+    UTOP = {k: v["utop"] for k, v in fwd.items() if v["utop"] is not None}
+    if column_mode == "positional":
+        # Free measurement of the thing Q10 was about: coverage of the positional basis
+        # (distinct tokens) and the mass a K-truncation actually carries.
+        all_u = torch.cat([u.reshape(-1) for u in UTOP.values()])
+        mass = torch.cat([v["p128"].sum(-1) for v in fwd.values()])
+        U128 = sorted(int(x) for x in all_u.unique().tolist())
+        q = torch.quantile(mass.float(), torch.tensor([0.1, 0.5, 0.9]))
+        print(f"positional basis: {len(U128)} distinct tokens over {all_u.numel()} slots; "
+              f"truncated mass mean {mass.mean():.4f} p10/p50/p90 "
+              f"{float(q[0]):.4f}/{float(q[1]):.4f}/{float(q[2]):.4f} "
+              f"frac<0.5 {(mass < 0.5).float().mean():.4f}")
     # Cross-push resume: self kernel_source (build_kernel.py adds our own
     # id) mounts the previous run's /kaggle/working at /kaggle/input/<slug>/,
     # so per-layer ckpts survive the working wipe.
-    _slug = "prism-exp27b-dense-profile"
+    _slug = ("prism-exp27b-dense-profile" if column_mode == "freq"
+             else "prism-exp27c-positional-cache")
     ck_dirs = [results_dir, os.path.join("/kaggle/input", _slug, "results")]
     for l in layers:
         JR: dict[tuple, torch.Tensor] = {}
@@ -192,17 +236,18 @@ def main(
         P128_RAW: dict[tuple, torch.Tensor] = {}
         RANKS: dict[tuple, tuple[float, float, float]] = {}
         H: dict[tuple, torch.Tensor] = {}
-        ck_l = next((os.path.join(dd, f"exp27b_jcache_L{l}.pt")
-                     for dd in ck_dirs if os.path.exists(os.path.join(dd, f"exp27b_jcache_L{l}.pt"))), None)
-        save_l = os.path.join(results_dir, f"exp27b_jcache_L{l}.pt")  # writes always to working, /kaggle/input is read-only
+        ck_l = next((os.path.join(dd, f"{tag}_jcache_L{l}.pt")
+                     for dd in ck_dirs if os.path.exists(os.path.join(dd, f"{tag}_jcache_L{l}.pt"))), None)
+        save_l = os.path.join(results_dir, f"{tag}_jcache_L{l}.pt")  # writes always to working, /kaggle/input is read-only
         if ck_l:
             ck = torch.load(ck_l, map_location="cpu")
-            if ck["U128"] == U128 and ck["pool_fp"] == pool_fp and ck.get("S") == S:
+            if (ck["U128"] == U128 and ck["pool_fp"] == pool_fp and ck.get("S") == S
+                    and ck.get("column_mode", "freq") == column_mode):
                 JR, P128, RANKS, H = ck["JR"], ck["P128"], ck["RANKS"], ck["H"]
                 P128_RAW = ck.get("P128_RAW", {})  # optional: old ckpts lack it
                 print(f"L{l}: resumed {len(JR)}/{n * S} J from ckpt")
             else:
-                print(f"L{l}: ckpt U128/pool mismatch -> recompute layer")
+                print(f"L{l}: ckpt U128/pool/S/column_mode mismatch -> recompute layer")
         done = len(JR)
         total = n * S
         for dom in domains:
@@ -212,6 +257,10 @@ def main(
                         continue
                     f = fwd[(dom, si)]
                     p128 = (f["p128"][S - 1 - t] / f["p128"][S - 1 - t].sum()).to(m.device)  # [128]
+                    # Columns of J at THIS position: global basis (freq) or the
+                    # position's own top-K (positional) — same order as p128 above.
+                    cols = (U128 if column_mode == "freq"
+                            else f["utop"][S - 1 - t].tolist())
                     ids_k = pool[dom][si]["input_ids"][:, :S - t]
                     mask_k = pool[dom][si]["attention_mask"][:, :S - t]
                     pc = None
@@ -223,7 +272,7 @@ def main(
                         # 0 tokens; the decoder pass is a fresh 1-token pass.
                         pc = DynamicCache(config=m.config)  # config ОБЯЗАТЕЛЕН: без него layers=[] -> GDN conv-state IndexError  # same style as prism/jacobian.py (version-safe)
                     Jr = compute_jacobian_for_tokens(
-                        m, l, ids_k.to(m.device), mask_k.to(m.device), U128,
+                        m, l, ids_k.to(m.device), mask_k.to(m.device), cols,
                         prefix_cache=pc,
                     ).float()
                     JR[(dom, si, t)] = Jr.cpu()
@@ -240,8 +289,9 @@ def main(
                         # intra-layer ckpt: a crash mid-layer loses <=1024 J (~1.5h),
                         # not the whole layer (~7h). Save is ~1s, negligible.
                         torch.save({"JR": JR, "P128": P128, "P128_RAW": P128_RAW,
-                                    "RANKS": RANKS, "H": H,
-                                    "U128": U128, "pool_fp": pool_fp,
+                                    "RANKS": RANKS, "H": H, "UTOP": UTOP,
+                                    "U128": U128, "column_mode": column_mode,
+                                    "pool_fp": pool_fp,
                                     "layers": layers, "D": D, "n_samples": n_samples,
                                     "domains": domains, "S": S}, save_l)
                     if done % 512 == 0:
@@ -251,14 +301,14 @@ def main(
                 # layers, popping it inside the layer loop leaves nothing for
                 # L12+ (v12/v13 crashes: UnboundLocalError then KeyError).
         torch.save({"JR": JR, "P128": P128, "P128_RAW": P128_RAW,
-                    "RANKS": RANKS, "H": H,
-                    "U128": U128, "pool_fp": pool_fp,
+                    "RANKS": RANKS, "H": H, "UTOP": UTOP,
+                    "U128": U128, "column_mode": column_mode, "pool_fp": pool_fp,
                     "layers": layers, "D": D, "n_samples": n_samples,
                     "domains": domains, "S": S}, save_l)
         print(f"L{l}: saved {save_l} ({len(JR)}/{total} J) "
               f"[{(time.time() - t0) / 60:.1f} min total]")
-    print(f"[OK] exp27b_dense cache: {len(layers)} layers x {n} samples x {S} t "
-          f"in {(time.time() - t0) / 60:.0f} min, S={S}")
+    print(f"[OK] {tag}_dense cache: {len(layers)} layers x {n} samples x {S} t "
+          f"in {(time.time() - t0) / 60:.0f} min, S={S}, column_mode={column_mode}")
     del fwd
 
 def _ranks(J: torch.Tensor) -> tuple[float, float, float]:
@@ -292,13 +342,16 @@ def main_cli():
     ap.add_argument("--layers", type=int, nargs="+", default=list(LAYERS_DEFAULT))
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--s-dense", type=int, default=S_DENSE)
+    ap.add_argument("--column-mode", default="freq", choices=("freq", "positional"))
+    ap.add_argument("--k-cols", type=int, default=128)
     ap.add_argument("--selfcheck", action="store_true")
     a = ap.parse_args()
     if a.selfcheck:
         selfcheck()
         return
     main(model=a.model, device=a.device, results_dir=a.results_dir,
-         layers=a.layers, n_samples=a.n_samples, seed=a.seed, s_dense=a.s_dense)
+         layers=a.layers, n_samples=a.n_samples, seed=a.seed, s_dense=a.s_dense,
+         column_mode=a.column_mode, k_cols=a.k_cols)
 
 if __name__ == "__main__":
     main_cli()
