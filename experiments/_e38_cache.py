@@ -229,7 +229,8 @@ def load_layer(layer: int, want: tuple = ("J", "P", "H")) -> dict:
     if ck["S"] != S or ck["D"] != D:
         raise ValueError(f"layer {layer}: unexpected S={ck['S']} D={ck['D']}")
     _check_basis(ck, layer)
-    if "U" in want and "UTOP" not in ck:
+    if "U" in want and not ck.get("UTOP"):
+        # пустой dict — это частотный кэш, а не «базис из нуля колонок»
         raise ValueError(
             f"layer {layer}: this cache has no per-position basis (freq cache); "
             "want=('U',) needs the positional exp27c cache")
