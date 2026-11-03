@@ -50,6 +50,19 @@ JCACHE_DIR = os.path.join(REPO, "kaggle_kernel", "results")
 # Kaggle datasets (same split as exp32r31-tail-recompute uses):
 #   jca: L6, L12, L18   /   jcb: L19, L22, L23
 # mounted at /kaggle/input/datasets/voroninmichael/prism-exp27b-jcache-{jca,jcb}/.
+#: Which column basis to read. "exp27b" = the published GLOBAL FREQUENCY basis U128
+#: (one basis for all positions; sub-stochastic p rows, ~half with mass < 0.5).
+#: "exp27c" = POSITIONAL top-K (each position its own K columns, p a real softmax
+#: truncation) — audit4 Q10 verdict round. Set with `PRISM_JCACHE=exp27c`, so a
+#: recompute run is one env var and cannot silently mix bases: the file carries
+#: `column_mode` and the loaders refuse a mismatch.
+CACHE_ID = os.environ.get("PRISM_JCACHE", "exp27b").strip()
+_COLUMN_MODE = {"exp27b": "freq", "exp27c": "positional"}
+if CACHE_ID not in _COLUMN_MODE:
+    raise ValueError(f"PRISM_JCACHE={CACHE_ID!r} not in exp27b|exp27c")
+# Where a freshly downloaded (positional) cache lands; /data holds the big copies.
+_EXTRA_DIRS = (JCACHE_DIR, os.path.join("/data/prism_kernels", CACHE_ID, "results"),
+               os.path.join("/data/stage", CACHE_ID))
 _E27B_KAGGLE_USERNAME = "voroninmichael"
 _E27B_KAGGLE_SLUG = "prism-exp27b-dense-profile"
 _E27B_DATASETS = ("prism-exp27b-jcache-jca", "prism-exp27b-jcache-jcb")
@@ -78,9 +91,11 @@ def jcache_path(layer: int) -> str:
     kernel's outputs mount. Returns the canonical local name if neither
     exists (torch.load then fails loudly with a clear path).
     """
-    local = os.path.join(JCACHE_DIR, f"exp27b_jcache_L{layer}.pt")
-    if os.path.exists(local):
-        return local
+    canonical = os.path.join(JCACHE_DIR, f"{CACHE_ID}_jcache_L{layer}.pt")
+    for d in _EXTRA_DIRS:
+        local = os.path.join(d, f"{CACHE_ID}_jcache_L{layer}.pt")
+        if os.path.exists(local):
+            return local
     # Kaggle: dataset mounts first (reliable), then the kernel-source mount
     # (only attaches if producer outputs are under the mount limit).
     # Dataset mount layout varies by Kaggle version: observed
@@ -90,21 +105,21 @@ def jcache_path(layer: int) -> str:
     for ds in _E27B_DATASETS:
         candidates += [
             os.path.join(
-                "/kaggle/input", ds, f"exp27b_jcache_L{layer}.pt"
+                "/kaggle/input", ds, f"{CACHE_ID}_jcache_L{layer}.pt"
             ),
             os.path.join(
                 "/kaggle/input/datasets", _E27B_KAGGLE_USERNAME, ds,
-                f"exp27b_jcache_L{layer}.pt",
+                f"{CACHE_ID}_jcache_L{layer}.pt",
             ),
         ]
     candidates += [
         os.path.join(
             "/kaggle/input", f"{_E27B_KAGGLE_USERNAME}-{_E27B_KAGGLE_SLUG}",
-            "results", f"exp27b_jcache_L{layer}.pt",
+            "results", f"{CACHE_ID}_jcache_L{layer}.pt",
         ),
         os.path.join(
             "/kaggle/input", _E27B_KAGGLE_SLUG, "results",
-            f"exp27b_jcache_L{layer}.pt",
+            f"{CACHE_ID}_jcache_L{layer}.pt",
         ),
     ]
     for mount in candidates:
@@ -129,7 +144,17 @@ def jcache_path(layer: int) -> str:
             lines = ["<unreadable>"]
         print(f"[e38cache] JCACHE MISS for L{layer}; /kaggle/input = {lines}",
               flush=True)
-    return local
+    return canonical          # canonical repo path, so torch.load reports something meaningful
+
+
+def _check_basis(ck: dict, layer: int) -> None:
+    """A positional-basis number must never be compared with a frequency-basis one:
+    the columns of J are different objects, not a different slice of the same thing."""
+    got = ck.get("column_mode", "freq")          # exp27b files predate the field
+    if got != _COLUMN_MODE[CACHE_ID]:
+        raise ValueError(
+            f"layer {layer}: cache says column_mode={got!r} but PRISM_JCACHE="
+            f"{CACHE_ID!r} expects {_COLUMN_MODE[CACHE_ID]!r} — mixing bases")
 
 
 def load_layer_H(layer: int) -> torch.Tensor:
@@ -143,6 +168,7 @@ def load_layer_H(layer: int) -> torch.Tensor:
     ck = torch.load(jcache_path(layer), map_location="cpu", weights_only=False)
     if ck["S"] != S or ck["D"] != D:
         raise ValueError(f"layer {layer}: unexpected S={ck['S']} D={ck['D']}")
+    _check_basis(ck, layer)
     n = len(DOMAINS) * N_PER_DOMAIN
     H = torch.empty(n, S, D, dtype=torch.float32)
     i = 0
@@ -166,14 +192,18 @@ def load_layer(layer: int, want: tuple = ("J", "P", "H")) -> dict:
         J   torch.Tensor [N_DOCS, S, K, D]  raw J
         P   torch.Tensor [N_DOCS, S, K]     normalized p128
         H   torch.Tensor [N_DOCS, S, D]     hidden states
-        U128 list[int]                      token set
+        U   torch.Tensor [N_DOCS, S, K]     column token ids PER POSITION
+                                    (want=("U",), exp27c only — the freq cache has
+                                     no per-position basis, only U128)
+        U128 list[int]                      token set (freq: the basis itself;
+                                     positional: the union over positions, provenance)
     Docs are ordered (domain-major): (wiki,0..7), (math,0..7), (code,0..7),
     (chat,0..7).
 
     Peak memory is driven by `want`: pass only the fields a consumer uses
     (e.g. want=("P",) for position audits) to stay in the ~2 GB class.
     """
-    bad_want = set(want) - {"J", "P", "H"}
+    bad_want = set(want) - {"J", "P", "H", "U"}
     if bad_want:
         raise ValueError(f"load_layer: unknown want fields {sorted(bad_want)}")
     # weights_only=False is deliberate: the cache is an internal artifact we
@@ -182,13 +212,21 @@ def load_layer(layer: int, want: tuple = ("J", "P", "H")) -> dict:
     ck = torch.load(jcache_path(layer), map_location="cpu", weights_only=False)
     if ck["S"] != S or ck["D"] != D:
         raise ValueError(f"layer {layer}: unexpected S={ck['S']} D={ck['D']}")
+    _check_basis(ck, layer)
+    if "U" in want and "UTOP" not in ck:
+        raise ValueError(
+            f"layer {layer}: this cache has no per-position basis (freq cache); "
+            "want=('U',) needs the positional exp27c cache")
     n = len(DOMAINS) * N_PER_DOMAIN
     J = torch.empty(n, S, K, D, dtype=torch.float32) if "J" in want else None
     P = torch.empty(n, S, K, dtype=torch.float32) if "P" in want else None
     H = torch.empty(n, S, D, dtype=torch.float32) if "H" in want else None
+    U = torch.empty(n, S, K, dtype=torch.long) if "U" in want else None
     i = 0
     for dom in DOMAINS:
         for si in range(N_PER_DOMAIN):
+            if U is not None:
+                U[i] = ck["UTOP"][(dom, si)].reshape(S, K).long()
             for t in range(S):
                 key = (dom, si, t)
                 if J is not None:
@@ -212,7 +250,10 @@ def load_layer(layer: int, want: tuple = ("J", "P", "H")) -> dict:
         out["P"] = P
     if H is not None:
         out["H"] = H
+    if U is not None:
+        out["U"] = U
     out["U128"] = list(ck["U128"])
+    out["column_mode"] = ck.get("column_mode", "freq")
     return out
 
 
