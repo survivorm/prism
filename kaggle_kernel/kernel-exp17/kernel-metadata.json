@@ -8,7 +8,8 @@
   "id": "voroninmichael/prism-lora-distillation",
   "title": "Prism: LoRA Distillation",
   "kernel_sources": [
-    "voroninmichael/exp16-stage-0-target-jacobian-cache"
+    "voroninmichael/exp16-stage-0-target-jacobian-cache",
+    "voroninmichael/prism-lora-distillation"
   ],
   "dataset_sources": [
     "voroninmichael/prism-exp16-targets"
