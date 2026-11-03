@@ -4,8 +4,16 @@
 усечённым `p`»). На кэше exp27b проверяется: (1) provenance `P128_RAW` — точная ли это
 перенормировка `P128` того же файла; (2) распределение массы `U128` под полным softmax и по
 доменам; (3) чувствительность `O1`, `O1/iso`, `Σp²`, `g_uni` к отказу от ренормировки `p`;
-(4) то же для `frac_K` (E-37) и его референса `(I−P)`. Якоря `docs/E39_supplement.md` §2.1
-проверяются fail-loud. Запуск из `experiments/`: `../.venv/bin/python exp39_supp_pscale_probe.py`.
+(4) то же для `frac_K` (E-37) и его референса `(I−P)`. Якоря проверяются fail-loud: `O1` и
+`g_uni` сверяются с числами статьи (`docs/paper.md` §2.5, карточка E-39-suppl в
+`docs/ref-exp.md`), `frac_K` — с `results/exp37_A1_K_anatomy.json`. Запуск из `experiments/`:
+`../.venv/bin/python exp39_supp_pscale_probe.py`.
+
+Две ловушки кэша, из-за которых зонд обязан читать `/data`-копию и ключи с целым `si`:
+копия в репозитории (`kaggle_kernel/results/exp27b_jcache_L*.pt`) поля `P128_RAW` **не** содержит
+(оно дописано позже, рядом лежат `.pre_raw.bak` без него), а ключи — `(dom, si:int, t)`; ключ вида
+`f"{dom}{si}"` даёт `KeyError`. Ключи `(dom, si, t)` здесь совпадают с `load_layer`-порядком
+`DOC_IDS` (`experiments/_e38_cache.py`), что проверяется побитовой сверкой `P128` с загруженным.
 
 Выход: `results/exp39_supp_sentinel_probe.json`, `results/exp39_supp_pscale_probe.json`.
 """
