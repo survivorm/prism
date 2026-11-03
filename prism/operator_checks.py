@@ -33,12 +33,19 @@ def _check_OX(O: np.ndarray, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return O, X
 
 
-def operator_fraction(O: np.ndarray, X: np.ndarray, norm_type: str = "energy") -> float:
+def operator_fraction(O: np.ndarray, X: np.ndarray, norm_type: str) -> float:
     """``‖OX‖²_F/‖X‖²_F`` (``norm_type="energy"``) or ``‖OX‖_F/‖X‖_F`` (``"norm"``).
 
     ``norm_type`` is identity-relevant (norm vs energy differ by a square —
     paper §6 item 19); the returned value is meaningless without a ChannelTag.
+    ``norm_type`` has NO default: a default silently labels the number as an
+    energy share, and norm vs energy differ by a square (audit2 recommendation,
+    same error class as M6 — unlabelled values are rejected, unlabelled calls
+    are now impossible).
     """
+    if norm_type not in ("energy", "norm"):
+        raise ValueError(f"norm_type={norm_type!r} not in energy|norm "
+                         "(norm vs energy differ by a square, paper §6 item 19)")
     O, X = _check_OX(O, X)
     OX = np.tensordot(O, X, axes=([1], [-2]))          # [..., m, q]
     num = float((OX ** 2).sum())
@@ -105,6 +112,17 @@ def _agg(num: float | np.ndarray, den: float | np.ndarray, aggregation: str,
     if aggregation == "ratio_of_means":
         val = float(num.sum() / den.sum())
         return val ** 0.5 if root else val
+    if aggregation == "energy_weighted":
+        # Energy-weighted mean of the per-position ratios with the energies as
+        # weights is the ratio of sums by construction:
+        #   Σ den_t·(num_t/den_t) / Σ den_t == Σ num_t / Σ den_t.
+        # The ТЗ vocabulary (E40_math_core §II, e40_todo §1.1, paper §6) allows
+        # the name, so it is accepted here as an ALIAS instead of being rejected
+        # while `tag.TAG_DOMAINS` admitted it (audit4 Q3). Any OTHER weight
+        # (‖J_t‖ instead of ‖J_t‖², an external covariate) is a different
+        # number — name that aggregation when it is needed.
+        val = float(num.sum() / den.sum())
+        return val ** 0.5 if root else val
     r = num / den
     if aggregation == "mean":
         return float((np.sqrt(r) if root else r).mean())
@@ -113,9 +131,8 @@ def _agg(num: float | np.ndarray, den: float | np.ndarray, aggregation: str,
     if aggregation == "per_position":   # RAW energy ratios (root is a property of the
         return r                        # aggregate; frac = 1 − 2c + O1 closes positionally)
     raise ValueError(
-        f"aggregation={aggregation!r} not in ratio_of_means|mean|median|per_position "
-        "(energy_weighted of per-position ratios with \u2016J_t\u2016\u00b2 weights "
-        "equals ratio_of_means \u2014 use it)")
+        f"aggregation={aggregation!r} not in ratio_of_means|energy_weighted"
+        "|mean|median|per_position")
 
 
 def c(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
@@ -136,7 +153,14 @@ def c(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
 
 def s(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
       p_slice: str = "p_t") -> np.ndarray | float:
-    """``s = ‖PJ‖_F / ‖J‖_F`` — the NORM ratio (E-33r's «98–99 %» object)."""
+    """``s = ‖PJ‖_F / ‖J‖_F`` — the NORM ratio (E-33r's «98–99 %» object).
+
+    Jensen warning (audit M3): for ``mean``/``median`` this is the aggregate
+    of the PER-POSITION root, so ``s()**2 != O1(..., same aggregation)``
+    (``(mean √r)² ≤ mean r``) and ``frac_K = 1 − 2c + s²`` does NOT close.
+    The identity-closing triples are ``ratio_of_means`` and ``per_position``;
+    ``exp40_1_t4a`` computes the mean cell as ``mean_t(s_t²)`` for exactly
+    this reason."""
     _check_p_slice(p, p_slice)
     PJ = apply_P(J, p)
     num = (PJ * PJ).sum(axis=(-2, -1))
@@ -158,7 +182,17 @@ def O1(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
 def cos_J_PJ(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
              p_slice: str = "p_t") -> np.ndarray | float:
     """``cos(J, PJ) = c/s`` — a DIFFERENT number from ``c`` (ТЗ §III.3):
-    measured 0.064–0.108 while c is 0.0005–0.003."""
+    measured 0.064–0.108 while c is 0.0005–0.003.
+
+    Restricted to ``ratio_of_means`` (pooled cosine) and ``per_position``:
+    under ``mean``/``median`` this formula is ``mean(c_t)/mean(s_t)`` — a
+    ratio-of-aggregates-of-ratios that is neither the pooled cosine nor the
+    mean cosine (audit M4); compute that hybrid by hand if you need it.
+    """
+    if aggregation not in ("ratio_of_means", "per_position"):
+        raise ValueError(
+            f"cos_J_PJ: aggregation={aggregation!r} gives mean(c)/mean(s), not a "
+            "cosine (audit M4); use ratio_of_means (pooled) or per_position")
     return c(J, p, aggregation, p_slice) / s(J, p, aggregation, p_slice)
 
 

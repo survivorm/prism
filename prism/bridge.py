@@ -37,6 +37,14 @@ def jacobian_gap(
     (no decay filtering). Historical default was 1e-6; the paper's
     relative quantile tau_l = 0.01 * median_i ||J_S[i]|| (E-6 calibration,
     ~1e-4 at L18) can be passed explicitly to enable decay masking.
+
+    Epsilon convention (docs/audit4.pdf M3): paper §2.4 writes the cosine
+    denominator as ``‖J‖·‖J_target‖ + ε``; the code uses ``F.cosine_similarity``
+    (divide by each norm with ``clamp_min=1e-12``). On live rows the two differ
+    by ``≲1e-9`` relative; on near-zero rows the additive form is WORSE — it
+    turns the cosine into an arbitrary small number, while clamping keeps the
+    direction. The formula-vs-code gap is therefore documented, not closed:
+    closing it would move published bridge numbers for no semantic gain.
     """
     G_inv = _inverse_gramian(E_S)
     J_L_proj = _project_to_vocab(J_L, E_L)
@@ -70,7 +78,7 @@ def _inverse_gramian(E: torch.Tensor) -> torch.Tensor:
     if key not in _gramian_cache:
         path = os.path.join(_GRAMIAN_DIR, f"{key}.pt")
         if os.path.exists(path):
-            _gramian_cache[key] = torch.load(path, weights_only=True)
+            _gramian_cache[key] = torch.load(path, weights_only=True, map_location="cpu")
         else:
             _gramian_cache[key] = _compute_inverse_gramian(E)
             os.makedirs(_GRAMIAN_DIR, exist_ok=True)
@@ -81,11 +89,21 @@ def _inverse_gramian(E: torch.Tensor) -> torch.Tensor:
 def _gramian_key(E: torch.Tensor) -> str:
     """Stable hash of an embedding matrix for disk caching.
 
-    Hashes shape/device header + first, last, and 10 deterministic mid-rows
-    (uniformly spaced, seeded from row count so the sample is stable across
-    runs but covers the interior). First/last rows alone would collide for
-    matrices that share boundary rows (e.g. PAD/UNK) but differ internally.
-    Hashing the full 248k×1024 matrix would be prohibitively expensive.
+    Hashes shape/device header + the first row, the last row, and up to 9
+    deterministic mid-rows (uniformly spaced, seeded from row count so the
+    sample is stable across runs but covers the interior). First/last rows
+    alone would collide for matrices that share boundary rows (e.g. PAD/UNK)
+    but differ internally. Hashing the full 248k×1024 matrix would be
+    prohibitively expensive.
+
+    KNOWN SLOP, kept on purpose (audit4 Q4): rows 0 and V−1 are fed to the
+    digest twice (once explicitly, once through ``idx``), ``device`` is part of
+    the key so a CPU and a GPU run get separate files, and the torch version is
+    NOT in the key (a LAPACK change could alter the pseudoinverse in the last
+    bits). None of these can cause a false cache HIT — they cost bytes, not
+    correctness — and changing any of them invalidates the whole on-disk
+    ``results/.gramians`` cache (a full (EᵀE)⁻¹ recompute for a 248k×1024
+    embedding), so the key is frozen until something actually needs it.
     """
     V = E.shape[0]
     idx = [0, V - 1]

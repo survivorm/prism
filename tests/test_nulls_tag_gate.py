@@ -12,6 +12,7 @@ from prism.nulls_and_stats import (
     mp_lambda_max_mc, mp_upper_edge, operator_null, paired_bootstrap,
     permutation_test, reduction_control, resolution_floor,
 )
+from prism.operator_checks import apply_P, cos_J_PJ, operator_fraction
 from prism.profiles import G_l, R_can, R_raw, r_cross
 from prism.tag import IDENTITY_FIELDS, make_tag
 
@@ -75,6 +76,9 @@ def test_reduction_control_and_bootstrap_and_floor():
     fl = resolution_floor(lambda s: float(s.mean()), rng.standard_normal((32,)),
                           subsamples=(8, 16), reps=30, seed=0)
     assert fl["floor_by_size"][8] > fl["floor_by_size"][16]  # floor shrinks with size
+    # M5: the full-size floor is a bootstrap (with replacement); a permutation
+    # floor was structurally 0 and made the not_testable guard vacuous
+    assert fl["floor_full"] > 0
 
 
 def test_profiles():
@@ -83,12 +87,42 @@ def test_profiles():
     assert 0 < R_raw(J) <= 1.0
     x = rng.standard_normal(24) * 2
     p = np.exp(x) / np.exp(x).sum()
-    assert 0 < R_can(J, p) <= 1.0
+    # reference value, not a range (audit M1: the (I−P)J slice passed the range too)
+    PJ = apply_P(J, p)
+    G = PJ @ PJ.T
+    ref = float(np.linalg.eigvalsh(G)[-1] / np.trace(G))
+    assert R_can(J, p) == pytest.approx(ref)
+    # the canonical slice is a DIFFERENT object from raw J (M1: on the wrong
+    # (I−P)J slice R_can was indistinguishable from R_raw)
+    assert abs(R_can(J, p) - R_raw(J)) > 1e-9
     assert G_l(4.0, 1.0) == pytest.approx(0.75)
     with pytest.raises(ValueError):
         G_l(0.0, 1.0)
     assert r_cross([2.0, 1.0, 0.0], [0.0, 1.0, 2.0]) == pytest.approx(1.0)
     assert r_cross([2.0, 1.5], [0.0, 0.5]) is None
+
+
+def test_fail_loud_identity_fields():
+    """M4/M6/M7/M10/M11: identity-relevant enum fields and frame preconditions
+    must raise, never silently pick the other quantity."""
+    rng = np.random.default_rng(7)
+    O = np.eye(6) * 0.5
+    X = rng.standard_normal((6, 4))
+    with pytest.raises(ValueError, match="norm_type"):
+        operator_fraction(O, X, norm_type="angle")
+    with pytest.raises(ValueError, match="alternative"):
+        permutation_test(0.1, rng.standard_normal(20), alternative="gt")
+    p = np.exp(rng.standard_normal(6))
+    p /= p.sum()
+    with pytest.raises(ValueError, match="aggregation"):
+        cos_J_PJ(rng.standard_normal((6, 3)), p, aggregation="mean")
+    with pytest.raises(ValueError, match="orthonormal"):
+        from prism.svd_bundle import principal_angles
+        principal_angles(rng.standard_normal((6, 2)), rng.standard_normal((6, 2)))
+    from prism.behavior import KL_lin
+    J = rng.standard_normal((6, 3))
+    with pytest.raises(ValueError, match="non-zero"):
+        KL_lin(J, p, 0.1, np.zeros(3))
 
 
 def test_all_invariants_pass():

@@ -348,8 +348,14 @@ def gauge_share(
     For top-r use :func:`gauge_share_top1` (or pass the full trace
     explicitly).
 
-    Distinct from ``g_uni`` (paper §8): ``g_uni = ‖QJ‖²_F / ‖J‖²_F`` is
-    the energy share of the RAW J; this is the share of ``JJ^T``.
+    SAME functional as ``g_uni`` when both are computed on the same ``J``:
+    with ``G = JJᵀ`` this is ``1ᵀG1/(K·tr G) = ‖Jᵀ1‖²/(K‖J‖²_F)``, which is the
+    definition ``p_algebra.g_uni`` implements — measured equal to 7.7e-16
+    (E-39 supplement, O2≡O3). They differ only when applied to DIFFERENT ``J``
+    (raw / ``P(p)J`` / centered) — e.g. ``g_uni(J^gf) ≡ 0`` because
+    ``P(p)·1 = 0``, so a "gauge share" measured after ``P(p)`` is empty by
+    construction (paper §6 item 20). Former wording «Distinct from g_uni»
+    predated E-39 and contradicted it (audit4 Q2).
 
     Σλ = 0 → 0.0 with a RuntimeWarning.
     """

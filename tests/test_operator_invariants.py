@@ -112,7 +112,7 @@ def test_operator_fraction_matches_iso_on_iid(data):
     rng = np.random.default_rng(1)
     Pd = P_matrix(p)
     X = rng.standard_normal((4000, 32, 64))
-    got = operator_fraction(Pd, X)
+    got = operator_fraction(Pd, X, norm_type="energy")   # no default (audit2)
     iso = float((Pd ** 2).sum() / 32)
     assert got == pytest.approx(iso, rel=0.02)
 

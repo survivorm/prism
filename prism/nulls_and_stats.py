@@ -48,10 +48,11 @@ def mp_upper_edge(p: int, n: int) -> float:
     """Marchenko–Pastur upper edge ``(1 + sqrt(p/n))²`` of ``XᵀX/n``, ``X``
     ``[n, p]`` — the normalization under which the ТЗ's «MP-скобки» reproduce:
     p=6, n=32 → 2.0535 ≈ 2.05; p=8, n=32 → 2.2500 = 2.25. The second numbers
-    of the early ТЗ pairs are n=192 edges (1.3848 for p=6; p=8 gives 1.4425,
-    NOT the quoted 1.45) — патч v2 §2.1 retracts both second numbers as
-    n-unlabelled; finite-n MC means sit below the edge and are the plaintiff
-    (user ruling 2026-11-03)."""
+    of the early ТЗ pairs are n=192 edges (1.3848 for p=6; p=8 gives 1.4499 —
+    the quoted «1.45» was itself wrong, and the «1.4425» of an earlier draft
+    was retracted too; ТЗ §III.11 keeps 1.4499). патч v2 §2.1 retracts both
+    second numbers as n-unlabelled; finite-n MC means sit below the edge and
+    are the plaintiff (user ruling 2026-11-03)."""
     if p <= 0 or n <= 0:
         raise ValueError("p and n must be positive")
     return float((1.0 + np.sqrt(p / n)) ** 2)
@@ -89,8 +90,13 @@ def reduction_control(statistic: np.ndarray, trivial_predictor: np.ndarray,
     beta, *_ = np.linalg.lstsq(A, y, rcond=None)
     resid = y - A @ beta
     ss = float(((y - y.mean()) ** 2).sum())
-    r2 = 1.0 - float((resid ** 2).sum()) / ss if ss > 0 else 1.0
+    # A constant statistic (ss == 0) has nothing to explain: reporting r² = 1
+    # would read as "the trivial model already explains everything" for a
+    # degenerate input (audit4 Q16). Report 0.0 with an explicit flag instead.
+    degenerate = ss <= 0.0
+    r2 = 0.0 if degenerate else 1.0 - float((resid ** 2).sum()) / ss
     return {"residual": resid, "r2_trivial": float(min(r2, 1.0)),
+            "degenerate_constant_statistic": degenerate,
             "residual_std": float(resid.std(ddof=A.shape[1]))}
 
 
@@ -113,7 +119,12 @@ def permutation_test(observed: float, null_values: np.ndarray,
                      alternative: str = "greater") -> float:
     """One-sided p-value ``(1 + #{null ≥ obs}) / (B + 1)`` (``"less"`` mirrors).
     ``null_values`` come from ``prism.permutation.generate_null`` or
-    :func:`operator_null` — this function only scores them."""
+    :func:`operator_null` — this function only scores them. A typo in
+    ``alternative`` must not silently mirror the p-value (audit M7).
+    """
+    if alternative not in ("greater", "less"):
+        raise ValueError(f"alternative={alternative!r} not in greater|less "
+                         "(an unlabelled value silently mirrored the verdict)")
     nv = np.asarray(null_values, dtype=np.float64)
     B = nv.size
     if B == 0:
@@ -128,7 +139,14 @@ def resolution_floor(metric_fn, docs: np.ndarray,
     """Per-test resolution floor: spread of ``metric_fn`` over subsamples of
     docs at each size (within the test, never a global constant — ТЗ §II.9).
     Compare an effect against ``floor_full`` BEFORE interpreting absence:
-    effect below the floor ⇒ status ``not_testable``, not «null»."""
+    effect below the floor ⇒ status ``not_testable``, not «null».
+
+    The full-size floor resamples WITH REPLACEMENT (bootstrap): without
+    replacement, m = n is a permutation and an order-invariant statistic has
+    spread exactly 0, which made the prescribed guard structurally vacuous
+    (audit M5). Sub-full sizes stay without replacement — there the floor is
+    the «which docs you happened to draw» spread.
+    """
     docs = np.asarray(docs)
     rng = np.random.default_rng(seed)
     n = docs.shape[0]
@@ -137,7 +155,8 @@ def resolution_floor(metric_fn, docs: np.ndarray,
     for m in sizes:
         if m > n:
             continue
-        vals = [float(metric_fn(docs[rng.choice(n, m, replace=False)])) for _ in range(reps)]
+        vals = [float(metric_fn(docs[rng.choice(n, m, replace=(m == n))]))
+                for _ in range(reps)]
         floors[m] = float(np.std(vals))
     return {"floor_by_size": floors, "floor_full": floors.get(n),
             "n_docs": n}

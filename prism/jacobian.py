@@ -249,8 +249,14 @@ def _deep_clone_cache(cache):
             continue
         setattr(new_cache, k, _copy.deepcopy(v))
     # Guard: the clone must report the same sequence length (loud, not
-    # silent, on a version that tracks it in cache state).
-    assert new_cache.get_seq_length() == cache.get_seq_length()
+    # silent, on a version that tracks it in cache state). A bare `assert`
+    # disappears under `python -O`, turning a fail-loud check into a silent
+    # one — the class of bug this guard exists to catch (audit4 Q12).
+    seq_new, seq_old = new_cache.get_seq_length(), cache.get_seq_length()
+    if seq_new != seq_old:
+        raise RuntimeError(
+            f"cache clone lost the sequence length: {seq_new} != {seq_old} "
+            "(transformers cache layout changed? the clone is not a clone)")
     return new_cache
 
 

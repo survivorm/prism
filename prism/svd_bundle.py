@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from .transport import _check_frame
+
 __all__ = ["svd_bundle", "principal_angles", "effective_rank"]
 
 
@@ -23,16 +25,24 @@ def effective_rank(Sigma: np.ndarray, threshold: float = 1e-2) -> int:
         raise ValueError(f"Sigma must be 1-D, got {Sigma.shape}")
     if not (0 < threshold <= 1):
         raise ValueError(f"threshold must be in (0, 1], got {threshold}")
+    if Sigma[0] <= 0:
+        # A zero spectrum has NO directions above threshold. With σ₁ = 0 the
+        # comparison `σ >= threshold·σ₁` is `0 >= 0` and would return the full
+        # dimension — a rank-0 Jacobian reported as full rank (audit4 Q1).
+        return 0
     return int((Sigma >= threshold * Sigma[0]).sum())
 
 
 def principal_angles(V1: np.ndarray, V2: np.ndarray, r: int | None = None) -> np.ndarray:
     """Cosines of principal angles between column spaces of ``V1``, ``V2``
-    (``[d, r]`` frames): ``σ(eigvals of V1ᵀV2)`` clipped to ``[0, 1]``,
-    descending. Supersedes the per-experiment copies (same math)."""
-    V1 = np.asarray(V1, dtype=np.float64)
-    V2 = np.asarray(V2, dtype=np.float64)
-    if V1.ndim != 2 or V2.ndim != 2 or V1.shape[0] != V2.shape[0]:
+    (``[d, r]`` frames): ``σ(eigvals of V1ᵀV2)``, descending. Frames must have
+    orthonormal columns (``_check_frame``) — on non-orthonormal inputs the SVD
+    values are not angle cosines and clipping to [0,1] would pass the wrong
+    object off as a valid one (audit M10). Supersedes the per-experiment
+    copies (same math)."""
+    V1 = _check_frame(V1, "V1")
+    V2 = _check_frame(V2, "V2")
+    if V1.shape[0] != V2.shape[0]:
         raise ValueError(f"frames must be [d, r] on a common d, got {V1.shape}, {V2.shape}")
     if r is not None:
         V1, V2 = V1[:, :r], V2[:, :r]
@@ -48,7 +58,12 @@ def svd_bundle(J: np.ndarray, rank: int, side: str = "right",
     singular vectors, ``J ≈ U diag(Σ) Vᵀ``), ``energy`` — captured Frobenius
     energy fraction, ``rank_effective`` — thresholded effective rank of the
     FULL spectrum, ``stable`` — False when the top-r block has a σ gap below
-    ``1e-2 σ₁`` anywhere (rotation ambiguity, E40_ans §5.2), and ``tag`` — the
+    ``1e-2 σ₁`` anywhere (rotation ambiguity, E40_ans §5.2). CONVENTION WARNING
+    (audit M9): this gap is in σ units (the E-38c ``gap_min`` convention);
+    ``kinetic.rotation_unique`` uses the Davis–Kahan σ² form
+    (``min|σᵢ²−σⱼ²| > eps·σ₁²``) — on a spectrum like [1.0, 0.991] the two
+    disagree by construction. Quote the convention with the flag.
+    ``tag`` — the
     ChannelTag passed in (ТЗ: a number without a passport is invalid).
 
     ``side`` is metadata for the consumer (which axis of the transport the

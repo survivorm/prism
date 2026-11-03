@@ -144,13 +144,25 @@ def top_r_subspaces(A, r):
 
 
 def overlap(Q1, Q2, r):
-    """cos^2 of principal angles (mean) between two r-dim subspaces."""
+    """cos^2 of principal angles (mean) between two r-dim subspaces.
+
+    ``r`` is unused (the frames are already sliced to r columns by the caller);
+    the parameter is kept because the E-38h/i notebooks call it positionally
+    (audit4 Q17 — dead argument, documented rather than silently re-cut)."""
     s = (Q1.t() @ Q2).abs().clamp(max=1.0)
     return float(s.pow(2).mean())
 
 
 def procrustes_gap(Q1, Q2):
-    """||Q1 - Q2 O||_F / r over orthogonal O (frame alignment)."""
-    U, _, Vt = torch.linalg.svd(Q1.t() @ Q2, full_matrices=False)
+    """||Q1 - Q2 O||_F / r MINIMIZED over orthogonal O (frame alignment).
+
+    The minimizer is O* = polar(Q2ᵀ Q1). For Q1ᵀ Q2 = U Σ Vᵀ that is O* = V Uᵀ,
+    so the SVD must be taken of the REVERSED product (Q2ᵀ Q1 = V Σ Uᵀ) to let
+    ``O = U @ Vt`` be the optimum. SVD-ing Q1ᵀQ2 and taking U Vᵀ gives the
+    TRANSPOSE of the optimum, which is not orthogonal-equivalent to it: two
+    frames of the SAME subspace (Q2 = Q1 R, R orthogonal) have a true gap of 0
+    and a transposed gap > 0 (audit docs/audit4.pdf B5: 0.499 vs 0.405 on random
+    frames). No committed E-38h number used this function (no consumers)."""
+    U, _, Vt = torch.linalg.svd(Q2.t() @ Q1, full_matrices=False)
     O = U @ Vt
     return float((Q1 - Q2 @ O).norm() / Q1.shape[1])
