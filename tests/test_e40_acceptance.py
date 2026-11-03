@@ -1,7 +1,7 @@
 """Приёмочный тест E-40: каждое заявленное число обязано лежать в артефакте.
 
 Зачем. В раунде 2026-11-03 в `docs/E40_tier0.md` оказались блоки про `s_same`,
-чувствительность к p-срезу и метрику убийства `P(p)` — объекто, которых в скрипте и в
+чувствительность к p-срезу и метрику убийства `P(p)` — объектов, которых в скрипте и в
 `E40_2_double_fit.json` нет; отдельно цитировались коммиты, которых нет среди объектов git.
 Правило яруса (§ «Правила яруса», п. 4) требует, чтобы число попадало в отчёт только из
 свежего чтения артефакта. Этот тест и есть механическая версия того правила: он сверяет
@@ -99,6 +99,22 @@ def test_5_тождество_и_флаги():
     assert abs(d["per_layer"]["23"]["eps3_over_dJ_valid"]) <= 1e-2
     offs = [d["per_layer"][L]["E_off_over_dJ"] for L in LAYERS]
     assert min(offs) >= 0.3 and max(offs) < 0.9, offs
+
+
+def test_2c_sрез_по_позиции_не_объясняет_диапазон_r_eff():
+    d = art("2c_pos_slice")
+    assert d["new_forwards"] == 0
+    inner_t = ("0", "8", "16", "32", "48", "64", "96")
+    for L in LAYERS:
+        v = d["per_layer"][L]
+        inner = [v["by_position"][t]["K128"]["r_eff_KF"] for t in inner_t]
+        assert all(1.0 <= x <= 32.0 for x in inner), (L, inner)  # PR матрицы 32 документов
+        assert v["by_position"]["127"]["K128"]["r_eff_KF"] < min(inner), L
+        ent = v["p_entropy_by_t"]
+        assert ent["127"] == max(ent.values()), ent  # t=127 = первый токен (нулевой контекст)
+        span = (max(inner) - min(inner)) / (sum(inner) / len(inner))
+        if L == "6":
+            assert span < 0.02, span  # якорь: на мелком слое срез стоит
 
 
 def test_6_критерий_и_насыщение():
