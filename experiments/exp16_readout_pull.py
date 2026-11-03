@@ -45,7 +45,11 @@ import torch.nn.functional as F
 
 from prism.calibration import load_calibration_data
 from prism.cache_io import find_targets_dir
-from prism.jacobian import compute_hidden_jacobian, softmax_jacobian
+from prism.jacobian import (
+    bridge_objective,
+    compute_hidden_jacobian,
+    softmax_jacobian,
+)
 
 from transformers import AutoModelForCausalLM  # type: ignore[import-not-found]
 
@@ -355,7 +359,9 @@ def main(
                 cos_sim = torch.nn.functional.cosine_similarity(
                     J_S_p.float(), tgt["J_tgt_p"].to(device).float(), dim=1
                 )
-                loss = (1.0 - cos_sim).mean() + kl_weight * kl_loss
+                # objective == reported metric: p_L-weighted, not the unweighted
+                # mean (audit4 M1); p_L is the K-subset softmax, so Σw = 1.
+                loss = bridge_objective(cos_sim, p_L) + kl_weight * kl_loss
             else:
                 loss = kl_weight * kl_loss
             total_loss_val += loss.item()
