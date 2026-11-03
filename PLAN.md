@@ -21,6 +21,16 @@
 - [x] **DONE P0 — E6**: закрыт; `s_agg`/`frac_K_energy_agg` в K-блоке и JSON, таблица supplement
       §2.2.1 перемаркирована по срезам; несогласия (λmax ≤ p_max; P²=P в вершине p=e_i) —
       в `docs/E40_math_core_answers.md`, позиция архитектора — §VI ТЗ.
+- [x] **DONE патч v2 (docs/E40_math_fixes.md): b_res=O(ε³)+lq_coupling; ChannelTag p_mode (без other)/p_slice +
+      require_triple_tag; тройка — параметр p_slice с валидацией p_0; κ-реестр 3 записи (curv_algebra безусловное,
+      curv_spectral с precondition+негативным контролем, cond_invariance), κ(OᵀHO) удалена; T4a сетка 8 ячеек +
+      g_uni-чекпоинт по двум артефактам; MP явные n (1.38=1.3848@n=192, 1.45→1.4499 отозваны); ТЗ: исправлен знак
+      обратной формулы c=(1+s²−frac_K)/2 (патч поймал нашу ошибку), ревизия 3, указатели с E39_supplement (удалён
+      153d297) на JSON-артефакты; E44 b_res=O(ε³)+lq_coupling; E40_tier0 предрегистрация E-40.5; ref-math κ_curv/
+      κ_log/κ_cond. Возражения — answers §8 (вакуумность обоснована неверно; третье κ=κ_log; T4b assert s²<0 стёк;
+      slice-параметры у функций — декорация вместо валидации; E39+.md правка закрыта удалением носителя).
+      302 passed, реестр 17/17. ВНИМАНИЕ: prism/{p_algebra,transport,kinetic,behavior,nulls_and_stats,profiles,
+      cheap_invariants,svd_bundle}.py и 3 тестовых файла раньше никогда не коммитились — докоммичены сейчас.**
 - [x] **DONE второй заход (статья, §VII.4–5): paper.md §2.5 — блоки «Тройка (c,s,frac_K)
       и правило срез-агрегации [L-triple]» и «Геометрический смысл cos(J,PJ)»; футер §6
       п. 24 (отношение — только со срезом и агрегацией); §2.5 п. 2 и ref-math — вершинная

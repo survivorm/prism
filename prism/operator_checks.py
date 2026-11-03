@@ -85,6 +85,20 @@ def _split(J: np.ndarray, p: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return PJ, p
 
 
+def _check_p_slice(p: np.ndarray, p_slice: str) -> None:
+    """Label guard (патч v2 §1.6.2): ``p_t`` = per-position, ``p_0`` = fixP.
+    They are DIFFERENT operators ``P(p)``, so the label must be explicit — and
+    ``p_0`` is validated: stacked rows must actually be one fixed p."""
+    if p_slice not in ("p_t", "p_0"):
+        raise ValueError(f"p_slice={p_slice!r} not in p_t|p_0 (stop condition)")
+    if p_slice == "p_0" and p.ndim >= 2:
+        dev = float(np.abs(p - p.reshape(-1, p.shape[-1])[0]).max())
+        if dev > 1e-12:
+            raise ValueError(
+                f"p_slice='p_0' but p varies per position (max dev {dev:.3g}); "
+                "this is per-position p_t — mislabelling mixes operators (E6 class)")
+
+
 def _agg(num: float | np.ndarray, den: float | np.ndarray, aggregation: str,
          root: bool = False):
     """One aggregation over one slice — never mix them across quantities (E6)."""
@@ -104,46 +118,59 @@ def _agg(num: float | np.ndarray, den: float | np.ndarray, aggregation: str,
         "equals ratio_of_means \u2014 use it)")
 
 
-def c(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means") -> np.ndarray | float:
+def c(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
+      p_slice: str = "p_t") -> np.ndarray | float:
     """``c = ⟨J, PJ⟩_F / ‖J‖²_F`` — cross term of ``‖(I−P)J‖²`` (PSD of P
     licenses ``c ≥ 0`` and NOTHING about alignment: measured cos(J, PJ) is
-    only 0.064–0.108, i.e. PJ is nearly ORTHOGONAL to J, not parallel to it)."""
+    only 0.064–0.108, i.e. PJ is nearly ORTHOGONAL to J, not parallel to it).
+
+    ``p_slice`` labels which ``P(p)`` produced the number (per-position ``p_t``
+    vs fixed ``p_0``); the position slice (all/alive) is whatever you passed —
+    report it with the number (tag, §1.6.5)."""
+    _check_p_slice(p, p_slice)
     PJ, _ = _split(J, p)
     num = (PJ * J).sum(axis=(-2, -1))
     den = (J * J).sum(axis=(-2, -1))
     return _agg(num, den, aggregation)
 
 
-def s(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means") -> np.ndarray | float:
+def s(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
+      p_slice: str = "p_t") -> np.ndarray | float:
     """``s = ‖PJ‖_F / ‖J‖_F`` — the NORM ratio (E-33r's «98–99 %» object)."""
+    _check_p_slice(p, p_slice)
     PJ = apply_P(J, p)
     num = (PJ * PJ).sum(axis=(-2, -1))
     den = (J * J).sum(axis=(-2, -1))
     return _agg(num, den, aggregation, root=True)
 
 
-def O1(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means") -> np.ndarray | float:
+def O1(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
+       p_slice: str = "p_t") -> np.ndarray | float:
     """``O1 = ‖PJ‖²_F / ‖J‖²_F = s²`` — ENERGY kill fraction. Test O1==s² is a
     tautology guard on the aggregation, keep it asserted (M0 registry)."""
+    _check_p_slice(p, p_slice)
     PJ = apply_P(J, p)
     num = (PJ * PJ).sum(axis=(-2, -1))
     den = (J * J).sum(axis=(-2, -1))
     return _agg(num, den, aggregation)
 
 
-def cos_J_PJ(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means") -> np.ndarray | float:
+def cos_J_PJ(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
+             p_slice: str = "p_t") -> np.ndarray | float:
     """``cos(J, PJ) = c/s`` — a DIFFERENT number from ``c`` (ТЗ §III.3):
     measured 0.064–0.108 while c is 0.0005–0.003."""
-    return c(J, p, aggregation) / s(J, p, aggregation)
+    return c(J, p, aggregation, p_slice) / s(J, p, aggregation, p_slice)
 
 
-def frac_K(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means") -> np.ndarray | float:
+def frac_K(J: np.ndarray, p: np.ndarray, aggregation: str = "ratio_of_means",
+           p_slice: str = "p_t") -> np.ndarray | float:
     """``frac_K = ‖(I−P)J‖²_F / ‖J‖²_F`` — ENERGY, not norm (E-37 metric).
 
     Identity ``frac_K = 1 − 2c + s²`` holds per position and for the corpus
     aggregate computed on one slice; combining it with per-position medians is
     what produced the phantom E6 (closed 2026-11-03, no longer blocked).
     """
+    _check_p_slice(p, p_slice)
     PJ = apply_P(J, p)
     Kmat = J - PJ
     num = (Kmat * Kmat).sum(axis=(-2, -1))
