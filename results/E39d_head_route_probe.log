@@ -1,0 +1,10 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   6%|▌         | 18/320 [00:00<00:01, 178.93it/s]Loading weights:  40%|████      | 128/320 [00:00<00:00, 714.62it/s]Loading weights:  62%|██████▎   | 200/320 [00:00<00:00, 463.49it/s]Loading weights:  79%|███████▉  | 254/320 [00:00<00:00, 375.30it/s]Loading weights:  96%|█████████▌| 307/320 [00:00<00:00, 412.02it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 435.39it/s]
+‖H‖ mean 129.319 = 4.041·√D
+route_exact: frac<0.5 0.5071 KL(vs поле кэша) 4.502e-10
+route_renorm: frac<0.5 0.5544 KL(vs поле кэша) 4.624e-02
+carrier_E39m_floor_pearson   KL exact 0.00499 vs renorm 0.00444 ×1.12 (в прогоне l_kl=0.005022750701755285)
+synthetic_eps_0.003          KL exact 0.00001 vs renorm 0.00001 ×1.03 (в прогоне l_kl=None)
+synthetic_eps_0.01           KL exact 0.00013 vs renorm 0.00013 ×0.97 (в прогоне l_kl=None)
+synthetic_eps_0.03           KL exact 0.00091 vs renorm 0.00093 ×0.99 (в прогоне l_kl=None)
+wrote /home/survivor/work/prism/results/E39d_head_route_probe.json wall 489.7 с

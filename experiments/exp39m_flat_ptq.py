@@ -169,15 +169,15 @@ def build_context():
     u64_docs = torch.stack(u64)
     N_docs = u64_docs.shape[0]
 
-    # ACTUAL logits через факторизацию E-38e (round 8 CRITICAL #1), вербатим exp39d
-    u_all = H_all / H_all.norm(dim=-1, keepdim=True).clamp_min(1e-12)
-    M_K_full = W_lm * g_base[None, :]
+    # Логики считывания = H @ W_lmᵀ, вербатим exp39d: H в кэше уже post-norm, поэтому
+    # множитель g и √D-ненормировка здесь НЕ нужны (см. комментарий в exp39d и
+    # `exp39d_head_route_probe.py`; g остаётся только в якобиане M_K = W·diag g).
     base_k_all = torch.empty(N_total, K, device=DEV)
     lse_b_all = torch.empty(N_total, device=DEV)
     raw_sum_all = torch.empty(N_total, device=DEV)
-    SQRT_D = math.sqrt(d39.D)
+    Wt = W_lm.t()
     for i in range(0, N_total, 256):
-        bl = SQRT_D * (u_all[i:i + 256] @ M_K_full.t())
+        bl = H_all[i:i + 256] @ Wt
         lse_b_all[i:i + 256] = torch.logsumexp(bl, dim=-1)
         base_k_all[i:i + 256] = bl[:, tok_ids]
         raw_sum_all[i:i + 256] = torch.exp(bl[:, tok_ids] - lse_b_all[i:i + 256, None]).sum(1)
@@ -290,14 +290,15 @@ def _corr_f(ctx, W_rows: torch.Tensor, n_pos: int = 512) -> float:
     """
     idx = torch.as_tensor(np.linspace(0, ctx["N_total"] - 1, n_pos).astype(np.int64),
                           device=DEV)
-    u = ctx["H_all"][idx]
-    u = u / u.norm(dim=-1, keepdim=True).clamp_min(1e-12)
-    mk = (W_rows * ctx["g_base"][None, :]).t()          # [D, K], колонки = строки U128 по порядку
+    Hs = ctx["H_all"][idx]
+    mk = W_rows.t()                                   # [D, K], колонки = строки U128 по порядку
     assert mk.shape[1] == ctx["K"] == ctx["base_k_all"].shape[1], \
         f"corr_f: {mk.shape[1]} колонок против K={ctx['K']}"
     # ВАЖНО: tok_ids — это id в словаре (до 151k), а не столбцы mk; повторная индексация
     # столбцов давала device-side assert на T4 (краш v3/v4). Порядок столбцов уже U128.
-    lg = (math.sqrt(d39.D) * (u @ mk)).detach().cpu().numpy()
+    # Логики считывания = H @ W_rowsᵀ: H в кэше уже post-norm (замер 2026-11-04,
+    # `exp39d_head_route_probe.py`); прежний √D·(H/‖H‖)·(W·diag g)ᵀ нормировал второй раз.
+    lg = (Hs @ mk).detach().cpu().numpy()
     bk = ctx["base_k_all"][idx].detach().cpu().numpy()
     return float(np.mean([_pearson(lg[i], bk[i]) for i in range(len(idx))]))
 
