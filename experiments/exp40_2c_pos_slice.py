@@ -32,7 +32,8 @@ import _e38_cache as e38  # noqa: E402
 
 LAYERS = (6, 12, 18, 22, 23)
 TS = (0, 8, 16, 32, 48, 64, 96, 127)   # позиции в индексе кэша (t=0 ↔ последний токен окна)
-KS = (128, 64)                          # 64 = верхняя половина базиса U128, ближе к E-27.5 (K=64)
+KS = (128, 64)                          # 64 = верхняя половина базиса U128; сравним с E-27.5
+                                      # (K=64) ТОЛЬКО после ренормализации p (ниже)
 
 
 def gram_r_eff(J: torch.Tensor, P: torch.Tensor, K: int) -> dict:
@@ -42,6 +43,10 @@ def gram_r_eff(J: torch.Tensor, P: torch.Tensor, K: int) -> dict:
     """
     J = J[:, :K].double()
     P = P[:, :K].double()
+    # усечение базиса без ренормировки делает P(p) субстохастической (Σp<1 при K=64) —
+    # это не softmax-якобиан и несопоставимо с E-27.5, где pkv/pkv.sum() (аудит v2 §3.4);
+    # при K=128 ренормировка — тождество
+    P = P / P.sum(-1, keepdim=True).clamp_min(1e-30)
     Jg = torch.einsum("ik,ikd->id", P, J)              # J^T p
     Jb = P[:, :, None] * (J - Jg[:, None, :])          # gauge-free
     E = torch.einsum("ikd,ikd->i", Jb, Jb)

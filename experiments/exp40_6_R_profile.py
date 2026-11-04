@@ -135,26 +135,26 @@ def main(results_dir: str = None) -> dict:
     from scipy.stats import spearmanr
     ls = sorted(kap)
     rho_k = spearmanr([prof[l] for l in ls], [kap[l] for l in ls])
-    # partial-out частотой токена (per-doc, per-layer): covariate = mean_t max p_t
-    cov = {}
-    ck = load_layer(23, want=("P",))
-    Pdoc = ck["P"].double()
-    for d_of, dom in enumerate(DOMAINS):
-        for si in range(N_PER_DOMAIN):
-            di = d_of * N_PER_DOMAIN + si   # плоский индекс документа
-            # (кэш лежит домен-мажорно: (wiki,0..7),(math,0..7),…); раньше
-            # сюда попадал индекс ДОМЕНА 0..3, и все 32 «документа» были
-            # четырьмя первыми wiki-документами, повторёнными по 8 раз
-            cov[f"{dom}#{si}"] = float(Pdoc[di].max(dim=-1).values.mean())
-    del ck
+    # partial-out частотой токена (per-doc, PER-LAYER): covariate = mean_t max p_t на СВОЁМ
+    # слое; раньше cov бралась только с L23, а поле называлось per-layer (аудит v2 §3.5)
     partial = {}
     for L in LAYERS:
+        ck = load_layer(int(L), want=("P",))
+        Pdoc = ck["P"].double()
+        cov = {}
+        for d_of, dom in enumerate(DOMAINS):
+            for si in range(N_PER_DOMAIN):
+                di = d_of * N_PER_DOMAIN + si   # плоский индекс документа
+                # (кэш лежит домен-мажорно: (wiki,0..7),(math,0..7),…; индекс ДОМЕНА
+                # сюда попадать не должен — иначе 32 «документа» = четыре wiki, ×8)
+                cov[f"{dom}#{si}"] = float(Pdoc[di].max(dim=-1).values.mean())
+        del ck
         x = np.array([per_doc[str(L)][d]["R_raw"] - per_doc[str(L)][d]["R_can"] for d in dkeys])
         z = np.array([cov[d] for d in dkeys])
         resid = x - np.polyval(np.polyfit(z, x, 1), z)
         rho = spearmanr(x, z)
         partial[str(L)] = {"rho_diff_freq": float(rho.statistic), "p": float(rho.pvalue),
-                           "resid_sd": float(resid.std())}
+                           "resid_sd": float(resid.std()), "cov_basis": "per-layer P"}
 
     tags = [tag(slice="gf", p_slice="p_t", aggregation="ratio_of_means", window="top",
                 side="right", norm_type="energy", layer=None, rank=None)]

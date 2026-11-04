@@ -72,23 +72,33 @@ def main(results_dir: str = None) -> dict:
             np_, op_ = rng.permutation(med_cb), rng.permutation(med_co)
             null_peaks.append(float((cumshare(np_) - cumshare(op_)).max()))
         null_peaks = np.array(null_peaks)
-        p_onesided = float((null_peaks >= peak).mean())
+        # конвенция проекта (prism/nulls_and_stats): p = (1 + #{null ≥ obs})/(B+1) — ноль
+        # недопустим; наивная доля могла вырождаться в ровно 0.0 (аудит v2 §3.2)
+        p_onesided = float((1 + int((null_peaks >= peak).sum())) / (B + 1))
         p_two = min(1.0, 2 * p_onesided)
-        # bootstrap по документам
-        boots = []
+        # bootstrap по документам; CI — УСЛОВНЫЙ по репликам с пересечением: sentinel 129
+        # в квантилях смешивал «нет пересечения» с «пересечение в конце» (аудит v2 §3.2)
+        boots_crossed, n_none = [], 0
         for _ in range(B):
             idx = rng.integers(0, cb.shape[0], cb.shape[0])
             rcb, _ = r_cross_of(np.nanmedian(cb[idx], axis=0),
                                 np.nanmedian(co[idx], axis=0))
-            boots.append(rcb if rcb is not None else 129.0)
-        lo, hi = np.quantile(boots, [0.025, 0.975])
+            if rcb is None:
+                n_none += 1
+            else:
+                boots_crossed.append(rcb)
+        if boots_crossed:
+            lo, hi = np.quantile(boots_crossed, [0.025, 0.975])
+        else:
+            lo = hi = float("nan")
         stable = (rc is not None) and p_two < 0.05
         per_layer[L] = {
             "r_cross": rc, "delta_peak": peak,
             "null_peak_p95": float(np.quantile(null_peaks, 0.95)),
             "p_two_sided": p_two, "n_docs": len(docs),
             "bootstrap_CI95": [float(lo), float(hi)],
-            "frac_boot_no_crossing": float(np.mean(np.array(boots) > 128.5)),
+            "ci_basis": "conditional on bootstrap replicas WITH crossing (аудит v2 §3.2)",
+            "frac_boot_no_crossing": n_none / B,
             "stable": bool(stable),
             "label": "natural × canonical × off²-tail/b_off-top × both",
         }
@@ -140,7 +150,17 @@ def main(results_dir: str = None) -> dict:
                                             "E-32tail (off2_vs_e30b_*)"},
                             {"id": "D4_layers",
                              "description": "b_off существует только на L18/L22 — «все "
-                                            "доступные слои» = {18,22}"}],
+                                            "доступные слои» = {18,22}"},
+                            {"id": "D4_r_cross_definition",
+                             "description": "объект ставки ИЗМЕНЁН относительно "
+                                            "пререгистрации (аудит v2 §3.1): ставка «r_cross ≈ 60» "
+                                            "была сформулирована на пересечении ИСХОДНЫХ кривых "
+                                            "(C_off²(l,r) = C_b(l,r)), а код считает первый ноль "
+                                            "разности НАКОПЛЕННЫХ ДОЛЕЙ cum_b(r) − cum_off²(r) — "
+                                            "это другая величина, и «hit/miss» в prediction_check "
+                                            "относится к новому объекту; пересчёт старого "
+                                            "определения на согласованной базе — отдельная работа "
+                                            "(данные exp32tail есть), в этот отчёт не входит"}],
                         "wall_sec": round(time.time() - t0, 1)})
     out = os.path.join(results_dir, "E40_4_intersection.json")
     dump_json(rep, out)
