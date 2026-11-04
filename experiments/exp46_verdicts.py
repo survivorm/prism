@@ -26,6 +26,11 @@ import numpy as np
 RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results",
                    "exp46_frame_as_memory.json.gz")
 NULLS = ("haar", "pca_doc", "pca_doc_raw", "pca_win")
+# leaf_perm — та же совокупность рам, разложенная по позициям случайно внутри
+# документа. Если она не хуже leaf_lag1, то работает не носительство, а «любая
+# рама этого документа ловит нужную энергию». В гейт п.7 НЕ входит (добавлена до
+# чисел, диагностика).
+DIAG = ("leaf_perm",)
 N_BOOT = 2000
 SEED = 0
 
@@ -82,7 +87,7 @@ def main():
     log("\n== медианы по всем позициям (score = KL / KL своей рамы; _nr — с восстановлением нормы) ==")
     log(f"{'вариант':>14s} {'KL':>9s} {'score':>7s} {'KL_nr':>9s} {'score_nr':>9s} "
         f"{'энерг.':>7s} {'top5':>5s} {'ΔNLL':>7s}")
-    order = [f"leaf_lag{l}" for l in d["lags"]] + list(NULLS) + ["mean_dir"]
+    order = ([f"leaf_lag{lag}" for lag in d["lags"]] + list(NULLS) + ["mean_dir"] + list(DIAG))
     med = {}
     for name in order:
         if name not in tab:
@@ -114,19 +119,31 @@ def main():
                 f"{'лист лучше' if better else ('null лучше' if bs['ci'][0] > 0 else 'НЕТ различия')}")
         log("  ИТОГ: " + ("лист лучше ВСЕХ null'ей (носитель есть)" if ok_all else
                           "носителя нет: как минимум один null не хуже листа"))
+        for nl in DIAG:
+            if nl not in med or prim not in med:
+                continue
+            bs = boot_diff(med[prim][field], med[nl][field])
+            bs_nr = boot_diff(med[prim]["score_nr"], med[nl]["score_nr"])
+            log(f"  [диагн] {prim} − {nl:<9s}: Δ(score) = {bs['mean_diff']:+.3f} "
+                f"CI [{bs['ci'][0]:+.3f}, {bs['ci'][1]:+.3f}], Δ(score_nr) = "
+                f"{bs_nr['mean_diff']:+.3f} CI [{bs_nr['ci'][0]:+.3f}, {bs_nr['ci'][1]:+.3f}] → "
+                + ("«любая рама документа» ХУЖЕ листа хотя бы в одном варианте"
+                   if (bs['ci'][1] < 0 or bs_nr['ci'][1] < 0)
+                   else "«любая рама документа» НЕ ХУЖЕ листа: привязка рама↔позиция сама по "
+                        "себе ничего не даёт"))
 
     log("\n== лестница лагов (монотонность = медленное вращение рамы) ==")
-    lags = [f"leaf_lag{l}" for l in d["lags"]]
+    lags = [f"leaf_lag{lag}" for lag in d["lags"]]
     docs = sorted(med[lags[0]]["kl"])
-    per_doc = {l: np.array([med[l]["kl"][dd] for dd in docs]) for l in lags}
-    for l in lags:
-        log(f"  {l:>12s}: медианный KL = {np.median(per_doc[l]):.4f}")
-    mono = np.mean([all(np.diff([per_doc[l][i] for l in lags]) >= -1e-9)
+    per_doc = {lg: np.array([med[lg]["kl"][dd] for dd in docs]) for lg in lags}
+    for lg in lags:
+        log(f"  {lg:>12s}: медианный KL = {np.median(per_doc[lg]):.4f}")
+    mono = np.mean([all(np.diff([per_doc[lg][i] for lg in lags]) >= -1e-9)
                     for i in range(len(docs))])
     log(f"  документов с немонотонной лестницей: {100 * (1 - mono):.0f} %")
     sp = []
     for i in range(len(docs)):
-        y = np.array([per_doc[l][i] for l in lags])
+        y = np.array([per_doc[lg][i] for lg in lags])
         sp.append(np.corrcoef(np.arange(len(lags)), y)[0, 1])
     log(f"  Spearman(lag, KL) по документам: медиана {np.median(sp):+.3f}, "
         f"доля > 0: {100 * np.mean(np.array(sp) > 0):.0f} %")

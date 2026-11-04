@@ -25,6 +25,11 @@
   pca_win      топ-r главных направлений окна [q−WIN, q−1] (без текущего h, иначе проекция
                тривиальна) — конкурент «адаптивные локальные направления без всякого якобиана».
   mean_dir     направление среднего h по документу, r=1 — контроль «а может, всё в среднем».
+  leaf_perm    тот же набор рам, что у листа, но разложенный по позициям случайно внутри
+               документа (перестановка). Держит маргинальное распределение рам и их энергии,
+               убивает ТОЛЬКО привязку «рама ↔ позиция»: если leaf_perm ≈ leaf_lag1, то
+               работает не носительство, а то, что любая рама этого документа ловит нужную
+               энергию. В гейт п.7 не входит (диагностика, добавлена до чисел).
 
 Метрики на вариант: KL(p_true‖p_proj), ΔNLL реализовавшегося токена (nll_proj − nll_true),
 пересечение top-5, энтропия спроецированного распределения, И доля энергии ‖Πh‖²/‖h‖² плюс
@@ -167,6 +172,12 @@ def main():
         variants["haar"] = (torch.stack([E28.haar_subspace(D, r, "cpu", generator=gen)
                                          for _ in range(S)]),
                             torch.ones(S, dtype=torch.bool))
+        # перестановка собственных рам: набор и энергии сохранены, привязка к позиции убита
+        # (генератор берётся ПОСЛЕ haar, чтобы не сдвигать его отрисовку относительно пред.
+        #  версий скрипта)
+        gperm = torch.Generator().manual_seed(5000 + di)
+        variants["leaf_perm"] = (Vd[torch.randperm(S, generator=gperm)].contiguous(),
+                                 torch.ones(S, dtype=torch.bool))
 
         lp_true = torch.log_softmax(Hd @ W.T, 1)
         top_true = lp_true.topk(5, 1).indices
@@ -207,7 +218,7 @@ def main():
             kl_med[name] = float(kl[ok].median())
             del lp, lp_nr, kl, kl_nr, top_p, inter, nll_p, nll_p_nr, ent, energy
         order = [f"leaf_lag{lag}" for lag in LAGS] + ["pca_doc", "pca_doc_raw", "pca_win",
-                                                  "haar", "mean_dir"]
+                                                  "haar", "mean_dir", "leaf_perm"]
         log(f"  док {di} ({dom}) готов, медианный KL: "
             + "  ".join(f"{k}={kl_med[k]:.2e}" for k in order)
             + f"   t={time.time() - t0:.0f} с")
