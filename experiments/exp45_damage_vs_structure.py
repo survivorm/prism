@@ -135,6 +135,8 @@ def kappa_of(J):
     """Медиана κ(r=16) по документам: стек [128,K,D] на документ, как E-28/E-39b."""
     ks = []
     for i in range(0, len(J), S):
+        if i % (4 * S) == 0:
+            log(f"    κ: документ {i // S + 1}/{len(J) // S}")
         Jd = torch.from_numpy(J[i:i + S].astype(np.float32))
         _, _, k2, _ = E28.document_profile(Jd, [1, R, 32], r_main=R)
         k2 = np.asarray(k2, dtype=np.float64)
@@ -501,7 +503,9 @@ def main():
     log("quantizing int8 RTN ...")
     edits.append(dict(name="rtn8", kind="dense",
                       W=_quantize_rtn(W.double(), RTN_BITS, RTN_GROUP).float()))
+    log("  RTN готов, строю J базы …")
     J0 = J_of_spec(WU0)
+    log("  J базы готов, считаю κ базы …")
     KAPPA_SUB = kappa_of(J0)        # база на той же подыборке документов, что и все правки
     log(f"  база κ(r={R}) на подыборке {len(SPEC_DOCS)} доков = {KAPPA_SUB:.6f} "
         f"(якорь по корпусу {ANCH['kappa_base']:.6f})")
