@@ -1,48 +1,39 @@
-"""Аудит E-39b, шаг 2: отвечает ли κ вообще на дрожание топ-r субпространства того же размера.
-Если да — κ живой метр и «калибровочная выровненность» требует когерентного null'а;
-если нет — κ при 12 % дрейфе слеп и вывод E-39b пуст."""
+"""E-39b шаг 2 (лёгкая версия): живость κ — дрожание топ-r субпространства на угол δ при
+сохранённых нормах, 8 документов L23, память по документу."""
 import sys, json, numpy as np, torch
 sys.path.insert(0, ".")
 import exp28_leaf_structure as E28
 from _e38_cache import jcache_path
 L, r, S = 23, 16, 128
+DOMS = ["wiki", "math", "code", "chat"]
 ck = torch.load(jcache_path(L), map_location="cpu", weights_only=False)
-DOMS, NS = ck["domains"], ck["n_samples"]
-J = np.stack([ck["JR"][(d, s, t)].numpy().astype(np.float32) for d in DOMS for s in range(NS) for t in range(S)])
-del ck
-N = len(J)
-
-def tops(Jst):
-    """_batched: правые векторы топ-r (numpy, по 256 позиций за раз)."""
-    out = []
-    for i in range(0, len(Jst), 256):
-        _, _, Vh = np.linalg.svd(Jst[i:i + 256], full_matrices=False)
-        out.append(Vh[:, :r, :].astype(np.float32))
-    return np.concatenate(out)                      # [N, r, D]
-
-def kappa(Jst):
-    ks = []
-    for i in range(0, N, S):
-        _, _, k2, _ = E28.document_profile(torch.from_numpy(Jst[i:i + S]), [1, r, 32], r_main=r)
-        ks.append(k2[~np.isnan(k2)])
-    return float(np.median(np.concatenate(ks)))
-
-V = tops(J)
-JV = np.einsum('nkd,nrd->nkr', J, V)                 # координаты в топ-r
-k0 = kappa(J)
-res = {"kappa_base": k0, "sweep": []}
-print("κ базы %.6f" % k0, flush=True)
+DEL = [0.0, 0.02, 0.05, 0.12, 0.25, 0.5]
+acc = {d: [] for d in DEL}
+drift = {d: [] for d in DEL}
 rng = np.random.default_rng(0)
-for delta in (0.0, 0.02, 0.05, 0.12, 0.25, 0.5):
-    # Q_r — случайное единичное r-подпространство, ортогональное V_r (по подпространству, не по позиции)
-    G = rng.standard_normal((N, V.shape[-1], r)).astype(np.float32)
-    Q = G - np.einsum('ndx,nrd,ner->ndx', V.transpose(0, 2, 1), V, np.ones((1, r, 1), np.float32))
-    Q = np.linalg.qr(Q.reshape(-1, V.shape[-1]))[0].reshape(N, -1)[:, :r].transpose(0, 2, 1)  # [N,r,D]
-    Jp = np.einsum('nkr,nrd->nkd', np.cos(delta) * JV, V) + \
-         np.einsum('nkr,nrd->nkd', np.sin(delta) * JV, Q) + \
-         (J - np.einsum('nkr,nrd->nkd', JV, V))
-    d = float(np.median(np.linalg.norm((Jp - J).reshape(N, -1), axis=1) / np.linalg.norm(J.reshape(N, -1), axis=1)))
-    k = kappa(Jp.astype(np.float32))
-    res["sweep"].append({"delta_rad": delta, "drift_median": d, "kappa": k, "ratio": k / k0})
-    print("δ=%.2f рад  drift %.4f  κ %.6f  ratio %.4f" % (delta, d, k, k / k0), flush=True)
-json.dump(res, open("/tmp/null39b2.json", "w"), indent=1)
+for dom in DOMS:
+    for si in range(2):
+        Jd = np.stack([ck["JR"][(dom, si, t)].numpy().astype(np.float32) for t in range(S)])
+        T = torch.from_numpy(Jd)
+        V, _ = E28.right_subspaces(T, [r])[r]                # [S, D, r]
+        Vn = V.numpy()                                        # [n, D, r]
+        JV = np.einsum('nkd,ndr->nkr', Jd, Vn)
+        Jr = Jd - np.einsum('nkr,ndr->nkd', JV, Vn)           # остаток за пределами топ-r
+        G = rng.standard_normal((S, Vn.shape[1], r)).astype(np.float32)
+        VG = np.einsum('ndr,nds->nrs', Vn, G)                 # [n, r, r]
+        Q = G - np.einsum('ndr,nrs->nds', Vn, VG)             # ортогонально V_n
+        Q = np.linalg.qr(Q)[0]                                # [n, D, r]
+        for d in DEL:
+            Jp = np.cos(d) * np.einsum('nkr,ndr->nkd', JV, Vn) + np.sin(d) * np.einsum('nkr,ndr->nkd', JV, Q) + Jr
+            drift[d].append(float(np.median(np.linalg.norm((Jp - Jd).reshape(S, -1), axis=1) /
+                                           np.linalg.norm(Jd.reshape(S, -1), axis=1))))
+            _, _, k2, _ = E28.document_profile(torch.from_numpy(Jp.astype(np.float32)), [1, r, 32], r_main=r)
+            acc[d].append(k2[~np.isnan(k2)])
+        print("док %s/%d готов" % (dom, si), flush=True)
+res = {"n_docs": 8, "sweep": []}
+k0 = float(np.median(np.concatenate(acc[0.0])))
+for d in DEL:
+    k = float(np.median(np.concatenate(acc[d]))) if d else k0
+    res["sweep"].append({"delta_rad": d, "drift_median": float(np.mean(drift[d])), "kappa": k, "ratio": k / k0})
+    print("δ=%.2f  drift %.4f  κ %.6f  ratio %.4f" % (d, np.mean(drift[d]), k, k / k0), flush=True)
+json.dump(res, open("/tmp/liveness2.json", "w"), indent=1)
