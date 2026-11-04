@@ -147,10 +147,25 @@ def main(
                 v_g = v_g / v_g.norm()
                 v_d = v_d / v_d.norm()
 
-                # First-order (linear) predictor: KL_lin(v) = ½ ‖J^(p) v‖² = ½ Var_p(J v)
+                # First-order predictor, L2-on-δp metric: KL_lin(v) = ½ ‖J^(p) v‖²
+                # ⚠ НЕ равен ½ Var_p(Jv): ‖M_p z‖² = zᵀM_p²z (веса [p(1−p)]², top-K
+                # окно), тогда как истинная квадратичная форма KL = ½ zᵀM_p z =
+                # ½ Var_p(z) (M_p D⁻¹ M_p = M_p). В gauge-направлении L2-версия
+                # недооценивает KL в κ_g≈19–28×, в differential в κ_d≈0.2–3.4×
+                # (аудит v4.1: ratio_lin 7–59× — артефакт метрики, в KL-метрике ≈1×).
                 # [L-fisher]; compares the full-decoder KL below with the linear term
                 kl_lin_g = 0.5 * float((J_p @ v_g).norm() ** 2)
                 kl_lin_d = 0.5 * float((J_p @ v_d).norm() ** 2)
+                # истинная KL-метрика: ½ Var_p(J v) по полному словарю недоступна
+                # (J строится на top-K), считаем по top-K с p-весами:
+                _zg = J @ v_g
+                _zd = J @ v_d
+                kl_fisher_g = 0.5 * float(
+                    (p_tokens * _zg * _zg).sum() - (p_tokens * _zg).sum() ** 2
+                )
+                kl_fisher_d = 0.5 * float(
+                    (p_tokens * _zd * _zd).sum() - (p_tokens * _zd).sum() ** 2
+                )
                 h_norm = float(h_base.norm())
 
                 results_g = {}
@@ -176,6 +191,8 @@ def main(
                     "norm_h": h_norm,
                     "KL_lin_g": kl_lin_g,
                     "KL_lin_d": kl_lin_d,
+                    "KL_fisher_g": kl_fisher_g,
+                    "KL_fisher_d": kl_fisher_d,
                     "ratio_lin": kl_lin_d / (kl_lin_g + 1e-30),
                     "KL_g_minus": results_g[-1],
                     "KL_g_plus": results_g[+1],
