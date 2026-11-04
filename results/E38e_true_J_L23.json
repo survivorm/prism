@@ -229,5 +229,29 @@
     }
   },
   "kappa_ratio_true_over_cached": 0.6089921357551339,
-  "wall_sec": 629.9
+  "e28_metrics": {
+    "r": 16,
+    "degen_rel": 1e-09,
+    "anchor_e28": {
+      "delta_mean": 0.26618594716955707,
+      "kappa_mean": 0.01752786685915092
+    },
+    "cached": {
+      "delta_svd": 0.2661859393119812,
+      "kappa_holonomy": 0.01752786710858345,
+      "n_nan_delta": 0
+    },
+    "true": {
+      "delta_svd": 0.16924823820590973,
+      "kappa_holonomy": 0.010576263070106506,
+      "n_nan_delta": 0
+    },
+    "random_baseline": {
+      "delta_svd": 1.5651689228700034,
+      "kappa_holonomy": 5.42854921023051
+    },
+    "delta_ratio_true_over_cached": 0.635827116350964,
+    "kappa_holonomy_ratio_true_over_cached": 0.6033970365354537
+  },
+  "wall_sec": 1374.6
 }
