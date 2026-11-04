@@ -183,7 +183,7 @@ def t4_ari_null(K, doms, B=B_ARI):
     nulls = np.zeros(B)
     for b in range(B):
         nulls[b] = adjusted_rand_score(lab, rng.permutation(doms))
-    p = float((nulls >= ari_real - 1e-12).mean())
+    p = float((1 + int((nulls >= ari_real - 1e-12).sum())) / (B + 1))  # конвенция (1+h)/(B+1), как exp27.5
     return {'ari_real': float(ari_real), 'k': int(k), 'silhouette': float(sil),
             'ari_null_mean': float(nulls.mean()), 'ari_null_p95': float(np.percentile(nulls, 95)),
             'p_value': p}
@@ -281,7 +281,7 @@ def t7_depth_spearman(exp27_json):
         out[key] = {'rho': float(rho),
                     'ci_lo': float(np.nanpercentile(boot, 2.5)),
                     'ci_hi': float(np.nanpercentile(boot, 97.5)),
-                    'p_perm': float((perm >= abs(rho) - 1e-12).mean())}
+                    'p_perm': float((1 + int((perm >= abs(rho) - 1e-12).sum())) / (B_ARI + 1))}
     return out
 
 
