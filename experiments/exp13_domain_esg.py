@@ -333,7 +333,7 @@ def main(
     all_results["shared_token_set_size"] = len(shared_ts)
     os.makedirs(results_dir, exist_ok=True)
     out_path = os.path.join(results_dir, "exp13_domain_esg.json")
-    all_results["params"] = {large_model: large_model, small_model: small_model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length, n_components: n_components, domains: domains, max_pairs: max_pairs, device_L: device_L, device_S: device_S}
+    all_results["params"] = {"large_model": large_model, "small_model": small_model, "n_samples": n_samples, "K": K, "max_length": max_length, "min_length": min_length, "n_components": n_components, "domains": domains, "max_pairs": max_pairs, "device_L": device_L, "device_S": device_S}
     with open(out_path, "w") as f:
         json.dump(all_results, f, indent=2)
 
