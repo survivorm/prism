@@ -79,7 +79,17 @@ def load_doc(ck, dom, si):
         PRaw = torch.stack([ck["P128_RAW"][(dom, si, t)] for t in range(S)]).float()
         sent = (PRaw.sum(-1) < SENT).numpy()
     else:
-        # L19: кэш без P128_RAW — sentinel-маска недоступна, все позиции валидны
+        # Аудит v5: silent sent=0 превращал alive-протокол в all-позиции. Fail-loud;
+        # явный выход — PRISM_ALLOW_NO_RAW=1 (осознанный all-срез).
+        import os as _os
+
+        if _os.environ.get("PRISM_ALLOW_NO_RAW") != "1":
+            raise KeyError(
+                "кэш без P128_RAW: sentinel-маска недоступна, метрики стали бы "
+                "all-срезом (класс E); возьмите RAW-кэш (_ec.raw_jcache_path) "
+                "или поставьте PRISM_ALLOW_NO_RAW=1 сознательно"
+            )
+        print("[WARN] P128_RAW absent: sentinel mask disabled, ALL positions used")
         sent = np.zeros(S, dtype=bool)
     return Jdoc, Pdoc, sent
 
