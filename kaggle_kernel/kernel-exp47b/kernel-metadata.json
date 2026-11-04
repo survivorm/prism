@@ -1,0 +1,17 @@
+{
+  "id": "voroninmichael/prism-exp47b-gen-kinematics",
+  "title": "Prism: exp47b-gen-kinematics",
+  "code_file": "kernel.py",
+  "kernel_type": "script",
+  "is_private": true,
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "enable_gpu": true,
+  "enable_internet": true,
+  "language": "python",
+  "dataset_sources": ["voroninmichael/prism-code-47b"],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": []
+}
