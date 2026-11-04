@@ -1,0 +1,18 @@
+{
+  "kernel_type": "notebook",
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "language": "python",
+  "code_file": "kernel.ipynb",
+  "id": "voroninmichael/e-38e-true-j-l23-vs-e-39m-carriers",
+  "title": "E-38e true J L23 vs E-39m carriers",
+  "kernel_sources": [
+    "voroninmichael/e-39m-flat-carrier-vs-ptq",
+    "voroninmichael/e-38e-true-j-l23-vs-e-39m-carriers"
+  ],
+  "dataset_sources": [
+    "voroninmichael/prism-exp-code",
+    "voroninmichael/prism-exp27b-jcache-jcb"
+  ]
+}

@@ -273,6 +273,33 @@ KERNELS = {
                 "границе парного bootstrap CI на 32 документах, порог 0.5 п.п. cheat "
                 "(λo=0) — разделитель H_flat / H_any_low_κ, не sanity.",
     },
+    "e38e_true_J": {
+        "dir": "kernel-e38e-carrier",
+        # Canonical slug (выведен Kaggle из заголовка при первом пуше): несверенный id
+        # даёт HTTP 409 на каждом следующем пуше.
+        "id": "voroninmichael/e-38e-true-j-l23-vs-e-39m-carriers",
+        "title": "E-38e true J L23 vs E-39m carriers",
+        "exp_file": "experiments/exp38e_true_J_L23.py",
+        # выход ядра E-39m = три exp39m_carrier_*.pt (W_rows + rec для сверки κ')
+        "sources": ["voroninmichael/e-39m-flat-carrier-vs-ptq"],
+        "datasets": [
+            "voroninmichael/prism-exp-code",
+            "voroninmichael/prism-exp27b-jcache-jcb",
+        ],
+        "runner_extra": "kwargs['docs'] = 8\n"
+                        "kwargs['carrier'] = 'cheat,floor_pearson,floor_pairwise'\n",
+        "note": "E-38e (docs/E39.md, коммиты 0a18733/6f3f711/58b5de3): JR(L23) в кэше exp27b — "
+                "формула финальной нормировки, вычисленная на ЕЁ ЖЕ выходе (замер в ядре: "
+                "формула на h_post[S-1-t] равна JR[t] до 1.7e-07). Здесь на настоящем "
+                "∂logits/∂h считаются κ (E-38d/E-39a), Δ_SVD и голономия E-28, shares "
+                "E-39-suppl — и то же для трёх носителей E-39m (cheat / floor_pearson / "
+                "floor_pairwise): переносится ли плоскость с суррогатного оператора на "
+                "настоящий. Носитель меняет 128 строк связной матрицы → J носителя есть та же "
+                "закрытая форма с M = W_rows·g, новых backward-прогонов нет. Метрики считаются "
+                "на CPU (GPU только форварды): якоря E-28 (0.266/0.018) и κ=0.0162 обязаны "
+                "сойтись побитово; на полном корпусе дополнительно сверяется κ' носителя из .pt "
+                "(допуск 3 %, fail-loud). Локальный смоук --docs 1 пройден перед пушем.",
+    },
     "exp39b": {
         "dir": "kernel-exp39b",
         # Canonical slug (derived from the title on the first push): a mismatched
