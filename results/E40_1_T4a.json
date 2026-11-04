@@ -1,0 +1,770 @@
+{
+  "experiment": "E-40.1-T4a",
+  "tz": "docs/e40_todo.md §3.2",
+  "core_version": "v1.0.0",
+  "timestamp": "2026-11-03T22:38:51+0300",
+  "observational": true,
+  "new_forwards": 0,
+  "inputs": {
+    "exp39_supp_three_objects": {
+      "path": "/home/survivor/work/prism/experiments/../results/exp39_supp_three_objects.json",
+      "sha256_16": "9796a53c602a243d"
+    },
+    "exp39k_gauge_aware_importance": {
+      "path": "/home/survivor/work/prism/experiments/../results/exp39k_gauge_aware_importance.json",
+      "sha256_16": "9f4017e147f0be57"
+    },
+    "exp27b_jcache_L6": {
+      "path": "/data/prism_kernels/exp27b/results/exp27b_jcache_L6.pt",
+      "sha256_16": "6d6b8ce784a2ad01"
+    }
+  },
+  "channel_tags": [
+    {
+      "protocol": "natural",
+      "slice": "gf",
+      "window": "full",
+      "side": "right",
+      "p_mode": "truncated_U128",
+      "p_slice": "p_t",
+      "aggregation": "ratio_of_means",
+      "layer": null,
+      "rank": null,
+      "norm_type": "energy",
+      "source": "cache",
+      "status": "measured"
+    },
+    {
+      "protocol": "natural",
+      "slice": "gf",
+      "window": "full",
+      "side": "right",
+      "p_mode": "truncated_U128",
+      "p_slice": "p_t",
+      "aggregation": "mean",
+      "layer": null,
+      "rank": null,
+      "norm_type": "energy",
+      "source": "cache",
+      "status": "measured"
+    },
+    {
+      "protocol": "natural",
+      "slice": "gf",
+      "window": "full",
+      "side": "right",
+      "p_mode": "truncated_U128",
+      "p_slice": "p_t",
+      "aggregation": "median",
+      "layer": null,
+      "rank": null,
+      "norm_type": "energy",
+      "source": "cache",
+      "status": "measured"
+    },
+    {
+      "protocol": "natural",
+      "slice": "fixP",
+      "window": "full",
+      "side": "right",
+      "p_mode": "truncated_U128",
+      "p_slice": "p_0",
+      "aggregation": "ratio_of_means",
+      "layer": null,
+      "rank": null,
+      "norm_type": "energy",
+      "source": "cache",
+      "status": "measured"
+    },
+    {
+      "protocol": "natural",
+      "slice": "fixP",
+      "window": "full",
+      "side": "right",
+      "p_mode": "truncated_U128",
+      "p_slice": "p_0",
+      "aggregation": "mean",
+      "layer": null,
+      "rank": null,
+      "norm_type": "energy",
+      "source": "cache",
+      "status": "measured"
+    },
+    {
+      "protocol": "natural",
+      "slice": "fixP",
+      "window": "full",
+      "side": "right",
+      "p_mode": "truncated_U128",
+      "p_slice": "p_0",
+      "aggregation": "median",
+      "layer": null,
+      "rank": null,
+      "norm_type": "energy",
+      "source": "cache",
+      "status": "measured"
+    }
+  ],
+  "per_layer": {
+    "6": {
+      "cells": {
+        "p_t_ratio_of_means_all": {
+          "c": 0.0024418184227117455,
+          "s": 0.01877141349896073,
+          "frac_K": 0.9954687291193254,
+          "residual": -1.1102230246251565e-16,
+          "closed": true
+        },
+        "p_t_mean_all": {
+          "c": 0.002361090477365715,
+          "s": 0.01858318163167727,
+          "frac_K": 0.9956231536848246,
+          "residual": 1.1102230246251565e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_all": {
+          "c": 0.0018324372374844227,
+          "s": 0.014975652232493813,
+          "frac_K": 0.9965767972427979,
+          "residual": 1.7401557978247162e-05,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_t_ratio_of_means_alive": {
+          "c": 0.0012152040010942695,
+          "s": 0.013805151919658351,
+          "frac_K": 0.9977601742173362,
+          "residual": -1.1102230246251565e-16,
+          "closed": true
+        },
+        "p_t_mean_alive": {
+          "c": 0.001260210223669912,
+          "s": 0.013797686721214699,
+          "frac_K": 0.997669955711517,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_alive": {
+          "c": 0.0008716359495444274,
+          "s": 0.010154650126449786,
+          "frac_K": 0.9983772189562842,
+          "residual": 1.7373936182396577e-05,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_all": {
+          "c": 0.006272687804754411,
+          "s": 0.013126543146105974,
+          "frac_K": 0.9876269305254578,
+          "residual": 1.1102230246251565e-16,
+          "closed": true
+        },
+        "p_0_mean_all": {
+          "c": 0.006442990802683581,
+          "s": 0.013284823417058295,
+          "frac_K": 0.9872905049278553,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_all": {
+          "c": 0.006232040908986663,
+          "s": 0.012746111902199014,
+          "frac_K": 0.9876991453776092,
+          "residual": 7.63826959127023e-07,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_alive": {
+          "c": 0.006662954836511,
+          "s": 0.013658771876487303,
+          "frac_K": 0.9868606523761522,
+          "residual": 3.3306690738754696e-16,
+          "closed": true
+        },
+        "p_0_mean_alive": {
+          "c": 0.006617123581147463,
+          "s": 0.01349751267068062,
+          "frac_K": 0.9869479356860003,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_alive": {
+          "c": 0.006313051119275863,
+          "s": 0.012830115246724208,
+          "frac_K": 0.9875464262240311,
+          "residual": 7.916605338609273e-06,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        }
+      },
+      "identity_gap_rel": 1.1141177754349233e-15,
+      "frac_K_source": "прямое ‖J−PJ‖², не из тождества (ТЗ §3.2, ред. v2)",
+      "g_uni_recomputed_corpus": 0.2149591889568795,
+      "g_uni_cached_supp": 0.2149591889568795,
+      "g_uni_cached_e39k": null,
+      "g_uni_matches": true
+    },
+    "12": {
+      "cells": {
+        "p_t_ratio_of_means_all": {
+          "c": 0.002313663903255977,
+          "s": 0.01804147676445468,
+          "frac_K": 0.9956981670773303,
+          "residual": -1.1102230246251565e-16,
+          "closed": true
+        },
+        "p_t_mean_all": {
+          "c": 0.002286067551446569,
+          "s": 0.017903341678554213,
+          "frac_K": 0.995748394540366,
+          "residual": 1.1102230246251565e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_all": {
+          "c": 0.0018186422749606958,
+          "s": 0.015274637455659575,
+          "frac_K": 0.9966459840998346,
+          "residual": 4.9954100354243636e-05,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_t_ratio_of_means_alive": {
+          "c": 0.0010667569128878856,
+          "s": 0.01258092680881275,
+          "frac_K": 0.9980247658935931,
+          "residual": 2.220446049250313e-16,
+          "closed": true
+        },
+        "p_t_mean_alive": {
+          "c": 0.0011351436268789263,
+          "s": 0.012717651406308284,
+          "frac_K": 0.9978914514035347,
+          "residual": 2.220446049250313e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_alive": {
+          "c": 0.0008900643699597717,
+          "s": 0.01040424133672583,
+          "frac_K": 0.9983573133017944,
+          "residual": 2.9193803921079287e-05,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_all": {
+          "c": 0.006311566638483639,
+          "s": 0.013152681125302077,
+          "frac_K": 0.9875498597438168,
+          "residual": 2.220446049250313e-16,
+          "closed": true
+        },
+        "p_0_mean_all": {
+          "c": 0.006356882140956357,
+          "s": 0.013186559424454567,
+          "frac_K": 0.987460121067542,
+          "residual": 1.1102230246251565e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_all": {
+          "c": 0.006232564529230631,
+          "s": 0.012917502663878018,
+          "frac_K": 0.9877070320020287,
+          "residual": 5.299185418694563e-06,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_alive": {
+          "c": 0.0065065201617837895,
+          "s": 0.013393886831580713,
+          "frac_K": 0.9871663558808894,
+          "residual": -2.220446049250313e-16,
+          "closed": true
+        },
+        "p_0_mean_alive": {
+          "c": 0.0064206798696078305,
+          "s": 0.013222265146058943,
+          "frac_K": 0.9873334685563772,
+          "residual": 1.1102230246251565e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_alive": {
+          "c": 0.006213768271904174,
+          "s": 0.012832397483849654,
+          "frac_K": 0.9877325998682863,
+          "residual": -4.534013088863809e-06,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        }
+      },
+      "identity_gap_rel": 1.1361823814584506e-15,
+      "frac_K_source": "прямое ‖J−PJ‖², не из тождества (ТЗ §3.2, ред. v2)",
+      "g_uni_recomputed_corpus": 0.1881803572241491,
+      "g_uni_cached_supp": 0.18818035722414914,
+      "g_uni_cached_e39k": null,
+      "g_uni_matches": true
+    },
+    "18": {
+      "cells": {
+        "p_t_ratio_of_means_all": {
+          "c": 0.0016386842101813086,
+          "s": 0.014343173414702813,
+          "frac_K": 0.9969283582032411,
+          "residual": -4.440892098500626e-16,
+          "closed": true
+        },
+        "p_t_mean_all": {
+          "c": 0.0015344356025137275,
+          "s": 0.013673001804509312,
+          "frac_K": 0.9971180797733187,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_all": {
+          "c": 0.001026715023160364,
+          "s": 0.010781988705209805,
+          "frac_K": 0.9980878787887719,
+          "residual": 2.5057554653429293e-05,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_t_ratio_of_means_alive": {
+          "c": 0.00054913677395596,
+          "s": 0.008302397964599889,
+          "frac_K": 0.9989706562640503,
+          "residual": -3.3306690738754696e-16,
+          "closed": true
+        },
+        "p_t_mean_alive": {
+          "c": 0.0005992203774028463,
+          "s": 0.008405745127236172,
+          "frac_K": 0.9988722157963383,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_alive": {
+          "c": 0.0004776929119731558,
+          "s": 0.007600554092160228,
+          "frac_K": 0.9991115932698407,
+          "residual": 9.210671279125116e-06,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_all": {
+          "c": 0.006113228519270883,
+          "s": 0.012474959663787663,
+          "frac_K": 0.987929167580071,
+          "residual": -4.440892098500626e-16,
+          "closed": true
+        },
+        "p_0_mean_all": {
+          "c": 0.006149422825754012,
+          "s": 0.012501979221201002,
+          "frac_K": 0.9878574538329393,
+          "residual": 1.1102230246251565e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_all": {
+          "c": 0.006128581162439877,
+          "s": 0.012412682934344645,
+          "frac_K": 0.98789732411998,
+          "residual": 4.117472310882775e-07,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_alive": {
+          "c": 0.00610951988820861,
+          "s": 0.01239734179178851,
+          "frac_K": 0.9879346543070855,
+          "residual": 3.3306690738754696e-16,
+          "closed": true
+        },
+        "p_0_mean_alive": {
+          "c": 0.0060989097704732985,
+          "s": 0.012344176897859951,
+          "frac_K": 0.9879545591623391,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_alive": {
+          "c": 0.006046486536422183,
+          "s": 0.012193791430845344,
+          "frac_K": 0.9880488336166326,
+          "residual": -6.881859981877625e-06,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        }
+      },
+      "identity_gap_rel": 7.698804475939092e-16,
+      "frac_K_source": "прямое ‖J−PJ‖², не из тождества (ТЗ §3.2, ред. v2)",
+      "g_uni_recomputed_corpus": 0.14248665098072727,
+      "g_uni_cached_supp": 0.14248665098072733,
+      "g_uni_cached_e39k": 0.14248665098072735,
+      "g_uni_matches": true
+    },
+    "22": {
+      "cells": {
+        "p_t_ratio_of_means_all": {
+          "c": 0.0014747701315438674,
+          "s": 0.013112669200176268,
+          "frac_K": 0.9972224018304656,
+          "residual": 1.1102230246251565e-16,
+          "closed": true
+        },
+        "p_t_mean_all": {
+          "c": 0.0014258312360409813,
+          "s": 0.012735530519387929,
+          "frac_K": 0.9973105312655284,
+          "residual": 1.1102230246251565e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_all": {
+          "c": 0.0009283321731092898,
+          "s": 0.010271053099860653,
+          "frac_K": 0.9982635945120963,
+          "residual": 1.4764326534799643e-05,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_t_ratio_of_means_alive": {
+          "c": 0.0004809546284635347,
+          "s": 0.007504267740551702,
+          "frac_K": 0.9990944047773948,
+          "residual": -1.1102230246251565e-16,
+          "closed": true
+        },
+        "p_t_mean_alive": {
+          "c": 0.0005385081627043366,
+          "s": 0.0077842368370726256,
+          "frac_K": 0.9989835780177271,
+          "residual": 1.1102230246251565e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_alive": {
+          "c": 0.00041023909571745237,
+          "s": 0.00723965458709354,
+          "frac_K": 0.9992344887266567,
+          "residual": 2.554319551206774e-06,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_all": {
+          "c": 0.006830772049242571,
+          "s": 0.013640360870532,
+          "frac_K": 0.9865245153461935,
+          "residual": 3.3306690738754696e-16,
+          "closed": true
+        },
+        "p_0_mean_all": {
+          "c": 0.0068212179377238075,
+          "s": 0.013586673119310682,
+          "frac_K": 0.9865421618110035,
+          "residual": 2.220446049250313e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_all": {
+          "c": 0.006831501977060726,
+          "s": 0.013555945552710755,
+          "frac_K": 0.9865211031078063,
+          "residual": 3.4340209964511814e-07,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_alive": {
+          "c": 0.00676143882981818,
+          "s": 0.013483622090502386,
+          "frac_K": 0.9866589304050428,
+          "residual": -3.3306690738754696e-16,
+          "closed": true
+        },
+        "p_0_mean_alive": {
+          "c": 0.0067305683268689895,
+          "s": 0.013400452763251487,
+          "frac_K": 0.9867184354805222,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_alive": {
+          "c": 0.006735076474727968,
+          "s": 0.013292945090509291,
+          "frac_K": 0.9867042417825143,
+          "residual": -2.307657209099645e-06,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        }
+      },
+      "identity_gap_rel": 6.825546641225792e-16,
+      "frac_K_source": "прямое ‖J−PJ‖², не из тождества (ТЗ §3.2, ред. v2)",
+      "g_uni_recomputed_corpus": 0.12577313509665994,
+      "g_uni_cached_supp": 0.1257731350966599,
+      "g_uni_cached_e39k": null,
+      "g_uni_matches": true
+    },
+    "23": {
+      "cells": {
+        "p_t_ratio_of_means_all": {
+          "c": 0.002979495819462671,
+          "s": 0.021736502974838545,
+          "frac_K": 0.99451348392265,
+          "residual": 2.220446049250313e-16,
+          "closed": true
+        },
+        "p_t_mean_all": {
+          "c": 0.0030334838681107426,
+          "s": 0.021879574723703766,
+          "frac_K": 0.9944117480538687,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_all": {
+          "c": 0.0031706981810286725,
+          "s": 0.0223855224336172,
+          "frac_K": 0.994276421903374,
+          "residual": 0.0001167066508053205,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_t_ratio_of_means_alive": {
+          "c": 0.002086967789315093,
+          "s": 0.019387707440452137,
+          "frac_K": 0.9962019476211663,
+          "residual": 0.0,
+          "closed": true
+        },
+        "p_t_mean_alive": {
+          "c": 0.0021407750208595573,
+          "s": 0.019583983204894774,
+          "frac_K": 0.9961019823564505,
+          "residual": 1.1102230246251565e-16,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_t_median_alive": {
+          "c": 0.0020590228257387306,
+          "s": 0.019293846659534618,
+          "frac_K": 0.9963022016557599,
+          "residual": 4.7994788315741665e-05,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_all": {
+          "c": 0.006203996586829231,
+          "s": 0.013142587849489564,
+          "frac_K": 0.9877647344417232,
+          "residual": 1.1102230246251565e-16,
+          "closed": true
+        },
+        "p_0_mean_all": {
+          "c": 0.006204043117701857,
+          "s": 0.013142563609993434,
+          "frac_K": 0.9877646407428391,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_all": {
+          "c": 0.006201080780506461,
+          "s": 0.013139368184343442,
+          "frac_K": 0.9877704754830761,
+          "residual": -5.952194737091077e-09,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        },
+        "p_0_ratio_of_means_alive": {
+          "c": 0.006210257720413433,
+          "s": 0.013148659088193541,
+          "frac_K": 0.9877523717949909,
+          "residual": 2.220446049250313e-16,
+          "closed": true
+        },
+        "p_0_mean_alive": {
+          "c": 0.006210868569409228,
+          "s": 0.013149149826947096,
+          "frac_K": 0.9877511630023531,
+          "residual": 0.0,
+          "closed": true,
+          "s2_definition": "mean_t(O1_t)"
+        },
+        "p_0_median_alive": {
+          "c": 0.006208997819307569,
+          "s": 0.01314809640341955,
+          "frac_K": 0.9877548892018208,
+          "residual": 1.240140223845998e-08,
+          "closed": false,
+          "reason": "median ≠ ratio of sums (ожидаемый негативный контроль)"
+        }
+      },
+      "identity_gap_rel": 7.466313966360934e-16,
+      "frac_K_source": "прямое ‖J−PJ‖², не из тождества (ТЗ §3.2, ред. v2)",
+      "g_uni_recomputed_corpus": 0.1403370168705075,
+      "g_uni_cached_supp": 0.14033701687050754,
+      "g_uni_cached_e39k": 0.14033701687050754,
+      "g_uni_matches": true
+    }
+  },
+  "a3_identity_asserts": {
+    "O2_eq_O3_rel": {
+      "6": 6.93037990758271e-15,
+      "12": 1.0206758751346668e-15,
+      "18": 2.620328644801483e-15,
+      "22": 1.8843616388361787e-15,
+      "23": 6.3578730743606136e-15
+    },
+    "g_uni_gf_zero_rel": {
+      "6": 5.186601984362758e-17,
+      "12": 3.718180514351314e-17,
+      "18": 1.6626274336095864e-17,
+      "22": 1.2447586809912756e-17,
+      "23": 1.556310802937853e-17
+    },
+    "iso_inline_eq_closed_rel": {
+      "6": 0.0,
+      "12": 0.0,
+      "18": 0.0,
+      "22": 0.0,
+      "23": 0.0
+    }
+  },
+  "frac_K_external_checkpoint": {
+    "6": {
+      "all": {
+        "t4a": 0.9954687291193254,
+        "supp": 0.9954687291030213,
+        "abs_dev": 1.6304069205830274e-11
+      },
+      "alive": {
+        "t4a": 0.9977601742173362,
+        "supp": 0.9977601742398008,
+        "abs_dev": 2.2464585747172805e-11
+      },
+      "c_all": {
+        "t4a": 0.0024418184227117455,
+        "supp": 0.0024418184312928054
+      }
+    },
+    "12": {
+      "all": {
+        "t4a": 0.9956981670773303,
+        "supp": 0.9956981670669984,
+        "abs_dev": 1.033184648946417e-11
+      },
+      "alive": {
+        "t4a": 0.9980247658935931,
+        "supp": 0.9980247659105784,
+        "abs_dev": 1.698530205374027e-11
+      },
+      "c_all": {
+        "t4a": 0.002313663903255977,
+        "supp": 0.002313663908791491
+      }
+    },
+    "18": {
+      "all": {
+        "t4a": 0.9969283582032411,
+        "supp": 0.9969283582068003,
+        "abs_dev": 3.559152972343327e-12
+      },
+      "alive": {
+        "t4a": 0.9989706562640503,
+        "supp": 0.9989706562754717,
+        "abs_dev": 1.1421308343528835e-11
+      },
+      "c_all": {
+        "t4a": 0.0016386842101813086,
+        "supp": 0.0016386842085154261
+      }
+    },
+    "22": {
+      "all": {
+        "t4a": 0.9972224018304656,
+        "supp": 0.9972224018352615,
+        "abs_dev": 4.795830399473289e-12
+      },
+      "alive": {
+        "t4a": 0.9990944047773948,
+        "supp": 0.9990944047893424,
+        "abs_dev": 1.1947665079503622e-11
+      },
+      "c_all": {
+        "t4a": 0.0014747701315438674,
+        "supp": 0.0014747701293143052
+      }
+    },
+    "23": {
+      "all": {
+        "t4a": 0.99451348392265,
+        "supp": 0.9945134839407105,
+        "abs_dev": 1.806044203078727e-11
+      },
+      "alive": {
+        "t4a": 0.9962019476211663,
+        "supp": 0.9962019476436772,
+        "abs_dev": 2.2510882047299674e-11
+      },
+      "c_all": {
+        "t4a": 0.002979495819462671,
+        "supp": 0.0029794958109680817
+      }
+    }
+  },
+  "frac_K_external_matches": true,
+  "g_uni_checkpoint": {
+    "layers": [
+      6,
+      12,
+      18,
+      22,
+      23
+    ],
+    "cached": "см. per_layer.g_uni_cached_*",
+    "recomputed": "см. per_layer.g_uni_recomputed_corpus",
+    "matches": true,
+    "matches_exp39k_overlap": {
+      "18": true,
+      "23": true
+    },
+    "cached_source": [
+      "exp39_supp_three_objects.json (g_uni_corpus)",
+      "exp39k_gauge_aware_importance.json (L18,L23)"
+    ]
+  },
+  "T4b_published_mixed": {
+    "s2_values": {
+      "6": -0.0010115920216060784,
+      "12": -0.0011084861917184134,
+      "18": -0.0007747264636982516,
+      "22": -0.0007500907549394816,
+      "23": -0.0018920644423446008
+    },
+    "all_negative": true,
+    "note": "c — rom (alive), frac_K — медиана E-37; смешение агрегаций ⇒ невязка; красный = ожидаемо (ТЗ §3.2 T4b)"
+  },
+  "resolved_cell": "p_t_ratio_of_means_all",
+  "E6_status": "resolved",
+  "deviations_from_spec": [
+    {
+      "id": "D7_T4b",
+      "description": "published table mixed aggregation (c=rom, frac=E-37 median) — s²_implied отрицателен; тождество не обязано замыкаться между агрегациями"
+    },
+    {
+      "id": "D7_p0",
+      "description": "p_0-ячейки построены на p̄=mean_t p (в кэше p_0 как фиксированная позиция не хранится); p̄ — единственная каноническая фиксация p, доступная из данных"
+    }
+  ],
+  "wall_sec": 132.2
+}

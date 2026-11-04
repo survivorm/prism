@@ -1,13 +1,18 @@
 {
   "experiment": "E-38e/E-39: настоящий J(L23) против кэшевого-суррогата",
+  "carriers": "",
+  "device": "cpu",
+  "pool_file": "/data/prism_kernels/exp27b/results/exp27b_pool_ids_L23.pt",
   "selfcheck_closed_form_vs_autograd": {
     "rel_dev_closed_form_vs_autograd": 5.31299271244734e-08,
+    "rel_closed_form_at_post_vs_cached_JR": 1.7392414974892745e-07,
     "position": "wiki/0 t=0"
   },
   "n_docs": 32,
   "n_positions": 4096,
   "new_forwards": 32,
   "per_doc_checks": {
+    "closed_form_at_post_vs_cached_JR_rel": 1.7392414974892745e-07,
     "wiki/0": {
       "max_abs_H_vs_post": 2.6524066925048828e-05,
       "norm_h_pre_mean": 9.846567153930664,
@@ -170,24 +175,25 @@
     }
   },
   "scale_true_over_cached": {
-    "median": 13.455155372619629,
-    "p10": 12.337627410888672,
-    "p90": 14.648062705993652
+    "median": 13.4746732711792,
+    "p10": 12.415586471557617,
+    "p90": 14.560596466064453
   },
   "cos_true_vs_cached": {
-    "median": 0.9959280281963385,
-    "min": 0.9895593151966022
+    "median": 0.9967327117919922,
+    "min": 0.992211639881134
   },
+  "selfcheck_supplement_ratios": 0.0,
   "supplement_ratios": {
     "cached": {
-      "O1_rel_median": 3.1716461862013747,
+      "O1_rel_median": 0.6729021489160021,
       "g_uni_median": 0.14079815289735628,
       "g_uni_mean": 0.14034440313309302
     },
     "true": {
-      "O1_rel_median": 3.132922193999093,
+      "O1_rel_median": 0.667402164865757,
       "g_uni_median": 0.14526663872113474,
-      "g_uni_mean": 0.1451987753095108
+      "g_uni_mean": 0.14519877530951084
     }
   },
   "kappa": {
@@ -201,34 +207,16 @@
       "n_neg_det": 0
     },
     "true": {
-      "kappa": 0.009886038049594443,
+      "kappa": 0.009886038049593145,
       "ci": [
-        0.0033205015696571795,
-        0.02149997548366945
-      ],
-      "n": 4032,
-      "n_neg_det": 0
-    },
-    "carrier_true": {
-      "kappa": 0.0066349527205928445,
-      "ci": [
-        0.0026203753218821896,
-        0.013534545184719199
-      ],
-      "n": 4032,
-      "n_neg_det": 0
-    },
-    "carrier_surrogate": {
-      "kappa": 0.009399959048719451,
-      "ci": [
-        0.0033741118410671525,
-        0.02010651832244334
+        0.0033205015696571643,
+        0.021499975483669408
       ],
       "n": 4032,
       "n_neg_det": 0
     }
   },
-  "kappa_ratio_true_over_cached": 0.6089921357551339,
+  "kappa_ratio_true_over_cached": 0.608992135755054,
   "e28_metrics": {
     "r": 16,
     "degen_rel": 1e-09,
@@ -253,5 +241,5 @@
     "delta_ratio_true_over_cached": 0.635827116350964,
     "kappa_holonomy_ratio_true_over_cached": 0.6033970365354537
   },
-  "wall_sec": 1374.6
+  "wall_sec": 1867.2
 }

@@ -21,8 +21,10 @@
 unif0(u_k) для топ-5 u_k.
 
 Агрегация: per-sample медианы по позициям, затем медиана + IQR по сэмплам
-(протокол E-34). Sentinel: sum(P128) < 0.5 → exclude (неактивен на текущем
-кэше, sentinel_fraction ≡ 0 = нет данных, механизм на месте).
+(протокол E-34). Sentinel: sum(P128_RAW) < 0.5 → exclude. ИСТОРИЧЕСКАЯ СПРАВКА
+(аудит docs/audit_experiments.md §2.3): до фикса маска стояла на ренормализованном
+P128 (Σ≡1, порог недостижим) — sentinel_fraction ≡ 0 была артефактом маскировки, и
+опубликованный артефакт посчитан по ВСЕМ позициям (помечен sentinel_position_set="all").
 
 Стоимость: torch.set_num_threads(1) — обязательно: на 12 потоках batched
 torch.linalg.eigh падает в oversubscription (~2750 мс/позиция против 1 мс).
@@ -158,8 +160,15 @@ def process_layer(ck: dict, Qs: list[torch.Tensor], sample_cap: int | None = Non
     keys = [(dom, si, t) for dom in domains for si in range(n_samples) for t in range(S)]
     if sample_cap is not None:
         keys = [k for k in keys if k[1] < sample_cap]
-    PT_raw = torch.stack([P128[k].float() for k in keys])
-    sent = (PT_raw.sum(-1).numpy() < E34.SENTINEL_SUM)
+    PRAW = ck.get("P128_RAW")
+    if PRAW is None:
+        raise KeyError(
+            "в кэше нет P128_RAW: sentinel-маска на ренормализованном P128 (Σ≡1) мертва "
+            "МОЛЧА — именно так получился sentinel_fraction ≡ 0 в старом артефакте "
+            "(аудит §2.3); падаем громко"
+        )
+    PT_raw = torch.stack([P128[k].float() for k in keys])          # оператор: ренормализованный p
+    sent = (torch.stack([PRAW[k].float() for k in keys]).sum(-1).numpy() < E34.SENTINEL_SUM)  # маска: raw-сумма
     n_sent = int(sent.sum())
     mask = ~torch.from_numpy(sent)
     PTv = PT_raw[mask]
@@ -204,6 +213,7 @@ def process_layer(ck: dict, Qs: list[torch.Tensor], sample_cap: int | None = Non
     res = {
         "n_positions": int(Nv),
         "sentinel_positions_excluded": n_sent,
+        "sentinel_mask_basis": "P128_RAW",
         "sentinel_fraction": n_sent / (len(domains) * n_samples * S),
         "rho_gf_r": {str(r): per_sample_stats(rho_gf_r[:, idx[r]], n_blk, npos)
                      for r in RS_REPORT},

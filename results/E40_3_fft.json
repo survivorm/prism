@@ -1,0 +1,401 @@
+{
+  "experiment": "E-40.3",
+  "tz": "docs/e40_todo.md §5",
+  "core_version": "v1.0.0",
+  "timestamp": "2026-11-03T23:29:01+0300",
+  "observational": true,
+  "new_forwards": 0,
+  "inputs": {
+    "E40_2_double_fit": {
+      "path": "/home/survivor/work/prism/results/E40_2_double_fit.json",
+      "sha256_16": "fdbe8ff45bf478f8"
+    }
+  },
+  "channel_tags": [
+    {
+      "protocol": "natural",
+      "slice": "gf",
+      "window": "full",
+      "side": "mixed",
+      "p_mode": "truncated_U128",
+      "p_slice": "p_t",
+      "aggregation": "median",
+      "layer": null,
+      "rank": null,
+      "norm_type": "energy",
+      "source": "cache",
+      "status": "measured"
+    }
+  ],
+  "grid_is_dyadic": false,
+  "n_pass_3sigma": 1,
+  "n_close_w0": 0,
+  "n_linear_pass_3sigma": 3,
+  "local_filter_note": "линейно-сеточные пики значимы лишь 3 из 10 ячеек и стоят на ω≈1.26–3.7 (масштабы 1.7–5 Δ) — это низкочастотный остаток формы, а не выделенная решёточная шкала; в log-сетке, где жила бы лог-периодичность, не значимо ничего (p ≥ 0.41 везде)",
+  "powlog_best_cells": [
+    "6",
+    "12",
+    "18"
+  ],
+  "is_dyadic_note": "Δ целые 1..32 ⇒ сетка НЕ равномерна в log Δ; использована ЛС-периодограмма (эквивалент FFT на равномерной сетке) — эквивалентна ТЗ-FFT",
+  "w0": 9.064720283654388,
+  "per_layer": {
+    "6": {
+      "C_F": {
+        "peak_freq": 11.43859649122807,
+        "amp_at_w0": 0.0009094814105132587,
+        "sigma_vs_null": 1.9682464499587886,
+        "passes_3sigma": false,
+        "linear_peak_freq": 1.263157894736842,
+        "amp_at_linear_peak": 0.002493518157961511,
+        "p_linear_max": 0.044,
+        "linear_null_p95": 0.0024747626486513576,
+        "passes_linear": true,
+        "loggrid_peak_freq": 11.43859649122807,
+        "amp_at_loggrid_peak": 0.00154797937714006,
+        "p_loggrid_max": 0.66,
+        "loggrid_null_p95": 0.0022958048868019373,
+        "passes_loggrid_max": false,
+        "null_p99": 0.002113313969745801,
+        "doc_resid_sd": 0.006228791311690302,
+        "doc_resid_median_by_domain": {
+          "chat": 0.0016117079977850685,
+          "code": -0.004666233514003741,
+          "math": -0.0014897527082900642,
+          "wiki": 0.0016757731057488543
+        },
+        "rho_doc_resid_vs_sent_share": 0.5218037865086337
+      },
+      "C_top16": {
+        "peak_freq": 12.12907268170426,
+        "amp_at_w0": 9.655080364555619e-05,
+        "sigma_vs_null": 1.8335989942338171,
+        "passes_3sigma": false,
+        "linear_peak_freq": 1.699248120300752,
+        "amp_at_linear_peak": 0.00025034306945983696,
+        "p_linear_max": 0.323,
+        "linear_null_p95": 0.0002958357968215651,
+        "passes_linear": false,
+        "loggrid_peak_freq": 12.12907268170426,
+        "amp_at_loggrid_peak": 0.00014679610415620973,
+        "p_loggrid_max": 0.919,
+        "loggrid_null_p95": 0.00027136334177538197,
+        "passes_loggrid_max": false,
+        "powlog_decomp": {
+          "amp_after_smooth_only": 8.937716822005827e-05,
+          "sigma_after_smooth_only": 1.299743051146888
+        },
+        "null_p99": 0.00023325482438705573,
+        "doc_resid_sd": 0.0012286073857586265,
+        "doc_resid_median_by_domain": {
+          "chat": 0.0007635220812917836,
+          "code": 0.00016387732549933733,
+          "math": -0.001170225778013179,
+          "wiki": 0.000875420094193515
+        },
+        "rho_doc_resid_vs_sent_share": 0.5985504377263006
+      }
+    },
+    "12": {
+      "C_F": {
+        "peak_freq": 11.802005012531328,
+        "amp_at_w0": 0.0017624503975877778,
+        "sigma_vs_null": 2.758339336340085,
+        "passes_3sigma": false,
+        "linear_peak_freq": 1.263157894736842,
+        "amp_at_linear_peak": 0.003795970335430963,
+        "p_linear_max": 0.01,
+        "linear_null_p95": 0.0035103658068141932,
+        "passes_linear": true,
+        "loggrid_peak_freq": 11.802005012531328,
+        "amp_at_loggrid_peak": 0.002222632068141353,
+        "p_loggrid_max": 0.689,
+        "loggrid_null_p95": 0.0032589345074734337,
+        "passes_loggrid_max": false,
+        "null_p99": 0.0028333619902946227,
+        "doc_resid_sd": 0.009447010457139577,
+        "doc_resid_median_by_domain": {
+          "chat": 0.004859796865104928,
+          "code": -0.008244411749137948,
+          "math": -0.0076255243200197545,
+          "wiki": 0.0026676186428640043
+        },
+        "rho_doc_resid_vs_sent_share": 0.5891866118600302
+      },
+      "C_top16": {
+        "peak_freq": 4.642857142857142,
+        "amp_at_w0": 0.00013933264384587057,
+        "sigma_vs_null": 2.4169978913981,
+        "passes_3sigma": false,
+        "linear_peak_freq": 7.62280701754386,
+        "amp_at_linear_peak": 0.0003334404096281646,
+        "p_linear_max": 0.061,
+        "linear_null_p95": 0.0003379327427676922,
+        "passes_linear": false,
+        "loggrid_peak_freq": 4.642857142857142,
+        "amp_at_loggrid_peak": 0.00014925694501461632,
+        "p_loggrid_max": 0.977,
+        "loggrid_null_p95": 0.0003100906712893382,
+        "passes_loggrid_max": false,
+        "powlog_decomp": {
+          "amp_after_smooth_only": 0.00014031932675209044,
+          "sigma_after_smooth_only": 1.966067913424499
+        },
+        "null_p99": 0.0002729394584846556,
+        "doc_resid_sd": 0.0014050109935878929,
+        "doc_resid_median_by_domain": {
+          "chat": 0.001067009443614956,
+          "code": 0.0003391719236229859,
+          "math": -0.0014748181151407766,
+          "wiki": 0.0005560392006031668
+        },
+        "rho_doc_resid_vs_sent_share": 0.6899854432439992
+      }
+    },
+    "18": {
+      "C_F": {
+        "peak_freq": 11.220551378446114,
+        "amp_at_w0": 0.0026499498877770714,
+        "sigma_vs_null": 2.177555268284875,
+        "passes_3sigma": false,
+        "linear_peak_freq": 1.263157894736842,
+        "amp_at_linear_peak": 0.00572130351839945,
+        "p_linear_max": 0.232,
+        "linear_null_p95": 0.006552836523360399,
+        "passes_linear": false,
+        "loggrid_peak_freq": 11.220551378446114,
+        "amp_at_loggrid_peak": 0.00435696950599708,
+        "p_loggrid_max": 0.503,
+        "loggrid_null_p95": 0.0058086403506241195,
+        "passes_loggrid_max": false,
+        "null_p99": 0.005804098600447896,
+        "doc_resid_sd": 0.024193966359108875,
+        "doc_resid_median_by_domain": {
+          "chat": 0.012210334040185934,
+          "code": -0.023627077108274816,
+          "math": -0.0228591180229762,
+          "wiki": 0.021980639306519927
+        },
+        "rho_doc_resid_vs_sent_share": 0.5879013808587774
+      },
+      "C_top16": {
+        "peak_freq": 10.057644110275689,
+        "amp_at_w0": 8.576902847467871e-05,
+        "sigma_vs_null": 2.3673561579068108,
+        "passes_3sigma": false,
+        "linear_peak_freq": 1.117794486215539,
+        "amp_at_linear_peak": 0.00014726025422469048,
+        "p_linear_max": 0.729,
+        "linear_null_p95": 0.00019347228253043845,
+        "passes_linear": false,
+        "loggrid_peak_freq": 10.057644110275689,
+        "amp_at_loggrid_peak": 9.46406310212061e-05,
+        "p_loggrid_max": 0.932,
+        "loggrid_null_p95": 0.00017974039527972744,
+        "passes_loggrid_max": false,
+        "powlog_decomp": {
+          "amp_after_smooth_only": 0.02714787064380829,
+          "sigma_after_smooth_only": 27.332125367757136
+        },
+        "null_p99": 0.0001647395383322311,
+        "doc_resid_sd": 0.0007375197981243711,
+        "doc_resid_median_by_domain": {
+          "chat": 0.0005249151820129526,
+          "code": -4.3076069983087866e-05,
+          "math": -0.0003412160668508136,
+          "wiki": 0.00023141633853362986
+        },
+        "rho_doc_resid_vs_sent_share": 0.7364373637178502
+      }
+    },
+    "22": {
+      "C_F": {
+        "peak_freq": 10.929824561403509,
+        "amp_at_w0": 0.0035759077903686036,
+        "sigma_vs_null": 2.7821292733105336,
+        "passes_3sigma": false,
+        "linear_peak_freq": 9.69423558897243,
+        "amp_at_linear_peak": 0.005835116314627335,
+        "p_linear_max": 0.513,
+        "linear_null_p95": 0.007154292391668749,
+        "passes_linear": false,
+        "loggrid_peak_freq": 10.929824561403509,
+        "amp_at_loggrid_peak": 0.005204805754148462,
+        "p_loggrid_max": 0.415,
+        "loggrid_null_p95": 0.006515852040543704,
+        "passes_loggrid_max": false,
+        "null_p99": 0.005918113698064299,
+        "doc_resid_sd": 0.026528525566519964,
+        "doc_resid_median_by_domain": {
+          "chat": 0.013579030162366331,
+          "code": -0.011871689559970974,
+          "math": -0.022176297288524535,
+          "wiki": 0.022100565385630443
+        },
+        "rho_doc_resid_vs_sent_share": 0.49224347347981956
+      },
+      "C_top16": {
+        "peak_freq": 12.746867167919799,
+        "amp_at_w0": 6.754177270674814e-05,
+        "sigma_vs_null": 1.5989595463871322,
+        "passes_3sigma": false,
+        "linear_peak_freq": 4.897243107769423,
+        "amp_at_linear_peak": 0.000178940868913219,
+        "p_linear_max": 0.63,
+        "linear_null_p95": 0.0002274100059928955,
+        "passes_linear": false,
+        "loggrid_peak_freq": 12.746867167919799,
+        "amp_at_loggrid_peak": 0.00015811694841530587,
+        "p_loggrid_max": 0.488,
+        "loggrid_null_p95": 0.00020833710970316326,
+        "passes_loggrid_max": false,
+        "null_p99": 0.0001941272394108145,
+        "doc_resid_sd": 0.0006090819717237035,
+        "doc_resid_median_by_domain": {
+          "chat": 0.0004265730916680167,
+          "code": -0.0003422661593866132,
+          "math": -0.00021995414748298856,
+          "wiki": -4.653088022803535e-05
+        },
+        "rho_doc_resid_vs_sent_share": 0.5249250617973906
+      }
+    },
+    "23": {
+      "C_F": {
+        "peak_freq": 5.660401002506266,
+        "amp_at_w0": 0.0003311408679702686,
+        "sigma_vs_null": 0.23173428784057468,
+        "passes_3sigma": false,
+        "linear_peak_freq": 3.6979949874686717,
+        "amp_at_linear_peak": 0.009170720162644082,
+        "p_linear_max": 0.007,
+        "linear_null_p95": 0.008122063715910927,
+        "passes_linear": true,
+        "loggrid_peak_freq": 5.660401002506266,
+        "amp_at_loggrid_peak": 0.0048565419704374455,
+        "p_loggrid_max": 0.718,
+        "loggrid_null_p95": 0.007428104560370467,
+        "passes_loggrid_max": false,
+        "null_p99": 0.006755311745680738,
+        "doc_resid_sd": 0.024651822055198776,
+        "doc_resid_median_by_domain": {
+          "chat": 0.011702673819298362,
+          "code": -0.004261766498664044,
+          "math": -0.014716230784103286,
+          "wiki": 0.011762271116944584
+        },
+        "rho_doc_resid_vs_sent_share": 0.2902786018543807
+      },
+      "C_top16": {
+        "peak_freq": 4.352130325814536,
+        "amp_at_w0": 0.0001841983430245924,
+        "sigma_vs_null": 3.0876221764883667,
+        "passes_3sigma": true,
+        "linear_peak_freq": 1.3358395989974938,
+        "amp_at_linear_peak": 0.0003188230778733288,
+        "p_linear_max": 0.087,
+        "linear_null_p95": 0.0003315487620221284,
+        "passes_linear": false,
+        "loggrid_peak_freq": 4.352130325814536,
+        "amp_at_loggrid_peak": 0.00022542664435856125,
+        "p_loggrid_max": 0.457,
+        "loggrid_null_p95": 0.00030754214419825805,
+        "passes_loggrid_max": false,
+        "null_p99": 0.00027577110143752555,
+        "doc_resid_sd": 0.0008364800082669715,
+        "doc_resid_median_by_domain": {
+          "chat": 0.0007569733634585581,
+          "code": 8.351237761041082e-05,
+          "math": -0.0008082141725231592,
+          "wiki": 0.0002437267784365575
+        },
+        "rho_doc_resid_vs_sent_share": 0.488754989333562
+      }
+    }
+  },
+  "fft_residual_summary": {
+    "C_F": {
+      "passes_3sigma_layers": []
+    },
+    "C_top16": {
+      "passes_3sigma_layers": [
+        "23"
+      ]
+    }
+  },
+  "S_effect": "truncation_proxy_different_peaks",
+  "S64_vs_S128_status": "not_testable_as_preregistered",
+  "S64_note": "S=64 = первые 64 позиции того же dense-кэша (truncation-прокси); независимого S=64 кэша exp27b нет ⇒ ветка ТЗ §5.4 не тестируется",
+  "S64": {
+    "6": {
+      "amp_w0": 0.0011924595033364256,
+      "peak_freq": 15.0
+    },
+    "12": {
+      "amp_w0": 0.001481042820514967,
+      "peak_freq": 15.0
+    },
+    "18": {
+      "amp_w0": 0.002513852638111401,
+      "peak_freq": 15.0
+    },
+    "22": {
+      "amp_w0": 0.004397507378793364,
+      "peak_freq": 7.368421052631579
+    },
+    "23": {
+      "amp_w0": 0.003604049876052772,
+      "peak_freq": 14.81829573934837
+    }
+  },
+  "S128": {
+    "6": {
+      "amp_w0": 0.0009094814105132587,
+      "peak_freq": 11.43859649122807
+    },
+    "12": {
+      "amp_w0": 0.0017624503975877778,
+      "peak_freq": 11.802005012531328
+    },
+    "18": {
+      "amp_w0": 0.0026499498877770714,
+      "peak_freq": 11.220551378446114
+    },
+    "22": {
+      "amp_w0": 0.0035759077903686036,
+      "peak_freq": 10.929824561403509
+    },
+    "23": {
+      "amp_w0": 0.0003311408679702686,
+      "peak_freq": 5.660401002506266
+    }
+  },
+  "verdict": "local_filter",
+  "deviations_from_spec": [
+    {
+      "id": "D3_lombscargle_instead_of_fft",
+      "description": "неровная log-сетка ⇒ ЛС/ЛС-амплитуда вместо FFT"
+    },
+    {
+      "id": "D3_phase_random_surrogate",
+      "description": "конвейерный суррогат = фазерандомайзер (power цел) вместо прогонов iid-J через весь пайплайн — тот же нулевой класс, дёшево"
+    },
+    {
+      "id": "D3_S64_is_truncation_proxy",
+      "description": "S=64 построен обрезкой dense-кэша S=128, а не вторым прогоном при S=64 ⇒ пререг. исход «S-расхождение = решёточная дисперсия» помечен not_testable"
+    },
+    {
+      "id": "D3_S64_top16_skipped",
+      "description": "S-эффект меряется только по C_F (подпространства для S=64 не пересчитывались)"
+    },
+    {
+      "id": "D3_lattice_branch_removed",
+      "description": "исход lattice_dispersion убран из verdict: ветка не тестируется на одном S-кэше; S_effect остаётся отдельным полём"
+    },
+    {
+      "id": "D3_local_filter_measured_here",
+      "description": "E-40.2 не публикует linear_sig ⇒ «локальный фильтр» проверен локально, но нулём по МАКСИМУМУ по ω (точечный σ при выбранном argmax ω завышен: 4…6 на всех 10 ячейках)"
+    }
+  ],
+  "wall_sec": 56.4
+}

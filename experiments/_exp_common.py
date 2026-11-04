@@ -67,7 +67,8 @@ def token_set_from(model, samples: list[dict], K: int) -> list[int]:
 
 
 def gauge_free_J(model, L: int, ids, mask, ts: list[int],
-                 h: torch.Tensor | None, p: torch.Tensor) -> torch.Tensor:
+                 h: torch.Tensor | None, p: torch.Tensor,
+                 t: int | None = None) -> torch.Tensor:
     """Gauge-free J^(p) [K, D] at the LAST position of ``ids``; h = [D].
 
     ``compute_jacobian_for_tokens`` linearizes at ``len(ids) - 1`` (prefix
@@ -78,7 +79,15 @@ def gauge_free_J(model, L: int, ids, mask, ts: list[int],
     ``S-1`` (audit docs/audit4.pdf B2: J off by 18.7 % at t=S-2, 28.7 % at
     t=S-3). ``p[t]`` needs no slicing: the model is causal, so position t's
     logits never saw tokens > t (padding must be absent — jacobian.py asserts
-    ``attention_mask.all()``)."""
+    ``attention_mask.all()``).  Передавай ``t`` явно — тогда контракт проверяется
+    ассертом (предупреждение аудита: контракт легко нарушить молча)."""
+    if t is not None:
+        assert ids.shape[1] == t + 1, (
+            f"gauge_free_J линеаризует на ПОСЛЕДНЕй позиции ids: просят t={t}, а "
+            f"len(ids)={ids.shape[1]} — передавай префикс ids[:, :t+1], иначе токены "
+            f"t..S-2 утекают в KV-кэш и позиция штампуется S-1 (аудит B2: J off 18.7 % "
+            f"при t=S-2, 28.7 % при t=S-3)"
+        )
     J = compute_jacobian_for_tokens(model, L, ids, mask, ts, h_override=h)
     return softmax_jacobian(J.float(), p)
 
@@ -95,7 +104,7 @@ def top_r_basis(model, samples, ts: list[int], L: int, r: int, n_pos: int = 8) -
     for t in range(S - n_pos, S):
         h = out.hidden_states[L + 1][0, t, :].float().cpu()
         p = torch.softmax(out.logits[0, t].float()[ts], dim=-1).cpu()
-        js.append(gauge_free_J(model, L, ids[:, :t + 1], mask[:, :t + 1], ts, h, p))
+        js.append(gauge_free_J(model, L, ids[:, :t + 1], mask[:, :t + 1], ts, h, p, t=t))
     _, evec = compute_esg(js, n_components=r)
     return evec.T.contiguous()  # [K, r], orthonormal columns
 
@@ -154,7 +163,7 @@ def doc_js(model, L: int, s: dict, ts: list[int], h: torch.Tensor,
         # prefix through t, so the linearization point (position + KV cache)
         # is t and not S-1 — see gauge_free_J docstring (audit B2)
         js.append(gauge_free_J(model, L, ids[:, :t + 1], mask[:, :t + 1],
-                               ts, h[t], p[t]))
+                               ts, h[t], p[t], t=t))
     return js
 
 

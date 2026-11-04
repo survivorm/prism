@@ -1,0 +1,265 @@
+{
+  "experiment": "E-40.1-manifest",
+  "tz": "docs/e40_todo.md §3.3",
+  "core_version": "v1.0.0",
+  "timestamp": "2026-11-03T22:36:29+0300",
+  "observational": true,
+  "new_forwards": 0,
+  "inputs": {
+    "exp27b_jcache_L23": {
+      "path": "/data/prism_kernels/exp27b/results/exp27b_jcache_L23.pt",
+      "sha256_16": "af12505131be72b4"
+    },
+    "E40_1_T4a": {
+      "path": "/home/survivor/work/prism/results/E40_1_T4a.json",
+      "sha256_16": "5abf66a374122e60"
+    },
+    "E40_0_gate": {
+      "path": "/home/survivor/work/prism/results/E40_0_gate.json",
+      "sha256_16": "e8bd3bbbf90e1f80"
+    }
+  },
+  "channel_tags": [],
+  "channel_tags_note": "манифест регистрирует реестр инвариантов (синтетика) и аудит-ответы; канал-величин не содержит — теги носят измерительные 0.0–0.8",
+  "invariants_registry": {
+    "O2_eq_O3": {
+      "status": "passing",
+      "identity": "g_uni(J) == gauge_share(G=ΣJJᵀ)",
+      "modules": [
+        "p_algebra"
+      ],
+      "live_run": "passing"
+    },
+    "g_uni_gf_zero": {
+      "status": "passing",
+      "identity": "g_uni(P(p)J) ≡ 0",
+      "modules": [
+        "p_algebra",
+        "operator_checks"
+      ],
+      "live_run": "passing"
+    },
+    "P_properties": {
+      "status": "passing",
+      "identity": "P·1=0, P⪰0, P²≠P (interior p; vertex P=0 excluded)",
+      "modules": [
+        "p_algebra"
+      ],
+      "live_run": "passing"
+    },
+    "iso_inline_eq_closed": {
+      "status": "passing",
+      "identity": "iso inline == iso closed form",
+      "modules": [
+        "p_algebra"
+      ],
+      "live_run": "passing"
+    },
+    "p_tilde_sum": {
+      "status": "passing",
+      "identity": "Σp̃ ∈ {1, 1 − mass}",
+      "modules": [
+        "p_algebra",
+        "tag"
+      ],
+      "live_run": "passing"
+    },
+    "secular_equation": {
+      "status": "passing",
+      "identity": "Σ pᵢ²/(pᵢ−λ) = 1 at λ ∈ eig(P)∖{0}",
+      "modules": [
+        "p_algebra"
+      ],
+      "live_run": "passing"
+    },
+    "trace_identities": {
+      "status": "passing",
+      "identity": "tr P = 1−Σp²; tr P² = Σp²−2Σp³+(Σp²)²",
+      "modules": [
+        "p_algebra"
+      ],
+      "live_run": "passing"
+    },
+    "H_orthogonal": {
+      "status": "passing",
+      "identity": "H Hᵀ = I",
+      "modules": [
+        "transport"
+      ],
+      "live_run": "passing"
+    },
+    "kappa_curv_algebra": {
+      "status": "passing",
+      "identity": "κ_curv² = 2r − 2trH (любая H ∈ O(r))",
+      "modules": [
+        "transport"
+      ],
+      "live_run": "passing"
+    },
+    "kappa_curv_spectral": {
+      "status": "passing",
+      "identity": "κ_curv² = 4Σ(1−cosθ) (парный спектр: r чётн., det +1, ±1 нет)",
+      "modules": [
+        "transport"
+      ],
+      "live_run": "passing"
+    },
+    "kappa_cond_invariance": {
+      "status": "passing",
+      "identity": "κ_cond(OᵀGO) = κ_cond(G), O орт.",
+      "modules": [
+        "p_algebra",
+        "spectral"
+      ],
+      "live_run": "passing"
+    },
+    "channels_sum": {
+      "status": "passing",
+      "identity": "Σ6 channels + eps3 = ‖ΔJ‖², E_resid/E_off independent",
+      "modules": [
+        "kinetic"
+      ],
+      "live_run": "passing"
+    },
+    "r1_cross_zero": {
+      "status": "passing",
+      "identity": "r=1 ⇒ E_cross = 0",
+      "modules": [
+        "kinetic"
+      ],
+      "live_run": "passing"
+    },
+    "O1_eq_s2": {
+      "status": "passing",
+      "identity": "O1 ≡ s² on one aggregation",
+      "modules": [
+        "operator_checks"
+      ],
+      "live_run": "passing",
+      "live_cache_rel_dev": 1.89870788423656e-16
+    },
+    "b_lin_r1": {
+      "status": "passing",
+      "identity": "b_lin(v=v₁) = ε²σ₁²",
+      "modules": [
+        "behavior"
+      ],
+      "live_run": "passing"
+    },
+    "triple_identity": {
+      "status": "passing",
+      "identity": "frac_K = 1 − 2c + s² (one aggregation, one slice)",
+      "modules": [
+        "cheap_invariants",
+        "operator_checks"
+      ],
+      "live_run": "passing"
+    },
+    "same_slice_aggregation": {
+      "status": "passing",
+      "identity": "tag carries slice+aggregation; mixed aggregations must not close the triple identity (IV.6)",
+      "modules": [
+        "tag",
+        "cheap_invariants"
+      ],
+      "live_run": "passing"
+    },
+    "R_can_definition": {
+      "status": "passing",
+      "identity": "R_can = λshare((PJ)(PJ)ᵀ), ≠ λshare(((I−P)J)…) ",
+      "modules": [
+        "profiles",
+        "operator_checks"
+      ],
+      "live_run": "passing"
+    },
+    "agg_closure_matrix": {
+      "status": "passing",
+      "identity": "triple closes for rom/per_position, Jensen gap for mean is real and documented",
+      "modules": [
+        "operator_checks"
+      ],
+      "live_run": "passing"
+    },
+    "mp_edge_labelled": {
+      "status": "passing",
+      "identity": "MP edges pinned with explicit n (2.0535/2.25/1.3848/1.4499)",
+      "modules": [
+        "nulls_and_stats"
+      ],
+      "live_run": "passing"
+    },
+    "svd_bundle_contract": {
+      "status": "passing",
+      "identity": "svd_bundle rebuilds J; energy = top-r σ² share; rank(0)=0; principal_angles needs an orthonormal frame; stable is the σ-form",
+      "modules": [
+        "svd_bundle"
+      ],
+      "live_run": "passing"
+    }
+  },
+  "audit_items": {
+    "(a1)": "«98–99%» = survive_frac = ‖PJ‖/‖J‖ (НОРМА; энергия 99.95–99.98%) — E40_1_audit.A3 + E39-supplement (git) §2; triple (operator=P(p_t), normalization=norm, slice=all 4096)",
+    "(a2)": "g_uni ≡ ESG gauge_share (тождество, ≤8e-16); O1 — отдельная величина; третьего объекта нет (E-39 suppl §2)",
+    "(a3)": "identity-asserts на реальном кэше — см. results/E40_1_T4a.json a3_identity_asserts (O2≡O3 ≤7.1e-15, g_uni(J^gf) ≤5.2e-17, iso inline=closed)",
+    "(b)": "ОТВЕТ ПОСЛЕ САМОКОРРЕКЦИИ (review v2 §N3): r_eff E-27.6 T6 — НЕ ESG и НЕ raw. _gram (exp27_6_isolation.py:65-80) строит Jb = p_i(J_i − Σ_j p_j J_j) = P(p_t)J, т.е. срез canonical, а r_eff = exp(−Σp ln p) берётся от спектра симметризованной 32×32 кросс-документной косинусной матрицы K^F (n=32 документа), не от грамиана JJᵀ по K=128 модам ⇒ это спектр сходства документов, а не спектр ESG; меж-сэмпловые пулы paper.md §2.3 объявлены невалидными (C_b ≈ 0.003–0.05) ⇒ r_eff^T6 не оценка размерности ESG и в носители E-40.8 не входит. Коллизия имён с r_eff^U(τ)=178 (E-39a) закрыта субскриптом; p_slice спектров E-27.5/27.6 — p_t, POS=0/T5=32 (E40_0_gate)",
+    "(c)": "Δ_gf E-33r.2 — L23, правый, срез gf, r=16, Δ=1, Δ_SVD (max principal angle), med по документам — E40_1_audit.A1",
+    "(d)": "Δ_raw — все 5 слоёв (layers.*.delta); Δ_fixP — в основном JSON только L23, в exp33r_gauge_anatomy_strict(_diag).json — все 5 слоёв (diag.E_fixed_p) ⇒ E-40.7 без даунгрейда. ОПЕРАТОРЫ РАЗНЫЕ (review v2 §N4): strict = pair_mean (p0_t = norm(p_t+p_{t+Δt})/2 на пару, meta.p0_method), exp32r3 = позиция у медианной p, S07/E-40.7 per-doc = P(p̄) с p̄ = среднее по корпусу. Носитель E-40.8 — S07 (p̄); слойные med'ы strict помечаются p_slice=p_0 + method=pair_mean и с S07 в одной таблице не смешиваются. strict-JSON лежат в results/ и вне git (results/*.json в .gitignore — как и все артефакты E-1…E-39), provenance = sha256_16 в шапке артефакта",
+    "(e)": "L0 в exp27b НЕТ (слои 6/12/18/22/23) ⇒ E-40.6 критерий односторонний, not_testable_no_L0 по построению",
+    "(f)": "порог левого канала max(0.05·E_right, Q_95(E_left^null)); нуль — Haar-конъюгация фактической M (M'=OMOᵀ, O∈Haar(128)), B=1000; полное Haar-вращение отвергнуто (недостижимый масштаб) — применяется в E-40.5",
+    "(g)": "exp31 C_F — на RAW J (exp31_correlation.py, JR без P) ⇒ пересчёт canonical в E-40.2 (не рефит); raw-пересчёт — якорь сверки с C_med",
+    "(h)": "exp30: моды Грама ESG (G=Σ_t J Jᵀ, per-sample медианы), r-сетка 1..128, слои {18,22}; l-сетки нет (один срез слоёв)",
+    "(i)": "exp32-tail: b — коэффициент a2 при e² в dz=a1 e+a2 e²+a3 e³ по token-пространству (T=128), слои {18,22}, per_doc есть",
+    "(j)": "exp27b: 4 домена × 8 документов × S=128 позиций, K=128 (U128-база), слои 6/12/18/22/23; sentinel 50.71% (порог 0.5)",
+    "(k)": "Δ_raw: 5 слоёв; Δ_fixP: 5 слоёв только в strict-вариантах (см. (d))",
+    "(l1)": "заморожено ниже (L1_FREEZE), ноль вычислений"
+  },
+  "l1_summary_stats_freeze": {
+    "carrier": "per_(doc,layer), n=32×5=160 (слоёв 5, не 6 — фиксация исполнителя)",
+    "n_primary": 160,
+    "stats": {
+      "S02_xi_exp": "ℓ из per-doc фитa экспоненты C(Δ)=A·exp(−Δ/ℓ)+c0 на canonical C_F (E-40.2), Δ=1..32; не сошёлся → NaN (исключается парно)",
+      "S03_amp_oct": "амплитуда ДПФ-бина на 1 цикл/октаву (ω=2π/log2) остатка log C − log (fit S02), log-uniform интерполяция 64 точек (конвейер E-40.3), per-doc",
+      "S04_tail_gap": "разность хвостовых долей: Σλ ESG r∈[119,128]/Σλ минус b-доля гессайновых мод k∈[1,6] (E-40.4), per-doc",
+      "S05_radial_share": "mean_t E_radial / (E_radial + E_off_manifold) — только всегда-интерпретируемые каналы (E-40.5), per-doc",
+      "S06_R_can": "λmax(E_K)/tr(E_K), E_K = Σ_t P(p_t)J_t (P(p_t)J_t)ᵀ (E-40.6), per-doc",
+      "S07_G": "1 − Δ_fixP/Δ_raw, r=16, Δ=1, per-doc (E-40.7; fixP = P(p̄)J, p̄ = среднее p по корпусу)"
+    },
+    "reserved": {
+      "S08a": "E-41.4 (фаза 2)",
+      "S08b": "E-44 (фаза 1.5)"
+    },
+    "standardization": "z-скор по слою внутри статистики (mean/std по 32 документам), NaN-пары исключаются попарно перед корреляцией",
+    "clusters": {
+      "C1": [
+        "S02",
+        "S03",
+        "S04"
+      ],
+      "C2": [
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "C3": [],
+      "C4": []
+    },
+    "rules": {
+      "R1": "rank≥5 или PR≥5 → рамка «один объект» умирает",
+      "R2": "rank≤1 и PR≤2.5 → сильная унификация с оговоркой о провенансе",
+      "R3": "иначе — отчёт по осям с CI"
+    }
+  },
+  "unit_tests": {
+    "cmd": "pytest tests/test_nulls_tag_gate.py tests/test_operator_invariants.py tests/test_transport_kinetic.py -q",
+    "passed": 28,
+    "failed": 0,
+    "rc": 0
+  },
+  "prereg_schema_check": {
+    "all_8_tests_filled": true,
+    "evidence": "tests IV.1–6 в test_operator_invariants.py + T4a grid (test_triple_grid_8_cells) + негативный median",
+    "e44_draft_filled": true
+  },
+  "wall_sec": 12.5
+}
