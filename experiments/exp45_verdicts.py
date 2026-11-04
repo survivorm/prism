@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 
 import numpy as np
 
@@ -36,7 +35,6 @@ def main():
     with open(RES) as f:
         d = json.load(f)
     ed = {r["name"]: r for r in d["edits"]}
-    base = ed["base"]
     others = [r for r in d["edits"] if r["name"] != "base"]
 
     log("== таблица (подряд, без выделения «удачных») ==")
@@ -120,6 +118,27 @@ def main():
     near = [(r["name"], abs(r["ratio_A"] - 1)) for r in others
             if KAPPA_NULL_BAND <= abs(r["ratio_A"] - 1) < 0.02]
     log(f"  пограничные (<2 %): {near if near else 'нет'}")
+
+    # --- п.7 разрешающая способность κ (iid seed null, если уже посчитан) ---
+    log("\n== п.7 с каким κ/κ₀ нельзя спорить: разброс внутри iid-семейства ==")
+    sn_path = os.path.join(os.path.dirname(RES), "exp45_kappa_seed_null.json")
+    if not os.path.exists(sn_path):
+        log("  exp45_kappa_seed_null.json ещё нет — пункт пропущен (перезапустить после)")
+    else:
+        with open(sn_path) as f:
+            sn = json.load(f)
+        fs, hr = sn["family_spread"], sn["family_spread"]["half_range_pct"]
+        log(f"  {sn['n_seeds']} iid-правок строк U128 при дрейфе {sn['drift_target']}: "
+            f"κ/κ₀ ∈ [{fs['min']:.4f}, {fs['max']:.4f}] ⇒ разброс одного draw ±{hr:.2f} %")
+        log(f"  медианный попарный (док-)bootstrap CI на Δκ: ±{sn['paired_resolution_rel_pct']:.2f} %; "
+            f"несогласованный CI уровня κ: ±{sn['level_boot']['L23']['ci32_rel_pct_n32']:.1f} % (32 дока), "
+            f"±{sn['level_boot']['L23']['ci32_rel_pct_n8']:.1f} % (8 документов)")
+        blind = [(r["name"], 100 * abs(r["ratio_A"] - 1)) for r in others
+                 if 100 * abs(r["ratio_A"] - 1) <= hr]
+        log(f"  правки таблицы, сдвиг κ которых ≤ разброса одного draw: "
+            f"{[(n_, f'{v_:.2f} %') for n_, v_ in blind] if blind else 'нет'}")
+        log("  ⇒ знаку Δκ (поднялся/опустился) верить нельзя, если он не превышает этот разброс; "
+            "величине — только вместе с попарным CI")
 
     # --- сводная регрессия: что объясняет ущерб ---
     log("\n== что объясняет KL_B: величина возмущения или лист ==")
