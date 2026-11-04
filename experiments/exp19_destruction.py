@@ -92,7 +92,10 @@ def _eval_kl(mS, samples, orig_logits_cache, n_samples, device):
             logits_ed = mS(input_ids=ids, attention_mask=attn).logits[:, -1, :]
         p_ed = torch.softmax(logits_ed.float(), dim=-1)
         p_orig = torch.softmax(orig_logits_cache[si].float(), dim=-1)
-        kl = (p_ed * torch.log(p_ed.clamp_min(1e-12) / (p_orig + 1e-12))).mean().item()
+        # KL = Σ_v p log(p/q) — сумма по vocab, НЕ среднее (аудит 2026-11-05:
+        # прежний .mean() давал KL/V = 7e-11 на шуме базы; сохранённые в
+        # results/exp19_destruction.json значения — в старых единицах mean/V).
+        kl = (p_ed * torch.log(p_ed.clamp_min(1e-12) / (p_orig + 1e-12))).sum().item()
         kl_sum += kl
     return kl_sum / min(n_samples, len(orig_logits_cache))
 
