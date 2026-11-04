@@ -48,6 +48,16 @@ def load_exp39a():
     return mod
 
 
+def load_exp28():
+    """Оценщики E-28 (Δ_SVD и голономия Procrustes) — тот же код, что дал карточку L23 0.266/0.018."""
+    path = Path(__file__).resolve().parent / "exp28_leaf_structure.py"
+    spec = importlib.util.spec_from_file_location("exp28_for_metrics", path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["exp28_for_metrics"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--docs", type=int, default=8, help="документов на домен (8 = весь корпус)")
@@ -186,8 +196,37 @@ def main() -> None:
     res["kappa"] = kap
     if kap["cached"]["kappa"] and kap["true"]["kappa"]:
         res["kappa_ratio_true_over_cached"] = kap["true"]["kappa"] / kap["cached"]["kappa"]
+    # ---- Δ_SVD и голономия E-28 на обоих операторах (те же оценщики, r = 16, без новых форвардов) ----
+    # Карточка E-28 (results/exp28_leaf_structure.json, L23): delta_mean 0.26618594716955707,
+    # kappa_mean 0.01752786685915092 — они обязаны сойтись на кэше, иначе сверяем не то.
+    e28 = load_exp28()
+    e28._pin_p_cores()
+    dsc: dict = {"r": e28.R_MAIN, "degen_rel": e28.DEGEN_REL,
+                 "anchor_e28": {"delta_mean": 0.26618594716955707, "kappa_mean": 0.01752786685915092}}
+    for tag, J in (("cached", JC), ("true", JT)):
+        A1, A2 = [], []
+        for i in range(J.shape[0]):
+            _, d1, k2, _nd = e28.document_profile(J[i], [e28.R_MAIN], e28.R_MAIN)
+            A1.append(d1.numpy())
+            A2.append(k2.numpy())
+        dsc[tag] = {"delta_svd": float(np.nanmean(np.stack(A1))),
+                    "kappa_holonomy": float(np.nanmean(np.stack(A2))),
+                    "n_nan_delta": int(np.isnan(np.stack(A1)).sum())}
+        del A1, A2
+    d_rand, k_rand = e28.rand_baseline(D, e28.R_MAIN, e28.B_RAND, e28.SEED + 23)
+    dsc["random_baseline"] = {"delta_svd": d_rand, "kappa_holonomy": k_rand}
+    assert len(docs) != 32 or abs(dsc["cached"]["delta_svd"] - dsc["anchor_e28"]["delta_mean"]) < 2e-3, \
+        f"Δ_SVD на кэше не воспроизводит E-28: {dsc['cached']}"
+    assert len(docs) != 32 or abs(dsc["cached"]["kappa_holonomy"] - dsc["anchor_e28"]["kappa_mean"]) < 2e-3, \
+        f"голономия на кэше не воспроизводит E-28: {dsc['cached']}"
+    dsc["delta_ratio_true_over_cached"] = dsc["true"]["delta_svd"] / dsc["cached"]["delta_svd"]
+    dsc["kappa_holonomy_ratio_true_over_cached"] = (dsc["true"]["kappa_holonomy"]
+                                                   / dsc["cached"]["kappa_holonomy"])
+    res["e28_metrics"] = dsc
+
     res["wall_sec"] = round(time.time() - t0, 1)
     path = Path(args.results_dir) / "E38e_true_J_L23.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(res, indent=2, ensure_ascii=False))
     print(json.dumps({k: v for k, v in res.items() if k not in ("per_doc_checks",)}, indent=2, ensure_ascii=False))
     print(f"wrote {path} wall {res['wall_sec']} с")
