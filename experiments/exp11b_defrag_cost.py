@@ -297,7 +297,7 @@ def main(
     all_results["_offline_basis_ms"] = t_offline * 1000
 
     os.makedirs(results_dir, exist_ok=True)
-    all_results["params"] = {model: model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length}
+    all_results["params"] = {"model": model, "n_samples": n_samples, "K": K, "max_length": max_length, "min_length": min_length}
     with open(os.path.join(results_dir, "exp11b_defrag_cost.json"), "w") as f:
         json.dump(all_results, f, indent=2)
     print(f"\nSaved to {results_dir}/exp11b_defrag_cost.json")

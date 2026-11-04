@@ -139,7 +139,7 @@ def main(
     }
 
     os.makedirs(results_dir, exist_ok=True)
-    results["params"] = {large_model: large_model, small_model: small_model, n_samples: n_samples, max_length: max_length, min_length: min_length}
+    results["params"] = {"large_model": large_model, "small_model": small_model, "n_samples": n_samples, "max_length": max_length, "min_length": min_length}
     with open(os.path.join(results_dir, "exp10b_gauge_bridge.json"), "w") as f:
         json.dump(results, f, indent=2)
     print(f"Saved to {results_dir}/exp10b_gauge_bridge.json")

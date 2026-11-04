@@ -249,7 +249,7 @@ def main(
     os.makedirs(results_dir, exist_ok=True)
     json_path = os.path.join(results_dir, "exp15_gdn_anchors.json")
     out = {"schemes": all_results, "correlations": correlations}
-    out["params"] = {model: model, large_model: large_model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length, max_pairs: max_pairs, device_L: device_L, device_S: device_S}
+    out["params"] = {"model": model, "large_model": large_model, "n_samples": n_samples, "K": K, "max_length": max_length, "min_length": min_length, "max_pairs": max_pairs, "device_L": device_L, "device_S": device_S}
     with open(json_path, "w") as f:
         json.dump(out, f, indent=2)
 
