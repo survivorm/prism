@@ -381,7 +381,6 @@ def main():
     Hst = np.stack([ck["H"][(d, s, t)].double().numpy()
                     for d in DOMS for s in range(NS) for t in range(S)])
     Ha = torch.from_numpy(Hst).float()
-    n_A = Hst.shape[0]
     log(f"set A: {Hst.shape} ({len(DOMS)} доменов × {NS} документов × {S})")
     del ck
 
@@ -400,7 +399,6 @@ def main():
     TOK_COL = torch.full((V,), -1, dtype=torch.long)
     TOK_COL[tok_ids] = torch.arange(K_TOK)
     WU0 = W[U128].numpy().astype(np.float64)
-    J_of = make_j_fn(Hst, g_np)
     # Геометрия (κ, спектр, дрейф) считается по ПОДЫБОРУ позиций, а не по всем 4096: полный
     # якобиан — это 4.3 ГБ fp64 на каждую правку, а медиана по 1024 позициям (8 документов) от
     # медианы по 4096 не уходит (проверка — assert ниже: база на подыборке обязана сойтись с
@@ -586,9 +584,12 @@ def main():
                   else e["rows"].numpy().astype(np.float64))
         J1 = J_of_spec(WU_new)
         dmed, dmean = drift_med(J0, J1)
+        log(f"  [{name}] дрейф {dmed:.4f} готов, считаю κ …")
         kap_A = kappa_of(J1)
+        log(f"  [{name}] κ = {kap_A:.6f}, спектр …")
         spec = spectral_flags(J1, docs=range(len(SPEC_DOCS)))
         del J1
+        log(f"  [{name}] спектр готов ({time.time() - t1:.0f} с), метрики A и B …")
         if e["kind"] == "dense":
             mA = dense_metrics(Ha_s, e["W"], W)
             mB = dense_metrics(HB_s, e["W"], W, tgt=tgt_B_s)
@@ -596,6 +597,7 @@ def main():
             mA = sparse_metrics(Ha_s, tok_ids, e["rows"], preA)
             mB = sparse_metrics(HB_s, tok_ids, e["rows"], preB, tgt=tgt_B_s)
         aA, aA_all = agg(mA, keep), agg(mA, torch.ones_like(keep))
+        log(f"  [{name}] метрики готовы ({time.time() - t1:.0f} с), агрегаты …")
         aB = agg(mB, mask_B_s)
         ppl_B = float(torch.exp(mB["nll"][mask_B_s].mean()))
         rec = dict(name=name, kind=e["kind"], drift_med=dmed, drift_mean=dmean,
