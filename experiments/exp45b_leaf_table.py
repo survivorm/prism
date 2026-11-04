@@ -173,7 +173,7 @@ def main():
         nll2 = nll.reshape(N, S)
         dnll = np.zeros_like(nll2)
         dnll[:, 1:] = np.abs(nll2[:, 1:] - nll2[:, :-1])
-        # у ПОСЛЕДНЕЙ позиции докуента цели нет: tgt там = pad, и nll/rank/align_next там
+        # у ПОСЛЕДНЕЙ позиции документа цели нет: tgt там = pad, и nll/rank/align_next там
         # осмысленны только как «лог-вероятность паддинга». Ставим флаг has_target и по нему
         # режут все, кто берёт из таблицы средние (самопроверка PPL ниже тоже по нему).
         has_t = np.ones((N, S), np.float32)
@@ -194,7 +194,8 @@ def main():
         k2s = {r: np.full((N, S), np.nan, np.float32) for r in R_LIST}
         scal = {k: np.zeros((N, S), np.float32) for k in
                 ("j_norm", "pr_sigma", "g_uni", "h_norm", "gap_r16", "s16_over_s1",
-                 "align_next", "align_emit", "align_rand")}
+                 "align_next", "align_emit", "align_rand", "align_pca_next", "align_pca_rand",
+                 "align_mean_next")}
         Vd = torch.empty(N, S, D, R_MAIN, dtype=torch.float16)
 
         def align(col_ids, V16):
@@ -221,7 +222,22 @@ def main():
             rr = rng.integers(0, V, size=(S, 8))
             scal["align_rand"][i] = np.mean(
                 [align(torch.from_numpy(rr[:, c]), V16) for c in range(8)], axis=0)
-            del J, V16
+            # Конкуренты той же размерности: нецентрированный PCA облака h по документу (линейный
+            # метод имеет полное право занять «массивное» среднее направление, листу оно недоступно
+            # по построению) и ранг-1 направление среднего (несправедлив по размерности, отмечаем).
+            Hd = H[i].double()
+            V_pca = torch.linalg.svd(Hd, full_matrices=False)[2][:R_MAIN].T.contiguous()
+            mu = Hd.mean(0)
+            U_mu = (mu / mu.norm().clamp_min(1e-12))[:, None]
+            Vp16 = V_pca.float().unsqueeze(0).expand(S, D, R_MAIN)
+            scal["align_pca_next"][i] = align(tgt[i], Vp16)
+            # «Случайный токен» в БАЗИСЕ PCA — иначе сравнивать основания нельзя: align растёт с
+            # захваченной энергией, и разница bases в абсолютных числах ничего не значит.
+            scal["align_pca_rand"][i] = np.mean(
+                [align(torch.from_numpy(rr[:, c]), Vp16) for c in range(8)], axis=0)
+            scal["align_mean_next"][i] = align(
+                tgt[i], U_mu.float().unsqueeze(0).expand(S, D, 1))
+            del J, V16, Hd, V_pca, U_mu
 
         toks = [tok.decode([int(x)]) for x in ids.reshape(-1)]
         tk_len = np.zeros(n, np.float32)
@@ -254,6 +270,9 @@ def main():
                            align_next=float(scal["align_next"][i, t]),
                            align_emit=float(scal["align_emit"][i, t]),
                            align_rand=float(scal["align_rand"][i, t]),
+                           align_pca_next=float(scal["align_pca_next"][i, t]),
+                           align_pca_rand=float(scal["align_pca_rand"][i, t]),
+                           align_mean_next=float(scal["align_mean_next"][i, t]),
                            tok_len=float(tk_len[j]), tok_nl=float(tk_nl[j]),
                            tok_sent_end=float(tk_sent[j]), tok_digit=float(tk_digit[j]),
                            off_end=int(off_end[j]))
