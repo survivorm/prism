@@ -27,7 +27,8 @@ from prism.jacobian import (
 def kl_div(p: torch.Tensor, q: torch.Tensor, eps: float = 1e-8) -> float:
     ps = (p + eps) / (p + eps).sum()
     qs = (q + eps) / (q + eps).sum()
-    return float(entropy(ps.detach().numpy(), qs.detach().numpy()))
+    # .cpu() обязателен: на cuda-тензоре scipy .numpy() кидает
+    return float(entropy(ps.detach().cpu().numpy(), qs.detach().cpu().numpy()))
 
 
 def run_full_decoder(
@@ -52,6 +53,7 @@ def main(
     min_length=32,
     eps_list=None,
     results_dir="results",
+    device="cpu",
 ):
     torch.set_num_threads(4)
     torch.manual_seed(42)
@@ -67,6 +69,7 @@ def main(
         model, torch_dtype=torch.float32, attn_implementation="eager"
     )
     m.eval()
+    m.to(device)  # Kaggle-GPU: драйвер ядра передаёт device="cuda:0"
 
     selected = [6, 12, 18]
 
@@ -93,8 +96,8 @@ def main(
             layer_results = []
 
             for si, sample in enumerate(samples):
-                ids = sample["input_ids"]
-                attn = sample["attention_mask"]
+                ids = sample["input_ids"].to(m.device)
+                attn = sample["attention_mask"].to(m.device)
                 S = ids.shape[1]
 
                 _k = (layer, si)
@@ -127,7 +130,9 @@ def main(
 
                 # SVD of J → find gauge direction (left vector ≈ uniform)
                 U_j, S_j, Vt_j = torch.linalg.svd(J.float(), full_matrices=False)
-                ones = torch.ones(J.shape[0]) / torch.sqrt(torch.tensor(float(J.shape[0])))
+                ones = torch.ones(J.shape[0], device=J.device) / torch.sqrt(
+                    torch.tensor(float(J.shape[0]), device=J.device)
+                )
                 uniformity = torch.abs(U_j.T @ ones)  # [min(K,D)]
                 gauge_idx = uniformity.argmax()
                 v_g = Vt_j[gauge_idx]
