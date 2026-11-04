@@ -117,15 +117,18 @@ def load_calibration_data(
         if not text:
             continue
         if save_offset_mapping:
+            # Токенизатор вызывается на ОДНОЙ строке, поэтому input_ids — плоский список id, а
+            # offset_mapping — список пар; индексация `[0]` здесь была багом (len(int) падал на
+            # первом же вызове, найденном E-45b).
             toks = tokenizer(
                 text, max_length=max_length, truncation=True,
                 add_special_tokens=False, return_offsets_mapping=True,
             )
-            if len(toks["input_ids"][0]) >= min_length:
+            if len(toks["input_ids"]) >= min_length:
                 samples.append({
-                    "input_ids": toks["input_ids"][0],
+                    "input_ids": toks["input_ids"],
                     "offset_mapping": torch.tensor(
-                        toks["offset_mapping"][0], dtype=torch.int32
+                        toks["offset_mapping"], dtype=torch.int32
                     ),
                 })
         else:
