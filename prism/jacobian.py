@@ -142,6 +142,26 @@ def _run_prefix_pass(
     return outputs.past_key_values
 
 
+def last_position_logits(
+    model,
+    h: torch.Tensor,
+    S: int,
+    layer_idx: int,
+    prefix_cache: DynamicCache,
+) -> torch.Tensor:
+    """Decode h (residual at position S-1, output of layer layer_idx) through the
+    remaining layers + final norm + lm_head against a prefix cache over positions
+    0..S-2 and return logits [1, V].
+
+    This is EXACTLY the path compute_jacobian_for_tokens differentiates through,
+    so with prefix_cache = _run_prefix_pass(m, ids, attn) and h =
+    hidden_states[layer_idx+1][:, -1:, :] it reproduces the full-forward
+    logits[:, -1, :] (KL ~ 1e-7, verified). Passing the cache of a FULL forward
+    (all S positions) instead double-counts the last token — the bug this helper
+    exists to prevent (audit 2026-11-05, E-11a/12a/12b)."""
+    return _run_decoder_pass(model, prefix_cache, h, S, layer_idx)
+
+
 def _extract_hidden_state(model, input_ids, attention_mask, layer_idx) -> torch.Tensor:
     """Full pass: extract hidden state at layer_idx for last token."""
     with torch.no_grad():

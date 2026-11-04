@@ -16,7 +16,12 @@ import torch
 from scipy.stats import entropy
 
 from prism.calibration import load_calibration_data
-from prism.jacobian import compute_jacobian_for_tokens, softmax_jacobian
+from prism.jacobian import (
+    compute_jacobian_for_tokens,
+    softmax_jacobian,
+    _run_prefix_pass,
+    last_position_logits,
+)
 
 
 def kl_div(p: torch.Tensor, q: torch.Tensor, eps: float = 1e-8) -> float:
@@ -28,59 +33,15 @@ def kl_div(p: torch.Tensor, q: torch.Tensor, eps: float = 1e-8) -> float:
 def run_full_decoder(
     model, prefix_cache, h: torch.Tensor, S: int, layer_idx: int
 ) -> torch.Tensor:
-    """Run h through remaining layers, return probs."""
-    from transformers.cache_utils import DynamicLayer, LinearAttentionLayer
-    from transformers.masking_utils import (  # type: ignore[import-not-found]
-        create_causal_mask,
-        create_recurrent_attention_mask,
-    )
+    """Истинный хвост модели (путь prism, согласованный с якобианом).
 
-    from transformers import DynamicCache
-
-    cache_clone = DynamicCache()
-    for idx in range(len(prefix_cache.layers)):
-        lyr = prefix_cache.layers[idx]
-        if isinstance(lyr, DynamicLayer):
-            nk = [k.clone() if k is not None else None for k in lyr.keys]
-            nv = [v.clone() if v is not None else None for v in lyr.values]
-            cache_clone.layers.append(DynamicLayer(keys=nk, values=nv))
-        else:
-            nc = {k: v.clone() for k, v in lyr.conv_states.items()}
-            nr = {k: v.clone() for k, v in lyr.recurrent_states.items()}
-            cache_clone.layers.append(
-                LinearAttentionLayer(conv_states=nc, recurrent_states=nr)
-            )
-
-    tm = model.model
-    pos = torch.full((4, 1, 1), S - 1, dtype=torch.long, device=h.device)
-    pos_emb = tm.rotary_emb(h, pos[1:])
-
-    dummy = h.new_zeros(1, 1, tm.config.hidden_size)
-    mk = {
-        "config": tm.config,
-        "inputs_embeds": dummy,
-        "attention_mask": None,
-        "past_key_values": cache_clone,
-        "position_ids": pos[0],
-    }
-    masks = {
-        "full_attention": create_causal_mask(**mk),
-        "linear_attention": create_recurrent_attention_mask(**mk),
-    }
-
-    x = h
-    for i in range(layer_idx + 1, model.config.num_hidden_layers):
-        x = tm.layers[i](
-            x,
-            position_embeddings=pos_emb,
-            attention_mask=masks[model.config.layer_types[i]],
-            position_ids=pos[0],
-            past_key_values=cache_clone,
-        )
-
-    x = tm.norm(x)
-    logits = model.lm_head(x[:, -1, :])
-    return torch.softmax(logits[0], dim=-1)
+    Аудит 2026-11-05, баг 2: прежняя копия декодировала h поверх кэша ПОЛНОГО
+    forward (0..S-1) — двойной учёт последнего токена, KL(δ=0) ≈ 7–9 натов.
+    prefix_cache обязан быть из _run_prefix_pass ([:, :-1]).
+    """
+    with torch.no_grad():
+        logits = last_position_logits(model, h, S, layer_idx, prefix_cache)
+    return torch.softmax(logits[0].float(), dim=-1)
 
 
 def main(
@@ -118,6 +79,7 @@ def main(
     token_set = sorted(top_k)
 
     all_results = {}
+    _jcache: dict[tuple[int, int], torch.Tensor] = {}  # J не зависит от eps (аудит: был в eps-цикле ×4)
 
     for eps_val in eps_list:
         eps_key = f"eps_{eps_val}"
@@ -135,7 +97,10 @@ def main(
                 attn = sample["attention_mask"]
                 S = ids.shape[1]
 
-                J = compute_jacobian_for_tokens(m, layer, ids, attn, token_set)
+                _k = (layer, si)
+                if _k not in _jcache:
+                    _jcache[_k] = compute_jacobian_for_tokens(m, layer, ids, attn, token_set)
+                J = _jcache[_k]
 
                 # Forward for baseline
                 with torch.no_grad():
@@ -145,9 +110,16 @@ def main(
                         output_hidden_states=True,
                         use_cache=True,
                     )
-                prefix_cache = out.past_key_values
+                    # кэш 0..S-2 (аудит 2026-11-05: полный кэш = двойной учёт S-1)
+                prefix_cache = _run_prefix_pass(m, ids, attn)
                 h_base = out.hidden_states[layer + 1][:, -1:, :]  # [1,1,D]
-                p_orig = torch.softmax(m.lm_head(m.model.norm(h_base))[:, -1, :][0], dim=-1)
+                # ЯКОРЬ = истинный выход модели z(h_base) (tail+norm+head), а не
+                # срезанный lm_head(norm(h_base)): на слоях 6/12/18 второй даёт
+                # KL≈8.9 ната при δ=0, тогда как run_full_decoder (ground truth)
+                # и J (полный дека-якобиан) согласованы с out.logits. Аудит
+                # 2026-11-05: абсолютные KL_g/KL_d были загрязщены константой
+                # якоря (симметрия KL(±) и ratio_lin выживали, модуль — нет).
+                p_orig = torch.softmax(out.logits[:, -1, :][0].detach(), dim=-1)
 
                 # p for J^(p)
                 p_tokens = torch.softmax(out.logits[0, -1, token_set], dim=-1)
