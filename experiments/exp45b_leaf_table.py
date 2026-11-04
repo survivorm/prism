@@ -107,7 +107,8 @@ def leaf_scalars(J: torch.Tensor) -> dict:
 
 def main():
     t0 = time.time()
-    torch.set_num_threads(os.cpu_count() or 8)
+    torch.set_num_threads(len(os.sched_getaffinity(0)))   # не os.cpu_count(): на этой коробке
+    # он возвращает 64 при 12 доступных ядрах, и OpenMP-потоки задыхаются на барьерах
     torch.set_grad_enabled(False)
     from transformers import AutoModelForCausalLM, AutoTokenizer
 

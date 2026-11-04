@@ -74,7 +74,8 @@ def kappa_part(J: np.ndarray) -> float:
 
 def main():
     t0 = time.time()
-    torch.set_num_threads(os.cpu_count() or 8)
+    torch.set_num_threads(len(os.sched_getaffinity(0)))   # не os.cpu_count(): на этой коробке
+    # он возвращает 64 при 12 доступных ядрах, и OpenMP-потоки задыхаются на барьерах
     E45.log("loading jcache L23 ...")
     ck = torch.load(jcache_path(E45.L), map_location="cpu", weights_only=False)
     U128 = [int(t) for t in (ck["U128"].numpy() if hasattr(ck["U128"], "numpy") else ck["U128"])]

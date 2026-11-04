@@ -82,7 +82,8 @@ def restricted(Hq: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
 
 def main():
     t0 = time.time()
-    torch.set_num_threads(os.cpu_count() or 8)
+    torch.set_num_threads(len(os.sched_getaffinity(0)))   # не os.cpu_count(): на этой коробке
+    # он возвращает 64 при 12 доступных ядрах, и OpenMP-потоки задыхаются на барьерах
     torch.set_grad_enabled(False)
     from transformers import AutoModelForCausalLM
 
@@ -205,7 +206,7 @@ def main():
                                  has_target=float(has_t[di, t])))
             kl_med[name] = float(kl[ok].median())
             del lp, lp_nr, kl, kl_nr, top_p, inter, nll_p, nll_p_nr, ent, energy
-        order = [f"leaf_lag{l}" for l in LAGS] + ["pca_doc", "pca_doc_raw", "pca_win",
+        order = [f"leaf_lag{lag}" for lag in LAGS] + ["pca_doc", "pca_doc_raw", "pca_win",
                                                   "haar", "mean_dir"]
         log(f"  док {di} ({dom}) готов, медианный KL: "
             + "  ".join(f"{k}={kl_med[k]:.2e}" for k in order)

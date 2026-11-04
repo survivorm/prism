@@ -368,7 +368,7 @@ def selftest_formulas():
 def main():
     global TOK_COL
     t0 = time.time()
-    torch.set_num_threads(os.cpu_count() or 8)
+    torch.set_num_threads(len(os.sched_getaffinity(0)))   # не os.cpu_count(): на коробке 64 при 12 ядрах
     out = {"experiment": "E-45", "L": L, "r": R, "anchors": ANCH, "edits": [],
            "selfcheck": {}}
 
