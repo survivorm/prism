@@ -232,8 +232,22 @@ def main():
     out_path = os.path.join(a.results_dir, 'exp28_leaf_structure.json')
     ck0 = load_layer(a.ckpt_dir, layers[0])
     D, S, n, domains = ck0['D'], ck0['S'], ck0['n_samples'], ck0['domains']
+    # Дисклоуз (аудит v5, класс E): E-28 работает по ВСЕМ позициям — sentinel-
+    # фильтр (sum P128_RAW < 0.5) в протоколе отсутствует намеренно; живые
+    # срезы E-33r/E-34/E-35/E-40 ≈50%. Кросс-чек L23: κ_alive/κ_all=1.065,
+    # Δ_alive/Δ_all=1.117 per-doc — выводы инвариантны. Доля считается и
+    # публикуется, чтобы артефакт был самодокументирован.
+    _sf = None
+    if "P128_RAW" in ck0:
+        _rows = torch.stack(
+            [ck0["P128_RAW"][(d, s, t)]
+             for d in domains for s in range(n) for t in range(S)]
+        ).sum(-1)
+        _sf = float((_rows < 0.5).float().mean())
     out = {
         'params': {'ckpt_dir': a.ckpt_dir, 'layers': layers, 'D': D, 'S': S,
+                   'sentinel_position_set': 'all (no sentinel filter by design; audit v5 class E)',
+                   'sentinel_fraction_first_layer': _sf,
                    'r_main': R_MAIN, 'r_sweep': R_SWEEP, 'b_rand': a.b_rand,
                    'seed': a.seed, 'n_degen_rel': DEGEN_REL,
                    'threads': torch.get_num_threads(),

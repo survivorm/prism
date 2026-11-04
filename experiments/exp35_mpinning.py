@@ -214,7 +214,13 @@ def main():
         for i, (dom, si) in enumerate(docs):
             Jdoc = np.stack([ck['JR'][(dom, si, t)].numpy() for t in range(S)])
             H = np.stack([ck['H'][(dom, si, t)].numpy() for t in range(S)]).astype(np.float64)
-            raw = ck.get('P128_RAW', ck['P128'])
+            raw = ck.get('P128_RAW')
+            if raw is None:  # аудит v5: sentinel на ренормализованном P128 (Σ≡1) мёртв
+                raise KeyError(
+                    "P128_RAW required for sentinel filtering (fallback на "
+                    "P128 молча отключает маску — класс E); use the RAW-extended "
+                    "cache (RAW_CACHE_DIRS)"
+                )
             sent = np.stack([raw[(dom, si, t)].numpy() for t in range(S)]).sum(1) < E34.SENTINEL_SUM
             dS = dS_pairs(H)
             vv = ~(sent[:-1] | sent[1:])
