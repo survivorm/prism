@@ -1,4 +1,9 @@
-"""Round-3 recompute of E-12a: add first-order predictor + spectral diagnostics.
+"""
+[DEPRECATED 2026-11-05] Этот one-off унаследовал баг run_full_decoder (h поверх
+кэша полного forward, 0..S-1 — двойной учёт последнего токена). Основной
+exp12a перепрогоняется целиком с исправленным путём prism; артефакты этого
+скрипта более не источник истины.
+Round-3 recompute of E-12a: add first-order predictor + spectral diagnostics.
 
 Same protocol as experiments/exp12a_perturbation_test.py (seed 42, 4 samples,
 K=64, layers {6,12,18}, eps=1.0, full decoder), plus per-sample:

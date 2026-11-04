@@ -19,6 +19,8 @@ from prism.calibration import load_calibration_data
 from prism.jacobian import (
     compute_jacobian_for_tokens,
     softmax_jacobian,
+    _run_prefix_pass,
+    last_position_logits,
 )
 
 
@@ -35,7 +37,6 @@ def quantize_vector(
     """
     assert directions.shape[1] == len(bits_per_dir)
 
-    # Project onto each direction
     coeffs = directions.T @ x  # [n_dirs]
 
     max_val = x.abs().max()
@@ -46,10 +47,8 @@ def quantize_vector(
         q = torch.clamp(q, -max_val, max_val)
         q_coeffs.append(q)
 
-    # Reconstruct projected part
     recon = directions @ torch.stack(q_coeffs)
 
-    # Residual = x - recon, quantize with uniform bits
     residual = x - recon
     step_r = 2 * residual.abs().max().clamp(min=1e-6) / (2**n_bits_rest)
     q_residual = torch.round(residual / step_r) * step_r
@@ -63,6 +62,22 @@ def uniform_quantize(x: torch.Tensor, n_bits: int) -> torch.Tensor:
     step = 2 * max_val / (2**n_bits)
     q = torch.round(x / step) * step
     return torch.clamp(q, -max_val, max_val)
+
+
+def run_full_decoder(
+    model, prefix_cache, h: torch.Tensor, S: int, layer_idx: int,
+    probs: bool = True,
+):
+    """Истинный хвост модели: слои layer+1..n, norm, head — путь prism
+    (_run_decoder_pass), согласованный с compute_jacobian_for_tokens. h —
+    состояние ПРОМЕЖУТОЧНОГО слоя, срезанный lm_head(norm(h)) — не выход
+    модели (аудит 2026-11-05, баг 1: ppl_orig = 3.7e6). Баг 2 того же дня:
+    прежняя копия клала h поверх кэша полного forward (0..S-1) — двойной
+    учёт последнего токена; prefix_cache обязан быть из _run_prefix_pass.
+    """
+    with torch.no_grad():
+        logits = last_position_logits(model, h, S, layer_idx, prefix_cache)
+    return torch.softmax(logits[0].float(), dim=-1) if probs else logits[0].float()
 
 
 def main(
@@ -121,12 +136,19 @@ def main(
 
             # Forward pass
             with torch.no_grad():
-                out = m(input_ids=ids, attention_mask=attn, output_hidden_states=True)
+                out = m(input_ids=ids, attention_mask=attn, output_hidden_states=True,
+                        use_cache=True)
+            prefix_cache = _run_prefix_pass(m, ids, attn)  # 0..S-2 (аудит 2026-11-05)
 
-            h = out.hidden_states[layer + 1][:, -1, :]  # [1, D]
-            h_norm = m.model.norm(h)  # [1, D]
-            z_orig = m.lm_head(h_norm)[0]  # [V]
-            p_orig = F.softmax(z_orig[0], dim=-1)
+            h = out.hidden_states[layer + 1][:, -1:, :]  # [1, 1, D] (форма для хвоста)
+            # ЯКОРЬ — истинный хвост модели (см. run_full_decoder), не lm_head(norm(h)):
+            # на слоях 6/12/18 срезанный ярлык давал ppl_orig ≈ 3.7e6 в артефакте.
+            z_orig = run_full_decoder(m, prefix_cache, h, ids.shape[1], layer,
+                                      probs=False)  # [V]
+            p_orig = F.softmax(z_orig, dim=-1)
+            # fail-loud: хвост при δ=0 обязан совпасть с полным форвардом
+            _d_anchor = (z_orig - out.logits[0, -1]).abs().max().item()
+            assert _d_anchor < 1e-2, f"E-12b anchor tail vs full forward: {_d_anchor:.2e}"
 
             # Build sensitivity map
             J = compute_jacobian_for_tokens(m, layer, ids, attn, token_set)
@@ -154,18 +176,31 @@ def main(
             n_bits_rest = 6  # reasonable for remaining dims
 
             # Quantized hidden state
-            h_vec = h[0, :]  # [D]
+            h_vec = h[0, 0, :]  # [D]
 
             h_q_map = quantize_vector(h_vec, directions, bits, n_bits_rest)
             h_q_uniform = uniform_quantize(h_vec, n_bits_uniform)
+            # Диагностика климпера (аудит 2026-11-05): квантизатор режет сетку
+            # ±‖x‖_∞ во ВСЕХ направлениях, а легитимный коэффициент |<v,x>| ≤ ‖x‖₂
+            # ≫ ‖x‖_∞ — 8-битная «защита» дифф-направлений может съедаться климпом,
+            # а не битностью. Пишем |c| и долю климпованных в артефакт.
+            _coeffs = directions.T @ h_vec
+            _mv = float(h_vec.abs().max())
+            clamp_diag = {
+                "max_abs_x": _mv,
+                "coeff_abs": [float(abs(c)) for c in _coeffs],
+                "clamp_frac": [float(abs(c) > _mv) for c in _coeffs],
+            }
 
-            # Forward with quantized hidden state
-            h_q_map_norm = m.model.norm(h_q_map.unsqueeze(0))
-            z_q_map = m.lm_head(h_q_map_norm)[0]
+            # Оба квантованных состояния — через ИСТИННЫЙ хвост (тот же
+            # run_full_decoder, что и база: сравнение корректно только на
+            # одной и той же функции выхода)
+            z_q_map = run_full_decoder(m, prefix_cache, h_q_map.view(1, 1, -1),
+                                       ids.shape[1], layer, probs=False)
             p_q_map = F.softmax(z_q_map, dim=-1)
 
-            h_q_uniform_norm = m.model.norm(h_q_uniform.unsqueeze(0))
-            z_q_uniform = m.lm_head(h_q_uniform_norm)[0]
+            z_q_uniform = run_full_decoder(m, prefix_cache, h_q_uniform.view(1, 1, -1),
+                                           ids.shape[1], layer, probs=False)
             p_q_uniform = F.softmax(z_q_uniform, dim=-1)
 
             # Metrics
@@ -222,7 +257,7 @@ def main(
         all_results[layer] = layer_results
 
     os.makedirs(results_dir, exist_ok=True)
-    all_results["params"] = {model: model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length}
+    all_results["params"] = {"model": model, "n_samples": n_samples, "K": K, "max_length": max_length, "min_length": min_length}
     with open(os.path.join(results_dir, "exp12b_quantization_map.json"), "w") as f:
         json.dump(all_results, f, indent=2)
     print(f"\nSaved to {results_dir}/exp12b_quantization_map.json")

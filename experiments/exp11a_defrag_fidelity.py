@@ -17,7 +17,12 @@ import torch
 from scipy.stats import entropy
 
 from prism.calibration import load_calibration_data
-from prism.jacobian import compute_jacobian_for_tokens, softmax_jacobian
+from prism.jacobian import (
+    compute_jacobian_for_tokens,
+    softmax_jacobian,
+    _run_prefix_pass,
+    last_position_logits,
+)
 
 
 def kl_divergence(p: torch.Tensor, q: torch.Tensor, eps: float = 1e-8) -> float:
@@ -51,65 +56,17 @@ def top_k_agreement(p_true: torch.Tensor, p_hat: torch.Tensor, k: int) -> float:
 def run_full_decoder(
     model, prefix_cache, h: torch.Tensor, S: int, layer_idx: int
 ) -> torch.Tensor:
-    """Run h through remaining layers with cache, return probs."""
-    from transformers.cache_utils import DynamicLayer, LinearAttentionLayer
-    from transformers.masking_utils import (  # type: ignore[import-not-found]
-        create_causal_mask,
-        create_recurrent_attention_mask,
-    )
+    """Истинный хвост модели: слои layer+1..n, norm, head — путь prism
+    (_run_decoder_pass), согласованный с compute_jacobian_for_tokens.
 
-    # Clone cache
-    from transformers import DynamicCache
-
-    cache_clone = DynamicCache()
-    for idx in range(len(prefix_cache.layers)):
-        layer = prefix_cache.layers[idx]
-        if isinstance(layer, DynamicLayer):
-            new_k = [k.clone() if k is not None else None for k in layer.keys]
-            new_v = [v.clone() if v is not None else None for v in layer.values]
-            cache_clone.layers.append(DynamicLayer(keys=new_k, values=new_v))
-        else:
-            new_conv = {k: v.clone() for k, v in layer.conv_states.items()}
-            new_recur = {k: v.clone() for k, v in layer.recurrent_states.items()}
-            cache_clone.layers.append(
-                LinearAttentionLayer(conv_states=new_conv, recurrent_states=new_recur)
-            )
-
-    text_model = model.model
-    pos = torch.full((4, 1, 1), S - 1, dtype=torch.long, device=h.device)
-    text_pos = pos[0]
-    rope_pos = pos[1:]
-    pos_emb = text_model.rotary_emb(h, rope_pos)
-
-    # Build masks
-    dummy = h.new_zeros(1, 1, text_model.config.hidden_size)
-    mask_kwargs = {
-        "config": text_model.config,
-        "inputs_embeds": dummy,
-        "attention_mask": None,
-        "past_key_values": cache_clone,
-        "position_ids": text_pos,
-    }
-    masks = {
-        "full_attention": create_causal_mask(**mask_kwargs),
-        "linear_attention": create_recurrent_attention_mask(**mask_kwargs),
-    }
-
-    x = h
-    n_layers = model.config.num_hidden_layers
-    for i in range(layer_idx + 1, n_layers):
-        layer_type = model.config.layer_types[i]
-        x = text_model.layers[i](
-            x,
-            position_embeddings=pos_emb,
-            attention_mask=masks[layer_type],
-            position_ids=text_pos,
-            past_key_values=cache_clone,
-        )
-
-    x = text_model.norm(x)
-    logits = model.lm_head(x[:, -1, :])
-    return torch.softmax(logits[0], dim=-1)
+    Аудит 2026-11-05, баг 2: прежняя локальная копия клонировала кэш ПОЛНОГО
+    forward (позиции 0..S-1) и декодировала h на позиции S-1 поверх него —
+    последнее слово учитывалось дважды (self-KV + GDN-состояние), KL(δ=0)
+    ≈ 7–9 натов. prefix_cache обязан быть из _run_prefix_pass ([:, :-1]).
+    """
+    with torch.no_grad():
+        logits = last_position_logits(model, h, S, layer_idx, prefix_cache)
+    return torch.softmax(logits[0].float(), dim=-1)
 
 
 def main(
@@ -172,10 +129,27 @@ def main(
                     output_hidden_states=True,
                     use_cache=True,
                 )
-            prefix_cache = out.past_key_values
+            # Кэш префикса — Позиции 0..S-2 (прежний out.past_key_values содержал
+            # и S-1 → двойной учёт последнего токена в хвосте; аудит 2026-11-05).
+            prefix_cache = _run_prefix_pass(m, ids, attn)
             h_base = out.hidden_states[layer + 1][:, -1:, :]  # [1, 1, D]
-            z0 = m.lm_head(m.model.norm(h_base))[:, -1, :]  # [1, V]
+            # ЯКОРЬ (=база линеаризации) обязан быть ИСТИННЫМ выходом модели
+            # z(h_base) = logits после слоёв layer+1..n, norm, head. Прежний
+            # ярлык z0 = lm_head(norm(h_base)) — срезанный хвост — на слоях
+            # 6/12/18 давал KL(p_true‖ŝ(z0)) ≈ 8.9 ната УЖЕ при δ=0, тогда как
+            # J — полный якобиан через дека-хвост (‖J‖_F ≈ 58): метрика
+            # насыщалась ошибкой якоря и не различала gauge/sem/rand
+            # (12.67/12.78/12.59). Аудит 2026-11-05; см. run_full_decoder —
+            # ground truth при δ=0 совпадает с out.logits ровно.
+            z0 = out.logits[:, -1, :].detach()  # [1, V] истина (tail+norm+head)
             p0 = torch.softmax(z0[0], dim=-1)
+            # fail-loud: якорь = ground truth при нулевом возмущении
+            _p_at0 = run_full_decoder(m, prefix_cache, h_base, S, layer)
+            _anchor_kl = kl_divergence(_p_at0, p0)
+            assert _anchor_kl < 1e-3, (
+                f"E-11a anchor: KL(p_true(δ=0)‖softmax(z0)) = {_anchor_kl:.4f} "
+                "≠ 0 — ярлык линеаризации не совпал с ground truth"
+            )
 
             # J^(p) gauge-free — last-token logits on token_set
             p_tokens = torch.softmax(out.logits[0, -1, token_set], dim=-1)
@@ -229,12 +203,25 @@ def main(
                     z_pert[0, token_set] += J @ delta_scaled
                     p_raw = torch.softmax(z_pert[0], dim=-1)
 
-                    # Predictor 2: gaugefree (in p-space)
+                    # Все p-space предикторы (gf, defrag) измеряются на УСЛОВНОМ
+                    # распределении по token_set: J_p = softmax_jacobian(...) и
+                    # dp = J_p @ delta живут в K-мерной нормированной p-координате.
+                    # Прежний вариант прибавлял dp к полной V-вероятности и гнал
+                    # через ПОВТОРНЫЙ softmax(p + dp) — это не линеаризация, а
+                    # коллапс ≈ uniform_V: KL_true_gf/dr были константой ~6.7 ната,
+                    # не зависящей ни от направления, ни от масштаба (аудит
+                    # 2026-11-05, баг 3). Корректная линеаризация вероятности:
+                    # q' = clamp(q + dp, 0) / Σ — без второго экспонирования.
+                    q_true = p_true[token_set].double()
+                    q_true = q_true / q_true.sum()
+                    q_raw = torch.softmax(z_pert[0, token_set].double(), dim=-1)
+
+                    # Predictor 2: gaugefree (в p-координате token_set)
                     dp_gf = J_p @ delta_scaled  # [K]
-                    # Extend to full V via top-k only
-                    p_gf = p0.clone()
-                    p_gf[token_set] += dp_gf
-                    p_gf = torch.softmax(p_gf, dim=-1)
+                    q_gf = (p_tokens.double() + dp_gf.double()).clamp_min(0.0)
+                    if q_gf.sum() < 1e-12:
+                        q_gf = p_tokens.double()
+                    q_gf = q_gf / q_gf.sum()
 
                     # Predictor 3: defrag_r
                     entry = {
@@ -242,8 +229,8 @@ def main(
                         "sample": si,
                         "perturbation": pname,
                         "scale": s,
-                        "KL_true_raw": kl_divergence(p_true, p_raw),
-                        "KL_true_gf": kl_divergence(p_true, p_gf),
+                        "KL_true_raw": kl_divergence(q_true, q_raw),
+                        "KL_true_gf": kl_divergence(q_true, q_gf),
                         "TV_true_raw": tv_distance(p_true, p_raw),
                         "cos_true_raw": cosine_similarity(p_true - p0, p_raw - p0),
                         "top1_raw": top_k_agreement(p_true, p_raw, 1),
@@ -257,13 +244,14 @@ def main(
                         # Reconstruction: J_tilde_p = U_r @ J_r
                         J_tilde_p = U_r @ J_r  # [K, D]
                         dp_dr = J_tilde_p @ delta_scaled  # [K]
-                        p_dr = p0.clone()
-                        p_dr[token_set] += dp_dr
-                        p_dr = torch.softmax(p_dr, dim=-1)
+                        q_dr = (p_tokens.double() + dp_dr.double()).clamp_min(0.0)
+                        if q_dr.sum() < 1e-12:
+                            q_dr = p_tokens.double()
+                        q_dr = q_dr / q_dr.sum()
 
-                        entry[f"KL_true_dr{r}"] = kl_divergence(p_true, p_dr)
+                        entry[f"KL_true_dr{r}"] = kl_divergence(q_true, q_dr)
                         entry[f"cos_true_dr{r}"] = cosine_similarity(
-                            p_true - p0, p_dr - p0
+                            q_true - p_tokens.double(), q_dr - p_tokens.double()
                         )
 
                     layer_results.append(entry)
@@ -288,7 +276,7 @@ def main(
                 )
 
     os.makedirs(results_dir, exist_ok=True)
-    all_results["params"] = {model: model, n_samples: n_samples, K: K, max_length: max_length, min_length: min_length}
+    all_results["params"] = {"model": model, "n_samples": n_samples, "K": K, "max_length": max_length, "min_length": min_length}
     with open(os.path.join(results_dir, "exp11a_defrag_fidelity.json"), "w") as f:
         json.dump(all_results, f, indent=2)
     print(f"\nSaved to {results_dir}/exp11a_defrag_fidelity.json")
