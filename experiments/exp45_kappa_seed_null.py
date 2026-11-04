@@ -38,11 +38,18 @@ from _e38_cache import jcache_path                    # noqa: E402
 import exp45_damage_vs_structure as E45               # noqa: E402
 
 L, S, R = E45.L, E45.S, E45.R
-N_SEEDS = 8
-DRIFT = 0.12
-KBASE_REL = 2e-3          # база обязана сойтись с базой таблицы (детерминировано)
 N_BOOT = 2000
 SEED0 = 100               # не пересекается с 0 и 11 из таблицы
+# Режим по умолчанию — только CI УРОВНЯ κ (numpy по уже закоммиченному exp28-артефакту, секунды,
+# модель не нужна). Разброс внутри iid-семейства с тех пор меряется СТРОКАМИ ТаБЛИЦЫ
+# (`E45_SEEDNULL=8 … --resume`): там те же iid-правки, но со всеми метриками сразу, поэтому
+# дублировать их отдельным процессом смысла нет. Попарный CI на Δκ остаётся опцией --paired N:
+# он требует J правки, которого в таблице нет (там только сводная медиана κ).
+PAIRED = 0
+for a in sys.argv[1:]:
+    if a.startswith("--paired"):
+        PAIRED = int(a.split("=")[1]) if "=" in a else 4
+KBASE_REL = 2e-3          # база обязана сойтись с базой таблицы (детерминировано)
 
 
 def log(*a):
@@ -64,8 +71,8 @@ def main():
     t0 = time.time()
     torch.set_num_threads(min(8, os.cpu_count() or 4))
     torch.set_grad_enabled(False)
-    out = {"experiment": "E-45d", "L": L, "r": R, "drift_target": DRIFT,
-           "n_seeds": N_SEEDS, "edits": [], "level_boot": {}}
+    out = {"experiment": "E-45d", "L": L, "r": R, "n_paired": PAIRED,
+           "edits": [], "level_boot": {}}
 
     # --------- несогласованный док-бутстрап уровня κ из уже закоммиченного артефакта ---------
     p28 = os.path.join(os.path.dirname(_HERE), "results", "exp28_leaf_structure.json")
@@ -85,7 +92,17 @@ def main():
             f"несогласованный CI уровня ±{rec['ci32_rel_pct_n32']:.1f} % (32 дока) / "
             f"±{rec['ci32_rel_pct_n8']:.1f} % (8 документов)")
 
-    # --------- iid null на том же срезе, что и таблица E-45 ---------
+    if PAIRED == 0:
+        out["wall_sec"] = round(time.time() - t0, 1)
+        out["note"] = ("разброс iid-семейства и полосы по метрикам — в таблице E-45, строки "
+                       "seednull_s*; здесь только CI уровня κ")
+        with open(os.path.join(os.path.dirname(_HERE), "results",
+                               "exp45_kappa_seed_null.json"), "w") as f:
+            json.dump(out, f, ensure_ascii=False, indent=1)
+        log("→ results/exp45_kappa_seed_null.json (только уровень; --paired N для Δκ)")
+        return
+
+    # --------- iid null на том же срезе, что и таблица E-45 (попарный Δκ, --paired N) ---------
     ck = torch.load(jcache_path(L), map_location="cpu", weights_only=False)
     U128 = [int(t) for t in (ck["U128"].numpy() if hasattr(ck["U128"], "numpy") else ck["U128"])]
     DOMS, NS = list(ck["domains"]), int(ck["n_samples"])
@@ -121,10 +138,10 @@ def main():
         f"база {kap0:.6f} не сходится с базой таблицы {KAPPA_TABLE_BASE:.6f} — "
         "срез или построение J разошлись с exp45_damage_vs_structure")
 
-    for seed in range(SEED0, SEED0 + N_SEEDS):
+    for seed in range(SEED0, SEED0 + PAIRED):
         G = np.random.default_rng(seed).standard_normal(WU0.shape) * float(WU0.std())
         lin = E45.drift_med(J0, J_of(G))[0]          # дрейф линеен по σ → одна калибровка
-        s_ = DRIFT / lin
+        s_ = 0.12 / lin
         J1 = J0 + s_ * J_of(G)
         dmed = E45.drift_med(J0, J1)[0]
         kd1 = kappa_docs(J1)

@@ -32,4 +32,12 @@ echo "[queue] $(date +%H:%M:%S) rc(E-46)=$?"
 echo "[queue] $(date +%H:%M:%S) вердикты E-46"
 ../.venv/bin/python exp46_verdicts.py > "$R/exp46_verdicts.log" 2>&1
 echo "[queue] $(date +%H:%M:%S) rc(E-46 verdicts)=$?"
+echo "[queue] $(date +%H:%M:%S) iid-семейство E-45 (8 draw'ов того же класса правок)"
+E45_SEEDNULL=8 ../.venv/bin/python exp45_damage_vs_structure.py --resume > "$R/exp45_seednull.log" 2>&1
+echo "[queue] $(date +%H:%M:%S) rc(seednull)=$?"
+
+echo "[queue] $(date +%H:%M:%S) вердикты E-45 повторно (с полосой семейства, п.7)"
+../.venv/bin/python exp45_verdicts.py > "$R/exp45_verdicts.log" 2>&1
+echo "[queue] $(date +%H:%M:%S) rc(verdicts 2)=$?"
+
 echo "[queue] $(date +%H:%M:%S) очередь пуста"
