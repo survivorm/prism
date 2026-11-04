@@ -91,7 +91,10 @@ def main(
         K_val = len(token_set)
         ones = torch.ones(K_val) / torch.sqrt(torch.tensor(float(K_val)))
         uniformity_0 = torch.abs((v_raw[0] @ ones)).item()
-        gauge_share_0 = 1.0 - (ev_cent[0] / ev_raw[0]).item()
+        # gauge_share_0 = 1 − λ₁ᶜ/λ₁⁰: доля ВЕРХНЕЙ СОБСТВЕННОЙ ВЕЛИЧИНЫ, ушедшая при
+        # uniform-центрировании; это НЕ доля энергии в uniform-направлении (выше неё в
+        # ×1.3–2.6; энергетический прокси = ×λ₁/tr G) — аудит §2.10, сноска † в ref-exp
+        gauge_share_0 = (1.0 - (ev_cent[0] / ev_raw[0]).item()) if float(ev_raw[0]) > 0 else float("nan")
 
         all_results[layer] = {
             "uniformity_0": uniformity_0,

@@ -1,0 +1,165 @@
+{
+  "experiment": "E-40.4",
+  "tz": "docs/e40_todo.md §6",
+  "core_version": "v1.0.0",
+  "timestamp": "2026-11-04T15:03:56+0300",
+  "observational": true,
+  "new_forwards": 0,
+  "inputs": {
+    "exp32tail_hessian_modes": {
+      "path": "/home/survivor/work/prism/results/exp32tail_hessian_modes.json",
+      "sha256_16": "0f6af0607bf135cd"
+    }
+  },
+  "channel_tags": [
+    {
+      "protocol": "natural",
+      "slice": "gf",
+      "window": "tail",
+      "side": "mixed",
+      "p_mode": "truncated_U128",
+      "p_slice": "p_t",
+      "aggregation": "median",
+      "layer": 22,
+      "rank": null,
+      "norm_type": "energy",
+      "source": "cache",
+      "status": "measured"
+    }
+  ],
+  "per_layer": {
+    "18": {
+      "r_cross": 126.99999999999999,
+      "delta_peak": 0.43459167340980454,
+      "null_peak_p95": 0.181048741603992,
+      "p_two_sided": 0.001998001998001998,
+      "n_docs": 32,
+      "bootstrap_CI95": [
+        126.99999999999999,
+        127.0
+      ],
+      "ci_basis": "conditional on bootstrap replicas WITH crossing (аудит v2 §3.2)",
+      "frac_boot_no_crossing": 0.41,
+      "stable": true,
+      "label": "natural × canonical × off²-tail/b_off-top × both"
+    },
+    "22": {
+      "r_cross": 127.0,
+      "delta_peak": 0.619134798762891,
+      "null_peak_p95": 0.3362730637387076,
+      "p_two_sided": 0.001998001998001998,
+      "n_docs": 32,
+      "bootstrap_CI95": [
+        127.0,
+        127.0
+      ],
+      "ci_basis": "conditional on bootstrap replicas WITH crossing (аудит v2 §3.2)",
+      "frac_boot_no_crossing": 0.569,
+      "stable": true,
+      "label": "natural × canonical × off²-tail/b_off-top × both"
+    }
+  },
+  "per_doc_S04_tail_gap": {
+    "18": {
+      "chat#0": 0.5556308662623775,
+      "chat#1": 0.4489555337957049,
+      "chat#2": 0.519560495457368,
+      "chat#3": 0.4797938844356269,
+      "chat#4": 0.5063919029936723,
+      "chat#5": 0.5000754687150801,
+      "chat#6": 0.6465258683071242,
+      "chat#7": 0.41073648818502223,
+      "code#0": 0.35123275876507165,
+      "code#1": 0.5425098272399383,
+      "code#2": 0.5213360320376258,
+      "code#3": 0.4331102214440717,
+      "code#4": 0.48944273642925223,
+      "code#5": 0.4907159065353611,
+      "code#6": 0.4190727338810277,
+      "code#7": 0.4168018104236994,
+      "math#0": 0.42492786602852217,
+      "math#1": 0.35009743236973034,
+      "math#2": 0.4489162451997964,
+      "math#3": 0.2326470463493489,
+      "math#4": 0.4144943954388079,
+      "math#5": 0.38380693817078254,
+      "math#6": 0.2699280339529666,
+      "math#7": 0.356070694381462,
+      "wiki#0": 0.38595373522142506,
+      "wiki#1": 0.5458630018791345,
+      "wiki#2": 0.4681037135358752,
+      "wiki#3": 0.4641390134624399,
+      "wiki#4": 0.48691914785017215,
+      "wiki#5": 0.4932845656090433,
+      "wiki#6": 0.5679245539166214,
+      "wiki#7": 0.41822511597334766
+    },
+    "22": {
+      "chat#0": 0.7013160037358627,
+      "chat#1": 0.6510751528539317,
+      "chat#2": 0.7194232671922054,
+      "chat#3": 0.7467339263092505,
+      "chat#4": 0.712030622782915,
+      "chat#5": 0.6938266390155733,
+      "chat#6": 0.7788901460684585,
+      "chat#7": 0.7344935065281993,
+      "code#0": 0.6638829177530582,
+      "code#1": 0.7657138820845638,
+      "code#2": 0.7229231822396276,
+      "code#3": 0.7246588189919034,
+      "code#4": 0.6474241402452963,
+      "code#5": 0.6902153936101579,
+      "code#6": 0.6182522873655086,
+      "code#7": 0.603917975909737,
+      "math#0": 0.7166123398379994,
+      "math#1": 0.6710121608708063,
+      "math#2": 0.6609555907713659,
+      "math#3": 0.4917314688104586,
+      "math#4": 0.6535940236035841,
+      "math#5": 0.6733556157634419,
+      "math#6": 0.6373589614755607,
+      "math#7": 0.62836255783223,
+      "wiki#0": 0.6803410464972565,
+      "wiki#1": 0.7282933282256436,
+      "wiki#2": 0.6848664556852977,
+      "wiki#3": 0.6065769045038559,
+      "wiki#4": 0.6794206432290875,
+      "wiki#5": 0.7218395896921748,
+      "wiki#6": 0.7540672922821914,
+      "wiki#7": 0.6450934203939549
+    }
+  },
+  "bet_lineage_mixed_bases": {
+    "18": {
+      "r_cross_mixed_bases": 124.88245613012477,
+      "delta_peak": 0.39368616820792174,
+      "note": "bases NOT aligned — lineage only, not an object"
+    },
+    "22": {
+      "r_cross_mixed_bases": 126.99999999999906,
+      "delta_peak": 0.6470638928010959,
+      "note": "bases NOT aligned — lineage only, not an object"
+    }
+  },
+  "prediction_check": {
+    "predicted": 60,
+    "observed": 127.0,
+    "verdict": "miss"
+  },
+  "H4_strong_status": "alive",
+  "deviations_from_spec": [
+    {
+      "id": "D4_single_basis",
+      "description": "off² берётся с СОГЛАСОВАННОЙ гессайновой базы (exp32tail full), а не сырой ESG-база из exp30: пересечение кривых на разных базах не объект; сверка off²(E-32tail)↔ESG(E-30) уже сделана в E-32tail (off2_vs_e30b_*)"
+    },
+    {
+      "id": "D4_layers",
+      "description": "b_off существует только на L18/L22 — «все доступные слои» = {18,22}"
+    },
+    {
+      "id": "D4_r_cross_definition",
+      "description": "объект ставки ИЗМЕНЁН относительно пререгистрации (аудит v2 §3.1): ставка «r_cross ≈ 60» была сформулирована на пересечении ИСХОДНЫХ кривых (C_off²(l,r) = C_b(l,r)), а код считает первый ноль разности НАКОПЛЕННЫХ ДОЛЕЙ cum_b(r) − cum_off²(r) — это другая величина, и «hit/miss» в prediction_check относится к новому объекту; пересчёт старого определения на согласованной базе — отдельная работа (данные exp32tail есть), в этот отчёт не входит"
+    }
+  ],
+  "wall_sec": 2.8
+}

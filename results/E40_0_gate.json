@@ -1,0 +1,104 @@
+{
+  "experiment": "E-40.0",
+  "tz": "docs/e40_todo.md §2 (редакция 2)",
+  "core_version": "v1.0.0",
+  "timestamp": "2026-11-03T23:35:22+0300",
+  "observational": true,
+  "new_forwards": 0,
+  "inputs": {
+    "exp27_jcache": {
+      "path": "/home/survivor/work/prism/experiments/../results/exp27_jcache.pt",
+      "sha256_16": "0dc0e75608d0d31e"
+    },
+    "exp27b_L6": {
+      "path": "/data/prism_kernels/exp27b/results/exp27b_jcache_L6.pt",
+      "sha256_16": "6d6b8ce784a2ad01"
+    }
+  },
+  "channel_tags": [],
+  "code_audit": [
+    {
+      "file": "experiments/exp27.5_pair_matrix.py",
+      "needle": "S, K, POS = 64, 64, 0",
+      "found": true,
+      "line": 28,
+      "meaning": "E-27.5: S=64, K=64, POS=0; «p0» в имени файла = индекс позиции, не фикс. p0"
+    },
+    {
+      "file": "experiments/exp27_6_isolation.py",
+      "needle": "S, K, POS = 64, 128, 0",
+      "found": true,
+      "line": 38,
+      "meaning": "E-27.6 основной срез: S=64, POS=0"
+    },
+    {
+      "file": "experiments/exp27_6_isolation.py",
+      "needle": "(d, si, l, 128, 32)",
+      "found": true,
+      "line": 58,
+      "meaning": "E-27.6 T5-срез читает (S=128, POS=32)"
+    }
+  ],
+  "vector_reconcile": {
+    "intersecting_grid": [
+      [
+        128,
+        0
+      ],
+      [
+        128,
+        1
+      ],
+      [
+        128,
+        2
+      ],
+      [
+        128,
+        32
+      ],
+      [
+        128,
+        33
+      ]
+    ],
+    "n_compared": 800,
+    "covered_slice": "S=128 (срез E-27.6 T5); срез E-27.5 S=64 сверке не подлежит: у exp27b плотный кэш только S=128",
+    "max_abs_dev_reversed": 2.384185791015625e-07,
+    "max_abs_dev_wrong_pairing": 0.9999876960491747,
+    "matches_exp27b": true,
+    "reversal_confirmed": true
+  },
+  "cache_invariants": {
+    "keysets_equal": true,
+    "n_keys_p": 4096,
+    "n_keys_j": 4096,
+    "p_sum_max_dev": 3.5762786865234375e-07,
+    "p_normalized": true,
+    "j_shape": [
+      128,
+      1024
+    ],
+    "j_shape_mismatch": 0,
+    "note": "P128 ренормирована per-position (Σ = 1) — сверять с ней, а не с P128_RAW; несогласованность ключей означала бы, что p и J читаются из разных позиций"
+  },
+  "p_checksum_note": "удалён: Σ‖p_t‖₁ ≈ 4096.000009 — константа для любой ренормированной p, и p_t, и p_0 (ТЗ §2.4)",
+  "E27_5_6_p_slice": "p_t",
+  "p_position": 0,
+  "T5_p_position": 32,
+  "source": "code_audit(exp27.5_pair_matrix.py:28, exp27_6_isolation.py:38,58)",
+  "matches_exp27b": true,
+  "reversal_confirmed": true,
+  "gate_open_items_for_E40_2": [
+    {
+      "item": "p_slice спектров E-27.5/27.6",
+      "status": "resolved (E-40.0)",
+      "value": "p_t (POS=0; T5=POS=32)"
+    }
+  ],
+  "gate_open_items_source": "results/E40_1_audit.json",
+  "gate_pass": true,
+  "E40_2_can_start": true,
+  "gate_pass_note": "гейт = код-аудит (все факты найдены); векторная сверка — диагностика и в вердикт не входит",
+  "wall_sec": 16.4
+}

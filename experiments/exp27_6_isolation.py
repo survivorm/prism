@@ -302,6 +302,9 @@ def t8_per_sample(J, P, H, labels):
 
             # TZ 11.2: g_uni = ||Q J_i||^2_F / E_i, Q = u u^T, u = 1/sqrt(K)
             # (uniform direction, not p-direction; gauge-free projection kills it — review A.3)
+            # ВНИМАНИЕ (аудит §2.11, тройное подтверждение тождества): здесь g_uni считается
+            # ПОСЛЕ P(p), а P(p)·1 = 0 при Σp=1 — поле артефакта ТОЖДЕСТВЕННО 0 (~1e-15).
+            # g_uni в docs/paper.md (0.109–0.215) — на raw J; это поле цитировать нельзя.
             u = np.ones(K) / np.sqrt(K)
             uJ = Jg.T @ u
             g_uni = float((uJ ** 2).sum()) / max(E, 1e-12)

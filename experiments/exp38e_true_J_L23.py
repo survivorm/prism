@@ -238,7 +238,10 @@ def main(docs: int = 8, carrier: str = "", results_dir: str | None = None,
         for J, P in zip(J_docs, P_docs):
             Jd = J.double()
             Pd = P.double()
-            PJ = Pd[..., None] * (Jd - torch.einsum("sk,skd->sd", Pd, Jd))
+            m = torch.einsum("sk,skd->sd", Pd, Jd)          # [S,D] — p-проекция по каждой позиции
+            # багфикс аудита (класс A): без unsqueeze ось S у m ложилась на ось K и
+            # вычиталась строками (s,k); при S=K=128 broadcast был молчаливо законен
+            PJ = Pd[..., None] * (Jd - m.unsqueeze(-2))
             o1 = PJ.pow(2).sum((-1, -2)) / Jd.pow(2).sum((-1, -2))
             iso = (Pd.pow(2).sum(-1) - 2 * Pd.pow(3).sum(-1) + Pd.pow(2).sum(-1) ** 2) / K
             Jt1 = torch.einsum("skd,k->sd", Jd, torch.ones(K, dtype=torch.float64))
@@ -251,6 +254,28 @@ def main(docs: int = 8, carrier: str = "", results_dir: str | None = None,
         # supplement'а: для этого отношения единственная осмысленная агрегация — медиана)
         return {"O1_rel_median": float(o1_rel.median()), "g_uni_median": float(g_uni.median()),
                 "g_uni_mean": float(g_uni.mean())}
+
+    # selfcheck ratios(): явный позиционный цикл против векторизации (ловит класс A —
+    # ровно тот баг, который векторизация молча содержала до фикса unsqueeze)
+    def _ratios_selfcheck() -> float:
+        torch.manual_seed(0)
+        S_, D_ = 5, 32
+        Jr = torch.randn(S_, K, D_, dtype=torch.float64)
+        Pr = torch.softmax(torch.randn(S_, K, dtype=torch.float64), dim=-1)
+        rel = []
+        for t in range(S_):
+            m = sum(Pr[t, k] * Jr[t, k] for k in range(K))                # [D], явная сумма
+            PJt = Pr[t][:, None] * (Jr[t] - m)
+            o1 = PJt.pow(2).sum() / Jr[t].pow(2).sum()
+            p2, p3 = Pr[t].pow(2).sum(), Pr[t].pow(3).sum()
+            rel.append(o1 / ((p2 - 2 * p3 + p2 * p2) / K))
+        ref = float(torch.tensor(rel).median())
+        got = ratios([Jr], [Pr])["O1_rel_median"]
+        err = abs(got - ref) / ref
+        assert err < 1e-12, f"ratios() разошёлся с явным циклом: {got} vs {ref} (rel {err:.2e})"
+        return err
+
+    res["selfcheck_supplement_ratios"] = _ratios_selfcheck()
 
     res["supplement_ratios"] = {"cached": ratios(J_cache_all, P_all), "true": ratios(J_true_all, P_all)}
     del J_true_all, J_cache_all          # списки по доку нужны только для ratios
