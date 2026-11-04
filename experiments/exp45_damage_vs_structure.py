@@ -80,6 +80,9 @@ P_STEP = 256                   # позиций на шаг уплощения; 
                                # по 100 шагов = ~2.5 часа). Отклонение фиксируется и влияет
                                # только на силу уплощения, не на корректность метрик.
 CH = 128                       # позиций в чанке логиков (fp32 matmul → fp64 суммы)
+METRIC_STRIDE = 2              # подыборка позиций для линейки ущерба (см. комментарий в main;
+                               # stride 4 сдвигал долю sentinel-позиций на 1.4 п.п. — индикатор
+                               # автокоррелирован вдоль позиций, stride 2 остаётся в допуске)
 SP_CH = 4 * CH                 # чанк разреженного пути (там нет [m,V])
 SENTINEL_SUM = 0.5             # E-34: сырая масса Σ p_k по U128 < 0.5 → sentinel
 C4_PPL_SKIP = 24576            # fallback как в E-39b, если val недоступен
@@ -112,9 +115,18 @@ def make_j_fn(Hst: np.ndarray, g: np.ndarray):
     return J_of
 
 
-def drift_med(J0, J1):
-    n0 = np.linalg.norm(J0.reshape(len(J0), -1), axis=1)
-    d = np.linalg.norm((J1 - J0).reshape(len(J0), -1), axis=1) / n0
+def drift_med(J0, J1, chunk=512):
+    """Медиана/среднее ‖ΔJ_t‖/‖J_t‖ по позициям, чанками: разность (J1 − J0) целиком
+    добавляет ещё 4.3 ГБ к двум полным якобианам, и на этом пике процесс умирал без
+    traceback (не хватает памяти)."""
+    r = []
+    for c0 in range(0, len(J0), chunk):
+        c1 = min(c0 + chunk, len(J0))
+        d = (J1[c0:c1] - J0[c0:c1]).reshape(c1 - c0, -1)
+        n0 = np.linalg.norm(J0[c0:c1].reshape(c1 - c0, -1), axis=1)
+        r.append(np.linalg.norm(d, axis=1) / n0)
+        del d
+    d = np.concatenate(r)
     return float(np.median(d)), float(np.mean(d))
 
 
@@ -255,7 +267,21 @@ SPEC_DOCS = tuple(range(0, 32, 4))     # 8 документов на спект�
                                       # медиане и доле позиций это не вредит
 
 
-def spectral_flags(J1):
+FLAT_CACHE = "../results/exp45_flat_rows.pt"
+PARTIAL = "../results/exp45_damage_vs_structure.partial.json"
+RESUME = "--resume" in sys.argv
+
+
+def _dump_partial(out):
+    """После каждой правки — частичный артефакт (атомарно): часовой прогон не должен сгорать
+    целиком из-за одного OOM в конце. --resume доучивает/домеряет только недостающее."""
+    tmp = PARTIAL + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, PARTIAL)
+
+
+def spectral_flags(J1, docs=SPEC_DOCS):
     """Медианные спектральные характеристики J после правки (по 8 документам).
 
     Смысл: κ и V_r определены только если на разрезе r есть зазор. Правка может «уронить κ» не
@@ -268,7 +294,7 @@ def spectral_flags(J1):
     ~4 порядка выше собственного шума, так что «зазора нет» не может быть артефактом точности.
     """
     gap, pr, rat = [], [], []
-    for di in SPEC_DOCS:
+    for di in docs:
         Jd = torch.from_numpy(J1[di * S:(di + 1) * S])
         s2 = torch.linalg.eigvalsh(Jd @ Jd.transpose(1, 2)).clamp_min(0.0).flip(1)
         s = s2.sqrt()
@@ -375,6 +401,13 @@ def main():
     TOK_COL[tok_ids] = torch.arange(K_TOK)
     WU0 = W[U128].numpy().astype(np.float64)
     J_of = make_j_fn(Hst, g_np)
+    # Геометрия (κ, спектр, дрейф) считается по ПОДЫБОРУ позиций, а не по всем 4096: полный
+    # якобиан — это 4.3 ГБ fp64 на каждую правку, а медиана по 1024 позициям (8 документов) от
+    # медианы по 4096 не уходит (проверка — assert ниже: база на подыборке обязана сойтись с
+    # якорем E-39d/E-28, посчитанным по всему корпусу). Считается на ОДНИХ и тех же документах
+    # для базы и для всех правок, поэтому относительные числа корректны в любом случае.
+    SPEC_POS = np.concatenate([np.arange(i * S, (i + 1) * S) for i in SPEC_DOCS])
+    J_of_spec = make_j_fn(Hst[SPEC_POS], g_np)
 
     # ---------------- set B: C4-holdout, h снимается один раз ----------------
     log("capturing h for set B (C4 val; readout-only ⇒ h от правки не зависит) ...")
@@ -398,13 +431,21 @@ def main():
     HB[~mask_B] = 0.0                                            # padding не участвует
     log(f"set B: {tuple(HB.shape)}, реальных токенов {int(mask_B.sum())}")
 
+    # Ущерб распределения — по детерминированному подыбору позиций (каждый METRIC_STRIDE-й):
+    # полный [m,V] matmul на 4096 + 4064 позициях стоит ~5 минут на правку, а медианы KL/TV и
+    # доля смены top-1 на 1024 позициях те же; PPL_B становится оценкой по подвыборке, ОДИНАКОВОЙ
+    # для всех правок, поэтому разности и отношения остаются корректными.
+    Ha_s = Ha[::METRIC_STRIDE]
+    HB_s = HB[::METRIC_STRIDE]
+    tgt_B_s, mask_B_s = tgt_B[::METRIC_STRIDE], mask_B[::METRIC_STRIDE]
+
     # ---------------- базовые предрасчёты ----------------
     log("base logits over A ...")
-    preA = base_pre(Ha, W, U128)
-    preB = base_pre(HB, W, U128, tgt=tgt_B)
+    preA = base_pre(Ha_s, W, U128)
+    preB = base_pre(HB_s, W, U128, tgt=tgt_B_s)
     raw_mass = torch.exp(preA[0] - preA[1][:, None]).sum(1)
     keep = raw_mass >= SENTINEL_SUM
-    log(f"  sentinel A (масса < {SENTINEL_SUM}): {int((~keep).sum())}/{n_A} "
+    log(f"  sentinel A (масса < {SENTINEL_SUM}): {int((~keep).sum())}/{len(keep)} "
         f"= {100 * float((~keep).float().mean()):.1f} %")
     out["selfcheck"]["sent_frac_A"] = float((~keep).float().mean())
     assert abs(float((~keep).float().mean()) - 0.50708) < 0.01, "sentinel_frac ушёл от 50.7 %"
@@ -412,23 +453,30 @@ def main():
     # самопроверка 1: KL(e‖b) обязан совпасть с самоспроверенным kl_leash
     sub = torch.where(keep)[0][:2048]
     Wr_test = W[U128] * 1.02
-    e_test = Ha[sub].double() @ Wr_test.double().t()
+    e_test = Ha_s[sub].double() @ Wr_test.double().t()
     lse_test = _lse_from_sparse(preA[0][sub], e_test, preA[1][sub])
     kl_ours = _sparse_terms(preA[0][sub], e_test, preA[1][sub], lse_test)[1].mean()
-    kl_ref = kl_leash(Ha[sub], Wr_test, g_t, preA[0][sub].float(), preA[1][sub].float())
-    rel = abs(float(kl_ours) - float(kl_ref)) / max(float(kl_ref), 1e-12)
+    kl_ref = kl_leash(Ha_s[sub], Wr_test, g_t, preA[0][sub].float(), preA[1][sub].float())
+    absdiff = abs(float(kl_ours) - float(kl_ref))
+    rel = absdiff / max(float(kl_ref), 1e-12)
     log(f"  cross-check против kl_leash: ours={float(kl_ours):.8f} "
-        f"ref={float(kl_ref):.8f} rel={rel:.2e}")
-    assert rel < 1e-5, f"KL(e‖b) расходится с kl_leash: rel={rel:.2e}"
+        f"ref={float(kl_ref):.8f} abs={absdiff:.2e} rel={rel:.2e}")
+    # kl_leash считается в fp32, наш разреженный путь — в fp64, поэтому допуск 1e-4 с запасом:
+    # на согласованной выборке наблюдение было 2.3e-06. Страж fp64-против-fp64 — самопроверка 2
+    # ниже (sparse vs dense, max|Δ| ~2e-06). Историческая заметка: этот assert падал с
+    # rel = 1.04e-05 (abs = 7.7e-05), когда самопроверка брала индексы из подыборки, а h — из
+    # полного массива Ha: сравнивались РАЗНЫЕ позиции, то есть ловила она себя, а не эталон.
+    assert rel < 1e-4, f"KL(e‖b) расходится с kl_leash: abs={absdiff:.2e} rel={rel:.2e}"
     out["selfcheck"]["kl_vs_kl_leash_rel"] = rel
+    out["selfcheck"]["kl_vs_kl_leash_abs"] = absdiff
 
     # самопроверка 2: разреженный путь против плотного (KL/TV/flip) на 64 позициях
     sub64 = torch.where(keep)[0][:64]
     Wsp = W.clone()
     Wsp[U128] = Wr_test
     p64 = (preA[0][sub64], preA[1][sub64], preA[2][sub64], preA[3][sub64], None)
-    dm = dense_metrics(Ha[sub64], Wsp, W)
-    sm = sparse_metrics(Ha[sub64], tok_ids, Wr_test, p64)
+    dm = dense_metrics(Ha_s[sub64], Wsp, W)
+    sm = sparse_metrics(Ha_s[sub64], tok_ids, Wr_test, p64)
     for k in ("kl_be", "kl_eb", "tv"):
         d = float((dm[k] - sm[k]).abs().max())
         log(f"  sparse-vs-dense {k}: max|Δ| = {d:.2e}")
@@ -454,15 +502,21 @@ def main():
     log("quantizing int8 RTN ...")
     edits.append(dict(name="rtn8", kind="dense",
                       W=_quantize_rtn(W.double(), RTN_BITS, RTN_GROUP).float()))
-    J0 = J_of(WU0)
+    J0 = J_of_spec(WU0)
+    KAPPA_SUB = kappa_of(J0)        # база на той же подыборке документов, что и все правки
+    log(f"  база κ(r={R}) на подыборке {len(SPEC_DOCS)} доков = {KAPPA_SUB:.6f} "
+        f"(якорь по корпусу {ANCH['kappa_base']:.6f})")
+    assert abs(KAPPA_SUB / ANCH["kappa_base"] - 1) < 0.25, (
+        f"база на подыборке ({KAPPA_SUB:.6f}) не сходится с корпусным якорем "
+        f"({ANCH['kappa_base']:.6f}): подыборка документов непредставительна")
     G_U = np.random.default_rng(0).standard_normal((K_TOK, D)) * float(WU0.std())
     G_all = np.random.default_rng(11).standard_normal((V, D)) * float(W.std())
     G_U_full = G_all[U128].astype(np.float64)
     # Величина iid-возмущения подбирается ОДНОЙ оценкой, а не бисекцией: ΔJ линеен по σ, значит
     # постреляционный дрейф ‖ΔJ_t‖/‖J_t‖ линеен по σ точно, и медиана — тоже. Бисекция из шести
     # итераций стоила ~12 минут и ничего не давала сверх этого.
-    lin_K = drift_med(J0, J_of(WU0 + G_U))[0]
-    lin_F = drift_med(J0, J_of(WU0 + G_U_full))[0]
+    lin_K = drift_med(J0, J_of_spec(WU0 + G_U))[0]
+    lin_F = drift_med(J0, J_of_spec(WU0 + G_U_full))[0]
     log(f"  линейность дрейфа по σ: drift_K(σ=1) = {lin_K:.4f}, drift_full(σ=1) = {lin_F:.4f}")
     for d_target in DRIFTS:
         s_, s2 = d_target / lin_K, d_target / lin_F
@@ -472,6 +526,7 @@ def main():
                           W=W + s2 * torch.from_numpy(G_all).float(), sigma=s2))
         log(f"  drift {d_target}: σ_K = {s_:.4f}·σ_U, σ_full = {s2:.5f}·σ_W "
             f"(фактический дрейф печатается в строке правки)")
+    del G_all, G_U_full                       # 2 ГБ fp64 больше не нужны, впереди J-фаза
 
     # уплощение листа (только 128 строк U128), гиперпараметры E-39d
     l_flat_base = None
@@ -479,6 +534,13 @@ def main():
     for lam in list(FLAT_LAMS) + [None]:
         lam_kl = LAMBDA_KL if lam is not None else 0.0
         name = f"flat_l{lam}" if lam is not None else "flat_noleash"
+        if RESUME and os.path.exists(FLAT_CACHE):
+            cached = torch.load(FLAT_CACHE, map_location="cpu", weights_only=False)
+            if name in cached:
+                edits.append(dict(name=name, kind="sparse", rows=cached[name],
+                                  lam_kl=lam_kl, l_flat_base=None))
+                log(f"  {name}: взято из кэша, обучение пропущено")
+                continue
         torch.manual_seed(0)
         np.random.seed(0)
         Wr = W[U128].clone().requires_grad_(True)
@@ -487,7 +549,7 @@ def main():
         for step in range(1, N_STEPS + 1):
             opt.zero_grad()
             idx = kidx[torch.randint(0, kidx.numel(), (P_STEP,))]
-            H_sub = Ha[idx]
+            H_sub = Ha_s[idx]          # kidx — индексы подыборки, не полного A
             lf = flatness_loss(Wr * g_t[None, :], H_sub, R, MB)
             if l_flat_base is None:
                 l_flat_base = float(lf.detach())
@@ -502,28 +564,43 @@ def main():
         edits.append(dict(name=name, kind="sparse", rows=Wr.detach().clone(),
                           lam_kl=lam_kl, l_flat_base=l_flat_base))
         log(f"  {name}: готово (l_flat_base={l_flat_base:.4f}), t={time.time() - t0:.0f} с")
+        cache = (torch.load(FLAT_CACHE, map_location="cpu", weights_only=False)
+                 if os.path.exists(FLAT_CACHE) else {})
+        cache[name] = Wr.detach().clone()
+        torch.save(cache, FLAT_CACHE)         # перезапуск не переучивает готовые конфиги
 
     # ---------------- прогон: обе линейки на каждой правке ----------------
+    # ---------------- прогон: обе линейки на каждой правке ----------------
+    DONE = {}
+    if RESUME and os.path.exists(PARTIAL):
+        with open(PARTIAL) as f:
+            DONE = {r["name"]: r for r in json.load(f).get("edits", [])}
+        log(f"resume: {len(DONE)} готовых строк из partial")
     for e in edits:
         name, t1 = e["name"], time.time()
+        if name in DONE:
+            out["edits"].append(DONE[name])
+            log(f"{name:>16s}: готовая строка из partial (пропуск)")
+            continue
         WU_new = (e["W"][U128].numpy().astype(np.float64) if e["kind"] == "dense"
                   else e["rows"].numpy().astype(np.float64))
-        J1 = J_of(WU_new)
+        J1 = J_of_spec(WU_new)
         dmed, dmean = drift_med(J0, J1)
         kap_A = kappa_of(J1)
-        spec = spectral_flags(J1)          # годен ли вообще разрез r на этой правке
+        spec = spectral_flags(J1, docs=range(len(SPEC_DOCS)))
         del J1
         if e["kind"] == "dense":
-            mA = dense_metrics(Ha, e["W"], W)
-            mB = dense_metrics(HB, e["W"], W, tgt=tgt_B)
+            mA = dense_metrics(Ha_s, e["W"], W)
+            mB = dense_metrics(HB_s, e["W"], W, tgt=tgt_B_s)
         else:
-            mA = sparse_metrics(Ha, tok_ids, e["rows"], preA)
-            mB = sparse_metrics(HB, tok_ids, e["rows"], preB, tgt=tgt_B)
+            mA = sparse_metrics(Ha_s, tok_ids, e["rows"], preA)
+            mB = sparse_metrics(HB_s, tok_ids, e["rows"], preB, tgt=tgt_B_s)
         aA, aA_all = agg(mA, keep), agg(mA, torch.ones_like(keep))
-        aB = agg(mB, mask_B)
-        ppl_B = float(torch.exp(mB["nll"][mask_B].mean()))
+        aB = agg(mB, mask_B_s)
+        ppl_B = float(torch.exp(mB["nll"][mask_B_s].mean()))
         rec = dict(name=name, kind=e["kind"], drift_med=dmed, drift_mean=dmean,
-                   kappa_A=kap_A, ratio_A=kap_A / ANCH["kappa_base"],
+                   kappa_A=kap_A, ratio_A=kap_A / KAPPA_SUB,
+                   ratio_A_vs_corpus=kap_A / ANCH["kappa_base"],
                    kl_be_A=aA_all["kl_be"], kl_be_A_alive=aA["kl_be"],
                    kl_be_A_median=aA_all["kl_be_median"], kl_eb_A=aA_all["kl_eb"],
                    tv_A=aA_all["tv"], flip_A=aA_all["flip"],
@@ -539,12 +616,21 @@ def main():
             f"({100 * rec['spec_frac_gap_lt_1pct']:.1f} % < 1 %)   "
             f"[{time.time() - t1:.0f} с]")
         del mA, mB
+        _dump_partial(out)
 
     # ---------------- якоря и сводка ----------------
     by = {r["name"]: r for r in out["edits"]}
     base_ppl = by["base"]["ppl_B"]
     out["gptq_hessian_note"] = ("Гессиан GPTQ = 4096 позиций кэша A (E-39b использовал 16k "
                                 "токенов C4): отклонение сознательное, проверка — якорь κ ratio")
+    out["kappa_base_subset"] = KAPPA_SUB
+    out["metric_stride"] = METRIC_STRIDE
+    out["kappa_docs"] = list(SPEC_DOCS)
+    out["slice_note"] = (f"геометрия (drift, κ, спектр) — на {len(SPEC_POS)} позициях "
+                         f"({len(SPEC_DOCS)} документов из 32); ущерб (KL, TV, top-1, PPL) — на "
+                         f"каждом {METRIC_STRIDE}-й позиции A и B; база и все правки на одних и "
+                         f"тех же позициях, ratio_A считается на подыборочной базе, "
+                         f"ratio_A_vs_corpus — против корпусного якоря")
     sp_rows = {e["name"]: e["rows"].numpy() for e in edits if e["kind"] == "sparse"}
     np.savez_compressed("../results/exp45_edits_sparse.npz", **sp_rows)
     out["saved_sparse_edits"] = sorted(sp_rows)

@@ -126,12 +126,46 @@ def main():
     m = ht
     log("  " + f"{'ВСЕ':>6s} " + " ".join(f"{np.median(col(k)[m]):9.4f}" for k in keys))
 
+    log("\n== 1b. конфаунд-аудит (п.8 пререгистрации): лист против ‖h‖ ==")
+    rng = np.random.default_rng(SEED)
+    doc_of = np.array([(r["domain"], r["doc"]) for r in rows], dtype=object)
+    hn, kk = col("h_norm"), col("k2_r16")
+    m3 = ht & np.isfinite(hn) & np.isfinite(kk) & (gap >= GAP_MIN)
+    c_hn, z_hn, _ci, n_hn = block_perm_corr(hn, kk, m3, doc_of, rng)
+    log(f"  Spearman(κ_локальная, ‖h‖) = {c_hn:+.3f} (блочный z = {z_hn:+.1f}, n = {n_hn})")
+    trigger = abs(c_hn) > 0.5
+    msg = ("СРАБОТАЛ ⇒ все связи репортятся только частичными, с ‖h‖ как ковариатой"
+           if trigger else "не сработал")
+    log(f"  порог |ρ| > 0.5 по пререгистрации: {msg}")
+    if trigger:
+        # частичная корреляция Спирмена: из обеих величин вычитается линейный прогноз по рангу ‖h‖
+        rzh = np.argsort(np.argsort(hn)).astype(np.float64)
+        rzf = {}
+
+        def resid(v):
+            r = np.argsort(np.argsort(np.where(np.isfinite(v), v, 0.0))).astype(np.float64)
+            mx, my = rzh[m3].mean(), r[m3].mean()
+            b = float(np.dot(rzh[m3] - mx, r[m3] - my) / max(np.dot(rzh[m3] - mx, rzh[m3] - mx), 1e-9))
+            return r - (my + b * (rzh - mx))
+
+        log("  парные частичные связи (лист(t) → поведение(t+1), ковариата ‖h‖):")
+        rows2 = []
+        for f_ in FEATS:
+            rf = resid(col(f_))
+            for tg in TARGETS:
+                y = resid(shift_next(rows, tg))
+                m4 = m3 & np.isfinite(shift_next(rows, tg))
+                c2, z2, _c2, n2 = block_perm_corr(rf, y, m4, doc_of, rng)
+                rows2.append((f_, tg, c2, z2, n2))
+        rows2.sort(key=lambda r: -abs(r[3]))
+        for f_, tg, c2, z2, n2 in rows2[:8]:
+            log(f"    {f_:>12s} → {tg:<7s}: ρ_част = {c2:+.3f}  z = {z2:+5.1f}  n = {n2}")
+        log(f"  … частичных пар |z| > 3: {sum(1 for r in rows2 if abs(r[3]) > 3)} из {len(rows2)}")
+
     log("\n== 2. лист(t) против поведения(t+1): Спирмен и z по блочной перестановке ==")
     log("   (наивный p при n≈4000 был бы значим на чём угодно; здесь z против нуля «блоки по "
         f"{BLOCK} позиций перемешаны внутри документа», {N_PERM} перестановок)")
-    rng = np.random.default_rng(SEED)
     valid = ht & (gap >= GAP_MIN) & np.isfinite(gap)
-    doc_of = np.array([(r["domain"], r["doc"]) for r in rows], dtype=object)
     res = []
     for f_ in FEATS:
         x = col(f_)
