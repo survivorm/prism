@@ -36,6 +36,10 @@ def main():
         d = json.load(f)
     ed = {r["name"]: r for r in d["edits"]}
     others = [r for r in d["edits"] if r["name"] != "base"]
+    # iid null'ы того же семейства (E45_SEEDNULL) — не «правки», а линейка разброса одного
+    # draw'а: в критериях 1–5 и в регрессии их быть не должно, они читаются в п.7.
+    fam = [r for r in d["edits"] if r["name"].startswith("seednull_")]
+    others = [r for r in others if not r["name"].startswith("seednull_")]
 
     log("== таблица (подряд, без выделения «удачных») ==")
     hdr = (f"{'правка':>18s} {'дрейф':>7s} {'κ/κ₀':>7s} {'KL_A':>9s} {'KL_B':>9s} "
@@ -120,25 +124,42 @@ def main():
     log(f"  пограничные (<2 %): {near if near else 'нет'}")
 
     # --- п.7 разрешающая способность κ (iid seed null, если уже посчитан) ---
-    log("\n== п.7 с каким κ/κ₀ нельзя спорить: разброс внутри iid-семейства ==")
+    log("\n== п.7 с какими различиями κ и ущерба нельзя спорить: разброс одного draw'а ==")
     sn_path = os.path.join(os.path.dirname(RES), "exp45_kappa_seed_null.json")
-    if not os.path.exists(sn_path):
-        log("  exp45_kappa_seed_null.json ещё нет — пункт пропущен (перезапустить после)")
-    else:
+    if os.path.exists(sn_path):
         with open(sn_path) as f:
             sn = json.load(f)
-        fs, hr = sn["family_spread"], sn["family_spread"]["half_range_pct"]
-        log(f"  {sn['n_seeds']} iid-правок строк U128 при дрейфе {sn['drift_target']}: "
-            f"κ/κ₀ ∈ [{fs['min']:.4f}, {fs['max']:.4f}] ⇒ разброс одного draw ±{hr:.2f} %")
-        log(f"  медианный попарный (док-)bootstrap CI на Δκ: ±{sn['paired_resolution_rel_pct']:.2f} %; "
-            f"несогласованный CI уровня κ: ±{sn['level_boot']['L23']['ci32_rel_pct_n32']:.1f} % (32 дока), "
-            f"±{sn['level_boot']['L23']['ci32_rel_pct_n8']:.1f} % (8 документов)")
-        blind = [(r["name"], 100 * abs(r["ratio_A"] - 1)) for r in others
-                 if 100 * abs(r["ratio_A"] - 1) <= hr]
-        log(f"  правки таблицы, сдвиг κ которых ≤ разброса одного draw: "
-            f"{[(n_, f'{v_:.2f} %') for n_, v_ in blind] if blind else 'нет'}")
-        log("  ⇒ знаку Δκ (поднялся/опустился) верить нельзя, если он не превышает этот разброс; "
-            "величине — только вместе с попарным CI")
+        lb = sn["level_boot"]["L23"]
+        log(f"  несогласованный CI уровня κ (док-бутстрап, exp28 per-doc): "
+            f"±{lb['ci32_rel_pct_n32']:.1f} % при 32 документах, ±{lb['ci32_rel_pct_n8']:.1f} % "
+            f"при 8; rel SD между документами {lb['rel_sd_docs_pct']:.1f} %")
+    if not fam:
+        log("  iid-строк в таблице нет — догнать отдельным проходом: "
+            "E45_SEEDNULL=8 ../.venv/bin/python exp45_damage_vs_structure.py --resume")
+    else:
+        def spread(key, pct=True):
+            v = np.array([r[key] for r in fam], dtype=float)
+            lo, hi = v.min(), v.max()
+            hr = 100 * (hi - lo) / 2 if pct else (hi - lo) / 2
+            return lo, hi, hr, v
+        for key, lbl in (("ratio_A", "κ/κ₀"), ("spec_gap16_med", "gap16"),
+                         ("spec_frac_gap_lt_1pct", "доля позиций с зазором < 1 %"),
+                         ("kl_be_A", "KL A"), ("kl_be_B", "KL B"), ("flip_B", "смена top-1")):
+            lo, hi, hr, v = spread(key, pct=(key == "ratio_A"))
+            log(f"  {len(fam)} draw'ов при дрейфе {fam[0]['drift_med']:.3f}: {lbl} ∈ "
+                f"[{lo:.5g}, {hi:.5g}], медиана {np.median(v):.5g}, «разброс одного draw'а» "
+                f"±{hr:.4g}{' %' if key == 'ratio_A' else ''}")
+        hr_k = spread("ratio_A")[2]
+        blind = [(r["name"], f"{100 * abs(r['ratio_A'] - 1):.2f} %") for r in others
+                 if 100 * abs(r["ratio_A"] - 1) <= hr_k]
+        log(f"  правки, сдвиг κ которых ≤ разброса одного draw'а: {blind if blind else 'нет'}")
+        for key, lbl in (("kl_be_B", "KL B"), ("spec_gap16_med", "gap16")):
+            v = np.array([r[key] for r in fam], dtype=float)
+            out_ = [(r["name"], f"{r[key]:.5g}") for r in others
+                    if not (v.min() <= r[key] <= v.max())]
+            log(f"  правки вне полосы iid-семейства по {lbl}: {out_ if out_ else 'нет'}")
+        log("  ⇒ знаку Δκ и величине gap16 верить нельзя, если они внутри этой полосы; "
+            "заявлять различие можно только выходя за неё")
 
     # --- сводная регрессия: что объясняет ущерб ---
     log("\n== что объясняет KL_B: величина возмущения или лист ==")

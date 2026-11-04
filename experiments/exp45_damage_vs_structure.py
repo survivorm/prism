@@ -66,6 +66,7 @@ N_PPL, S_PPL = 32, 128         # set B: как E-39b (якорь PPL base 34.317
 GPTQ_BITS, GPTQ_GROUP, GPTQ_DAMP = 4, 128, 0.01
 RTN_BITS, RTN_GROUP = 8, 128
 DRIFTS = (0.06, 0.12, 0.25)
+SEEDNULL_DRIFT = 0.12        # дрейф для iid null'а E45_SEEDNULL (середина сетки DRIFTS)
 FLAT_LAMS = (0.01, 0.1)            # сетка E-39d была (0.01, 0.1, 1.0, 10.0); верх отброшен:
                                   # в exp39d_l23_training.json λ=1 даёт PPL 248–320 (+624…+832 %)
                                   # и κ'=0.0043, ХУЖЕ чем λ=0.1 (0.0026), а λ=10 расходился.
@@ -525,6 +526,20 @@ def main():
         log(f"  drift {d_target}: σ_K = {s_:.4f}·σ_U, σ_full = {s2:.5f}·σ_W "
             f"(фактический дрейф печатается в строке правки)")
     del G_all, G_U_full                       # 2 ГБ fp64 больше не нужны, впереди J-фаза
+
+    # iid null того же семейства, НЕСКОЛЬКО draw'ов. Строки rand_K/rand_full — по ОДНОЙ выборке
+    # на семейство, поэтому их взаимные различия (знак Δκ, величина gap16) могут быть разбросом
+    # выборки: якобиан L23 есть функция только 128 строк U128, так что по закону J у rand_K и
+    # rand_full одинаковый. Считается только при E45_SEEDNULL>0 (отдельный --resume-проход),
+    # иначе гонять восемь лишних строк бессмысленно.
+    n_sn = int(os.environ.get("E45_SEEDNULL", "0"))
+    for k in range(n_sn):
+        Gk = np.random.default_rng(100 + k).standard_normal((K_TOK, D)) * float(WU0.std())
+        sk = SEEDNULL_DRIFT / drift_med(J0, J_of_spec(Gk))[0]   # дрейф линеен по σ
+        edits.append(dict(name=f"seednull_s{k}", kind="sparse",
+                          rows=W[U128] + sk * torch.from_numpy(Gk).float(), sigma=sk))
+    if n_sn:
+        log(f"  iid null: {n_sn} draw'ов семейства U128 при дрейфе {SEEDNULL_DRIFT}")
 
     # уплощение листа (только 128 строк U128), гиперпараметры E-39d
     l_flat_base = None
