@@ -68,7 +68,11 @@ RTN_BITS, RTN_GROUP = 8, 128
 DRIFTS = (0.06, 0.12, 0.25)
 FLAT_LAMS = (0.01, 0.1, 1.0, 10.0)
 LAMBDA_KL = 0.1                # вес KL-поводка E-39d (spec §4.4)
-N_STEPS, LR, P_STEP, MB = 100, 1e-3, 512, 64
+N_STEPS, LR, MB = 100, 1e-3, 64
+P_STEP = 256                   # позиций на шаг уплощения; E-39d использовал 512, здесь вдвое
+                               # меньше (замер: ~6 с/шаг при 512 на 12 ядрах CPU, пять конфигов
+                               # по 100 шагов = ~2.5 часа). Отклонение фиксируется и влияет
+                               # только на силу уплощения, не на корректность метрик.
 CH = 128                       # позиций в чанке логиков (fp32 matmul → fp64 суммы)
 SP_CH = 4 * CH                 # чанк разреженного пути (там нет [m,V])
 SENTINEL_SUM = 0.5             # E-34: сырая масса Σ p_k по U128 < 0.5 → sentinel
@@ -448,28 +452,20 @@ def main():
     G_U = np.random.default_rng(0).standard_normal((K_TOK, D)) * float(WU0.std())
     G_all = np.random.default_rng(11).standard_normal((V, D)) * float(W.std())
     G_U_full = G_all[U128].astype(np.float64)
+    # Величина iid-возмущения подбирается ОДНОЙ оценкой, а не бисекцией: ΔJ линеен по σ, значит
+    # постреляционный дрейф ‖ΔJ_t‖/‖J_t‖ линеен по σ точно, и медиана — тоже. Бисекция из шести
+    # итераций стоила ~12 минут и ничего не давала сверх этого.
+    lin_K = drift_med(J0, J_of(WU0 + G_U))[0]
+    lin_F = drift_med(J0, J_of(WU0 + G_U_full))[0]
+    log(f"  линейность дрейфа по σ: drift_K(σ=1) = {lin_K:.4f}, drift_full(σ=1) = {lin_F:.4f}")
     for d_target in DRIFTS:
-        lo, hi = 0.01, 2.0                               # масштаб под медианный дрейф J
-        for _ in range(6):
-            s_ = (lo + hi) / 2
-            if drift_med(J0, J_of(WU0 + s_ * G_U))[0] < d_target:
-                lo = s_
-            else:
-                hi = s_
-        s_ = (lo + hi) / 2
+        s_, s2 = d_target / lin_K, d_target / lin_F
         edits.append(dict(name=f"rand_K_d{d_target}", kind="sparse",
                           rows=W[U128] + s_ * torch.from_numpy(G_U).float(), sigma=s_))
-        lo, hi = 1e-4, 0.2
-        for _ in range(6):
-            s2 = (lo + hi) / 2
-            if drift_med(J0, J_of(WU0 + s2 * G_U_full))[0] < d_target:
-                lo = s2
-            else:
-                hi = s2
-        s2 = (lo + hi) / 2
         edits.append(dict(name=f"rand_full_d{d_target}", kind="dense",
                           W=W + s2 * torch.from_numpy(G_all).float(), sigma=s2))
-        log(f"  drift {d_target}: σ_K = {s_:.4f}·σ_U, σ_full = {s2:.5f}·σ_W")
+        log(f"  drift {d_target}: σ_K = {s_:.4f}·σ_U, σ_full = {s2:.5f}·σ_W "
+            f"(фактический дрейф печатается в строке правки)")
 
     # уплощение листа (только 128 строк U128), гиперпараметры E-39d
     l_flat_base = None
