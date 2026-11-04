@@ -237,6 +237,7 @@ def main(
                 "top1_uniform": top1_uniform,
                 "delta_h_map": (h_q_map - h_vec).norm().item(),
                 "delta_h_uniform": (h_q_uniform - h_vec).norm().item(),
+                "clamp_diag": clamp_diag,
             }
 
             layer_results.setdefault(str(si), []).append(entry)
