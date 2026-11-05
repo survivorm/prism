@@ -277,7 +277,9 @@ def main():
                             V = V / V.norm(dim=0, keepdim=True)
                             V = torch.linalg.qr(V)[0]
                             if metric == "M":
-                                V = torch.linalg.qr(Lch @ V)[0]
+                                # ревью E49-2 §2.1: cholesky даёт G=L·Lᵀ ⇒ G-ортонорм
+                                # = qr(LᵀV); инлайн-ветка ранее крутила метрику LᵀL
+                                V = torch.linalg.qr(Lch.T @ V)[0]
                             Vs.append(V)
                         comb.setdefault(f"W{W}_r{r}_{metric}", []).append(doc_stats(Vs, None))
                 del eig
