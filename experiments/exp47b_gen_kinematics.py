@@ -127,9 +127,17 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
     # e52k падал здесь на GPU: `pre`/`raw` ниже снимаются на CPU, а `wn` оставался на
     # cuda:0, и проверка g-режима (голый w против 1+w) давала cuda/cpu mismatch. wn дальше
     # употребляется только через .cpu() (C.head_M, feats), поэтому CPU-размещение безопасно.
-    wn = norm.weight.detach().float().cpu()
+    wn = norm.weight.detach().float().cpu().clone()   # clone: у quantized-весов .cpu() может оставаться view
     # эмпирика семантики RMSNorm: gemma-style g=1+w против голого g=w (Qwen2/3)
-    with torch.no_grad():
+    if os.environ.get("PRISM_SKIP_NORM_TEST") == "1":
+        # семантика g уже проверен локально (E-47b): qwen3_5/gemma-style -> g=1+w
+        g_mode = "1p_w" if "Qwen3_5" in type(norm).__name__ else "w"
+        print(f"[norm] тест пропущен (PRISM_SKIP_NORM_TEST=1), g_mode={g_mode}", flush=True)
+        wn = norm.weight.detach().float().cpu().clone()
+        g_n = (wn if g_mode == "w" else 1.0 + wn)
+        eps = float(getattr(norm, "variance_epsilon", getattr(norm, "eps", 1e-6)))
+    else:
+     with torch.no_grad():
         prb = torch.randint(1, 1000, (1, 8), device=dev)
         pre_c = []
         hk = norm.register_forward_hook(lambda _m, inp, _o: pre_c.append(inp[0].detach()))
