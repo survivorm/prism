@@ -77,11 +77,14 @@ from exp49_leaf_info import load_model, smoothed_us  # noqa: E402
 from exp50_gauges import pullback_step, safe_med, boot_ci, det_seed  # noqa: E402
 
 TMAX = 96
+MIN_STEP = 5e-4
 N_SW = 1      # swap — вторичный диагностик (null почти no-op, см. докстринг)
 N_SUR = 2     # главный null: step-matched суррогат, 2 реплики
 LAGS = (4, 8, 16, 32)   # L=64 убран: 30% времени ради хвоста кривой, не участвующего в вердикте
 MAIN_LAG = 16
 _DEV = {"xl": 0.0, "q": 0.0}          # надзор ортогональности (п.6-7 ревью)
+_DEV_BY = {}                          # per-tag снапшоты (ревью-7 п.2)
+_TAG = ["ctrl"]
 _EYE16 = None
 
 
@@ -103,8 +106,10 @@ def loop_curvature(Vs, t, L):
     r_ = Xl.shape[0]
     if _EYE16 is None or _EYE16.shape[0] != r_:
         _EYE16 = torch.eye(r_, dtype=torch.float64)
-    _DEV["xl"] = max(_DEV["xl"], float((Xl.T @ Xl - _EYE16).abs().max()))
-    _DEV["q"] = max(_DEV["q"], float((Q.T @ Q - _EYE16).abs().max()))
+    dxl = float((Xl.T @ Xl - _EYE16).abs().max()); dq = float((Q.T @ Q - _EYE16).abs().max())
+    _DEV["xl"] = max(_DEV["xl"], dxl); _DEV["q"] = max(_DEV["q"], dq)
+    d = _DEV_BY.setdefault(_TAG[0], {"xl": 0.0, "q": 0.0})
+    d["xl"] = max(d["xl"], dxl); d["q"] = max(d["q"], dq)
     th, _, _ = C.schur_angles(Q)
     return float(torch.sqrt((th * th).sum()))
 
@@ -168,7 +173,7 @@ def synth_white_matched(Vs_ref, D, r, T, seed):
     распределения. (До фикса раунда-6 «шаг» считался как 1−tr(VᵀV') ≈ −15 и
     clamp'ился в константу — матчинг был мнимый.)"""
     step = mean_step(Vs_ref)                 # = ||Θ||_2 (та же метрика, что κ)
-    step = min(max(step, 5e-4), 0.6)
+    step = min(max(step, MIN_STEP), 0.6)
     ang_step = step / math.sqrt(r)           # суррогат вращает все r плоскостей на ang:
     ang = ang_step                           # его ||Θ||_2 = √r·ang = step (точный матчинг)
     g = torch.Generator().manual_seed(seed)
@@ -314,6 +319,7 @@ def main():
         hn = np.asarray(f["hnorm"], dtype=float)[:TMAX]
         rng = None
         for W in (1, 16):
+            _TAG[0] = f"W{W}"                                      # per-tag DEV
             rng = np.random.default_rng(det_seed(f"{key}_W{W}"))   # независимость W-проходов
             Vs = frames_of(u, hn, A, eps, W)
             kr = kappa_curve(Vs)
@@ -335,6 +341,7 @@ def main():
             row["k_sur"] = {str(L): safe_med([x for sub in ku[L] for x in sub]) for L in LAGS}
             row["mean_step_real"] = round(mean_step(Vs), 5)   # контроль матчинга null'а
             row["mean_step_sur"] = round(float(np.mean(steps_sur)), 5)
+            row["step_clamped"] = bool(row["mean_step_real"] < MIN_STEP)  # П3 ревью-7
             # ПАРА по ДОКУМЕНТУ: среднее по позициям (для парного bootstrap по n_doc)
             row["d16_mean"] = None
             row["d16_swap_mean"] = None
@@ -372,7 +379,7 @@ def main():
             "k_coh_control": out["controls"].get("coh_k16_med"),
             "k_white_matched_control": out["controls"].get("white_matched_k16_med"),
             "coh_d16_sign_control": out["controls"].get("coh_d16_sign"),
-            "max_nonorthogonality": dict(_DEV),   #кумулятив по всему прогону (safety-метр)
+            "max_nonorthogonality": _DEV_BY.get(tag, dict(_DEV)),  # per-tag (ревью-7 п.2)
             "n_docs": len(dd),
         }
         lo, hi = summ[tag]["paired_d16_by_doc"][1]
