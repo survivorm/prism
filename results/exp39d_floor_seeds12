@@ -1,0 +1,210 @@
+{
+  "experiment": "E-39d: L23 readout training with flatness regularizer + pearson-ordering",
+  "tz": "docs/E39.md §4",
+  "params": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "r": 16,
+    "kappa_target": 0.005,
+    "kl_pass": 0.05,
+    "lambda_kl": 0.1,
+    "lambda_grid": [
+      0.01
+    ],
+    "n_steps": 100,
+    "lr": 0.001,
+    "seeds": [
+      1,
+      2
+    ],
+    "p_step": 512,
+    "micro_batch": 64,
+    "order_mode": "pearson",
+    "order_grid": [
+      1.0
+    ],
+    "n_total_pos": 4096,
+    "n_docs": 32,
+    "S": 128,
+    "vocab": 248320,
+    "k_tokens": 128,
+    "device": "cpu",
+    "c4_skip": 4096,
+    "n_docs_ppl": 8,
+    "sentinel_excluded": 2271,
+    "trainable": "W_lm[token_set] (128×1024); g (RMSNorm) FROZEN"
+  },
+  "kappa_base": 0.01592266925901069,
+  "kappa_base_ci": [
+    0.013719908665637872,
+    0.022509675020409493
+  ],
+  "ppl_base": 34.31424616090346,
+  "runs": [
+    {
+      "lambda": 0.01,
+      "lambda_order": 1.0,
+      "seed": 1,
+      "history": [
+        {
+          "step": 20,
+          "loss": 0.01209414005279541,
+          "l_flat": 0.6991251707077026,
+          "l_kl": 0.028106842190027237,
+          "l_order": 0.0022922041825950146,
+          "ordering_corr": 0.9977077841758728,
+          "kappa": 0.013146193691777532,
+          "ppl": 34.66278713491337
+        },
+        {
+          "step": 40,
+          "loss": 0.008141424506902695,
+          "l_flat": 0.619398295879364,
+          "l_kl": 0.009652944281697273,
+          "l_order": 0.0009821474086493254,
+          "ordering_corr": 0.9990178942680359,
+          "kappa": 0.01171043238537577,
+          "ppl": 34.522052405914245
+        },
+        {
+          "step": 60,
+          "loss": 0.00720163993537426,
+          "l_flat": 0.5694023370742798,
+          "l_kl": 0.007125596050173044,
+          "l_order": 0.000795057276263833,
+          "ordering_corr": 0.9992049336433411,
+          "kappa": 0.010657893199347446,
+          "ppl": 34.45530842846854
+        },
+        {
+          "step": 80,
+          "loss": 0.0063358028419315815,
+          "l_flat": 0.5055713653564453,
+          "l_kl": 0.005686409771442413,
+          "l_order": 0.0007114484906196594,
+          "ordering_corr": 0.9992886185646057,
+          "kappa": 0.009892186218590612,
+          "ppl": 34.525814040137064
+        },
+        {
+          "step": 100,
+          "loss": 0.006339543964713812,
+          "l_flat": 0.4703095257282257,
+          "l_kl": 0.008449159562587738,
+          "l_order": 0.0007915328023955226,
+          "ordering_corr": 0.9992085099220276,
+          "kappa": 0.009237998543813578,
+          "ppl": 34.62040092771691
+        }
+      ],
+      "final": {
+        "kappa": 0.009237998543813578,
+        "ppl": 34.62040092771691,
+        "ppl_delta_pct": 0.8922089250565257,
+        "kappa_improvement": 1.7236059503033416,
+        "delta_W_rel": 0.23766008019447327,
+        "kl_full": 0.004617474507540464,
+        "kl_full_2forward_check": 0.013225485570728779,
+        "kl_last": 0.008449159562587738,
+        "ordering_corr_final": 0.9992485046386719,
+        "elapsed_s": 1126.5966651439667
+      },
+      "verdict": "TARGET_NOT_MET",
+      "verdict_detail": {
+        "kappa_target_met": false,
+        "ppl_within_2pct": true,
+        "kl_within_budget": true
+      }
+    },
+    {
+      "lambda": 0.01,
+      "lambda_order": 1.0,
+      "seed": 2,
+      "history": [
+        {
+          "step": 20,
+          "loss": 0.011628661304712296,
+          "l_flat": 0.6992867588996887,
+          "l_kl": 0.024186907336115837,
+          "l_order": 0.002217102563008666,
+          "ordering_corr": 0.9977829456329346,
+          "kappa": 0.01324390100930886,
+          "ppl": 34.721579244187026
+        },
+        {
+          "step": 40,
+          "loss": 0.008320803754031658,
+          "l_flat": 0.6096193194389343,
+          "l_kl": 0.012148760259151459,
+          "l_order": 0.0010097339982166886,
+          "ordering_corr": 0.9989902973175049,
+          "kappa": 0.01163353031145086,
+          "ppl": 34.55518863025665
+        },
+        {
+          "step": 60,
+          "loss": 0.0071587772108614445,
+          "l_flat": 0.5571281313896179,
+          "l_kl": 0.007383100688457489,
+          "l_order": 0.0008491860935464501,
+          "ordering_corr": 0.9991508722305298,
+          "kappa": 0.010604235663177319,
+          "ppl": 34.57718444857611
+        },
+        {
+          "step": 80,
+          "loss": 0.006488088518381119,
+          "l_flat": 0.5103548169136047,
+          "l_kl": 0.006351912394165993,
+          "l_order": 0.0007493493612855673,
+          "ordering_corr": 0.9992507100105286,
+          "kappa": 0.009886747655054333,
+          "ppl": 34.5442659746691
+        },
+        {
+          "step": 100,
+          "loss": 0.005887369159609079,
+          "l_flat": 0.45950013399124146,
+          "l_kl": 0.00478899572044611,
+          "l_order": 0.0008134684758260846,
+          "ordering_corr": 0.9991865158081055,
+          "kappa": 0.009222926141468472,
+          "ppl": 34.61644741715578
+        }
+      ],
+      "final": {
+        "kappa": 0.009222926141468472,
+        "ppl": 34.61644741715578,
+        "ppl_delta_pct": 0.8806874405320464,
+        "kappa_improvement": 1.7264227225477364,
+        "delta_W_rel": 0.23662489652633667,
+        "kl_full": 0.005846877582371235,
+        "kl_full_2forward_check": null,
+        "kl_last": 0.00478899572044611,
+        "ordering_corr_final": 0.9991995692253113,
+        "elapsed_s": 750.566400051117
+      },
+      "verdict": "TARGET_NOT_MET",
+      "verdict_detail": {
+        "kappa_target_met": false,
+        "ppl_within_2pct": true,
+        "kl_within_budget": true
+      }
+    }
+  ],
+  "summary": {
+    "best_kappa": 0.009222926141468472,
+    "best_lambda": 0.01,
+    "best_seed": 2,
+    "best_ppl": 34.61644741715578,
+    "best_ppl_delta_pct": 0.8806874405320464,
+    "best_kl_full": 0.005846877582371235,
+    "best_kappa_improvement": 1.7264227225477364,
+    "n_success": 0,
+    "n_partial": 0,
+    "n_fail": 0,
+    "n_diverged": 0,
+    "n_target_not_met": 2,
+    "total_time_s": 2054.8367536067963,
+    "interpretation": "No run met all three criteria. Lowest κ' =0.009223 (base=0.015923) at λ=0.01, seed=2 (PPL +0.88%, KL_full 0.0058). Verdicts: 0 SUCCESS / 0 PARTIAL_BEHAVIOR_COST / 2 TARGET_NOT_MET / 0 FAIL / 0 DIVERGED."
+  }
+}

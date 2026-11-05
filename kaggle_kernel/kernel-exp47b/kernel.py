@@ -9,8 +9,8 @@ try:
     subprocess.run(["pip", "uninstall", "-y", "-q", "torch", "torchvision", "torchaudio",
                     "cudf", "dask-cuda", "cuml", "cuml-cu12", "libcuml", "numba-cuda"],
                    check=False, capture_output=True)
-    subprocess.run(["pip", "install", "-q", "torch==2.5.1+cu121",
-                    "--index-url", "https://download.pytorch.org/whl/cu121"], check=True)
+    subprocess.run(["pip", "install", "-q", "torch==2.6.0+cu124",
+                    "--index-url", "https://download.pytorch.org/whl/cu124"], check=True)
     subprocess.run(["pip", "install", "-q", "-U", "transformers", "datasets"], check=True)
 
     import torch
@@ -27,7 +27,7 @@ try:
 
     exp = os.path.join(code, "experiments", "exp47b_gen_kinematics.py")
     cmd = [sys.executable, "-u", exp, "--model", model, "--device", "cuda",
-           "--n-docs", "16", "--max-new", "384", "--prompt-len", "64", "--seed", "47",
+           "--n-docs", "16", "--max-new", "384", "--prompt-len", "64",
            "--results-dir", "/kaggle/working"]
     print("RUN", " ".join(cmd), flush=True)
     subprocess.run(cmd, check=True)

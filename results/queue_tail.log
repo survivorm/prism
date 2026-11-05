@@ -1,0 +1,6 @@
+c rc=0
+Traceback (most recent call last):
+  File "<stdin>", line 6, in <module>
+KeyError: 'done'
+iid2 rc=0
+verdicts2 rc=0

@@ -1,0 +1,20 @@
+[queue] 23:00:41 ждём окончания exp45_damage_vs_structure
+[queue] 03:19:06 E-45 завершён
+[queue] 03:19:06 E-45c (калибровочный нуль)
+Terminated                 ../.venv/bin/python exp45c_gauge_null.py > "$R/exp45c_gauge_null.log" 2>&1
+[queue] 04:18:49 rc(E-45c)=0
+[queue] 04:18:49 E-45b (таблица лист↔поведение)
+[queue] 06:00:08 rc(E-45b)=0
+[queue] 06:00:08 вердикты E-45
+[queue] 06:00:09 rc(verdicts)=0
+[queue] 06:00:09 анализ E-45b
+[queue] 06:00:09 rc(analysis)=0
+[queue] 06:00:09 E-46 (лист как носитель)
+[queue] 06:00:17 rc(E-46)=0
+[queue] 06:00:17 вердикты E-46
+[queue] 06:00:18 rc(E-46 verdicts)=0
+[queue] 06:00:18 iid-семейство E-45 (8 draw'ов того же класса правок)
+[queue] 06:04:33 rc(seednull)=0
+[queue] 06:04:33 вердикты E-45 повторно (с полосой семейства, п.7)
+[queue] 06:04:33 rc(verdicts 2)=0
+[queue] 06:04:33 очередь пуста
