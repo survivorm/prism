@@ -19,14 +19,28 @@ r=1-транспорт e50):
   I5 SPECTR  — ряды σ₁..σ₄(J(t)): τ и автокорреляция (порядок 0: присоединённые
                инварианты; null для них — только перестановочный, отмечаем честно).
 
-КОНТРОЛИ: точная геодезическая (I1≈+1, I3≡const) и белый ряд (I1≈0, I2≈0) — до данных.
-NULL: swap-local (25% транспозиций соседей; гауз и все инварианты пересчитываются).
-ВЕРДИКТ (предрегистрирован): инвариант выживает, если |real − swap| вне bootstrap-CI
-swap И знак стабилен минимум в 3/4 доменов.
+КОНТРОЛИ (раунд-3 ревью П0-1): геодезическая с COHERENT 2-фреймом (данные дают
+детерминированный v2 — контроль обязан совпадать по структуре): I1≈+1, I3≡const,
+I2=+1 точно (det ≡ +1); белый ряд с INCOHERENT pl: I1≈0, I2≈0, I3_sd>0.2.
+Контроль скобкует I2 с двух сторон [0,1].
+NULL (трёхступенчатый): sur = step-matched белая прямая (сильный: тот же шаг,
+нулевая динамика), sw = 25% транспозиций соседей (локальный порядок), sh = полный
+перемешивание (весь порядок); реплики j=0..1, paired по документу.
+ВЕРДИКТ (предрегистрирован v3, 2026-11-06, ДО просмотра данных; по каждому
+инварианту: значимо = CI разности не содержит 0 И знак согласован в >=3/4
+доменов):
+  "directional+ordering"    — sur И sw значимы (не step-случайно, порядок важен);
+  "directional(order-free)" — только sur (гладкая структура вне локального порядка);
+  "local-ordering"          — только sw;
+  "long-range-only"         — только sh;
+  "domain-dependent"        — overall значимо, но <3/4 доменов (не подтверждён);
+  "null-compatible"         — ни против одного нуля не значимо.
+Для I5 — только vs sh (у sur нет σ-ряда).
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -71,7 +85,7 @@ def gauge_along_lines(vv, mats):
             gm.append(T.T @ mats[t])
     # _DEV (ревью E51 §6): дрейф ортогональности накопленного T — O(D³) один раз
     # на документ; численный шум не должен имитировать нетривиальность.
-    dev = float(np.abs(T.T @ T - torch.eye(D, dtype=torch.float64)).max())
+    dev = float((T.T @ T - torch.eye(D, dtype=torch.float64)).abs().max())
     return gvv, gm, gdg, dev
 
 
@@ -170,12 +184,21 @@ def run_controls(T=96, D=400):
     series["white"] = [nz(torch.randn(D, dtype=torch.float64, generator=g2)) for _ in range(T)]
     for kind in ("geo", "white"):
         vv = series[kind]
-        rngp = torch.Generator().manual_seed(9)
         pl = []
-        for x in vv:
-            zz = nz(torch.randn(D, dtype=torch.float64, generator=rngp))
-            zz = nz(zz - x * (x @ zz))
-            pl.append(torch.stack([x, zz], 1))
+        if kind == "geo":
+            # П0-1 (ревью-3): COHERENT pl — как в данных (v2 детерминирован), а не
+            # случайный zz_t: вращающийся 2-фрейм даёт det(pl_t^T pl_{t+1}) ≡ +1.
+            for t in range(T):
+                a = 0.012 * t
+                pl.append(torch.stack([u0 * math.cos(a) + w0 * math.sin(a),
+                                       -u0 * math.sin(a) + w0 * math.cos(a)], 1))
+        else:
+            # INCOHERENT pl — белая несвязная ориентация: null I2 ≈ 0.
+            rngp = torch.Generator().manual_seed(9)
+            for x in vv:
+                zz = nz(torch.randn(D, dtype=torch.float64, generator=rngp))
+                zz = nz(zz - x * (x @ zz))
+                pl.append(torch.stack([x, zz], 1))
         gv, gpl, gdg, gdev = gauge_along_lines(vv, pl)
         # I2/I3 — инвариантны (детерминанты Грэма / CR) БЕЗ транспорта; на транспор-
         # тированных рамках они ВЫРОЖДАЮТСЯ (правая композиция: gv ≡ ±v0 точно —
@@ -188,6 +211,7 @@ def run_controls(T=96, D=400):
     def gt(x, thr):   # strict-greater со строгим None-обращением (0.0 — валидное число!)
         return x is not None and x > thr
     ok = ((res["geo"]["I1_l1"] is not None and abs(res["geo"]["I1_l1"] - 1.0) < 0.1)
+          and (res["geo"]["I2_mean"] is not None and abs(res["geo"]["I2_mean"] - 1.0) < 0.1)
           and (res["geo"]["I3_sd"] is not None and res["geo"]["I3_sd"] < 0.02)
           and (res["geo"]["I4_e"] is not None and res["geo"]["I4_e"] < 0.3)
           and (res["white"]["I1_l8"] is not None and abs(res["white"]["I1_l8"]) < 0.07)
@@ -212,16 +236,19 @@ def swap_idx(T, rng):
     return idx
 
 
-def surrogate_lines(v1s, rng):
+def surrogate_lines(v1s, key, j):
     """Step-matched белая прямая (тот же RMS шаг, что у реальных линий v1s) +
     случайный орт-комплемент: нуль «та же скорость, нулевая динамика» (первичный
     нуль E50v3). Ревью E51 §2/§9: swap-25% слаб для I1 на малых лагах и для
-    порядка I2/I3 — нужен сильный нуль."""
+    порядка I2/I3 — нужен сильный нуль. Seed — детерминированный от (key, j)
+    (ревью-3 П1-2): результат не зависит от порядка вызовов нулей."""
     Vs = torch.stack([v.detach() for v in v1s])[:, :, None]  # [n,D,r=1], torch
     D = Vs.shape[1]
-    vs = E50.synth_white_matched(Vs, D, 1, len(v1s), int(rng.integers(1 << 30)))
+    h = hashlib.sha256(f"{key}|sur{j}|".encode()).digest()
+    vs = E50.synth_white_matched(Vs, D, 1, len(v1s),
+                                 int.from_bytes(h[:8], "little") % (1 << 62))
     out_v, out_p = [], []
-    rg = torch.Generator().manual_seed(int(rng.integers(1 << 30)))
+    rg = torch.Generator().manual_seed(int.from_bytes(h[8:16], "little") % (1 << 62))
     for x in vs:
         xt = x.reshape(-1).to(torch.float64)
         zz = torch.randn(D, dtype=torch.float64, generator=rg)
@@ -233,7 +260,7 @@ def surrogate_lines(v1s, rng):
 
 def bundle(vv, pl, specs=None):
     gv, gpl, gdg, gdev = gauge_along_lines(vv, pl)
-    I1 = inv_I1(gdg); I2 = inv_I2(pl); I3 = inv_I3(vv); e, axd = inv_I4(gdg)
+    I1 = inv_I1(gdg); I2 = inv_I2(pl); I3 = inv_I3(vv); e, _dr = inv_I4(gdg)
     return dict(I1_1=safe_med(I1[1]), I1_8=safe_med(I1[8]),
                 I1_1_all=I1[1], I1_8_all=I1[8],
                 I2=round(float(np.mean(I2)), 4) if I2 else None,
@@ -285,6 +312,12 @@ def main():
                    I1_8=b["I1_8"], I1_8_ci=boot_mean_ci(b["I1_8_all"]),
                    I2=b["I2"], I3_sd=b["I3_sd"], I4_e=b["I4_e"], I5=b["I5"],
                    gauge_dev=b["gauge_dev"])
+        S2 = np.asarray(specs, dtype=float)   # П1-1: rank-deficiency v2
+        if S2.ndim == 2 and S2.shape[1] > 1:
+            row["frac_rankdef"] = round(float(np.mean(S2[:, 1] < 0.01 * S2[:, 0])), 4)
+            row["gap_s2s1"] = safe_med((S2[:, 1] / np.maximum(S2[:, 0], 1e-12)).tolist())
+            row["gap_s3s2"] = (safe_med((S2[:, 2] / np.maximum(S2[:, 1], 1e-12)).tolist())
+                               if S2.shape[1] > 2 else None)
         n_ = len(v1s)
         for j in range(N_SW):
             idx = swap_idx(n_, rng)
@@ -297,7 +330,7 @@ def main():
                         [specs[i] for i in sh])
             row[f"sh{j}"] = {k: bb[k] for k in NULL_KEYS}
             row[f"sh{j}"]["I5"] = bb["I5"]
-            sv, sp = surrogate_lines(v1s, rng)
+            sv, sp = surrogate_lines(v1s, key, j)
             bb = bundle(sv, sp)
             row[f"sur{j}"] = {k: bb[k] for k in NULL_KEYS}
         rep.setdefault(doc["dom"], []).append(row)
@@ -322,23 +355,39 @@ def main():
     for dom, rows in rep.items():
         summ[dom] = {f: safe_med([r[f] for r in rows]) for f in FIELDS}
         summ[dom]["I5_tau_s1"] = safe_med([r["I5"].get("tau_s1") for r in rows])
+        summ[dom]["frac_rankdef"] = safe_med([r.get("frac_rankdef") for r in rows])
     allr = [r for rows in rep.values() for r in rows]
     s = summ["_all"] = {}
     s["max_gauge_dev"] = max((r["gauge_dev"] for r in allr), default=None)
+    s["frac_rankdef_median"] = safe_med([r.get("frac_rankdef") for r in allr])
+    s["I2_rankdef_caveat"] = bool((s["frac_rankdef_median"] or 0) > 0.2)
     for f in FIELDS:
         s[f] = [safe_med([r[f] for r in allr]), boot_ci([r[f] for r in allr])]
+    # Вердикт v3 (предрегистр. в docstring): overall CI + >=3/4 доменов того же знака
+    ndom = len(rep)
+    dom_need = max(1, math.ceil(0.75 * ndom))
     verdict = {}
     for f in FIELDS:
-        sig = {}
+        sig, domc = {}, {}
         for n in NULLS:
             d = [x for rows in rep.values() for x in paired(rows, f, n)]
             s[f"vs_{n}_" + f] = [safe_med(d), boot_mean_ci(d)]
             lo, hi = s[f"vs_{n}_" + f][1]
             sig[n] = lo is not None and lo * hi > 0
-        verdict[f] = ("directional+ordering" if sig["sur"] and sig["sw"] else
-                      "directional(order-free)" if sig["sur"] else
-                      "local-ordering" if sig["sw"] else
-                      "long-range-only" if sig["sh"] else "null-compatible")
+            dc = 0
+            for rows in rep.values():
+                dlo, dhi = boot_mean_ci(paired(rows, f, n))[1]
+                if dlo is not None and dlo * dhi > 0:
+                    dc += 1
+            domc[n] = dc
+            s[f"doms_{n}_" + f] = dc
+        rob = {n: sig[n] and domc[n] >= dom_need for n in NULLS}
+        verdict[f] = ("directional+ordering" if rob["sur"] and rob["sw"] else
+                      "directional(order-free)" if rob["sur"] else
+                      "local-ordering" if rob["sw"] else
+                      "long-range-only" if rob["sh"] else
+                      "domain-dependent" if any(sig.values()) else "null-compatible")
+    s["dom_need"] = dom_need
     for key in ("tau_s1", "r1_L16"):   # I5: paired против полного shuffle (у sur нет specs)
         d = []
         for r in allr:
