@@ -658,13 +658,26 @@ def main():
     out["base_ppl_B"] = base_ppl
     out["ppl_delta_pct"] = {k: 100 * (r["ppl_B"] / base_ppl - 1)
                             for k, r in by.items() if k != "base"}
-    for k, v, tol in (("kappa_base", by["base"]["kappa_A"], 2e-3),
-                      ("ppl_base", base_ppl, 5e-3),
-                      ("ppl_gptq4", by["gptq4"]["ppl_B"], 2e-2),
-                      ("gptq_kappa_ratio", by["gptq4"]["ratio_A"], 5e-2)):
+    # Якорные сверки: два разных утверждения, которые раньше были слиты в один список.
+    # (а) самоточность конвейера — те же позиции, тот же код ⇒ совпадение до 1e-12 (см. ratio_A
+    #     базы ниже); (б) сопоставимость с ЧУЖИМ срезом — E-28/E-39b считали κ по 4096 позициям,
+    #     PPL по 8 документам C4, поэтому разность там есть выборка, а не ошибка: несогласованный
+    #     док-бутстрап уровня κ на L23 даёт ±9.5 % при 8 документах
+    #     (results/exp45_kappa_seed_null.json). Допуски обязаны быть порядка этой полосы.
+    rel_self = abs(by["base"]["ratio_A"] - 1.0)
+    log(f"  самоточность: ratio_A базы = {by['base']['ratio_A']:.12f} (rel {rel_self:.2e})")
+    assert rel_self < 1e-12, f"база не совпадает сама с собой: {by['base']['ratio_A']}"
+    out["selfcheck"]["kappa_selfcheck_rel"] = rel_self
+    for k, v, tol, why in (
+            ("kappa_base", by["base"]["kappa_A"], 0.25,
+             "другой срез позиций: 8 документов против 4096 (полоса ±9.5 %)"),
+            ("ppl_base", base_ppl, 0.15, "другой корпус C4: 32 документа против 8 у E-39b"),
+            ("ppl_gptq4", by["gptq4"]["ppl_B"], 0.15, "то же, на правке GPTQ"),
+            ("gptq_kappa_ratio", by["gptq4"]["ratio_A"], 5e-2,
+             "тот же объект и тип отношения, допуск узкий")):
         rel = abs(v / ANCH[k] - 1)
-        log(f"anchor {k}: {v:.6g} vs {ANCH[k]:.6g} (rel {rel:.2e}, допуск {tol:.0e})")
-        assert rel < tol, f"якорь {k} не сошёлся: rel={rel:.2e}"
+        log(f"anchor {k}: {v:.6g} vs {ANCH[k]:.6g} (rel {rel:.2e}, допуск {tol:.0e}; {why})")
+        assert rel < tol, f"якорь {k} не сошёлся: rel={rel:.2e} — {why}"
         out["selfcheck"][f"anchor_{k}_rel"] = rel
     assert by["base"]["kl_be_B"] < 1e-9, "base должен давать KL = 0 точно"
     for lam in FLAT_LAMS:
