@@ -1,26 +1,30 @@
 #!/bin/bash
-# Waits for a free batch-GPU slot (exp17/exp18 RUNNING), then pushes probe -> exp19 -> exp16r.
+# Очередь GPU-перегенераций (docs/regen_queue.md). Слот: Kaggle держит 2 одновременные
+# GPU-сессии на аккаунт, поэтому пушим по одному, как только освобождается слот.
+# Убитый ранее сторож: exp3 -> exp2a; здесь добавлен exp48b (аудит E46+ A1).
 cd /home/survivor/work/prism/kaggle_kernel || exit 1
-L=voroninmichael/prism-exp17-lora-distill
-S=voroninmichael/prism-exp18-logit-kd
-log(){ echo "[$(date +%H:%M:%S)] $*"; }
-push(){ # $1=dir $2=slug
-  log "push $1"
-  kaggle kernels push -p "$1" 2>&1 | grep -vE 'it/s|100%|Warning|outdated' | tail -2
-}
-# Wait until one of the two frees a slot (max 3h)
-for i in $(seq 1 180); do
-  a=$(kaggle kernels status $L 2>/dev/null | tail -1 | grep -oE 'KernelWorkerStatus\.[A-Z]+')
-  b=$(kaggle kernels status $S 2>/dev/null | tail -1 | grep -oE 'KernelWorkerStatus\.[A-Z]+')
-  log "exp17=$a exp18=$b"
-  if [ "$a" != "KernelWorkerStatus.RUNNING" ] || [ "$b" != "KernelWorkerStatus.RUNNING" ]; then
-    log "slot free (exp17=$a exp18=$b)"
-    break
+QUEUE=(kernel-exp3 kernel-exp2a kernel-exp48b)
+WATCH=(voroninmichael/e-39m-flat-carrier-vs-ptq voroninmichael/prism-exp3-ablation \
+       voroninmichael/prism-exp2a-cka-identity voroninmichael/prism-exp48b-lfm3-gen-kinematics)
+log() { echo "[$(date +%H:%M:%S)] $*"; }
+st() { kaggle kernels status "$1" 2>/dev/null | tail -1 | grep -oE 'KernelWorkerStatus\.[A-Z]+'; }
+push() { log "push $1"; kaggle kernels push -p "$1" 2>&1 | grep -viE 'it/s|100%|outdated' | tail -2; sleep 15; }
+
+for i in $(seq 1 480); do
+  running=0
+  state=""
+  for k in "${WATCH[@]}"; do
+    s=$(st "$k"); state="$state ${k##*/}=${s#KernelWorkerStatus.}"
+    [ "$s" = "KernelWorkerStatus.RUNNING" ] && running=$((running + 1))
+  done
+  log "running=$running$state"
+  if [ ${#QUEUE[@]} -gt 0 ] && [ "$running" -lt 2 ]; then
+    nxt=${QUEUE[0]}
+    QUEUE=("${QUEUE[@]:1}")
+    push "$nxt"
+    continue
   fi
+  [ ${#QUEUE[@]} -eq 0 ] && { log "очередь пуста"; break; }
   sleep 60
 done
-# Push in priority order: probe (answers user's question), then exp19, then exp16r
-push kernel-probe-fullvocab prism-full-vocab-jacobian-probe
-push kernel-exp19 prism-exp19-destruction
-push kernel-exp16r prism-readout-pull
-log "DONE — all three pushed (or see errors above)"
+log "watcher exit"
