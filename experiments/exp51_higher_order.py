@@ -173,7 +173,10 @@ def run_controls(T=96, D=400):
             zz = nz(zz - x * (x @ zz))
             pl.append(torch.stack([x, zz], 1))
         gv, gpl, gdg = gauge_along_lines(vv, pl)
-        I1 = inv_I1(gdg); I2 = inv_I2(gpl); I3 = inv_I3(gv); e, _ = inv_I4(gdg)
+        # I2/I3 — инвариантны (детерминанты Грэма / CR) БЕЗ транспорта; на транспор-
+        # тированных рамках они ВЫРОЖДАЮТСЯ (правая композиция: gv ≡ ±v0 точно —
+        # тривиализация теоремы E50), поэтому считаются на исходных vv/pl.
+        I1 = inv_I1(gdg); I2 = inv_I2(pl); I3 = inv_I3(vv); e, _ = inv_I4(gdg)
         res[kind] = {"I1_l1": safe_med(I1[1]), "I1_l8": safe_med(I1[8]),
                      "I2_mean": round(float(np.mean(I2)), 3) if I2 else None,
                      "I3_sd": round(float(np.std(I3)), 4) if len(I3) > 3 else None,
@@ -185,6 +188,7 @@ def run_controls(T=96, D=400):
           and (res["geo"]["I4_e"] is not None and res["geo"]["I4_e"] < 0.3)
           and (res["white"]["I1_l8"] is not None and abs(res["white"]["I1_l8"]) < 0.07)
           and gt(res["white"]["I4_e"], 0.7)
+          and gt(res["white"]["I3_sd"], 0.2)
           and (res["white"]["I2_mean"] is not None and abs(res["white"]["I2_mean"]) < 0.15))
     res["SELFTEST"] = "ok" if ok else "ВАЛИТСЯ"
     return res
@@ -205,7 +209,7 @@ def swap_idx(T, rng):
 
 def bundle(vv, pl):
     gv, gpl, gdg = gauge_along_lines(vv, pl)
-    I1 = inv_I1(gdg); I2 = inv_I2(gpl); I3 = inv_I3(gv); e, axd = inv_I4(gdg)
+    I1 = inv_I1(gdg); I2 = inv_I2(pl); I3 = inv_I3(vv); e, axd = inv_I4(gdg)
     return dict(I1_1=safe_med(I1[1]), I1_8=safe_med(I1[8]),
                 I1_1_all=I1[1], I1_8_all=I1[8],
                 I2=round(float(np.mean(I2)), 4) if I2 else None,
