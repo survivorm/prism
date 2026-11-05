@@ -132,7 +132,7 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
         hk = norm.register_forward_hook(lambda _m, inp, _o: pre_c.append(inp[0].detach()))
         raw = m.model(input_ids=prb).last_hidden_state[0, -1].detach().float().cpu()
         hk.remove()
-        pre = pre_c[0][0, -1].float()
+        pre = pre_c[0][0, -1].detach().float().cpu()   # raw уже cpu — device-консистентность (e52k cuda fix)
         r = (pre.pow(2).mean(-1, keepdim=True) + eps).rsqrt()
         e_w = float((wn * r * pre - raw).abs().max())
         e_1w = float(((1.0 + wn) * r * pre - raw).abs().max())
