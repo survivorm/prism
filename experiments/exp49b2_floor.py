@@ -56,16 +56,22 @@ def synth_white(T, D, seed):
 
 
 def synth_coh(T, D, seed, delta=0.02):
+    """ГЕОДЕЗИЧЕСКИЙ когерентный контроль. Фикс (ревью E49 §1.1/exp49b2): w теперь
+    ортогонален u всегда (инициализация + после каждого шага), шаг cos(δ)u+sin(δ)w —
+    точная геодезическая на δ; раньше w не ортогонализовался, CB на LFM3 был
+    невалиден (CB > CA)."""
     g = torch.Generator().manual_seed(seed)
     u = nz(torch.randn(D, dtype=torch.float64, generator=g))
     w = nz(torch.randn(D, dtype=torch.float64, generator=g))
+    w = nz(w - u * (u @ w))
     out = []
     for t in range(T):
         out.append(u.clone())
         u2 = math.cos(delta) * u + math.sin(delta) * w
+        u = nz(u2)
         z = nz(torch.randn(D, dtype=torch.float64, generator=g))
         w = nz(w + 0.05 * (z - (z @ u) * u - (z @ w) * w))
-        u = nz(u2)
+        w = nz(w - u * (u @ w))            # re-orthogonalize vs НОВЫЙ u
     return out
 
 
@@ -89,7 +95,7 @@ def frames_of(us, A, eps, r=16):
         Gm = J @ J.T; Gm = 0.5 * (Gm + Gm.T)
         _, Ue = torch.linalg.eigh(Gm)
         V = J.T @ Ue[:, -r:]
-        out.append(torch.linalg.qr(V / V.norm(dim=0, keepdim=True))[0].float())
+        out.append(torch.linalg.qr(V / V.norm(dim=0, keepdim=True))[0])   # float64 (ревью §1.3)
     return out
 
 
@@ -103,6 +109,9 @@ def cond(Vs):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=("qwen", "lfm3"), default="qwen")
+    ap.add_argument("--controls-only", action="store_true",
+                    help="только CA/CB синтетика (для перепроверки фикс. synth_coh)")
+    ap.add_argument("--syn-n", type=int, default=N_SYN)
     args = ap.parse_args()
     root = os.path.join(_HERE, "..")
     A, U, eps, npz, jp = load_model(args)
@@ -114,23 +123,31 @@ def main():
 
     for W in (4, 16):
         fr = {}
-        for doc in docs:
-            key = f"{doc['dom']}_{doc['si']}"
-            f = z[key].item()
-            u = torch.from_numpy(z[key + "_u"].astype(np.float64))
-            Vs = frames_of(smoothed_us(u, np.asarray(f["hnorm"], dtype=float), W), A, eps)
-            assert len(Vs) % W == 0, f"T={len(Vs)} не делится на W={W}"
-            fr[key] = Vs
-            print(f"W{W} frames {key}", flush=True)
+        if not args.controls_only:
+            for doc in docs:
+                key = f"{doc['dom']}_{doc['si']}"
+                f = z[key].item()
+                u = torch.from_numpy(z[key + "_u"].astype(np.float64))
+                Vs = frames_of(smoothed_us(u, np.asarray(f["hnorm"], dtype=float), W), A, eps)
+                assert len(Vs) % W == 0, f"T={len(Vs)} не делится на W={W}"
+                fr[key] = Vs
+                print(f"W{W} frames {key}", flush=True)
 
         syn = {"CA_smooth": {"tau": [], "sl": []}, "CB_smooth": {"tau": [], "sl": []}}
-        for i in range(N_SYN):
+        for i in range(args.syn_n):
             for kind, fn in (("CA_smooth", synth_white), ("CB_smooth", synth_coh)):
                 us_s = smoothed_us(torch.stack(fn(384, D, 2000 + 37 * i)), np.ones(384), W)
                 t_, sl_ = cond(frames_of(us_s, A, eps))
                 syn[kind]["tau"].append(t_)
                 syn[kind]["sl"].append(sl_)
         print(f"W{W} synthetic done", flush=True)
+        if args.controls_only:
+            out.setdefault("controls", {})[f"W{W}"] = {
+                k: {"tau": safe_med(v["tau"]), "tau_ci": boot_ci(v["tau"]),
+                    "tau_med_series": v["tau"]} for k, v in syn.items()}
+            print(f"W{W} CONTROLS:", json.dumps({k: out["controls"][f"W{W}"][k]["tau"]
+                  for k in syn}), flush=True)
+            continue
 
         per = {}
         pair_blk, pair_bmix = {"d": [], "dom": []}, {"d": [], "dom": []}
@@ -202,7 +219,8 @@ def main():
         out[f"W{W}"] = agg
         print(f"W{W} VERDICT:", json.dumps(agg["verdict"], ensure_ascii=False), flush=True)
 
-    path = os.path.join(root, "results", f"exp49b2_floor_{args.model}.json")
+    path = os.path.join(root, "results",
+                        f"exp49b2_floor_{args.model}{'_cbfix' if args.controls_only else ''}.json")
     json.dump(out, open(path, "w"), indent=1, allow_nan=False)
     print("WROTE", path)
 
