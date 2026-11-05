@@ -640,3 +640,37 @@ def compute_G(delta_fixP, delta_raw):
   `kinetic_decomposition_{t}.json`, `token_ipr_{l}.json`, `neural_ipr_{l}.json`, `R_can_{l}.json`, `G_{l}.json`
 
 ---
+
+## 6. Ядро v1 (`prism/*`): карта модулей
+
+Отделено от §5: то — листинги живого torch-пути (прогоны через модель), это — **numpy-ядро
+фазы 1** (постпроцессинг кэша, ноль форвардов). Публичный контракт identity-координат —
+`ChannelTag` (12 полей, §1.1 `docs/e40_todo.md`), он **заменил** «4-координатную метку
+канала» из §5: срез, окно, сторона, нормировка, `p_mode`/`p_slice`, `aggregation`, слой,
+ранг, протокол, источник, статус.
+
+| модуль | что держит | выходы | чем пинится |
+|---|---|---|---|
+| `tag.py` (110) | контракт тега: `TAG_DOMAINS`, валидация перечислимых полей, дефолт `aggregation = ratio_of_means` | `make_tag`, `require_triple_tag` | `tests/test_nulls_tag_gate.py`, запись реестра `same_slice_aggregation` (негативная половина: смешанная агрегация обязана падать) |
+| `p_algebra.py` (191) | алгебра `P(p)` на K-срезе, замкнутые формы | `P_matrix`, `trace_P` = 1−Σp², `trace_P2`, `isotropic_reference`, `g_uni` ≡ `gauge_share`, `secular_residual`, `secular_roots` | `tests/test_p_algebra.py`; реестр: `P_properties`, `trace_identities`, `secular_equation`, `O2_eq_O3`, `g_uni_gf_zero`, `p_tilde_sum`, `iso_inline_eq_closed` |
+| `operator_checks.py` (206) | тройка `(c, s, frac_K)` и `O1` **с параметром агрегации** (`ratio_of_means \| mean \| median \| per_position`) и валидацией `p_slice` | `apply_P`, `operator_fraction`, `c`, `s`, `O1`, `cos_J_PJ`, `frac_K` | `tests/test_operator_invariants.py`; реестр: `O1_eq_s2`, `triple_identity`, `agg_closure_matrix`, `R_can_definition` |
+| `cheap_invariants.py` (38) | предсказание кросс-члена оператором и выравнивание | `c_pred = tr P / √(K·tr P²)`, `A_alignment = c / c_pred` | `tests/test_operator_invariants.py`, `tests/test_audit_core_v2.py` |
+| `transport.py` (131) | транспорт базисов: знаковая/столбцовая канонизация, полярный распад, главная ветвь `log Q` | `align_signs_and_columns`, `polar_factor`, `procrustes_transport`, `transport_log`, `holonomy`, `holonomy_angles`, `kappa` (`κ_curv² = 2r − 2 tr H`) | `tests/test_transport_kinetic.py`; реестр: `H_orthogonal`, `kappa_curv_algebra`, `kappa_curv_spectral`, `kappa_cond_invariance` |
+| `svd_bundle.py` (94) | один SVD позиции на всех потребителей; конвенция главных углов `Vaᵀ @ Vb` | `svd_bundle`, `effective_rank`, `principal_angles` | `tests/test_nulls_tag_gate.py`, `tests/test_spectral.py`; реестр `svd_bundle_contract` (реконструкция `U diag(S) Vᵀ = J`, `rank(0) = 0`) |
+| `kinetic.py` (269) | шестиканальная декомпозиция `ΔJ` + флаги валидности; переиспользует SVD через `svds=` | `kinetic_decomposition` (`E_radial/right/left/cross/resid/off_manifold`, `eps3_correction`, `linearization_valid`, `rotation_unique`), `channel_energy_matrix` (5×5 Gram = `‖ΔJ‖²`) | `tests/test_transport_kinetic.py`; реестр: `channels_sum`, `r1_cross_zero` |
+| `invariants.py` (454) | **реестр M0**: 21 запись со статусами `{passing, failing, blocked}` и живыми проверками на кэше | таблица статусов (носитель: `results/E40_1_core_manifest.json::invariants_registry`) | `experiments/exp40_1_manifest.py` — драйвер; на сегодня 21/21 `passing` |
+| `nulls_and_stats.py` (162) | нули и статистика: оператор-нуль, края Марченко–Пастура (**истиной является Монте-Карло**, числа ТЗ — ориентир), перестановочный тест, парный бутстрап, флор разрешения | `operator_null`, `mp_upper_edge`, `mp_lambda_max_mc`, `reduction_control`, `permutation_test`, `paired_bootstrap`, `resolution_floor` (SE-флор + `floor_95`) | `tests/test_nulls_tag_gate.py` (в т.ч. `reduction_control`: константная статистика ⇒ r² = 0, не 1) |
+| `behavior.py` (106) | поведенческие концы (интервенционный канал): **в tier-0 не импортируется** | `b_mag`, `b_lin`, `b_res` (`= O(ε³)` + `lq_coupling`), `b_qual`, `KL_lin` | `tests/test_operator_invariants.py` (`b_lin_r1`, `b_mag`, `b_res`, `lq_coupling`), `tests/test_nulls_tag_gate.py` (`KL_lin`, guard `v ≠ 0`); `b_qual` пока без теста |
+| `profiles.py` (74) | рецепты слойных профилей фазы 1 | `R_raw`, `R_can`, `G_l`, `r_cross` | реестр `R_can_definition` (`R_can ≠ λshare(((I−P)J)…)`) |
+
+**Как прогонять.** Ядро целиком: `pytest tests/test_p_algebra.py
+tests/test_operator_invariants.py tests/test_transport_kinetic.py
+tests/test_nulls_tag_gate.py tests/test_audit_core_v2.py -q` → 44 теста за ~10 с; гейт
+манифеста пинит подмножество из трёх файлов (`test_nulls_tag_gate`,
+`test_operator_invariants`, `test_transport_kinetic`) = 28 passed — это то число, которое
+сериализовано в `E40_1_core_manifest.json::unit_tests`. Статусы реестра:
+`experiments/exp40_1_manifest.py` → `results/E40_1_core_manifest.json`.
+
+**Границы ядра.** NumPy, вход — уже посчитанный кэш/артефакты, новых форвардов ноль;
+torch-модули (§5) оно не трогает. Числа, посчитанные ядром по кэшу exp27b, наследуют его
+базис (`basis=U128-freq`) — при переходе на `exp27c` пересоздаются заново, а не подменяются.

@@ -1,0 +1,10 @@
+[tail] 05:15:41 exp45c (gauge-null, правка допусков + κ(J) по правке)
+rc(exp45c)=0
+[tail] 05:35:58 вырезать seednull_* из partial
+вырезано строк seednull_*: 8, осталось 9
+rc(strip)=0
+[tail] 05:35:58 iid-полоса заново (E45_SEEDNULL=8, σ от правки W+G)
+rc(seednull)=0
+[tail] 05:53:53 вердикты
+rc(verdicts)=0
+[tail] 05:53:53 готово

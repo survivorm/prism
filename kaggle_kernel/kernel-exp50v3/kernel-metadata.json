@@ -1,0 +1,19 @@
+{
+ "id": "voroninmichael/prism-exp50v3-loop-curvature-qwen",
+ "title": "Prism: exp50v3 loop-curvature qwen",
+ "code_file": "kernel.ipynb",
+ "kernel_type": "notebook",
+ "is_private": true,
+ "is_gpu_enabled": true,
+ "machine_shape": "NvidiaTeslaT4",
+ "accelerator": "gpu",
+ "enable_gpu": true,
+ "enable_internet": true,
+ "language": "python",
+ "dataset_sources": [
+  "voroninmichael/prism-code-48b"
+ ],
+ "kernel_sources": [],
+ "competition_sources": [],
+ "model_sources": []
+}

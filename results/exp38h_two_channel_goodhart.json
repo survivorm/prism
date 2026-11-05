@@ -530,6 +530,6 @@
     "bridge_per_channel": "1 − jacobian_gap(J_L, J_S, E_L, E_S, p) needs J_L of the large target model (not on this machine) — honestly not run",
     "behavior_top_p_retention": "needs E-16 eval runs under the per-channel edits — not run"
   },
-  "runtime_s": 5.1,
+  "runtime_s": 6.0,
   "deterministic": true
 }
