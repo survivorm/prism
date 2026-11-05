@@ -182,6 +182,7 @@ def main(
     domains=("wiki", "math", "code", "chat"),
     max_length=64,
     make_png: bool = True,
+    expect_pool_fp: str | None = None,
 ):
     torch.manual_seed(42)
     if device == "auto":
@@ -200,6 +201,23 @@ def main(
 
     print(f"Loading {n_samples} samples x {len(domains)} domains...")
     per_domain = _load_all(model, domains, n_samples, max_length)
+
+    # Аудит v6 (строка R1 очереди): пул берётся из streaming-потока, порядок которого не
+    # закреплён, поэтому повторный прогон читает ДРУГИЕ тексты -> другой top-token набор ->
+    # другие числа. Измерено на v8 против закоммиченного артефакта: params идентичны, а
+    # pk_hash разошёлся (5c12c1749837596b -> 30d82ade4ab705b9), и C_at_sigma_d_b на L6
+    # изменился в ~30 раз (0.0326 -> 0.0010). Отпечаток пула теперь печатается и кладётся в
+    # params; с --expect-pool-fp подмена данных падает громко вместо тихой замены чисел.
+    _h = hashlib.sha256()
+    for _dom in domains:
+        for _s in per_domain[_dom]:
+            _h.update(str(_s["input_ids"].tolist()).encode())
+    pool_fp = _h.hexdigest()[:16]
+    print(f"pool_fp={pool_fp}", flush=True)
+    if expect_pool_fp and expect_pool_fp != pool_fp:
+        raise SystemExit(
+            f"пул не совпал с пререгистрированным: {pool_fp} != {expect_pool_fp}. "
+            "Перегенерация на другом пуле не является повтором этого прогона.")
 
     # v4: ONE forward per sample, full logits cached (gauge p per position).
     fwd: dict[tuple, dict] = {}
@@ -418,6 +436,7 @@ def main(
                     "min_bin_pairs": MIN_BIN_PAIRS,
             "n_bins": N_BINS,
             "token_set_size": len(token_set),
+            "pool_fp": pool_fp,
         },
     }
     os.makedirs(results_dir, exist_ok=True)
@@ -549,6 +568,9 @@ if __name__ == "__main__":
     parser.add_argument("--domains", default="wiki,math,code,chat")
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--no-png", action="store_true")
+    parser.add_argument("--expect-pool-fp", default=None,
+                        help="отпечаток пула из params закоммиченного артефакта; "
+                             "расхождение = громкий отказ (аудит v6, R1)")
     args = parser.parse_args()
     main(
         model=args.model,
@@ -560,4 +582,5 @@ if __name__ == "__main__":
         domains=tuple(x for x in args.domains.split(",") if x),
         max_length=args.max_length,
         make_png=not args.no_png,
+        expect_pool_fp=args.expect_pool_fp,
     )
