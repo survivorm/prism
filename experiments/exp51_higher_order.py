@@ -300,8 +300,20 @@ def main():
     z = np.load(npz, allow_pickle=True)
     rng = np.random.default_rng(SEED)
     rep = {}
+    cache_p = os.path.join(root, "results", f"exp51_cache_{args.model}.jsonl")
+    done_keys = set()
+    if os.path.exists(cache_p):
+        with open(cache_p) as fh:
+            for ln in fh:
+                r0 = json.loads(ln)
+                rep.setdefault(r0["dom"], []).append(r0)
+                done_keys.add(r0["key"])
+        print(f"[resume] кэш: {len(done_keys)} доков", flush=True)
+    cache_fh = open(cache_p, "a")
     for doc in docs:
         key = f"{doc['dom']}_{doc['si']}"
+        if key in done_keys:
+            continue
         f = z[key].item()
         u = torch.from_numpy(z[key + "_u"].astype(np.float64))[:TMAX]
         hn = np.asarray(f["hnorm"], dtype=float)[:TMAX]
@@ -344,6 +356,7 @@ def main():
             row[f"sur{j}"] = {k: bb[k] for k in NULL_KEYS}
             row[f"sur{j}"]["step"] = round(E50.mean_step(_stack1(sv)), 5)
         rep.setdefault(doc["dom"], []).append(row)
+        cache_fh.write(json.dumps(row, allow_nan=False) + "\n"); cache_fh.flush()
         print(key, "done", flush=True)
 
     FIELDS = ("I1_1", "I1_8", "I2", "I3_sd", "I4_e")
@@ -387,7 +400,7 @@ def main():
             sig[n] = lo is not None and lo * hi > 0
             dc = 0
             for rows in rep.values():
-                dlo, dhi = boot_ci(paired(rows, f, n))[1]
+                dlo, dhi = boot_ci(paired(rows, f, n))   # ПАРА, не [1] (крах qwen-run 05.11)
                 if dlo is not None and dlo * dhi > 0:
                     dc += 1
             domc[n] = dc

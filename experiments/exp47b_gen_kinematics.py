@@ -103,8 +103,24 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
     tok = AutoTokenizer.from_pretrained(model)
     n_layers = int(m.config.num_hidden_layers)
     norm = m.model.norm
-    eps = float(norm.eps)
-    g_n = 1.0 + norm.weight.detach().float()
+    eps = float(getattr(norm, "variance_epsilon",
+                        getattr(norm, "eps", m.config.rms_norm_eps)))
+    wn = norm.weight.detach().float()
+    # эмпирика семантики RMSNorm: gemma-style g=1+w против голого g=w (Qwen2/3)
+    with torch.no_grad():
+        prb = torch.randint(1, 1000, (1, 8), device=dev)
+        pre_c = []
+        hk = norm.register_forward_hook(lambda _m, inp, _o: pre_c.append(inp[0].detach()))
+        raw = m.model(input_ids=prb).last_hidden_state[0, -1].detach().float().cpu()
+        hk.remove()
+        pre = pre_c[0][0, -1].float()
+        r = (pre.pow(2).mean(-1, keepdim=True) + eps).rsqrt()
+        e_w = float((wn * r * pre - raw).abs().max())
+        e_1w = float(((1.0 + wn) * r * pre - raw).abs().max())
+        g_mode = "w" if e_w <= e_1w else "1p_w"
+        assert min(e_w, e_1w) < 1e-3, f"norm не закрыт ни одной g: w={e_w:.1e} 1+w={e_1w:.1e}"
+        print(f"[norm] g-режим: {g_mode} (err w={e_w:.1e}, 1+w={e_1w:.1e})", flush=True)
+    g_n = (wn if g_mode == "w" else 1.0 + wn)
     W = m.lm_head.weight.detach()
     U = torch.tensor(U128, device=dev)
     A = C.head_M(W[U].cpu().float(), g_n.cpu()).to(dev)      # [128,D] fp64 на устройстве
@@ -234,6 +250,8 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
            "docs": docs_out}
     with open(os.path.join(results_dir, "exp47b_gen_kinematics.json"), "w") as f:
         json.dump(out, f, ensure_ascii=False, allow_nan=False)
+    feats_npz["g_norm"] = g_n.cpu().numpy().astype(np.float32)   # источник истины для e52a
+    feats_npz["eps"] = np.float64(eps)
     np.savez_compressed(os.path.join(results_dir, "exp47b_gen_kinematics.npz"), **feats_npz)
     print(f"saved. total {time.time()-t0:.0f}s", flush=True)
     return out
