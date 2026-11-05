@@ -1,0 +1,18 @@
+{
+  "kernel_type": "notebook",
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "language": "python",
+  "code_file": "kernel.ipynb",
+  "is_private": true,
+  "enable_internet": true,
+  "id": "voroninmichael/prism-exp52k-scale-curve-real-ptq",
+  "title": "Prism Exp52k Scale Curve Real Ptq",
+  "kernel_sources": [
+    "voroninmichael/prism-exp52k-scale-curve-real-ptq"
+  ],
+  "dataset_sources": [],
+  "competition_sources": [],
+  "model_sources": []
+}

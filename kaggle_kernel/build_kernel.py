@@ -167,6 +167,56 @@ def assert_no_bare_prism(cells: list[dict]) -> None:
         )
 
 
+def build_driver_kernel(driver_file: str, bundle_files: list[str], out_dir: str,
+                        kernel_id: str, kernel_title: str,
+                        kernel_sources: list[str] | None):
+    """Driver-mode notebook: writer-cell (все исходники инлайном) + driver-cell."""
+    cells = []
+    w = ["# ---------- inline code bundle (written verbatim; no dataset) ----------\n",
+         "import os, pathlib\n",
+         "ROOT = '/kaggle/working/code'\n"]
+    n = 0
+    for rel in bundle_files:
+        path = os.path.join(ROOT, rel)
+        with open(path, encoding="utf-8") as fh:
+            src = fh.read()
+        w.append(f"p = pathlib.Path(ROOT, {rel!r}); p.parent.mkdir(parents=True, exist_ok=True)\n")
+        w.append(f"p.write_text({src!r}, encoding='utf-8')\n")
+        n += 1
+    w.append(f"print('[bundle] wrote {n} files under', ROOT)\n")
+    cells.append(code_cell("".join(w)))
+    with open(driver_file, encoding="utf-8") as fh:
+        drv = fh.read()
+    cells.append(code_cell("# ---------- driver ----------\n" + drv))
+
+    nb = {"cells": cells, "metadata": {"kernelspec": {
+        "display_name": "Python 3", "language": "python", "name": "python3"},
+        "language_info": {"name": "python", "version": "3.11"}},
+        "nbformat": 4, "nbformat_minor": 4}
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, "kernel.ipynb"), "w") as f:
+        json.dump(nb, f, indent=None, separators=(",", ":"))
+    meta = dict(METADATA_TEMPLATE)
+    meta["is_private"] = True
+    meta["enable_internet"] = True
+    if kernel_id:
+        # slug обязан совпадать с титлом (Kaggle 400 иначе): генерим id из title
+        slug = re.sub(r"[^a-z0-9]+", "-", kernel_title.lower()).strip("-")
+        ns = kernel_id.split("/")[0] if "/" in kernel_id else kernel_id
+        meta["id"] = f"{ns}/{slug}"
+    meta["title"] = kernel_title
+    ks = list(kernel_sources or [])
+    if kernel_id and kernel_id not in ks:
+        ks.append(kernel_id)   # self-source: прошлые working-выходы (модели!) в /kaggle/input
+    meta["kernel_sources"] = ks
+    meta["dataset_sources"] = []
+    meta["competition_sources"] = []
+    meta["model_sources"] = []
+    with open(os.path.join(out_dir, "kernel-metadata.json"), "w") as f:
+        json.dump(meta, f, indent=2)
+    print(f"driver-kernel written: {out_dir} ({len(cells)} cells, {n} bundle files)")
+
+
 def build_kernel(
     exp_file: str,
     out_dir: str,
@@ -178,8 +228,18 @@ def build_kernel(
     extra_modules: list[str] | None = None,
     extra_local: list[str] | None = None,
     calib_pins: list[str] | None = None,
+    driver_file: str = "",
+    bundle_files: list[str] | None = None,
 ):
-    """Build kernel.ipynb and kernel-metadata.json for one experiment."""
+    """Build kernel.ipynb and kernel-metadata.json for one experiment.
+
+    DRIVER MODE (--driver + --files): no pip/setup/runner cells and NO DATASET.
+    Every bundled file пишется дословно writer-cell'ом в /kaggle/working/code,
+    затем идёт driver-cell (свои pip, свои импорты, свои модель-загрузки).
+    """
+    if driver_file:
+        return build_driver_kernel(driver_file, bundle_files or [], out_dir,
+                                   kernel_id, kernel_title, kernel_sources)
     # Read deps from pyproject.toml
     with open(os.path.join(ROOT, "pyproject.toml")) as f:
         pyproject = f.read()
@@ -495,7 +555,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--exp",
-        required=True,
+        required=False, default="",
         help="Path to exp file, e.g. experiments/exp13_domain_esg.py",
     )
     parser.add_argument(
@@ -531,6 +591,10 @@ if __name__ == "__main__":
         "--calib-pins", default=[], nargs="*",
         help="домены чьи закреплённые пулы (data/calib_pins/<dom>__*.json) инлайнятся в ядро",
     )
+    parser.add_argument("--driver", default="",
+                        help="DRIVER MODE: файл-драйвер (инлайнится последним cell'ом)")
+    parser.add_argument("--files", default=[], nargs="*",
+                        help="DRIVER MODE: rel-пути файлов в /kaggle/working/code (writer-cell)")
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
     build_kernel(
@@ -544,4 +608,6 @@ if __name__ == "__main__":
         extra_modules=args.extra_modules,
         extra_local=args.extra_local,
         calib_pins=args.calib_pins,
+        driver_file=args.driver,
+        bundle_files=args.files,
     )
