@@ -33,9 +33,27 @@ def pool_fingerprint(texts: list[str]) -> str:
     return h.hexdigest()[:16]
 
 
-def _pin_path(domain, model_name, n_samples, min_length, max_length, save_offset_mapping) -> Path:
+def _default_pin_dir() -> Path | None:
+    """Каталог пинов по умолчанию, или None если искать негде.
+
+    В flattening-Kaggle-ядре модулей нет на диске и `__file__` не определён (упавший exp3:
+    `NameError: name '__file__' is not defined` прямо в `_pin_path`) — значит путь репозитория
+    строится только когда модуль реально лежит в репозитории; иначе пин ищется по `PIN_DIR_ENV`,
+    а без него — поток (или громкий отказ при `PIN_REQUIRE_ENV`).
+    """
+    try:
+        here = Path(__file__).resolve()
+    except NameError:
+        return None
+    return here.parent.parent / "data" / "calib_pins"
+
+
+def _pin_path(domain, model_name, n_samples, min_length, max_length,
+              save_offset_mapping) -> Path | None:
     root = os.environ.get(PIN_DIR_ENV)
-    base = Path(root) if root else Path(__file__).resolve().parent.parent / "data" / "calib_pins"
+    base = Path(root) if root else _default_pin_dir()
+    if base is None:
+        return None
     slug = re.sub(r"[^0-9A-Za-z.]+", "_", model_name)
     mode = "offset" if save_offset_mapping else "plain"
     return base / f"{domain}__{slug}__n{n_samples}__min{min_length}__max{max_length}__{mode}.json"
@@ -134,14 +152,15 @@ def load_calibration_data(
     pin = _pin_path(domain, model_name, n_samples, min_length, max_length, save_offset_mapping)
     texts: list[str] | None = None
     ds_id = cfg = split = field = None
-    if pin.exists():
+    if pin is not None and pin.exists():
         meta = json.loads(pin.read_text(encoding="utf-8"))
         texts = list(meta["texts"])
         print(f"[calib] {domain}: пин {pin.name}, строк={len(texts)}, "
               f"pool_fp={meta['fp']}, поток не читается", flush=True)
     elif os.environ.get(PIN_REQUIRE_ENV) == "1":
         raise RuntimeError(
-            f"нет пина пула {pin} при {PIN_REQUIRE_ENV}=1: прогон на потоке с Hub недопустим, "
+            f"нет пина пула {pin or f'каталог пинов недоступен — задайте {PIN_DIR_ENV}'} при "
+            f"{PIN_REQUIRE_ENV}=1: прогон на потоке с Hub недопустим, "
             f"иначе числа не воспроизводимы. Сгенерируйте пин с {PIN_WRITE_ENV}=1 один раз и "
             f"закоммитьте его."
         )
@@ -199,6 +218,12 @@ def load_calibration_data(
         fp = pool_fingerprint(texts)
         print(f"[calib] {domain}: поток с Hub, строк={len(texts)}, pool_fp={fp}", flush=True)
         if os.environ.get(PIN_WRITE_ENV) == "1":
+            if pin is None:
+                raise RuntimeError(
+                    f"{PIN_WRITE_ENV}=1, но каталога пинов нет: {PIN_DIR_ENV} не задан, а "
+                    "`__file__` недоступен (flattening-ядро). Задайте PRISM_CALIB_PIN_DIR "
+                    "на путь, который попадает в вывод ядра."
+                )
             pin.parent.mkdir(parents=True, exist_ok=True)
             pin.write_text(
                 json.dumps(
