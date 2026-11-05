@@ -291,12 +291,26 @@ def check_e47_e48() -> None:
         want = [f"{medf(sel, 'a_med'):.3f}", f"{medf(sel, 's_med'):.3f}", f"{medf(sel, 'p_med'):.3f}",
                 f"{medf(sel, 'g_med'):.1f}", f"{ent:.2f}"]
         for val, lbl in zip(want, ("a", "s", "p", "g", "ent")):
-            chk(val in cells, f"E-48b: {dom}/{lbl} — в docs нет {val}, строка {cells}")
+            # сравнение числами, не строками: «1.0» и «1.000» — одно и то же число,
+            # а строковое сравнение ломалось на формате ячейки g
+            ok = any(c.replace(",", ".").strip("≈~ ").replace("−", "-") == val
+                     or _close(c, val) for c in cells)
+            chk(ok, f"E-48b: {dom}/{lbl} — в docs нет {val}, строка {cells}")
         # петли в docs стоят одной ячейкой: «15.2/док, 11/16»
         loops_mean = f"{float(np.mean([r['n_loops'] for r in sel])):.1f}/док"
         n_loopdocs = f"{sum(1 for r in sel if r['n_loops'] > 0)}/16"
         need(row_txt, loops_mean, f"E-48b: {dom} петель/док")
         need(row_txt, n_loopdocs, f"E-48b: {dom} документов с петлями")
+
+
+def _close(cell: str, want: str) -> bool:
+    """Ячейка таблицы ≡ числу `want` с точностью до половины последнего печатного знака."""
+    try:
+        c, w = float(cell), float(want)
+    except ValueError:
+        return False
+    dec = len(want.split(".")[1]) if "." in want else 0
+    return abs(c - w) <= 0.5 * 10 ** (-dec) + 1e-12
 
 
 # ------------------------------------------------------- трассируемость артефактов серии

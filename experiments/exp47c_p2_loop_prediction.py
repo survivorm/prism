@@ -168,6 +168,7 @@ def main():
         docs = json.load(open(os.path.join(root, jpath)))["docs"]
         z = np.load(npz, allow_pickle=True)
         sets = {}
+        kinds = set()  # из какого поля брались triv-фичи (full = ent_full/top1_full из npz)
         for doc in docs:
             key = f"{doc['dom']}_{doc['si']}"
             f = z[key].item()
@@ -189,6 +190,7 @@ def main():
                     "lfm3: в npz нет ent_full/top1_full и нет TRIV_FIX — тривиальные "
                     "конкуренты считались бы по U-срезу (128 колонок) вместо вокабуляра. "
                     "Перегенерируй exp48b (docs/regen_queue.md).")
+            kinds.add(kind)
             leaf, triv = build_feats(f, triv_kind=kind)
             T = leaf.shape[0]
             m = onset_mask(doc, T)
@@ -210,7 +212,12 @@ def main():
             "auc_cross_domain_by_delta": rep,
             "verdict": {"AUC_leaf_d16": leaf_auc, "AUC_triv_d16": triv_auc,
                         "AUC_all_d16": all_auc, "delta_auc_all_vs_triv": round(all_auc - triv_auc, 3),
-                        "lead_tokens_leaf_ge08": lead, "verdict": verdict},
+                        "lead_tokens_leaf_ge08": lead, "verdict": verdict,
+                        # три ноги пререгистрационного критерия — какая именно не сошлась
+                        "legs": {"AUC_leaf_ge_0.8": bool(leaf_auc >= 0.8),
+                                 "lead_ge_5": bool(lead >= 5),
+                                 "delta_auc_ge_0.05": bool(all_auc - triv_auc >= 0.05)},
+                        "triv_feature_source": sorted(str(k) for k in kinds)},
         }
         print(name, verdict, "| leaf/triv/all @d16:", leaf_auc, triv_auc, all_auc, flush=True)
     path = os.path.join(root, "results", "exp47c_p2_loop_prediction.json")

@@ -1,0 +1,7 @@
+/home/survivor/work/prism/experiments/exp47c_p2_loop_prediction.py:65: RuntimeWarning: All-NaN slice encountered
+  return np.array([np.nanmedian(x[max(0, i - w + 1):i + 1]) for i in range(len(x))])
+qwen лист не добавляет (по пререгистрации §6 P2) | leaf/triv/all @d16: 0.44 0.733 0.725
+/home/survivor/work/prism/experiments/exp47c_p2_loop_prediction.py:65: RuntimeWarning: All-NaN slice encountered
+  return np.array([np.nanmedian(x[max(0, i - w + 1):i + 1]) for i in range(len(x))])
+lfm3 лист не добавляет (по пререгистрации §6 P2) | leaf/triv/all @d16: 0.763 0.735 0.823
+WROTE /home/survivor/work/prism/experiments/../results/exp47c_p2_loop_prediction.json

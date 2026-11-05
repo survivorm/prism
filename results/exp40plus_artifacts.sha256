@@ -9,6 +9,18 @@ f09ed0c80fc5ac358f38809e4e9c0581ba1ac291eaaba234160facff551a1849  results/exp45b
 16f1dc41567ed0f0b84497c147a0ac24f3b19b70058c668fdcbf6272f42b92f5  results/exp45_flat_rows.pt
 
 # sizes (байт):
-131797659  results/exp45b_leaf_table.npz
-6808691  results/exp45_edits_sparse.npz
-1575081  results/exp45_flat_rows.pt
+# 131797659  results/exp45b_leaf_table.npz
+# 6808691  results/exp45_edits_sparse.npz
+# 1575081  results/exp45_flat_rows.pt
+
+# --- R9 (2026-11-05): перегенерация E-48b с гейном `w` финальной нормы -------------------
+# Это ДРУГАЯ выборка и ДРУГАЯ политика отсчёта, а не побитовое повторение: пул калибровки
+# не закреплён пином (R12), поэтому повтор ядра даст третий рисунок. Числы docs/leaf_dynamics.md
+# §9.5 и docs/paper.md §4.11 сняты с этого файла; прежний npz (политика без гейна) сохранён как
+# A0_backup и тоже присутствует здесь — на него ссылается docs/audit_40plus.md как на историю.
+535c100594d3a36ef4cfd1d96b91483f1948c985ab48712ee0f6f73cc3281bc0  results/exp48b_lfm3_gen_kinematics.npz
+f133bf715c9fa4a9d7cbb4b6bf77b50c4a3e612891160abd6e683e4902f28fb9  /data/prism_kernels/exp48b/exp48b_lfm3_gen_kinematics.A0_backup.npz
+
+# sizes (байт):
+# 1578794007  results/exp48b_lfm3_gen_kinematics.npz   # R9, с гейном w
+# 1578590069  /data/prism_kernels/exp48b/exp48b_lfm3_gen_kinematics.A0_backup.npz   # прежняя политика

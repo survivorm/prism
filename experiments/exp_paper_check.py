@@ -58,6 +58,30 @@ def f4(x: float) -> str:
     return f"{x:.4f}"
 
 
+SECTIONS = {}
+_now = "_преамбула"
+for _ln in PAPER.splitlines():
+    if _ln.startswith("## ") or _ln.startswith("### "):
+        _now = _ln.lstrip("#").strip()
+        SECTIONS.setdefault(_now, [])
+    SECTIONS.setdefault(_now, []).append(_ln)
+SEC_TXT = {k: "\n".join(v) for k, v in SECTIONS.items()}
+
+
+def need_in(sec: str, s: str, label: str) -> None:
+    """Наличие числа внутри раздела, заголовок которого содержит `sec`.
+
+    need() ищет по всей статье, поэтому подмена числа в нужном месте не ловится, если то же
+    число упоминается рядом как снятая историческая версия (ровно случай R9/R10: в §4.11 есть
+    «до перегенерации было +0.017»).
+    """
+    hits = [v for k, v in SEC_TXT.items() if sec in k]
+    chk(len(hits) >= 1, f"{label}: раздел «{sec}» не найден")
+    if hits:
+        chk(any(f in hits[0] for f in (s, s.replace("-", "−"))),
+            f"{label}: в разделе «{sec}» нет «{s}» — вне раздела есть, а в самом разделе нет")
+
+
 # ---------------------------------------------------------------- E-40.1: знак Δ_gain
 a1 = art("E40_1_audit")
 a2 = a1["A2_delta_gain_signs"]
@@ -231,8 +255,27 @@ v47b = art("exp47b_gen_kinematics")["verdicts"]
 need(f3(v47b["K1.1"]["median_r_sa"]), "E-47 K1.1")
 chk(v47b["K1.2"]["frac"] == 0.89, "E-47: доля документов с AC≥3 поехала")
 v47c = art("exp47c_p2_loop_prediction")
-need(f"{v47c['qwen']['verdict']['delta_auc_all_vs_triv']:+.3f}", "E-47c ΔAUC Qwen")
-need(f"{v47c['lfm3']['verdict']['delta_auc_all_vs_triv']:+.3f}", "E-47c ΔAUC LFM3")
+for model in ("qwen", "lfm3"):
+    vd = v47c[model]["verdict"]
+    need(f"{vd['delta_auc_all_vs_triv']:+.3f}", f"E-47c ΔAUC {model}")
+    if model == "lfm3":  # статья печатает тройку AUC только для LFM3 (там она и есть предмет)
+        for key in ("AUC_leaf_d16", "AUC_triv_d16", "AUC_all_d16"):
+            need_in("4.11", f"{vd[key]:.3f}", f"E-47c {key} {model}")
+        need_in("4.11", f"{vd['delta_auc_all_vs_triv']:+.3f}", "E-47c ΔAUC lfm3 (в §4.11)")
+        # Первичная строка сравнения двух носителей — с контекстом: одно и то же число
+        # встречается в разделе дважды (вывод + «до перегенерации было»), и без контекста
+        # подмена в первичной строке не ловится (проверено подменой +0.088 → +0.017).
+        pair = (f"{v47c['qwen']['verdict']['delta_auc_all_vs_triv']:+.3f}** (Qwen) и "
+                f"**{vd['delta_auc_all_vs_triv']:+.3f}")
+        need_in("4.11", pair, "E-47c первичная строка ΔAUC (Qwen и LFM3 рядом)")
+    # вердикт обязан совпадать с тремя ногами, иначе статья перескажет его неверно
+    legs = vd["legs"]
+    chk(vd["verdict"].startswith("ЛИСТ") == all(legs.values()),
+        f"E-47c {model}: вердикт не соответствует ногам критерия {legs}")
+    if model == "lfm3":  # R10: triv-фичи из того же npz, внешний пересчёт не использован
+        chk(vd["triv_feature_source"] == ["full"], f"E-47c lfm3: triv-фичи не из npz: {vd['triv_feature_source']}")
+        chk(legs["delta_auc_ge_0.05"] and not legs["AUC_leaf_ge_0.8"],
+            "E-47c lfm3: статья объясняет отрицательный вердикт ногой AUC_leaf, а ноги поменялись")
 b48 = art("exp48a_lfm3_kinematics")
 need(f3(b48["verdicts"]["T1"]["a0"]), "E-48a a0")
 need(f"{st.median([r['p_med'] for r in b48['descriptive']['per_doc']]):.4f}", "E-48a p_med")
@@ -243,6 +286,16 @@ rows = gen48["docs"]
 for dom in ("wiki", "math", "code", "chat"):
     sel = [r for r in rows if r["dom"] == dom]
     need(f"{float(np.mean([r['n_loops'] for r in sel])):.1f}", f"E-48b петель/док {dom}")
+
+f = lambda xs: [x for x in xs if isinstance(x, (int, float))]
+loop = [r for r in rows if r["n_loops"] > 0]
+pk = lambda r: f(r["in_loop"].get("acf_peak_by_loop") or [])
+n_acf = sum(1 for r in loop if pk(r) and max(pk(r)) >= 3)
+need_in("4.11", f"{n_acf}/{len(loop)}", f"E-48b петлевые документы с AC(s) ≥ 3 ({n_acf}/{len(loop)})")
+chk(n_acf / len(loop) < 0.89, "E-48b: периодичность петли у LFM3 перестала быть слабее Qwen (24/27)")
+need(f"{round(100 * n_acf / len(loop))} %", f"E-48b доля AC(s) ≥ 3 в процентах ({round(100 * n_acf / len(loop))} %)")
+chk("decoding_policy_note" in gen48["params"] and "gain w" in gen48["params"]["decoding_policy_note"],
+    "E-48b: в артефакте нет decoding_policy_note про гейн w — это прежняя генерация, R9 не применён")
 
 # ---------------------------------------------------------------- E-39-дополнение (§2.5)
 def floats(o):
