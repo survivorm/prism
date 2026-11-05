@@ -57,3 +57,14 @@ for _ in range(1000):
     S = s0 + v * np.arange(T)[:, None] * 0.05 + rng.normal(0, 0.05, (T, R))
     mixx.append(tau_amp(np.sort(S, axis=1)))
 print("Q5 дрейф+шум+сортировка:                    τ_amp2 = %.4f" % np.mean(mixx))
+
+# --- Q6 сеточный артефакт: та же смесь (Q5), квантованная symmetric RTN на lev уровней
+#     (ответ на 4B rtn2: τ_amp² −0.063 — может, σ(t) просто залипает на сетке)
+for lev, tag in ((1, "2-bit (lev=1)"), (7, "3-bit"), (127, "8-bit")):
+    q = []
+    for _ in range(1000):
+        S = s0 + v * np.arange(T)[:, None] * 0.05 + rng.normal(0, 0.05, (T, R))
+        sc = np.abs(S).max(axis=0, keepdims=True).clip(1e-9) / lev
+        S = np.clip(np.round(S / sc), -lev, lev) * sc
+        q.append(tau_amp(np.sort(S, axis=1)))
+    print("Q6 сетка %s: τ_amp2 = %.4f (было %.4f)" % (tag, np.mean(q), 0.6672))
