@@ -6,6 +6,8 @@ import os, sys, time, glob, json, shutil, traceback, gc, subprocess
 t0 = time.time()
 os.environ.setdefault("OMP_NUM_THREADS", "3")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+os.environ["HF_HOME"] = "/kaggle/working/.hf"          # staging под local_dir — в working, не в home
+os.environ["HF_HUB_CACHE"] = "/kaggle/working/.hf/hub"
 CODE = "/kaggle/working/code"
 sys.path.insert(0, CODE)
 sys.path.insert(0, os.path.join(CODE, "experiments"))
@@ -37,14 +39,14 @@ try:
     print("[env] QWEN_DIR:", os.environ["PRISM_QWEN_DIR"], flush=True)
     E52 = load("e52", "exp52a_perturb_axis.py")   # после env (load_model читает при вызове)
 
-    JOBS = [  # (tag, hf_repo, dtype, bnb-int8)
-        ("q08_bf16", "Qwen/Qwen3.5-0.8B", "bfloat16", False),
-        ("q2_bf16",  "Qwen/Qwen3.5-2B",   "bfloat16", False),
-        ("q4_bf16",  "Qwen/Qwen3.5-4B",   "bfloat16", False),
-        ("q4_int8",  "Qwen/Qwen3.5-4B",   "bfloat16", True),
-        ("q9_int8",  "Qwen/Qwen3.5-9B",   "bfloat16", True),
+    JOBS = [  # (tag, hf_repo, dtype, bnb-int8, последний заход за этой моделью)
+        ("q08_bf16", "Qwen/Qwen3.5-0.8B", "bfloat16", False, True),
+        ("q2_bf16",  "Qwen/Qwen3.5-2B",   "bfloat16", False, True),
+        ("q4_bf16",  "Qwen/Qwen3.5-4B",   "bfloat16", False, False),
+        ("q4_int8",  "Qwen/Qwen3.5-4B",   "bfloat16", True,  True),
+        ("q9_int8",  "Qwen/Qwen3.5-9B",   "bfloat16", True,  True),
     ]
-    for tag, repo, dt, q8 in JOBS:
+    for tag, repo, dt, q8, last in JOBS:
         try:
             name = repo.split("/")[-1]
             md = f"/kaggle/working/m_{name}"
@@ -61,8 +63,11 @@ try:
                         "--docs-json", rd + "/exp47b_gen_kinematics.json",
                         "--out", f"/kaggle/working/exp52k_tau_{tag}.json"]
             E52.main()
-            if name in ("Qwen3.5-2B", "Qwen3.5-9B") and md.startswith("/kaggle/working"):
+            if last and name != "Qwen3.5-0.8B" and md.startswith("/kaggle/working"):
                 shutil.rmtree(md, ignore_errors=True)   # освобождаем диск под следующий размер
+            shutil.rmtree("/kaggle/working/.hf", ignore_errors=True)  # staging-дубли снапшотов
+            free = shutil.disk_usage("/kaggle/working").free / 2**30
+            print(f"[disk] free {free:.1f} GiB", flush=True)
             gc.collect(); torch.cuda.empty_cache()
         except Exception:
             print(f"##### {tag} FAILED", flush=True)
