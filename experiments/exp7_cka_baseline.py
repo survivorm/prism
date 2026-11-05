@@ -31,6 +31,11 @@ def cka_similarity(
     where HSIC(X,Y) = ||center(K_XY)||_F^2
     """
     # Linear kernels
+    if X.shape[0] != Y.shape[0]:
+        raise ValueError(
+            f"CKA требует равного числа объектов: N={X.shape[0]} против M={Y.shape[0]} "
+            "(матрица центрирования одна)"
+        )
     K_XX = X @ X.T  # [N, N]
     K_YY = Y @ Y.T
     K_XY = X @ Y.T

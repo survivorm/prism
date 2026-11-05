@@ -3,7 +3,7 @@
 # GPU-сессии на аккаунт, поэтому пушим по одному, как только освобождается слот.
 # Убитый ранее сторож: exp3 -> exp2a; здесь добавлен exp48b (аудит E46+ A1).
 cd /home/survivor/work/prism/kaggle_kernel || exit 1
-QUEUE=(kernel-exp3 kernel-exp2a kernel-exp48b)
+QUEUE=(kernel-exp3 kernel-exp2a)
 WATCH=(voroninmichael/e-39m-flat-carrier-vs-ptq voroninmichael/prism-exp3-ablation \
        voroninmichael/prism-exp2a-cka-identity voroninmichael/prism-exp48b-lfm3-gen-kinematics)
 log() { echo "[$(date +%H:%M:%S)] $*"; }

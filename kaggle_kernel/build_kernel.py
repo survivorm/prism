@@ -83,7 +83,18 @@ def strip_local_imports(code: str, names: list[str]) -> str:
 
     Same line-based discipline as strip_prism_imports (multi-line paren
     blocks included). `names` = helper module basenames (e.g. ' _e38_cache').
+
+    Относительные формы (`from .jacobian import X`) строги так же: ядро инлайнит
+    все модули в ОДНО пространство имён без пакета, поэтому относительный импорт
+    внутри модуля (`prism/bridge.py:_weighted_cosine_loss`) в flattening-ядре обязан
+    падать с `ImportError: attempted relative import with no known parent package`
+    — на этом упал exp3 (очередь R2), хотя локально, как пакет, код работал.
+    Если модуля в списке нет (не инлайнится), строка НЕ удаляется: падение громче,
+    чем NameError на неопределённое имя.
     """
+    prefixes = tuple(
+        f"{kw}{n} import" for n in names for kw in ("from ", "from .")
+    ) + tuple(f"from . import {n}" for n in names)
     out: list[str] = []
     skip_depth = 0
     for raw in code.split("\n"):
@@ -93,7 +104,7 @@ def strip_local_imports(code: str, names: list[str]) -> str:
             if skip_depth <= 0:
                 skip_depth = 0
             continue
-        if any(s.startswith(f"from {n} import") for n in names):
+        if any(s.startswith(p) for p in prefixes):
             if s.endswith("("):
                 skip_depth = raw.count("(") - raw.count(")")
                 if skip_depth < 0:
@@ -305,16 +316,21 @@ def build_kernel(
     ]
 
     # Prism modules
-    for mod in [
+    prism_mods = [
         "prism.jacobian",
         "prism.bridge",
         "prism.esg",
         "prism.calibration",
         "prism.cache_io",
         "prism.layer_selection",
-    ] + list(extra_modules or []):
+    ] + list(extra_modules or [])
+    # Basenames of everything inlined into the flat namespace: относительные импорты
+    # между ними — мертвый код после инлайна, и именно они роняли ядро.
+    inlined_names = [m.rsplit(".", 1)[-1] for m in prism_mods] + list(extra_local or [])
+    for mod in prism_mods:
         src = get_source(mod)
         src = strip_docstring(src)
+        src = strip_local_imports(src, inlined_names)
         cells.append(code_cell(src))
 
     # Local experiment helpers (e.g. experiments/_e38_cache.py) — inlined the

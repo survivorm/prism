@@ -163,6 +163,15 @@ torch.ones(K, device=eigenvectors.device) / torch.sqrt(...)
 re.sub(r"\n?\s*from prism\.\w+ import [^\n]*\n?", "", code)
 ```
 
+**Дополнение (05.11, очередь R2).** Тот же класс, но для **относительных** импортов внутри модулей:
+`prism/bridge.py` делал `from .jacobian import bridge_objective` внутри функции («import-light»).
+Ни `strip_prism_imports`, ни `strip_local_imports` его не резали (первый знает только `from prism.`,
+второй — только `from <basename> import`), и ядро падало с
+`attempted relative import with no known parent package` — при `COMPLETE` и чистом локальном прогоне
+(локально это пакет, в ядре — плоское пространство имён). `strip_local_imports` теперь режет и
+`from .<mod> import` / `from . import <mod>` для инлайннутых модулей; импорт модуля, которого в
+инлайне нет, остаётся — падение громче, чем `NameError` на неопределённое имя.
+
 ### 12. log_probs = torch.zeros(1) → device mismatch
 
 **Симптом**: `cuda:X and cpu!` при накоплении log_probs.

@@ -20,6 +20,13 @@ from prism.calibration import (
 
 def cka_similarity(X: torch.Tensor, Y: torch.Tensor) -> float:
     """Linear CKA between two sets of vectors [N, D]."""
+    if X.shape[0] != Y.shape[0]:
+        raise ValueError(
+            f"CKA сравнвает представления на ОДНОМ числе объектов: N={X.shape[0]} против "
+            f"M={Y.shape[0]}. Матрица центрирования одна, поэтому при разных размерах "
+            "получается `mm: mat1 and mat2 shapes cannot be multiplied` (так и упал exp2a). "
+            "Сравниваемые группы надо уравнивать ровно, а не `len//2` с остатком."
+        )
     K_XX = X @ X.T
     K_YY = Y @ Y.T
     K_XY = X @ Y.T
@@ -112,9 +119,16 @@ def main(
     # representation distribution) and ~0 cross-model (see exp7).
     # NOTE: this was previously CKA(X, X) on the SAME tensor (h_list ==
     # h_list2), which is 1.0 by construction and validated nothing.
-    half = max(1, len(samples) // 2)
+    half = len(samples) // 2
+    if half < 2:
+        raise ValueError(
+            f"нужно минимум 4 сэмпла на две равные группы (есть {len(samples)}): "
+            "CKA на одном объекте вырождена"
+        )
+    # Ровно равные группы: нечётный остаток ВЫБРАСЫВАЕТСЯ, иначе группы 2 и 3 и
+    # cka_similarity падает на матрице центрирования (аудит v6, F15 / очередь R3).
     grp_A = samples[:half]
-    grp_B = samples[half:]
+    grp_B = samples[half : 2 * half]
 
     results = {
         "large_identity": {},
