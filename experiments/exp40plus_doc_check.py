@@ -15,6 +15,8 @@
 
 Запуск:  cd experiments && ../.venv/bin/python exp40plus_doc_check.py     (CPU, ~15 с)
 
+Договор (поправка 05.11). Документ `E45b_leaf_memory.md` свёрнут в историю, места его
+цитирования — живые доки серии (`living_docs`).
 Договор. Для E-45b источником считаем закоммиченный лог `exp45b_analysis.log` (он пересоздаётся
 детерминированно, seed 0, 40 с): doc обязан ЦИТИРОВАТЬ его строки. Для E-46 — `exp46_verdicts.log`.
 Для остального — JSON-артефакты. Числа сравниваются по значению с допуском в один печатный
@@ -43,6 +45,17 @@ NOK = 0
 def doc(name: str) -> str:
     with open(os.path.join(D, name), encoding="utf-8") as f:
         return f.read()
+
+
+# Живые документы серии (05.11). Закрытые раунды свёрнуты в git history (коммит `07c27df`),
+# поэтому «doc обязан цитировать артефакт» переносится на любой живой документ, куда материал
+# свёрнут: paper.md — утверждения, ref-exp.md — карточки и таблицы, leaf_dynamics.md — рабочая
+# серия. Смысл проверки тот же: число из артефакта обязано быть прочитано где-то в working set.
+LIVING = ("paper.md", "ref-exp.md", "leaf_dynamics.md")
+
+
+def living_docs() -> str:
+    return "\n".join(doc(n) for n in LIVING)
 
 
 def art_json(name: str):
@@ -84,7 +97,7 @@ def medf(rows, key, pred=None) -> float:
 
 # ------------------------------------------------------- E-45b: §1 и §3 обязаны цитировать лог
 def check_e45b_quotes_log() -> None:
-    d = doc("E45b_leaf_memory.md")
+    d = living_docs()
     log = art_log("exp45b_analysis.log")
     w = "E45b ↔ exp45b_analysis.log"
     chk("Traceback" not in log and "rc(" not in log,
@@ -150,7 +163,7 @@ def check_e45b_quotes_log() -> None:
 
 # ------------------------------------------------------- E-45b §1/§2: артефакт-таблица
 def check_e45b_artifact() -> None:
-    d = doc("E45b_leaf_memory.md")
+    d = living_docs()
     art = art_json("exp45b_leaf_table.json.gz")
     rows, meta = art["rows"], art["meta"]
     w = "E45b ↔ exp45b_leaf_table.json.gz"
@@ -175,7 +188,7 @@ E46_ROWS = ("leaf_lag0", "leaf_lag1", "leaf_lag8", "haar", "pca_doc", "pca_doc_r
 
 
 def check_e46() -> None:
-    d = doc("E45b_leaf_memory.md")
+    d = living_docs()
     log = art_log("exp46_verdicts.log")
     w = "E46 ↔ exp46_verdicts.log"
     tab = {}
