@@ -91,16 +91,23 @@ def _step(V_prev, u_prev, u_cur, A, eps, h_cur):
 
 def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
          device="cpu", results_dir="results", do_verify_basis=True,
-         rtn_bits=None, rtn_group=128):
+         rtn_bits=None, rtn_group=128, dtype="float32", load_in_8bit=False):
     torch.set_num_threads(4)
     torch.manual_seed(RNG_SEED)
     dev = torch.device(device)
     from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache  # type: ignore
 
     t0 = time.time()
-    m = AutoModelForCausalLM.from_pretrained(model, dtype=torch.float32,
-                                             attn_implementation="eager")
-    m.eval().to(dev)
+    kw = {}
+    if load_in_8bit:      # честный PTQ (bnb int8): trunk квант, embed/head точные
+        from transformers import BitsAndBytesConfig
+        kw = dict(quantization_config=BitsAndBytesConfig(load_in_8bit=True),
+                  device_map="cuda:0")
+    m = AutoModelForCausalLM.from_pretrained(model, dtype=getattr(torch, dtype),
+                                             attn_implementation="eager", **kw)
+    m.eval()
+    if not load_in_8bit:
+        m.to(dev)
     if rtn_bits:      # full-model RTN (тест A/B честный: меняется и динамика u).
         lev = 2 ** (rtn_bits - 1) - 1
         nq = 0
