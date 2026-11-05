@@ -37,6 +37,10 @@ SOURCES = {
     "lfm3": ("/data/prism_kernels/exp48b/exp48b_lfm3_gen_kinematics.npz",
              "results/exp48b_lfm3_gen_kinematics.json"),
 }
+# СЕЛФ-РЕВИЮ (2026-11-05): в exp48b ent/top1 считались по U-128 подвектору softmax, а у
+# Qwen — по полному vocab (0.02 бит против 6.7 бит на тех же шагах!). triv-фичи LFM3
+# пересчитаны из сохранённых u по полному vocab (шаг 8, zero-order hold) — /tmp/e48b.
+TRIV_FIX = {"lfm3": "/tmp/e48b/lfm3_triv_fullfix.npz"}
 W = 16
 DELTS = (5, 16, 32, 64)
 MAIN_DELT = 16
@@ -59,9 +63,13 @@ def acf_recent(x, w=24, lags=tuple(range(2, 13))):
     return out
 
 
-def build_feats(f):
+def build_feats(f, triv_fix=None):
     a, s, p = (np.asarray(f[k], float) for k in ("a", "s", "p"))
     ent, top1, eq = (np.asarray(f[k], float) for k in ("ent", "top1", "eq_prev"))
+    if triv_fix is not None:
+        # ZOH: полновocab-фичи пересчитаны каждый 8-й шаг -> растягиваем на сетку шагов
+        ent = np.repeat(ent, 8)[:len(ent) * 8][:len(a)]
+        top1 = np.repeat(top1, 8)[:len(top1) * 8][:len(a)]
     leaf = np.column_stack([a, s, p] + [roll_med(m) for m in (a, s, p)])
     triv = np.column_stack([ent, top1, eq] + [roll_med(m) for m in (ent, top1, eq)]
                            + [acf_recent(s)])
@@ -143,11 +151,16 @@ def main():
     for name, (npz, jpath) in SOURCES.items():
         docs = json.load(open(os.path.join(root, jpath)))["docs"]
         z = np.load(npz, allow_pickle=True)
+        fix = np.load(TRIV_FIX[name]) if name in TRIV_FIX else None
         sets = {}
         for doc in docs:
             key = f"{doc['dom']}_{doc['si']}"
             f = z[key].item()
-            leaf, triv = build_feats(f)
+            tf = None
+            if fix is not None:
+                tf = True
+                f = dict(f); f["ent"] = fix[key + "_ent"]; f["top1"] = fix[key + "_top1"]
+            leaf, triv = build_feats(f, triv_fix=tf)
             T = leaf.shape[0]
             m = onset_mask(doc, T)
             for delta in DELTS:

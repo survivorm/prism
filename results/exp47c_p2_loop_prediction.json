@@ -59,8 +59,8 @@
   "auc_cross_domain_by_delta": {
    "5": {
     "leaf": 0.745,
-    "triv": 0.815,
-    "all": 0.858,
+    "triv": 0.839,
+    "all": 0.851,
     "folds_leaf": {
      "chat": 0.808,
      "code": 0.704,
@@ -70,8 +70,8 @@
    },
    "16": {
     "leaf": 0.752,
-    "triv": 0.801,
-    "all": 0.849,
+    "triv": 0.825,
+    "all": 0.842,
     "folds_leaf": {
      "chat": 0.82,
      "code": 0.696,
@@ -81,8 +81,8 @@
    },
    "32": {
     "leaf": 0.762,
-    "triv": 0.787,
-    "all": 0.842,
+    "triv": 0.812,
+    "all": 0.835,
     "folds_leaf": {
      "chat": 0.831,
      "code": 0.684,
@@ -92,8 +92,8 @@
    },
    "64": {
     "leaf": 0.774,
-    "triv": 0.777,
-    "all": 0.834,
+    "triv": 0.8,
+    "all": 0.829,
     "folds_leaf": {
      "chat": 0.843,
      "code": 0.674,
@@ -104,9 +104,9 @@
   },
   "verdict": {
    "AUC_leaf_d16": 0.752,
-   "AUC_triv_d16": 0.801,
-   "AUC_all_d16": 0.849,
-   "delta_auc_all_vs_triv": 0.048,
+   "AUC_triv_d16": 0.825,
+   "AUC_all_d16": 0.842,
+   "delta_auc_all_vs_triv": 0.017,
    "lead_tokens_leaf_ge08": 0,
    "verdict": "лист не добавляет (по пререгистрации §6 P2)"
   }
