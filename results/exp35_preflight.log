@@ -1,0 +1,19 @@
+# E-35 preflight — перегенерация после аудита v6 (F4)
+# Причина: ds_perm_check получал БУЛЕВУ МАСКУ (vv & ~boundary) вместо значений d_S,
+#   поэтому obs_diff = mean(boundary) - доля True, а не разность средних.
+# Команда (CPU, wall ~60 с, seed 42 — всё остальное воспроизвелось бит-в-бит):
+#   .venv/bin/python experiments/exp35_preflight.py \
+#     --out-reg results/exp35_preflight_regression.json \
+#     --out-axis2 results/exp35_preflight_axis2_attribution.json
+# Изменилось ровно одно поле (проверено поэлементным сравнением старого и нового JSON):
+#   ds_boundary_check.obs_diff       0.7785035131 -> 0.1505641341
+#   ds_boundary_check.ds_rest_pool   0.2356372120 -> 0.8635765910
+#   ds_boundary_check.ds_boundary_pool  1.0141407251 (не менялся — ветка границ была корректна)
+#   ds_boundary_check.perm_p         0.0004997501 (не менялся: нулевое распределение
+#     при перестановке меток внутри документа ни разу не достигало наблюдаемой разности)
+# Смысл: эффект границ есть и он значим, но он ×1.17 (1.014 против 0.864), а не ×4.3.
+# Артефакты на диске: results/exp35_preflight_regression.json (72K, results/*.json в
+# .gitignore — политика репо, см. docs/audit_v6_answers.md §3.3), axis2 — байт-identical.
+
+E-35 preflight L23 r=16: n_docs=27, alpha_med=0.2686 (p_med=0.000643, sig=0.89), beta_med=-0.0276 (p_med=0.377, sig=0.22), partial(ds)=0.646, VIF(ds)=1.4, R2=0.54, ds_bound/rest=1.0141/0.8636 (p=0.0005)
+artifacts: results/exp35_preflight_regression.json, results/exp35_preflight_axis2_attribution.json

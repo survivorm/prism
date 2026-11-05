@@ -143,6 +143,8 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
                      "eq_prev": [], "hnorm": []}
             u = h / h.norm()
             V_prev = u_prev = None
+            # Кадр при промптной позиции — отдельно от V_prev (NaN первого шага не трогаем).
+            V_at_cur = C.V16_from_J(C.J_analytic(A, h, eps)[0])[0]
             tokens = ids[0].tolist()
             V_stack, u_stack = [], []
             for step in range(max_new):
@@ -167,7 +169,10 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
                 feats["p"].append(pl); feats["g"].append(gg)
                 V_prev, u_prev = V_cur, u
                 u = u_new
-                V_stack.append(V_cur.float().cpu().numpy())
+                # Аудит E46+ (A6): писался V_cur = кадр СЛЕДУЮЩЕЙ позиции, то есть
+                # сохранённые u[i] и V[i] были сдвинуты на шаг. Теперь оба на позиции i.
+                V_stack.append(V_at_cur.float().cpu().numpy())
+                V_at_cur = V_cur
                 h = h_new
             gen_tokens = tokens[prompt_len:]
             loops = C.find_loops(gen_tokens)
