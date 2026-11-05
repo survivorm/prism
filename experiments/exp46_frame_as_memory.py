@@ -139,13 +139,15 @@ def main():
         mu_hat = (mu / mu.norm().clamp_min(1e-12))[:, None]           # [D,1]
         kl_med = {}
         Hc = Hd - mu                                    # центрированное облако
-        U_pca, _, _ = torch.linalg.svd(Hc, full_matrices=False)
-        pca_doc = U_pca[:, :r]                          # первое направление ≠ «среднее»
+        # БАЗИС берётся из ПРАВЫХ сингулярных векторов (Vh), то есть из подпространства R^D, а не
+        # из левых U (те живют в пространстве позиций: [S,·] вместо [D,·]). Первая версия брала U —
+        # pca_doc вышел [S,r], и expand(S,D,r) упал на несовпадении размеров.
+        Vh = torch.linalg.svd(Hc, full_matrices=False)[2]
+        pca_doc = Vh[:r].T.contiguous()               # центрированный: первое направление ≠ «среднее»
         # Нецентрированный PCA — честный конкурент линейного метода: он имеет полное право
         # занять «массивное» среднее направление, а лист его не занимает по построению.
         # Отставать лист обязан от обоих, иначе вывод «носителя нет».
-        U_raw, _, _ = torch.linalg.svd(Hd, full_matrices=False)
-        pca_doc_raw = U_raw[:, :r]
+        pca_doc_raw = torch.linalg.svd(Hd, full_matrices=False)[2][:r].T.contiguous()
 
         variants = {}
         for lag in LAGS:
@@ -164,8 +166,7 @@ def main():
         okw = torch.zeros(S, dtype=torch.bool)
         for t in range(WIN, S):                        # окно БЕЗ текущего h
             Hw = Hd[t - WIN:t] - Hd[t - WIN:t].mean(0)
-            Uw, _, _ = torch.linalg.svd(Hw, full_matrices=False)
-            Vw[t] = Uw[:, :r]
+            Vw[t] = torch.linalg.svd(Hw, full_matrices=False)[2][:r].T
             okw[t] = True
         variants["pca_win"] = (Vw, okw)
         gen = torch.Generator().manual_seed(1000 + di)

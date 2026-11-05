@@ -29,7 +29,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 RES = os.path.join(HERE, "..", "results", "exp45b_leaf_table.json.gz")
 BLOCK = 8                      # длина блока перестановки (позиции внутри документа)
 N_PERM = 1000
-GAP_MIN = 0.01
+GAP_PREREG = 0.01       # пререгистрация E-45b: «позиции с зазором меньше — невалидны»
+# Единица в пререгистрации оказалась догадкой, а не измерением: измеренный зазор на r=16
+# равен 0.0087 (процентиля 0.0078…0.0097, E-45b на свежем тексте и 0.00875 на кэше в E-45g),
+# то есть порог 0.01 объявляет невалидными 98.9-99.7 % позиций и весь анализ пуст (n = 0).
+# E-45g (`results/exp45g_cut_stability.json`) померил настоящее основание: при шуме ε ≤ 1e-06
+# правый базис V₁₆ не двигается (0.00°) и κ не меняется, а порядок σ₁₆ > σ₁₇ не ломается даже
+# при ε = 0.25. Значит валидность разреза = «зазор больше численного пола», а не «больше 1 %».
+GAP_MIN = 1e-4            # порог валидности по измеренному численному полу (E-45g)
+GAP_NOISE_FLOOR = 1e-6    # ε, при котором V₁₆ и κ ещё не шевелятся (E-45g, ε-скан)
 SEED = 0
 
 FEATS = ("d1_r16", "k2_r16", "pr_sigma", "g_uni", "j_norm", "gap_r16", "s16_over_s1",
@@ -112,7 +120,12 @@ def main():
     for dom in sorted(set(doms)):
         m = doms == dom
         log(f"  {dom:>5s}: медиана gap_r16 = {np.median(gap[m]):.4f}, "
-            f"доля позиций с gap < {GAP_MIN} = {np.mean(gap[m] < GAP_MIN) * 100:.1f} %")
+            f"доля позиций с gap < {GAP_MIN:g} = {np.mean(gap[m] < GAP_MIN) * 100:.1f} %")
+    log(f"  пререгистрационный порог {GAP_PREREG}: невалидно {np.mean(gap < GAP_PREREG) * 100:.1f} %"
+        f" — при нём анализ пуст, поэтому валидность берётся по численному полу E-45g")
+    log(f"  медианный зазор {np.median(gap):.5f} = ×{np.median(gap) / GAP_NOISE_FLOOR:.0f} над "
+        f"шумом, при котором V₁₆ и κ ещё не двигаются; невалидно по {GAP_MIN:g}: "
+        f"{np.mean(gap < GAP_MIN) * 100:.1f} %")
     log(f"  всего: доля невалидных позиций = {np.mean(gap < GAP_MIN) * 100:.1f} % "
         f"(на них выводы «лист разрушен/укреплён» не опираем)")
 
@@ -128,7 +141,7 @@ def main():
 
     log("\n== 1b. конфаунд-аудит (п.8 пререгистрации): лист против ‖h‖ ==")
     rng = np.random.default_rng(SEED)
-    doc_of = np.array([(r["domain"], r["doc"]) for r in rows], dtype=object)
+    doc_of = np.array([f"{r['domain']}#{r['doc']}" for r in rows])   # 1-D строки: из list-of-tuples numpy делает 2-D массив, и == возвращает вектор (первый прогон упал именно здесь)
     hn, kk = col("h_norm"), col("k2_r16")
     m3 = ht & np.isfinite(hn) & np.isfinite(kk) & (gap >= GAP_MIN)
     c_hn, z_hn, _ci, n_hn = block_perm_corr(hn, kk, m3, doc_of, rng)
@@ -186,12 +199,17 @@ def main():
     an, ar = col("align_next"), col("align_rand")
     pn, pr = col("align_pca_next"), col("align_pca_rand")
     haar = (meta["r_main"] / 1024.0) ** 0.5
-    log(f"  Haar-ориентир √(r/D) = {haar:.4f}; фактический align_rand = {np.median(ar):.4f}, "
-        f"align_pca_rand = {np.median(pr):.4f}")
+    ah = col("align_haar")
+    log(f"  Haar-ориентир √(r/D) = {haar:.4f}, измеренный "
+        f"align_haar = {np.median(ah):.4f} — механический уровень ранг-r подпространства")
+    log(f"  align_rand (тот же базис, случайный токен) = "
+        f"{np.median(ar):.4f} = ×{np.median(ar) / max(np.median(ah), 1e-9):.2f} от Haar, "
+        f"align_pca_rand = {np.median(pr):.4f}: строки словаря анизотропны, "
+        f"поэтому знаменатель скоринга — он, а не Haar")
     with np.errstate(divide="ignore", invalid="ignore"):
         s_leaf, s_pca = an / np.maximum(ar, 1e-9), pn / np.maximum(pr, 1e-9)
     rng2 = np.random.default_rng(1)
-    docs = np.array([(r["domain"], r["doc"]) for r in rows])
+    docs = np.array([f"{r['domain']}#{r['doc']}" for r in rows])
     uniq = sorted(set(docs.tolist()))
     dmed = {k: np.median(s_leaf[docs == k]) for k in uniq}
     dpca = {k: np.median(s_pca[docs == k]) for k in uniq}

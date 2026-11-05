@@ -1,0 +1,130 @@
+loading jcache L23 ...
+set A: (4096, 1024) (4 доменов × 8 документов × 128)
+loading model (fp32) ...
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  33%|███▎      | 106/320 [00:00<00:00, 999.28it/s]Loading weights:  70%|██████▉   | 223/320 [00:00<00:00, 1081.37it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1070.17it/s]
+capturing h for set B (C4 val; readout-only ⇒ h от правки не зависит) ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  val недоступен (Bad split: val. Available splits: ['train', 'validation']), fallback train skip=24576
+set B: (4064, 1024), реальных токенов 3681
+base logits over A ...
+  sentinel A (масса < 0.5): 1050/4096 = 51.3 %
+  cross-check против kl_leash: ours=0.00554644 ref=0.00554647 abs=3.16e-08 rel=5.69e-06
+  sparse-vs-dense kl_be: max|Δ| = 1.80e-06
+  sparse-vs-dense kl_eb: max|Δ| = 1.88e-06
+  sparse-vs-dense tv: max|Δ| = 1.22e-06
+  sparse-vs-dense flip: расхождений 0 из 64
+quantizing GPTQ 4-bit (Гессиан = 4096 позиций кэша) ...
+quantizing int8 RTN ...
+  база κ(r=16) на подыборке 8 доков = 0.015921 (якорь по корпусу 0.016233)
+  линейность дрейфа по σ: drift_K(σ=1) = 1.0228, drift_full(σ=1) = 0.9230
+  drift 0.06: σ_K = 0.0587·σ_U, σ_full = 0.06501·σ_W (фактический дрейф печатается в строке правки)
+  drift 0.12: σ_K = 0.1173·σ_U, σ_full = 0.13001·σ_W (фактический дрейф печатается в строке правки)
+  drift 0.25: σ_K = 0.2444·σ_U, σ_full = 0.27086·σ_W (фактический дрейф печатается в строке правки)
+  flat_l0.01: взято из кэша, обучение пропущено
+  flat_l0.1: взято из кэша, обучение пропущено
+  flat_noleash: взято из кэша, обучение пропущено
+            base: drift 0.0000  κ 0.015921 (×1.000)  KL_A 0.00000  KL_B 0.00000  TV_B 0.0000  flip_B 0.0000  PPL_B 31.6411  gap16 0.0088 (98.9 % < 1 %)   [434 с]
+           gptq4: drift 0.1270  κ 0.015848 (×0.995)  KL_A 0.00499  KL_B 0.01303  TV_B 0.0568  flip_B 0.0842  PPL_B 32.2962  gap16 0.0074 (100.0 % < 1 %)   [3224 с]
+            rtn8: drift 0.0058  κ 0.015920 (×1.000)  KL_A 0.00008  KL_B 0.00009  TV_B 0.0048  flip_B 0.0103  PPL_B 31.6426  gap16 0.0086 (99.3 % < 1 %)   [1306 с]
+    rand_K_d0.06: drift 0.0600  κ 0.015877 (×0.997)  KL_A 0.00459  KL_B 0.00652  TV_B 0.0319  flip_B 0.0608  PPL_B 31.8034  gap16 0.0074 (100.0 % < 1 %)   [30 с]
+ rand_full_d0.06: drift 0.0600  κ 0.015979 (×1.004)  KL_A 0.00838  KL_B 0.00983  TV_B 0.0510  flip_B 0.0706  PPL_B 31.7465  gap16 0.0098 (77.3 % < 1 %)   [66 с]
+    rand_K_d0.12: drift 0.1200  κ 0.015813 (×0.993)  KL_A 0.01842  KL_B 0.02619  TV_B 0.0640  flip_B 0.1162  PPL_B 32.3897  gap16 0.0057 (100.0 % < 1 %)   [25 с]
+ rand_full_d0.12: drift 0.1200  κ 0.015947 (×1.002)  KL_A 0.03349  KL_B 0.03925  TV_B 0.1016  flip_B 0.1429  PPL_B 32.4823  gap16 0.0105 (4.7 % < 1 %)   [75 с]
+loading jcache L23 ...
+set A: (4096, 1024) (4 доменов × 8 документов × 128)
+loading model (fp32) ...
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  30%|██▉       | 95/320 [00:00<00:00, 943.12it/s]Loading weights:  60%|██████    | 192/320 [00:00<00:00, 941.34it/s]Loading weights:  90%|████████▉ | 287/320 [00:00<00:00, 845.87it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 850.28it/s]
+capturing h for set B (C4 val; readout-only ⇒ h от правки не зависит) ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  val недоступен (Bad split: val. Available splits: ['train', 'validation']), fallback train skip=24576
+set B: (4064, 1024), реальных токенов 3681
+base logits over A ...
+  sentinel A (масса < 0.5): 1050/2048 = 51.3 %
+  cross-check против kl_leash: ours=0.00554644 ref=0.00554647 abs=3.16e-08 rel=5.69e-06
+  sparse-vs-dense kl_be: max|Δ| = 1.80e-06
+  sparse-vs-dense kl_eb: max|Δ| = 1.88e-06
+  sparse-vs-dense tv: max|Δ| = 1.22e-06
+  sparse-vs-dense flip: расхождений 0 из 64
+quantizing GPTQ 4-bit (Гессиан = 4096 позиций кэша) ...
+quantizing int8 RTN ...
+loading jcache L23 ...
+set A: (4096, 1024) (4 доменов × 8 документов × 128)
+loading model (fp32) ...
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  42%|████▏     | 133/320 [00:00<00:00, 1323.94it/s]Loading weights:  83%|████████▎ | 266/320 [00:00<00:00, 1096.61it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1110.57it/s]
+capturing h for set B (C4 val; readout-only ⇒ h от правки не зависит) ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  val недоступен (Bad split: val. Available splits: ['train', 'validation']), fallback train skip=24576
+set B: (4064, 1024), реальных токенов 3681
+base logits over A ...
+  sentinel A (масса < 0.5): 1050/2048 = 51.3 %
+  cross-check против kl_leash: ours=0.00554644 ref=0.00554647 abs=3.16e-08 rel=5.69e-06
+  sparse-vs-dense kl_be: max|Δ| = 1.80e-06
+  sparse-vs-dense kl_eb: max|Δ| = 1.88e-06
+  sparse-vs-dense tv: max|Δ| = 1.22e-06
+  sparse-vs-dense flip: расхождений 0 из 64
+quantizing GPTQ 4-bit (Гессиан = 4096 позиций кэша) ...
+quantizing int8 RTN ...
+  RTN готов, строю J базы …
+  J базы готов, считаю κ базы …
+    κ: документ 1/8
+    κ: документ 5/8
+  база κ(r=16) на подыборке 8 доков = 0.015921 (якорь по корпусу 0.016233)
+  линейность дрейфа по σ: drift_K(σ=1) = 1.0228, drift_full(σ=1) = 0.9230
+  drift 0.06: σ_K = 0.0587·σ_U, σ_full = 0.06501·σ_W (фактический дрейф печатается в строке правки)
+  drift 0.12: σ_K = 0.1173·σ_U, σ_full = 0.13001·σ_W (фактический дрейф печатается в строке правки)
+  drift 0.25: σ_K = 0.2444·σ_U, σ_full = 0.27086·σ_W (фактический дрейф печатается в строке правки)
+  flat_l0.01: взято из кэша, обучение пропущено
+  flat_l0.1: взято из кэша, обучение пропущено
+  flat_noleash: взято из кэша, обучение пропущено
+resume: 7 готовых строк из partial
+            base: готовая строка из partial (пропуск)
+           gptq4: готовая строка из partial (пропуск)
+            rtn8: готовая строка из partial (пропуск)
+    rand_K_d0.06: готовая строка из partial (пропуск)
+ rand_full_d0.06: готовая строка из partial (пропуск)
+    rand_K_d0.12: готовая строка из partial (пропуск)
+ rand_full_d0.12: готовая строка из partial (пропуск)
+  [rand_K_d0.25] дрейф 0.2500 готов, считаю κ …
+    κ: документ 1/8
+    κ: документ 5/8
+  [rand_K_d0.25] κ = 0.016726, спектр …
+  [rand_K_d0.25] спектр готов (1400 с), метрики A и B …
+  [rand_K_d0.25] метрики готовы (1400 с), агрегаты …
+    rand_K_d0.25: drift 0.2500  κ 0.016726 (×1.051)  KL_A 0.08097  KL_B 0.11418  TV_B 0.1335  flip_B 0.2238  PPL_B 35.2616  gap16 0.0014 (100.0 % < 1 %)   [1400 с]
+  [rand_full_d0.25] дрейф 0.2500 готов, считаю κ …
+    κ: документ 1/8
+    κ: документ 5/8
+  [rand_full_d0.25] κ = 0.016039, спектр …
+  [rand_full_d0.25] спектр готов (1871 с), метрики A и B …
+  [rand_full_d0.25] метрики готовы (1981 с), агрегаты …
+ rand_full_d0.25: drift 0.2500  κ 0.016039 (×1.007)  KL_A 0.14467  KL_B 0.16957  TV_B 0.2084  flip_B 0.2814  PPL_B 36.4852  gap16 0.0109 (1.5 % < 1 %)   [1981 с]
+  [flat_l0.01] дрейф 0.4589 готов, считаю κ …
+    κ: документ 1/8
+    κ: документ 5/8
+  [flat_l0.01] κ = 0.005178, спектр …
+  [flat_l0.01] спектр готов (1465 с), метрики A и B …
+  [flat_l0.01] метрики готовы (1466 с), агрегаты …
+      flat_l0.01: drift 0.4589  κ 0.005178 (×0.325)  KL_A 0.15949  KL_B 0.14718  TV_B 0.0695  flip_B 0.0945  PPL_B 35.5608  gap16 0.0288 (0.0 % < 1 %)   [1466 с]
+  [flat_l0.1] дрейф 0.5513 готов, считаю κ …
+    κ: документ 1/8
+    κ: документ 5/8
+  [flat_l0.1] κ = 0.003358, спектр …
+  [flat_l0.1] спектр готов (1237 с), метрики A и B …
+  [flat_l0.1] метрики готовы (1237 с), агрегаты …
+       flat_l0.1: drift 0.5513  κ 0.003358 (×0.211)  KL_A 0.44626  KL_B 0.50219  TV_B 0.0980  flip_B 0.1233  PPL_B 48.8715  gap16 0.0492 (0.0 % < 1 %)   [1237 с]
+  [flat_noleash] дрейф 0.5485 готов, считаю κ …
+    κ: документ 1/8
+    κ: документ 5/8
+  [flat_noleash] κ = 0.002055, спектр …
+  [flat_noleash] спектр готов (1193 с), метрики A и B …
+  [flat_noleash] метрики готовы (1194 с), агрегаты …
+    flat_noleash: drift 0.5485  κ 0.002055 (×0.129)  KL_A 5.50241  KL_B 4.77802  TV_B 0.4564  flip_B 0.5644  PPL_B 2364.8059  gap16 0.0820 (0.0 % < 1 %)   [1194 с]
+anchor kappa_base: 0.0159209 vs 0.0162333 (rel 1.92e-02, допуск 2e-03)
+Traceback (most recent call last):
+  File "/home/survivor/work/prism/experiments/exp45_damage_vs_structure.py", line 684, in <module>
+    main()
+    ~~~~^^
+  File "/home/survivor/work/prism/experiments/exp45_damage_vs_structure.py", line 667, in main
+    assert rel < tol, f"якорь {k} не сошёлся: rel={rel:.2e}"
+           ^^^^^^^^^
+AssertionError: якорь kappa_base не сошёлся: rel=1.92e-02
