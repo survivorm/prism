@@ -341,6 +341,32 @@ rd = [supp["layers"][str(L)]["nulls_same_slice"]["real_over_direction"] for L in
 need(f"{min(rd):.3f}–{max(rd):.3f}", "E-39-дополнение real/dir")
 
 # ---------------------------------------------------------------- трассируемость ссылок
+# --- E-0.1: числа статьи обязаны совпадать с каноническим артефактом (05.11) ---------------
+# Проверка заведена после переиздания канона под закреплённый пул: до неё ряд $C_b$ в статье
+# не сверялся ни с чем, и подмена артефакта прошла бы молча.
+_e01 = art("exp01_coherence")["layers"]
+_L01 = ("6", "12", "18", "22")
+_m01 = re.search(r"^- \*\*E-0\.1\*\*.*$", PAPER, re.M)
+chk(_m01 is not None, "E-0.1: в статье нет пункта E-0.1")
+if _m01:
+    _row = _m01.group(0)
+    for _label, _field, _pat in (
+            ("$C_b$", "C_at_sigma_d_b", r"межсэмпловой \$C_b\$ = ([0-9./]+)"),
+            ("pos-pk", "C_at_sigma_d_a", r"падает до ([0-9./]+) \(")):
+        _m = re.search(_pat, _row)
+        chk(_m is not None, f"E-0.1: в статье не найден ряд {_label}")
+        if _m:
+            _got = [float(x) for x in _m.group(1).split("/")]
+            _exp = [_e01[_l][_field] for _l in _L01]
+            chk(len(_got) == 4 and all(abs(a - b) < 6e-4 for a, b in zip(_got, _exp)),
+                f"E-0.1: {_label} в статье {_got} ≠ артефакт {[round(x, 4) for x in _exp]}")
+    _sup = re.search(r"0 из (\d+) и 0 из (\d+)", _row)
+    chk(_sup is not None, "E-0.1: не найдено число бинов на левом краю поддержки")
+    if _sup:
+        _nb = [len(_e01[_l]["gate_curve_b"]["C"]) for _l in ("6", "12")]
+        chk([int(_sup.group(1)), int(_sup.group(2))] == _nb,
+            f"E-0.1: бинов в статье {_sup.group(1)}/{_sup.group(2)}, в артефакте {_nb}")
+
 tracked = set(subprocess.run(["git", "ls-files", "results"], cwd=ROOT, capture_output=True, text=True)
               .stdout.split())
 def _is_hex(x: str) -> bool:
