@@ -90,7 +90,8 @@ def _step(V_prev, u_prev, u_cur, A, eps, h_cur):
 
 
 def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
-         device="cpu", results_dir="results", do_verify_basis=True):
+         device="cpu", results_dir="results", do_verify_basis=True,
+         rtn_bits=None, rtn_group=128):
     torch.set_num_threads(4)
     torch.manual_seed(RNG_SEED)
     dev = torch.device(device)
@@ -100,6 +101,17 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
     m = AutoModelForCausalLM.from_pretrained(model, dtype=torch.float32,
                                              attn_implementation="eager")
     m.eval().to(dev)
+    if rtn_bits:      # full-model RTN (тест A/B честный: меняется и динамика u).
+        lev = 2 ** (rtn_bits - 1) - 1
+        nq = 0
+        for mod in m.modules():
+            if isinstance(mod, torch.nn.Linear):
+                w = mod.weight.data
+                wf = w.reshape(w.shape[0], -1, rtn_group).double()
+                sc = wf.abs().amax(-1, keepdim=True).clamp(min=1e-12) / lev
+                mod.weight.data = ((wf / sc).round().clamp(-lev, lev) * sc).reshape_as(w).to(w.dtype)
+                nq += 1
+        print(f"[rtn] int{rtn_bits} per-group({rtn_group}) деQuantized Linear-слоёв: {nq}", flush=True)
     tok = AutoTokenizer.from_pretrained(model)
     n_layers = int(m.config.num_hidden_layers)
     norm = m.model.norm
@@ -264,7 +276,11 @@ if __name__ == "__main__":
     ap.add_argument("--max-new", type=int, default=384)
     ap.add_argument("--prompt-len", type=int, default=64)
     ap.add_argument("--device", default="cpu")
+    ap.add_argument("--rtn-bits", type=int, default=None,
+                    help="full-model RTN: симметрично per-group квантовать ВСЕ Linear (dequant in-place)")
+    ap.add_argument("--rtn-group", type=int, default=128)
     ap.add_argument("--results-dir", default=os.path.join(_HERE, "..", "results"))
     a = ap.parse_args()
     main(model=a.model, n_docs=a.n_docs, max_new=a.max_new, prompt_len=a.prompt_len,
-         device=a.device, results_dir=a.results_dir)
+         device=a.device, results_dir=a.results_dir,
+         rtn_bits=a.rtn_bits, rtn_group=a.rtn_group)
