@@ -1,0 +1,13 @@
+{
+  "kernel_type": "notebook",
+  "is_gpu_enabled": false,
+  "language": "python",
+  "code_file": "kernel.ipynb",
+  "id": "voroninmichael/prism-ds-publish-probe",
+  "title": "Prism: dataset publish probe (R15)",
+  "kernel_sources": [],
+  "dataset_sources": [],
+  "competition_sources": [],
+  "model_sources": [],
+  "enable_internet": true
+}
