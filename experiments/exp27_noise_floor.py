@@ -345,7 +345,12 @@ def main(
     print(f"[OK] exp27 saved to {out_path}")
     print(json.dumps(manifest, indent=1))
 
-def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs):
+def _metrics(JR, P128, RANKS, H, D, layers, domains, n_samples, cfgs,
+             u128_frozen=False):
+    # u128_frozen — аудит v6 F3: вызывался как keyword с двух мест (main и --resume),
+    # а в сигнатуре его не было → TypeError на любом пути. Семантика — только
+    # строка провенанса U128_source в манифесте, на метрики не влияет.
+
     # ---- per-layer metrics -------------------------------------------------
     n = n_samples * len(domains)
     Ss = sorted({S for S, _, _ in cfgs})
@@ -539,7 +544,9 @@ def main_cli():
         layers=tuple(int(x) for x in args.layers.split(",")),
         n_samples=args.n_samples,
         domains=tuple(args.domains.split(",")),
-        make_png=args.make_png,
+        # аудит v6 F3: здесь был make_png=args.make_png — ни такого аргумента
+        # argparse, ни параметра make_png у main() в файле нет (PNG-кода нет вообще),
+        # то есть любой запуск без --resume падал на AttributeError.
     )
 
 if __name__ == "__main__":

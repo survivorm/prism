@@ -1,12 +1,31 @@
 """Experiment 10d: Common mode as meta-signal (optional).
 
-Correlate common-mode coordinate c_t = v_0^T h_l with entropy H(p_t)
-across positions/samples of calibration data, per layer.
+ЧТО МЕРЯЕТСЯ НА САМОМ ДЕЛЕ (аудит v6 F11; прежний текст обещал другое).
+Для каждого слоя берётся v_0 — верхний собственный вектор ESG, построенной
+ПУЛОМ по всем калибровочным сэмплам (то есть межсэмпловой пул, который
+`prism/esg.py` в своих докстрингах запрещает как невалидный: E-0.1, C_b на
+уровне шума). Число на слой-сэмпел — это
+
+    c = ‖v_0ᵗ J‖ ,   J = якобиан ЛОГИТОВ по токен-сету на ПОСЛЕДНЕЙ позиции
+
+то есть НОРМА общей моды в скрытом пространстве, а не координата `v_0ᵗ h_l` по
+позициям последовательности; `h` здесь вообще не участвует. Спирмен считается
+по `n_samples` точкам (по умолчанию 4!). При n=4 спектр Спирмена дискретен:
+ρ ∈ {0, ±0.4, ±0.8, ±1} — то есть опубликованные «−0.40 … −0.80» есть просто
+допустимые значения этого критерия, а не измеренная сила связи; признак
+насыщения (−0.8 = максимум при n=4, кроме ±1) читается ровно наоборот.
+Вывод «gauge = канал уверенности» на этих числах НЕ держится: чтобы он был
+чем-то большим, чем ноль, нужны позиции внутри документа как точки (тогда
+n = S·N) и ESG внутри траектории, а не пул по сэмплам.
+
+Временный статус: артефакт остаётся как диапозон-диагностика, поле
+`spearman_corr` читается только вместе с `n_points` и `spearman_values_at_n`.
 """
 
 import argparse
 import json
 import os
+from itertools import permutations
 
 import torch
 from scipy.stats import spearmanr
@@ -114,6 +133,14 @@ def main(
             "c_values": c_values,
             "h_values": h_values,
             "spearman_corr": corr,
+            # аудит v6 F11: явное самоопределение величины и её разрешения
+            "measurement": "c = ||v0^T J|| на последней позиции (не v0^T h по позициям); "
+                           "v0 — ESG, собранная пулом по всем сэмплам",
+            "n_points": len(c_values),
+            "spearman_values_at_n": (sorted({round(abs(spearmanr(list(range(4)), list(p))[0]), 3)
+                                             for p in permutations(range(4))})
+                                     if len(c_values) == 4 else None),
+            "esg_pool": "cross-sample (запрещён докстрингом prism/esg.py; см. E-0.1 C_b)",
         }
         print(f"  layer {layer}: corr={corr:.3f}, c={c_values}, H={h_values}")
 

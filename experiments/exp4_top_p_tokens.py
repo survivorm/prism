@@ -6,6 +6,15 @@ Compare bridge loss using three token selection strategies:
   3. random: uniformly random tokens from vocabulary (low-probability negatives)
 
 This addresses reviewer concern about uniform token-set bias.
+
+КОНФАУНД, КОТОРЫЙ НАДО ЧИТАТЬ (аудит v6 F13): ядро top-p — это union ядер по
+всем калибровочным сэмплам с потолком 512, то есть `top_p_92` сравнивается с
+`uniform_64`/`random_64` ОДНОВРЕМЕННО по составу и по размеру множества (K
+входит в `jacobian_gap` как число строк). therefore сравнение «top-p против
+uniform» — это не «состав при том же K»; размер множества пишется в `params`
+и в `set_size` каждого варианта, и читать числа надо вместе с ним.
+Конвенция nucleus здесь — `cumsum <= p`, то есть токен, переполняющий 0.92,
+В ЯДРО НЕ входит (нестандартно, сознательно; иначе размер ядра скачет на 1).
 """
 
 import argparse
@@ -151,7 +160,8 @@ def main(
             print(f"  {l_L}->{l_S}: loss={loss:.6f}")
 
         avg = sum(layer_losses.values()) / len(layer_losses)
-        results[name] = {"per_layer": layer_losses, "avg": avg}
+        results[name] = {"per_layer": layer_losses, "avg": avg,
+                         "set_size": len(token_set)}
 
     # Save
     os.makedirs(results_dir, exist_ok=True)
@@ -163,6 +173,9 @@ def main(
             "n_samples": n_samples,
             "max_length": max_length,
             "min_length": min_length,
+            "token_set_sizes": {k: len(v) for k, v in token_sets.items()},
+            "caveat": "top_p_92 — union ядер (cap 512) против K=64 у uniform/random: "
+                      "различие метрики смешивает состав И размер множества (аудит v6 F13)",
         },
     }
     with open(os.path.join(results_dir, "exp4_top_p_tokens.json"), "w") as f:

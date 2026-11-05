@@ -176,4 +176,9 @@ if __name__ == "__main__":
     if args.self_check:
         _selfcheck()
         raise SystemExit(0)
-    main(**vars(args))
+    # Аудит v6 F3: main(**vars(args)) передавал self_check, которого в сигнатуре main()
+    # нет → TypeError при любом CLI-запуске (артефакт exp2a_cka_identity.json поэтому
+    # никогда и не был создан).
+    a = vars(args)
+    a.pop("self_check", None)
+    main(**a)

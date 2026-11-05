@@ -124,16 +124,16 @@ def main(
     results = {
         "raw": {
             "per_layer": variants["raw"],
-            "avg": sum(v["loss"] for v in variants["raw"]) / len(variants["raw"]),
+            "avg": sum(v["gap"] for v in variants["raw"]) / len(variants["raw"]),
         },
         "centered": {
             "per_layer": variants["centered"],
-            "avg": sum(v["loss"] for v in variants["centered"])
+            "avg": sum(v["gap"] for v in variants["centered"])
             / len(variants["centered"]),
         },
         "softmax": {
             "per_layer": variants["softmax"],
-            "avg": sum(v["loss"] for v in variants["softmax"])
+            "avg": sum(v["gap"] for v in variants["softmax"])
             / len(variants["softmax"]),
         },
     }

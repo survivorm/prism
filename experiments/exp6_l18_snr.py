@@ -153,7 +153,10 @@ def main(
     all_results = {
         "layers": per_layer,
         "params": {
-            model: model,
+            # багфикс аудита (F8, свип 31058a5 пропустил файл): ключ `model` был не
+            # заквочен — в опубликованном exp6_l18_snr.json params содержал
+            # "Qwen/Qwen3.5-0.8B" как ИМЯ ключа
+            "model": model,
             "n_samples": n_samples,
             "K": K,
             "max_length": max_length,

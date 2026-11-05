@@ -144,8 +144,10 @@ def main():
     sp = []
     for i in range(len(docs)):
         y = np.array([per_doc[lg][i] for lg in lags])
-        sp.append(np.corrcoef(np.arange(len(lags)), y)[0, 1])
-    log(f"  Spearman(lag, KL) по документам: медиана {np.median(sp):+.3f}, "
+        # аудит v6: метрика называлась Spearman, но считалась как Пирсон по
+        # рангу лага против СЫРОГО значения KL; теперь ранги и того, и другого
+        sp.append(np.corrcoef(np.arange(len(lags)), np.argsort(np.argsort(y)))[0, 1])
+    log(f"  Spearman(lag, KL) по документам (ранги обеих осей): медиана {np.median(sp):+.3f}, "
         f"доля > 0: {100 * np.mean(np.array(sp) > 0):.0f} %")
     log("  замечание: монотонность лестницы — это то же предсказание, что стоит за κ; если её нет,")
     log("  «медленно вращающаяся рама» не подтверждается, каким бы хорошим ни был lag1 против null'ей")

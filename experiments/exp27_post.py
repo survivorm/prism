@@ -112,9 +112,16 @@ def main(json_path: str, out_dir: str = "results"):
     for l in LAYERS:
         hs = half_split(res, l)
         F = _cfg(res, l, "S64_K64_p0")["F"]
-        c18 = _cfg(res, "18" if l == "19" else "18", "S64_K64_p0").get("C_b_mean")
-        c19 = _cfg(res, l, "S64_K64_p0").get("C_b_mean")
-        print(f"L{l}: CI mean={hs['mean']:.4f} p90={hs['p90']:.4f} (F={F:.4f}) C_b L18={c18:.3f} L19={c19:.3f}")
+        # аудит v6: прежний вид ('18' if l == '19' else '18') был тавтологией
+        # (обе ветки давали 18), то есть колонка «L18» показывала C_b самого
+        # слоя; теперь сравниваются ровно L18 и L19
+        c18 = _cfg(res, "18", "S64_K64_p0").get("C_b_mean")
+        c19 = _cfg(res, "19", "S64_K64_p0").get("C_b_mean")
+        # аудит v6: {None:.3f} валился TypeError, а .get(...,0) на лог-шкале рисовал
+        # несуществующее значение как настоящую колонку; пропуск теперь явный
+        f18 = "n/a" if c18 is None else f"{c18:.3f}"
+        f19 = "n/a" if c19 is None else f"{c19:.3f}"
+        print(f"L{l}: CI mean={hs['mean']:.4f} p90={hs['p90']:.4f} (F={F:.4f}) C_b L18={f18} L19={f19}")
 
     # PNGs (guarded).
     try:
@@ -126,7 +133,7 @@ def main(json_path: str, out_dir: str = "results"):
         fig, ax = plt.subplots(figsize=(7, 4))
         Ss = (32, 64, 128, 256)
         M = np.array([
-            [(_cfg(res, l, f"S{S}_K64_pair0_1").get("C_a_pospk", 0)
+            [(_cfg(res, l, f"S{S}_K64_pair0_1").get("C_a_pospk", float("nan"))
               / _cfg(res, l, f"S{S}_K64_p0")["F"])
              for S in Ss] for l in LAYERS
         ])
@@ -145,7 +152,7 @@ def main(json_path: str, out_dir: str = "results"):
         fig, ax = plt.subplots(figsize=(7, 4))
         pairs = ("0_1", "1_2", "2_4", "4_8", "8_16")
         M = np.array([
-            [(_cfg(res, l, f"S64_K64_pair{pr}").get("C_a_pospk", 0)
+            [(_cfg(res, l, f"S64_K64_pair{pr}").get("C_a_pospk", float("nan"))
               / _cfg(res, l, "S64_K64_p0")["F"])
              for pr in pairs] for l in LAYERS
         ])
@@ -164,7 +171,9 @@ def main(json_path: str, out_dir: str = "results"):
         fig, ax = plt.subplots(figsize=(7, 4))
         x = np.arange(len(LAYERS)); w = 0.26
         for k, name in enumerate(("r_eff_entrop", "r_eff_stable", "r_eff_PR")):
-            vals = np.array([_cfg(res, l, "S64_K64_p0").get(name, 0) for l in LAYERS])
+            # аудит v6: .get(name, 0) на log-шкале = нарисованная колонка там, где данных
+            # нет; nan в matplotlib = пропуск (дырка), а не ноль
+            vals = np.array([_cfg(res, l, "S64_K64_p0").get(name) or np.nan for l in LAYERS])
             ax.bar(x + (k - 1) * w, vals, w, label=name)
         ax.set_xticks(x); ax.set_xticklabels([f"L{l}" for l in LAYERS])
         ax.set_yscale("log"); ax.set_ylabel("r_eff (log)")

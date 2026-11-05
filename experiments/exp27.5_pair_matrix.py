@@ -59,12 +59,18 @@ def main() -> None:
             "S": S, "K": K, "pos": POS, "layers": LAYER_SET,
             "n_pairs": len(pts) * (len(pts) - 1) // 2,
             "domains": DOMAINS, "n_per_domain": N_PER_DOMAIN,
-            "metric": "cosine(softmax_jacobian(J_raw[:K], p[:K]) / delta_ij)",
+            "metric": "cosine(softmax_jacobian(J_raw[:K], p[:K])_i, \u2026_j) \u2014 косинус пар якобианов; "
+                      "делитель delta_ij сокращается в косинусе (оба аргумента делятся на одно и то "
+                      "же число), поэтому в формуле его НЕТ (прежняя подпись \u00ab/delta_ij\u00bb "
+                      "вводила в заблуждение \u2014 аудит v6)",
             "gauge": "pos-pk at pos 0 (p renormalized on K-subset)",
             "ckpt": str(args.ckpt),
             "ckpt_sha256": hashlib.sha256(Path(args.ckpt).read_bytes()).hexdigest()[:16],
-            "ckpt_U128_sha": ckpt.get("U128_sha", None),
-            "ckpt_model_sha": ckpt.get("model_sha", None),
+            # аудит v6: ключей U128_sha/model_sha в кэше нет -> прежний .get давал null
+            # всегда; теперь считаем sha фактически сохранённого U128
+            "ckpt_U128_sha": (hashlib.sha256(ckpt["U128"].numpy().tobytes()).hexdigest()[:16]
+                              if "U128" in ckpt else None),
+            "ckpt_model": str(ckpt.get("model", ckpt.get("model_id", None))),
         },
         "layers": {},
     }
@@ -84,8 +90,10 @@ def main() -> None:
         M = np.full((n, n), np.nan)
         for i in range(n):
             for j in range(i + 1, n):
-                d = (hs[i] - hs[j]).norm().item()
-                M[i, j] = M[j, i] = _cos(Jg[i] / d, Jg[j] / d)
+                # аудит v6: прежний вид `_cos(Jg[i]/d, Jg[j]/d)` делил ОБА аргумента на
+                # одно и то же число -> косинус не менялся (no-op), а подпись обещала
+                # нормировку на расстояние; деление убрано, метрика та же
+                M[i, j] = M[j, i] = _cos(Jg[i], Jg[j])
         v = M[~np.isnan(M)]
         same = [M[i, j] for i in range(n) for j in range(i + 1, n)
                 if pts[i][0] == pts[j][0]]

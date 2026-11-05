@@ -103,11 +103,13 @@ def main(
         "determinism_pass": det_ok,
     }
     out["params"] = {
-        model: model,
-        n_samples: n_samples,
-        K: K,
-        max_length: max_length,
-        min_length: min_length,
+        # багфикс аудита (F8): ключи были не заквочены — расширенные имена становились
+        # ключами params ("Qwen/Qwen3.5-0.8B": "..." в опубликованном JSON)
+        "model": model,
+        "n_samples": n_samples,
+        "K": K,
+        "max_length": max_length,
+        "min_length": min_length,
     }
     # pi-lens-ignore: unchecked-throwing-call-python (standalone script: fail fast on missing results dir is the point)
     with open(os.path.join(results_dir, "exp1_identity.json"), "w") as f:

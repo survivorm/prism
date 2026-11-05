@@ -34,7 +34,7 @@ import time
 import traceback
 
 import numpy as np
-from scipy.stats import t as tdist
+from scipy.stats import spearmanr, t as tdist
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import exp28_leaf_structure as E28  # noqa: E402
@@ -80,14 +80,17 @@ def angle_max(a, b):
 
 
 def spearman(x, y):
+    """Спирмен через ранги со средними по связкам (scipy.rankdata внутри).
+
+    багфикс аудита (F9): прежняя версия вычитала из рангов `(arange(n)+1)/(n+1)` —
+    сдвиг по ПОЗИЦИИ В МАССИВЕ, не аффинное преобразование рангов, и связки не
+    обрабатывались; систематика 0.004-0.02, до 0.1 на затронутых rho_nb_*.
+    """
     n = len(x)
     if n < 3:
         return float('nan')
-    rx = np.argsort(np.argsort(x))
-    ry = np.argsort(np.argsort(y))
-    rx = rx - (np.arange(n) + 1) / (n + 1)
-    ry = ry - (np.arange(n) + 1) / (n + 1)
-    return float(np.corrcoef(rx, ry)[0, 1])
+    return float(spearmanr(np.asarray(x, dtype=np.float64),
+                           np.asarray(y, dtype=np.float64)).statistic)
 
 
 def fit_cubic(eps, y):

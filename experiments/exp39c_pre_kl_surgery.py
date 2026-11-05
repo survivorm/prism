@@ -553,7 +553,9 @@ def main(results_dir=None):
         vn_ov = float(torch.linalg.norm(Vn.T @ V_top.T, "fro"))
         # round 4 §3: per-strategy κ' DRY-RUN (E-39a's _kappa_dryrun, N=32
         # cache). a_random is EXACTLY E-39a's a_random (bottom-64 QR of a
-        # random projection), so its κ' should reproduce E-39a's 0.0040
+        # random projection), so its κ' should reproduce E-39a's 0.000297
+        # (пост-фиксное значение; 0.0040 было ДО фикса einsum-бага v1–v3 и
+        # его эти комментарии больше не обязаны давать — аудит v6)
         # (consistency check on the dry-run pipeline + the E-39c_pre V_new
         # construction). b/c are the other two E-39a strategies.
         kap_s = _kappa_dryrun(M_kp_s, u64, u64.shape[0], S_LEN, R)["kappa"]
@@ -920,7 +922,9 @@ def main(results_dir=None):
             "target across α) rests on this dry-run κ'(α); a real E-39c "
             "measurement at a candidate α would be needed to confirm.",
             "κ' dry-run uses the 32-doc cache (N=32, S=128) — the SAME "
-            "convention as E-39a (its a_random dry-run = 0.0040). The KL side "
+            "convention as E-39a (its a_random dry-run = 0.000297, CI "
+            "[0.000269, 0.000343]; прежнее 0.0040 относилось до einsum-фикса). "
+            "The KL side "
             "uses only 8 fresh C4 docs (skip 4096), so KL and κ' are measured "
             "on different doc sets (both base-model references, disjoint from "
             "each other by offset). The a_random consistency check in "

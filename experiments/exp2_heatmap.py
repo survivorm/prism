@@ -233,7 +233,10 @@ def main(
     for a in anchors:
         a = int(a)
         targets = []
-        for l_S in sorted(traces[a].keys()):
+        # Аудит v6 F3: в traces[a] лежит и строковый ключ "_tps" (turning points),
+        # а sorted() по смеси int/str падает TypeError — уже ПОСЛЕ полного прогона,
+        # то есть формат v3 ни разу не был сохранён.
+        for l_S in sorted(k for k in traces[a] if k != "_tps"):
             gs = traces[a][l_S]
             targets.append({
                 "l_S": int(l_S),

@@ -26,10 +26,15 @@ from prism.jacobian import compute_jacobian_for_tokens
 
 
 def kl_divergence(p_logits: torch.Tensor, q_logits: torch.Tensor) -> float:
-    """KL(P || Q) from logit vectors."""
-    p = torch.nn.functional.log_softmax(p_logits, dim=-1)
-    q = torch.nn.functional.softmax(q_logits, dim=-1)
-    return (p * q).sum().item()
+    """KL(P || Q) from logit vectors.
+
+    Аудит v6 F3: тело было `(log_softmax(p) * softmax(q)).sum()` = Σ q·log p =
+    −H(Q,P) ≤ 0 — это перекрёстная энтропия, не KL, и именно отсюда «отрицательные
+    KL» в карточке. KL(P‖Q) = Σ p·(log p − log q) ≥ 0.
+    """
+    lp = torch.nn.functional.log_softmax(p_logits, dim=-1)
+    lq = torch.nn.functional.log_softmax(q_logits, dim=-1)
+    return (lp.exp() * (lp - lq)).sum().item()
 
 
 def logits_from_hidden(model, hidden: torch.Tensor) -> torch.Tensor:
@@ -148,7 +153,9 @@ def main(
 
     # Correlation analysis
     kl_means = [sum(v) / len(v) for v in kl_all.values()]
-    gap_means = [sum(v) / len(v) for v in gap_all.values()]
+    # Аудит v6 F3: gap_all/bridge_means не существуют (словари называются kl_all/
+    # bridge_all) → NameError сразу после цикла, то есть на любом прогоне.
+    gap_means = [sum(v) / len(v) for v in bridge_all.values()]
 
     import scipy
 
@@ -159,7 +166,7 @@ def main(
         "kl_per_layer": kl_all,
         "gap_per_layer": bridge_all,
         "kl_means": kl_means,
-        "gap_means": bridge_means,
+        "gap_means": gap_means,
         "spearman_corr": corr,
         "n_samples": len(samples),
         "params": {

@@ -33,8 +33,8 @@ the L6/L22 re-check (docs/E38_fixes.md §1 LOW). `pos0_ratio` uses the
 median over positions 1..S-1 (pos 0 excluded from its own denominator —
 a strong sink would inflate the ratio, docs/E38_fixes.md §1 MEDIUM).
 
-NaN handling: triples with any ‖h_t‖ < 1e-10 are skipped in κ_g (NaN),
-counted in `kappa_nan_count` and excluded by nan-robust statistics —
+NaN handling: triples with any ‖h_t‖ non-finite or < 1e-10 are skipped in
+κ_g (NaN), counted in `kappa_nan_count` and excluded by nan-robust statistics —
 exact-zero h would make û = 0 and crash geodesic_curvature's unit-check
 mid-run (docs/E38_fixes.md §1 HIGH; E-28 convention «дегенерации → NaN и
 исключаются»). Cache check: min ‖h‖ = 5.85 on L22, count(<1e-10) = 0.
@@ -124,7 +124,10 @@ def main():
                 # Guard window = t-1..t+1 INCLUSIVE: the slice must cover
                 # all three triple members (t-1, t, t+1); the old t-1:t+1
                 # missed t+1 (docs/E38_fixes2.md §2).
-                if float(norms[i, t - 1:t + 2].min()) < 1e-10:
+                mn = float(norms[i, t - 1:t + 2].min())
+                # аудит v6: `mn < 1e-10` не ловит NaN (NaN < 1e-10 это False), то есть
+                # нечиcленные ‖h‖ проходили гвард и не попадали в kapp_nan_count
+                if not np.isfinite(mn) or mn < 1e-10:
                     kapp[i, t] = np.nan
                     kapp_nan_count += 1
                     continue
@@ -290,6 +293,12 @@ def main():
         "params": {"seed": SEED, "S": S, "layers": list(LAYERS), "N_docs": 32,
                    "head": f"[0,{HEAD_END})", "body": f"[{HEAD_END},{BODY_END})",
                    "tail": f"{{{BODY_END}}}", "anomaly_threshold": T_ANOM,
+                   "segment_semantics": "кэш exp27b перевёрнут (JR[t] = h_post[S-1-t]): "
+                                        "head = cache [0,16) = последние 16 ПРЯМЫХ позиций "
+                                        "(конец документа), tail = cache S-2 = шаг между "
+                                        "первой и второй прямыми позициями (НАЧАЛО "
+                                        "документа). Аудит v6 F5: имена сегментов относятся "
+                                        "к индексу кэша, а не к порядку токенов.",
                    "cache": "kaggle_kernel/results/exp27b_jcache_L<layer>.pt (one per layer)"},
         "metrics": per_layer,
         "l18_vs_l19": l18_vs_l19,
@@ -297,7 +306,9 @@ def main():
                      "counts": counts},
         "meta": {"S": S, "note": "GDN chunk boundary at S=128 (E-27.6) may "
                                  "contaminate tail; recorded in params",
-                 "pos0": "attention sink recorded separately (not excluded "
+                 "pos0": "pos0 = cache t=0 = ПОСЛЕДНЯЯ прямая позиция документа "
+                         "(кэш перевёрнут), это НЕ attention sink начала; recorded "
+                         "separately (not excluded "
                          "from segments per TZ)",
                  "labels": "edges special requires BOTH edges anomalous AND "
                          "ABOVE body (TZ (>>)); edges atypical = head "
