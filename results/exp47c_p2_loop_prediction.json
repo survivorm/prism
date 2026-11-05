@@ -1,0 +1,114 @@
+{
+ "qwen": {
+  "auc_cross_domain_by_delta": {
+   "5": {
+    "leaf": 0.421,
+    "triv": 0.77,
+    "all": 0.76,
+    "folds_leaf": {
+     "chat": 0.409,
+     "code": 0.521,
+     "math": 0.335,
+     "wiki": 0.419
+    }
+   },
+   "16": {
+    "leaf": 0.44,
+    "triv": 0.733,
+    "all": 0.725,
+    "folds_leaf": {
+     "chat": 0.428,
+     "code": 0.538,
+     "math": 0.352,
+     "wiki": 0.44
+    }
+   },
+   "32": {
+    "leaf": 0.469,
+    "triv": 0.665,
+    "all": 0.669,
+    "folds_leaf": {
+     "chat": 0.459,
+     "code": 0.544,
+     "math": 0.4,
+     "wiki": 0.473
+    }
+   },
+   "64": {
+    "leaf": 0.504,
+    "triv": 0.614,
+    "all": 0.656,
+    "folds_leaf": {
+     "chat": 0.49,
+     "code": 0.568,
+     "math": 0.454,
+     "wiki": 0.506
+    }
+   }
+  },
+  "verdict": {
+   "AUC_leaf_d16": 0.44,
+   "AUC_triv_d16": 0.733,
+   "AUC_all_d16": 0.725,
+   "delta_auc_all_vs_triv": -0.008,
+   "lead_tokens_leaf_ge08": 0,
+   "verdict": "лист не добавляет (по пререгистрации §6 P2)"
+  }
+ },
+ "lfm3": {
+  "auc_cross_domain_by_delta": {
+   "5": {
+    "leaf": 0.745,
+    "triv": 0.815,
+    "all": 0.858,
+    "folds_leaf": {
+     "chat": 0.808,
+     "code": 0.704,
+     "math": 0.957,
+     "wiki": 0.51
+    }
+   },
+   "16": {
+    "leaf": 0.752,
+    "triv": 0.801,
+    "all": 0.849,
+    "folds_leaf": {
+     "chat": 0.82,
+     "code": 0.696,
+     "math": 0.961,
+     "wiki": 0.531
+    }
+   },
+   "32": {
+    "leaf": 0.762,
+    "triv": 0.787,
+    "all": 0.842,
+    "folds_leaf": {
+     "chat": 0.831,
+     "code": 0.684,
+     "math": 0.965,
+     "wiki": 0.57
+    }
+   },
+   "64": {
+    "leaf": 0.774,
+    "triv": 0.777,
+    "all": 0.834,
+    "folds_leaf": {
+     "chat": 0.843,
+     "code": 0.674,
+     "math": 0.97,
+     "wiki": 0.607
+    }
+   }
+  },
+  "verdict": {
+   "AUC_leaf_d16": 0.752,
+   "AUC_triv_d16": 0.801,
+   "AUC_all_d16": 0.849,
+   "delta_auc_all_vs_triv": 0.048,
+   "lead_tokens_leaf_ge08": 0,
+   "verdict": "лист не добавляет (по пререгистрации §6 P2)"
+  }
+ }
+}
