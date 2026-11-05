@@ -1,0 +1,405 @@
+{
+  "experiment": "E-39c_pre: KL pre-gate + behavioral budget for M_K-surgery (round 2: tied-weight KL decomposition + \u03b1-blend sweep)",
+  "id_note": "Renamed from exp39b_kl_surgery (ID collision with the real E-39b = PTQ/GPTQ gate, T\u0417 \u00a72; see E39_fixes \u00a70).",
+  "tz": "docs/E39.md \u00a73 (pre-stage); fixes: docs/E39_fixes.md (r1), docs/E39c_pre_fixes.md (r2)",
+  "params": {
+    "seed": 0,
+    "model": "Qwen/Qwen3.5-0.8B",
+    "n_docs": 8,
+    "s_len": 128,
+    "r": 16,
+    "kl_pass": 0.05,
+    "kl_pass_rationale": "half of the E-16 KL leash (0.1)",
+    "gate_token_rule": "t\u22651 (round 2 \u00a74.1: t=0 is the unconditioned first token, not a behavioral cost)",
+    "c4_skip": 4096,
+    "vocab": 248320,
+    "alpha_grid": [
+      0.0,
+      0.01,
+      0.02,
+      0.05,
+      0.08,
+      0.1,
+      0.2,
+      0.5,
+      0.7,
+      0.9,
+      1.0
+    ]
+  },
+  "v_new_subspace": {
+    "mode": "bottom_16_right_svs_of_U (no true null space)"
+  },
+  "sigma_bottom16_U": [
+    0.1281386398595397,
+    0.1266685192876605,
+    0.12284812224087883,
+    0.1168254927028848,
+    0.11520929915205637,
+    0.10969804833371188,
+    0.10413800239516238,
+    0.09864370582655177,
+    0.09673214307145715,
+    0.09216792336252407,
+    0.08867359595620855,
+    0.08504315961429575,
+    0.07869850423553901,
+    0.07288775968809463,
+    0.06461216838964748,
+    0.0543449641176668
+  ],
+  "m_k_norm": {
+    "before": 33.845441493363055,
+    "after": 33.84544149336321,
+    "frobenius_preserved": true
+  },
+  "row_diag": {
+    "space": "W_lm (dW = M_kp/g \u2212 W_lm_old; ratios in W_lm-space)",
+    "mean_dW_over_row": 2.440909132123916,
+    "max_dW_over_row": 6.985273168901659,
+    "p90_dW_over_row": 3.177279751891006
+  },
+  "kl_decomposition_tied_weights": {
+    "note": "0.8B ties lm_head\u2194embed_tokens; the full edit changes both readout and input embeddings (\u2192 all 24 layers). Three untied states split the cost. Values are mean KL over real tokens (t\u22651). 'full' uses the RAW bottom-16 V_new (VU[:,-16:], orthogonalize=False) \u2014 NOT the orthogonalized blend endpoint, and NOT the E-39a a_random design (bottom-64 random; see v_new_strategy_sensitivity.strategies.a_random = 6.10). The headline full-surgery KL is the bottom-16 raw-rotation cost.",
+    "full": {
+      "mean_t0": 6.270620822906494,
+      "mean_t1": 6.314577102661133,
+      "per_doc_t1": [
+        6.140936374664307,
+        6.074851989746094,
+        5.945274829864502,
+        7.364632606506348,
+        7.0214924812316895,
+        4.8758320808410645,
+        6.023260116577148,
+        5.846714496612549
+      ]
+    },
+    "head_only": {
+      "mean_t0": 1.3531004190444946,
+      "mean_t1": 1.359429121017456,
+      "per_doc_t1": [
+        1.119703769683838,
+        1.8358497619628906,
+        0.8623775243759155,
+        2.367946147918701,
+        1.2057856321334839,
+        0.8355753421783447,
+        1.068544626235962,
+        1.0227781534194946
+      ]
+    },
+    "embed_only": {
+      "mean_t0": 5.187386512756348,
+      "mean_t1": 5.22790002822876,
+      "per_doc_t1": [
+        4.998388290405273,
+        4.8319807052612305,
+        5.55258321762085,
+        6.1537041664123535,
+        5.643336296081543,
+        3.748122453689575,
+        5.028591156005859,
+        4.824323654174805
+      ]
+    },
+    "embed_only_hidden_drift": {
+      "mean_rel": 0.9323306679725647,
+      "p90_rel": 1.1965001821517944,
+      "max_rel": 2.5315957069396973
+    },
+    "interpretation": "head_only = readout-only cost; embed_only = upstream propagation; full \u2248 head_only + embed_only + cross term (tied model). If embed_only dominates, the surgery is NOT readout-only: it edits the input embeddings, so the 'a flat leaf is cheap' claim is confounded by tied weights. (Round 2 \u00a75.1: the decomposition exposes that the tied model has no cheap readout-only path.)",
+    "dominant_term": "embed_only (upstream propagation)",
+    "sum_of_parts_vs_full": {
+      "head_only_plus_embed_only": 6.587329149246216,
+      "full": 6.314577102661133,
+      "cross_term": -0.272752046585083
+    }
+  },
+  "alpha_blend_sweep": {
+    "construction": "V_mixed(\u03b1)=\u221a\u03b1\u00b7V_new_perp+\u221a(1\u2212\u03b1)\u00b7V_top (NO QR \u2014 orthonormal by construction since V_new_perp\u22a5V_top; round 3 \u00a72.2 fix) where V_new_perp is V_new orthogonalized against V_top; M_kp(\u03b1)=U_top\u00b7\u03a3_top\u00b7V_mixed(\u03b1)\u1d40+M_rest; \u03b1=0 no-op, \u03b1=1 = V_new_perp endpoint. Per-column \u2016V_mixed\u2212V_top\u2016 = \u221a(2\u22122\u221a(1\u2212\u03b1)) exactly (a clean rotation, not a sign-flip artifact).",
+    "blend_stability": {
+      "v_new_vs_v_top_fro": 0.360221557639187,
+      "overlap_max": 4.0,
+      "overlap_note": "\u2016V_new\u1d40V_top\u2016_F: 0 = orthogonal, 4 = fully aligned. Here ~0.53 (modest, non-zero), so the raw V_new and V_top overlap; orthogonalizing to V_new_perp removes it and makes the blend a clean monotonic Grassmannian path."
+    },
+    "blend_diagnostics": {
+      "clean_rotation_verified": true,
+      "detail": "round 3 \u00a72.4: for a clean blend every column of V_mixed has per-column perturbation EXACTLY \u221a(2\u22122\u221a(1\u2212\u03b1)) (uniform, min\u2248max\u2248expected). This verifies the blend is a true partial rotation. The EARLIER QR-blend version had per-column max \u2248 1.97 at \u03b1=0.1 (vs expected 0.32) \u2014 7/16 columns sign-flipped by QR (Householder) and silently NEGATED M_kp terms, which inflated the row change (0.77 vs 0.23) and made the KL spuriously non-monotonic. With the QR removed, the row change is monotone in \u03b1 and the small-\u03b1 point is a genuinely small rotation."
+    },
+    "endpoint_note": "TWO distinct full-rotation values \u2014 cite the right one in the paper: (1) headline FULL surgery (bottom-16 RAW V_new = VU[:,-16:], orthogonalize=False) = kl_decomposition_tied_weights.full = 6.31; (2) the \u03b1-blend's ORTHOGONALIZED endpoint (V_new_perp = V_new minus its V_top component) at \u03b1=1 = points[\u03b1=1].kl_t1 = 6.73. Gap = +0.41 (6.5%): the orthogonalized endpoint is HIGHER than the raw bottom-16 rotation. Both are KL-infeasible. (The ACTUAL E-39a a_random design \u2014 bottom-64 random, not bottom-16 \u2014 costs 6.10; see v_new_strategy_sensitivity.)",
+    "kappa_note": "round 4 \u00a76: \u03ba'(\u03b1) IS measured per \u03b1 (dry-run on the base-model \u00fb_t, E-39a's exact _kappa_dryrun, N=32). The round-2/3 claim 'the flattening side is already satisfied' was WRONG: E-39a's a_random \u03ba' (post-fix: 0.000297, from the E-39a JSON) applies ONLY at \u03b1=1 (full rotation). At small \u03b1 the top-16 subspace is dominated by V_top, so \u03ba' stays near the base 0.0162. Hence the KL budget (KL<0.05, small \u03b1) and the flattening target (\u03ba'<0.005, large \u03b1) are SIMULTANEOUSLY binding \u2014 see alpha_blend_sweep.trade_off.",
+    "kappa_full_surgery_ref": 0.0002969915962521594,
+    "trade_off": {
+      "kappa_target": 0.005,
+      "kl_budget": 0.05,
+      "kl_safe_alphas": [],
+      "kappa_safe_alphas": [
+        0.7,
+        0.9,
+        1.0
+      ],
+      "both_safe_alphas": [],
+      "alpha01_measured": [
+        0.01,
+        0.02,
+        0.05,
+        0.08
+      ],
+      "alpha01_min_kl": 0.13465984165668488,
+      "kl_min_passing_alpha": null,
+      "kap_min_passing_alpha": 0.7,
+      "kl_budget_crossing_estimate": null,
+      "disjoint": true
+    },
+    "points": [
+      {
+        "alpha": 0.0,
+        "kl_t1": 0.0,
+        "kl_t0": 0.0,
+        "mean_dW_over_row": 0.0,
+        "v_mixed_vs_v_top_fro": 4.000000000000001,
+        "pert_col_expected": 0.0,
+        "pert_col_observed_mean": 0.0,
+        "pert_col_observed_max": 0.0,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.01592266925901064,
+        "kappa_below_target": false,
+        "kl_below_0.05": true
+      },
+      {
+        "alpha": 0.01,
+        "kl_t1": 0.13465984165668488,
+        "kl_t0": 0.13359582424163818,
+        "mean_dW_over_row": 0.24252026127253157,
+        "v_mixed_vs_v_top_fro": 3.979949748426481,
+        "pert_col_expected": 0.10012555011963764,
+        "pert_col_observed_mean": 0.10012555011963775,
+        "pert_col_observed_max": 0.10012555011963778,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.015736136195026586,
+        "kappa_below_target": false,
+        "kl_below_0.05": false
+      },
+      {
+        "alpha": 0.02,
+        "kl_t1": 0.5807725191116333,
+        "kl_t0": 0.5760530829429626,
+        "mean_dW_over_row": 0.3429982416290751,
+        "v_mixed_vs_v_top_fro": 3.9597979746446677,
+        "pert_col_expected": 0.14177804018135828,
+        "pert_col_observed_mean": 0.1417780401813586,
+        "pert_col_observed_max": 0.14177804018135867,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.015566547270770108,
+        "kappa_below_target": false,
+        "kl_below_0.05": false
+      },
+      {
+        "alpha": 0.05,
+        "kl_t1": 2.330620288848877,
+        "kl_t0": 2.312141180038452,
+        "mean_dW_over_row": 0.5424581284977722,
+        "v_mixed_vs_v_top_fro": 3.898717737923587,
+        "pert_col_expected": 0.22503584389649425,
+        "pert_col_observed_mean": 0.225035843896494,
+        "pert_col_observed_max": 0.22503584389649411,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.015065481012535586,
+        "kappa_below_target": false,
+        "kl_below_0.05": false
+      },
+      {
+        "alpha": 0.08,
+        "kl_t1": 2.812587261199951,
+        "kl_t0": 2.79042911529541,
+        "mean_dW_over_row": 0.6863455040726244,
+        "v_mixed_vs_v_top_fro": 3.836665218650177,
+        "pert_col_expected": 0.28577507007244723,
+        "pert_col_observed_mean": 0.28577507007244735,
+        "pert_col_observed_max": 0.2857750700724475,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.01456947218689247,
+        "kappa_below_target": false,
+        "kl_below_0.05": false
+      },
+      {
+        "alpha": 0.1,
+        "kl_t1": 2.9751598834991455,
+        "kl_t0": 2.951716423034668,
+        "mean_dW_over_row": 0.7675029723102896,
+        "v_mixed_vs_v_top_fro": 3.7947331922020564,
+        "pert_col_expected": 0.3203644860139345,
+        "pert_col_observed_mean": 0.32036448601393447,
+        "pert_col_observed_max": 0.3203644860139347,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.014243597236605395,
+        "kappa_below_target": false,
+        "kl_below_0.05": false
+      },
+      {
+        "alpha": 0.2,
+        "kl_t1": 3.634730339050293,
+        "kl_t0": 3.6082375049591064,
+        "mean_dW_over_row": 1.086552709212415,
+        "v_mixed_vs_v_top_fro": 3.5777087639996648,
+        "pert_col_expected": 0.4595058410947224,
+        "pert_col_observed_mean": 0.45950584109472237,
+        "pert_col_observed_max": 0.4595058410947226,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.012531961784859899,
+        "kappa_below_target": false,
+        "kl_below_0.05": false
+      },
+      {
+        "alpha": 0.5,
+        "kl_t1": 5.516854286193848,
+        "kl_t0": 5.477758884429932,
+        "mean_dW_over_row": 1.7253913872419973,
+        "v_mixed_vs_v_top_fro": 2.828427124746191,
+        "pert_col_expected": 0.7653668647301795,
+        "pert_col_observed_mean": 0.7653668647301796,
+        "pert_col_observed_max": 0.7653668647301799,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.007669252413815229,
+        "kappa_below_target": false,
+        "kl_below_0.05": false
+      },
+      {
+        "alpha": 0.7,
+        "kl_t1": 6.286022663116455,
+        "kl_t0": 6.242077827453613,
+        "mean_dW_over_row": 2.050780752502325,
+        "v_mixed_vs_v_top_fro": 2.1908902300206656,
+        "pert_col_expected": 0.9510809034933189,
+        "pert_col_observed_mean": 0.951080903493319,
+        "pert_col_observed_max": 0.9510809034933194,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.004584122076074278,
+        "kappa_below_target": true,
+        "kl_below_0.05": false
+      },
+      {
+        "alpha": 0.9,
+        "kl_t1": 6.754856586456299,
+        "kl_t0": 6.707306385040283,
+        "mean_dW_over_row": 2.3452293566651217,
+        "v_mixed_vs_v_top_fro": 1.264911064067352,
+        "pert_col_expected": 1.16942056932753,
+        "pert_col_observed_mean": 1.16942056932753,
+        "pert_col_observed_max": 1.1694205693275306,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.0016107636867234596,
+        "kappa_below_target": true,
+        "kl_below_0.05": false
+      },
+      {
+        "alpha": 1.0,
+        "kl_t1": 6.72758674621582,
+        "kl_t0": 6.68101692199707,
+        "mean_dW_over_row": 2.516049844673751,
+        "v_mixed_vs_v_top_fro": 4.972216191673105e-16,
+        "pert_col_expected": 1.4142135623730951,
+        "pert_col_observed_mean": 1.4142135623730951,
+        "pert_col_observed_max": 1.4142135623730965,
+        "pert_col_uniform_clean_rotation": true,
+        "kappa_dryrun": 0.00014468642577030203,
+        "kappa_below_target": true,
+        "kl_below_0.05": false
+      }
+    ],
+    "any_nontrivial_alpha_with_kl_below_0.05": [],
+    "min_kl_over_nonzero_alpha": 0.13465984165668488,
+    "conclusion": "on the tested grid (\u03b1 \u2208 [0.0, 0.01, 0.02, 0.05, 0.08, 0.1, 0.2, 0.5, 0.7, 0.9, 1.0], incl. \u03b1<0.1), NO \u03b1 satisfies BOTH constraints. NO \u03b1 passes the KL budget: min KL = 0.1347 at \u03b1=0.01 (2.69\u00d7 over); at that \u03b1, \u03ba'\u22480.0157 (\u22433\u00d7 the 0.005 target). The \u03ba' target is reached only at \u03b1 \u2208 [0.7, 0.9, 1.0], where KL = 6.29\u20136.75 (\u2243126\u2013135\u00d7 over). The two feasible regions are DISJOINT (trade_off) \u2014 the route is infeasible by TENSION, not a thin margin. The clean (QR-free) blend makes KL monotone in \u03b1, so this is not a blend artifact. Full surgery (\u03b1=1) is refuted on KL (~126\u00d7 over).",
+    "budget_note": "NO \u03b1 on the tested grid passes the KL budget: min KL = 0.1347 at \u03b1=0.01 (2.69\u00d7 over). Since KL increases monotonically with \u03b1 (clean_rotation_verified), no smaller \u03b1 can help. The \u03ba' target (<0.005) is reached only at \u03b1 \u2208 [0.7, 0.9, 1.0], where KL = 6.29\u20136.75 (126\u2013135\u00d7 over budget). The feasible regions are DISJOINT \u2014 the route is infeasible by tension, not by a thin margin. (At the smallest \u03b1, \u03ba'\u22480.0157 \u22433\u00d7 the target; at the smallest \u03ba'-passing \u03b1=0.7, KL\u22486.29.)"
+  },
+  "v_new_strategy_sensitivity": {
+    "note": "E-39a's three V_new strategies in the bottom-64 pool, evaluated at full surgery (\u03b1=1). If NO direction is KL-safe, the surgery is infeasible regardless of the V_new choice \u2014 a stronger negative result.",
+    "r_pool": 64,
+    "v_c_rank_ok": true,
+    "strategies": {
+      "a_random": {
+        "kl_t1": 6.099402904510498,
+        "rho_noise_u_obs_overlap_mean": 0.00019332539594019474,
+        "v_new_vs_v_top_fro": 0.5092793433729647,
+        "kappa_dryrun": 0.0002969915962523538,
+        "kappa_below_target": true,
+        "kl_below_0.05": false
+      },
+      "b_principal": {
+        "kl_t1": 5.223599910736084,
+        "rho_noise_u_obs_overlap_mean": 0.00025729586980373,
+        "v_new_vs_v_top_fro": 1.122405892622033,
+        "kappa_dryrun": 0.0003797210518389054,
+        "kappa_below_target": true,
+        "kl_below_0.05": false
+      },
+      "c_balanced": {
+        "kl_t1": 6.5948028564453125,
+        "rho_noise_u_obs_overlap_mean": 0.000211305698319632,
+        "v_new_vs_v_top_fro": 1.0112798994492973,
+        "kappa_dryrun": 0.0003925739158962983,
+        "kappa_below_target": true,
+        "kl_below_0.05": false
+      }
+    },
+    "any_strategy_kl_below_0.05": false,
+    "e39a_consistency": {
+      "e39c_pre_a_random_kappa": 0.0002969915962523538,
+      "e39a_a_random_kappa": 0.0002969915962521594,
+      "abs_diff": 1.9439744952665095e-16,
+      "note": "a_random (E-39c_pre) vs a_random (E-39a) dry-run \u03ba'. Small diff (\u22721e-3) confirms the E-39c_pre V_new construction + _kappa_dryrun pipeline reproduce E-39a. (A larger diff would flag a construction/convention mismatch.)"
+    },
+    "conclusion": "no V_new direction is KL-safe at full surgery \u2014 the failure is structural (no V_new in the bottom pool is KL-safe at full rotation), not a consequence of the bottom-16 choice; per-strategy \u03ba' dry-run also reported (round 4)"
+  },
+  "kappa_dryrun_alpha1": {
+    "note": "round 4: per-\u03b1 \u03ba' DRY-RUN is now measured (base-model \u00fb_t, E-39a's exact _kappa_dryrun, N=32). Edited-model \u00fb_t differ due to tied weights \u2014 this is a DRY-RUN, NOT an E-39c measurement. See alpha_blend_sweep.points[].kappa_dryrun and .trade_off.",
+    "per_alpha": {
+      "0.0": 0.01592266925901064,
+      "0.01": 0.015736136195026586,
+      "0.02": 0.015566547270770108,
+      "0.05": 0.015065481012535586,
+      "0.08": 0.01456947218689247,
+      "0.1": 0.014243597236605395,
+      "0.2": 0.012531961784859899,
+      "0.5": 0.007669252413815229,
+      "0.7": 0.004584122076074278,
+      "0.9": 0.0016107636867234596,
+      "1.0": 0.00014468642577030203
+    },
+    "target": 0.005,
+    "ref_39a": 0.0002969915962521594
+  },
+  "kl_full_nats_per_token": {
+    "mean_real_tokens_t_ge_0": 6.270620822906494,
+    "mean_real_tokens_t_ge_1": 6.314577102661133,
+    "per_doc_t_ge_1": [
+      6.140936374664307,
+      6.074851989746094,
+      5.945274829864502,
+      7.364632606506348,
+      7.0214924812316895,
+      4.8758320808410645,
+      6.023260116577148,
+      5.846714496612549
+    ]
+  },
+  "gate": {
+    "metric": "mean KL over real tokens, t\u22651, padding excluded (round 2 \u00a74.1)",
+    "threshold": 0.05,
+    "value": 6.314577102661133,
+    "pass": false,
+    "basis": "KL only (\u03ba' is a dry-run preview, not a gate input)"
+  },
+  "limitations": [
+    "Tied weights: editing W_lm = editing embed_tokens \u2014 the forward changes beyond the readout (T\u0417 \u00a73.5). round 2 \u00a75.1 decomposes this into head_only vs embed_only; the FULL (real model) cost is the sum of both.",
+    "C4 disjointness: ds.skip(4096) vs the 27b cache's first docs \u2014 disjoint by offset, NOT hash-verified.",
+    "KL_PASS=0.05 is a protocol choice (half of E-16's 0.1 leash), not derived from data.",
+    "\u03ba' is a dry-run preview on base-model \u00fb_t; the real E-39c measurement happens on the edited model.",
+    "\u03b1-blend V_new is the bottom-16 (E-39a 'a'-equivalent) subspace across the \u03b1 grid; the three E-39a strategies are compared only at FULL surgery (round 2 \u00a75.3), not across \u03b1. round 3 \u00a72.2: the blend is orthogonalized (V_new_perp \u22a5 V_top) AND the QR on the combo is removed (orthonormal by construction), so it is a verified clean partial rotation (per-column perturbation = \u221a(2\u22122\u221a(1\u2212\u03b1)) exactly; see alpha_blend_sweep.blend_diagnostics). The earlier QR-blend's non-monotonicity was a Householder sign-flip artifact (silent negation of M_kp terms), not a loss-landscape property. The \u03b1=1 blend endpoint is V_new_perp, \u2248 the full-surgery raw-V_new design (kl_decomposition_tied_weights); both are KL-infeasible.",
+    "Per-\u03b1 \u03ba' IS measured (round 4 \u00a73) as a DRY-RUN on the base-model \u00fb_t (E-39a's _kappa_dryrun, N=32). This is a PREVIEW, not an E-39c measurement: the real edited-model \u03ba'(\u03b1) could differ (tied weights). The trade-off verdict (KL budget vs flattening target across \u03b1) rests on this dry-run \u03ba'(\u03b1); a real E-39c measurement at a candidate \u03b1 would be needed to confirm.",
+    "\u03ba' dry-run uses the 32-doc cache (N=32, S=128) \u2014 the SAME convention as E-39a (its a_random dry-run = 0.0040). The KL side uses only 8 fresh C4 docs (skip 4096), so KL and \u03ba' are measured on different doc sets (both base-model references, disjoint from each other by offset). The a_random consistency check in v_new_strategy_sensitivity.e39a_consistency validates the pipeline."
+  ],
+  "runtime_s": 2577.9,
+  "deterministic": true
+}
