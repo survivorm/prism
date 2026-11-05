@@ -44,7 +44,7 @@ KERNELS = {
         "id": "voroninmichael/prism-exp2-heatmap",
         "title": "Prism: exp2-heatmap",
         "exp_file": "experiments/exp2_heatmap.py",
-        "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\nimport os as _os; _os.environ['PRISM_CALIB_PIN_WRITE'] = '1'; _os.environ['PRISM_CALIB_PIN_DIR'] = '/kaggle/working/calib_pins'\n",
+        "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\nkwargs['max_length'] = 64\nkwargs['min_length'] = 32\nkwargs['dtype'] = 'float16'\nimport os as _os; _os.environ['PRISM_CALIB_PIN_WRITE'] = '1'; _os.environ['PRISM_CALIB_PIN_DIR'] = '/kaggle/working/calib_pins'\n",
         "note": "optional: full 32x24 heatmap, n=8, K=64 (was thin n=3/K=8).",
     },
     # --- аудит v6: перегенерации, у которых обвязка уже есть или тривиальна ---

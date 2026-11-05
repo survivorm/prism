@@ -150,14 +150,18 @@ def main(
     cap: int = 6,
     n_samples: int = 8,
     K: int = 64,
+    dtype: str = "float32",
 ):
+    # dtype="float16" обязателен на T4: 4B в fp32 - это 16 ГБ весов, что не влезает рядом
+    # с 0.8B (Kaggle отдаёт T4 с ~14.7 ГБ доступного). Локально по умолчанию остаётся fp32.
+    torch_dtype = getattr(torch, dtype)
     t0 = time.time()
     print(f"Loading models: {large_model}, {small_model}")
     model_L = AutoModelForCausalLM.from_pretrained(
-        large_model, torch_dtype=torch.float32, device_map=device
+        large_model, torch_dtype=torch_dtype, device_map=device
     )
     model_S = AutoModelForCausalLM.from_pretrained(
-        small_model, torch_dtype=torch.float32, device_map=device
+        small_model, torch_dtype=torch_dtype, device_map=device
     )
     tok = AutoTokenizer.from_pretrained(small_model)
 
