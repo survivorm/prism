@@ -2,6 +2,10 @@
 
 Randomly permute rows of E_L. If bridge breaks → semantics matter (good).
 If bridge survives → bridge ignores semantics (bad).
+
+Перестановка задаётся фиксированным seed (багфикс аудита F14: `torch.randperm(V)`
+без seed делал опубликованные числа непереводимыми — база перестановки не
+воспроизводилась).
 """
 
 import argparse
@@ -21,6 +25,7 @@ def main(
     K=8,
     max_length=64,
     min_length=32,
+    seed=0,
     results_dir="results",
 ):
     torch.set_num_threads(4)
@@ -68,7 +73,8 @@ def main(
 
     # Permuted embeddings
     V = E.shape[0]
-    perm = torch.randperm(V)
+    # seed обязателен: перестановочная база — часть определения эксперимента (аудит F14)
+    perm = torch.randperm(V, generator=torch.Generator().manual_seed(seed)).to(E.device)
     E_perm = E[perm]
 
     for layer in [0, 12, 23]:
@@ -85,7 +91,7 @@ def main(
         print(f"inv_perm layer {layer}: {loss:.2e}")
 
     os.makedirs(results_dir, exist_ok=True)
-    results["params"] = {"model": model, "n_samples": n_samples, "K": K, "max_length": max_length, "min_length": min_length}
+    results["params"] = {"model": model, "n_samples": n_samples, "K": K, "max_length": max_length, "min_length": min_length, "seed": seed}
     with open(os.path.join(results_dir, "exp5_embedding_perm.json"), "w") as f:
         json.dump(results, f, indent=2)
 
@@ -99,6 +105,7 @@ if __name__ == "__main__":
     parser.add_argument("--K", type=int, default=8)
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--min-length", type=int, default=32)
+    parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--results-dir", default="results")
     args = parser.parse_args()
     main(**vars(args))

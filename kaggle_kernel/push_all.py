@@ -42,6 +42,33 @@ KERNELS = {
         "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\n",
         "note": "optional: full 32x24 heatmap, n=8, K=64 (was thin n=3/K=8).",
     },
+    # --- аудит v6: перегенерации, у которых обвязка уже есть или тривиальна ---
+    "exp3_ablation": {
+        "dir": "kernel-exp3",
+        "slug": "prism-exp3-ablation",
+        "id": "voroninmichael/prism-exp3-ablation",
+        "title": "Prism: exp3-ablation",
+        "exp_file": "experiments/exp3_ablation.py",
+        "runner_extra": "kwargs['n_samples'] = 4\nkwargs['K'] = 32\n",
+        "note": "аудит v6 F7: null-столбец «случайная ортогональная R» (1.02 ± 0.01) "
+                "посчитан дефектной матрицей (clamp(min=0) обнулял ~53 % столбцов, "
+                "max|QQᵀ−I| = 0.67) и без seed. Код починен (seed=0, одна R на все "
+                "слои); без перегенерации опубликованное число неизвлекаемо из текущего "
+                "кода. Протокол как в закоммиченном exp3_ablation.json (N=4, K=32).",
+    },
+    "exp2a_cka_identity": {
+        "dir": "kernel-exp2a",
+        "slug": "prism-exp2a-cka-identity",
+        "id": "voroninmichael/prism-exp2a-cka-identity",
+        "title": "Prism: exp2a-cka-identity",
+        "exp_file": "experiments/exp2a_cka_identity.py",
+        "runner_extra": "kwargs['n_samples'] = 5\n",
+        "note": "аудит v6 F15 + F3: артефакта exp2a никогда не было, потому что CLI "
+                "падал с TypeError (main(**vars(args)) получал self_check). Починено, "
+                "--self-check проходит (CKA(X,X)=1.000000, инварианты масштаба/сдвига/"
+                "перестановки). Нужен эмпирический identity-контроль 4B→4B и 0.8B→0.8B, "
+                "на котором висит интерпретация низких CKA у E-2/E-2a.",
+    },
     "exp4_k_sensitivity": {
         "dir": "kernel-exp4k",
         "slug": "exp4-top-p-tokens",

@@ -32,6 +32,12 @@ def main():
 
     if args.only:
         targets = [t.strip() for t in args.only.split(",")]
+        unknown = [t for t in targets if t not in _EXP_MODULES]
+        if unknown:
+            # аудит v6: пример `--only exp1` был нерабочим (модуль называется
+            # exp1_identity) и молча ловил ImportError внутри try
+            sys.exit(f"--only: нет таких модулей в _EXP_MODULES: {unknown}\n"
+                     f"доступно: {', '.join(_EXP_MODULES)}")
     else:
         targets = [e for e in _EXP_MODULES if e not in skip]
 

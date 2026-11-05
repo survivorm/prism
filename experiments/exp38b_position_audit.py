@@ -24,6 +24,19 @@ is J+P only, ~2.1 GB/layer — H is NOT stacked, docs/E38_fixes2.md §6).
 
 Body = t ∈ [16, S-2] (126 INCLUDED, per TZ); J_t is defined for t = 0..S-1,
 so including S-2 leaves position S-1 as the tail (non-empty).
+
+POS SEMANTICS (аудит v6 F5 — здесь была инвертирована атрибуция, не числа).
+Кэш exp27b хранит позиции в ОБРАТНОМ прямом порядке: JR[(dom,si,t)] =
+closed_form(h_post[S-1-t]) (продюсер exp27b_dense.py, `p128[S-1-t]`). Значит
+    cache t = 0     = ПОСЛЕДНЯЯ прямая позиция документа (это «pos0» ниже),
+    cache t = S-1   = ПЕРВАЯ прямая позиция (кандидат на attention sink),
+    cache t = 126   = вторая прямая позиция.
+Поэтому «pos0» — это КОНЕЦ документа, а не его начало: гипотеза attention
+sink проверяется на t = S-1, и с этой версии здесь меряется ОБА края
+(`pos0_*` = конец, `edge_first_*` = начало). Прежняя ветка align_edge_effect
+сравнивала align тела с pos0 (концом) и не могла сработать ни при каком
+раскладе; теперь она смотрит на первый прямой позиция.
+
 pos 0 is the E-0.1/E-27.6 baseline; the L22 PR check uses the COMPUTED
 pos0 PR median from this cache (not the paper's 4.6 — that figure is the
 min over positions per paper §20, recorded as a cross-reference only;
@@ -48,11 +61,16 @@ counted in meta.nan_count); PR on a degenerate J returns 0.0
 Pre-registered outcomes (per layer):
     no_artifact        — C_b(body) ≤ 1.5 x C_b(pos0) and (L22: PR body CI
                          contains the computed pos0 PR median) and not
-                         (align body > 0.9 with pos0 < 0.7)
+                         (align body > 0.9 with edge_first < 0.7) and not
+                         edge_first_enhanced
     edge_contamination — C_b(body) > 1.5 x C_b(pos0)
+    edge_first_enhanced — C_b(первой прямой позиции) > 1.5 x C_b(body) — край
+                         СВЯЗНЕЕ тела (добавлено аудитом v6: схема ловила только
+                         понижение связности на краю и на таком эффекте молчала)
     l22_position_sensitive — L22 PR body CI excludes the computed pos0
                              PR median (paper cross-ref: 4.6)
-    align_edge_effect  — align_K1(body) > 0.9 while pos0 < 0.7
+    align_edge_effect  — align_K1(body) > 0.9 while align_K1(первой прямой
+                         позиции, cache t = S-1) < 0.7
 
 Deterministic: seed=0, B=1000.
 """
@@ -103,6 +121,7 @@ def main():
         iu, ju = torch.nonzero(~eye).T      # row-major pairs, per-row groups
 
         pos0_cos, pos0_pr, pos0_al = [], [], []
+        ed1_cos = ed1_pr = ed1_al = None      # cache t = S-1 = первый прямой позиция
         body_cos_list, body_pr_list, body_al_list = [], [], []
         prof_t, prof_cos, prof_pr, prof_al = [], [], [], []
         nan_count = 0
@@ -118,8 +137,8 @@ def main():
                                       torch.tensor(float("nan")), cos_mat)
             cos_docs = torch.nanmedian(cos_mat[iu, ju].reshape(N, N - 1),
                                        dim=1).values
-            # SVD only where needed (pos0, body, profile t)
-            if t == 0 or HEAD_END <= t <= BODY_END or t % 4 == 0:
+            # SVD only where needed (pos0, первый край, body, profile t)
+            if t == 0 or t == S - 1 or HEAD_END <= t <= BODY_END or t % 4 == 0:
                 sv = torch.linalg.svd(Jt, full_matrices=False)
                 pr_docs = torch.tensor(
                     [float(participation_ratio(sv.S[i] ** 2)) for i in range(N)])
@@ -134,6 +153,8 @@ def main():
                 al_docs = (sv.U * one[None, :, None]).sum(dim=1).abs().max(dim=-1).values  # [N]
                 if t == 0:
                     pos0_cos, pos0_pr, pos0_al = cos_docs, pr_docs, al_docs
+                if t == S - 1:
+                    ed1_cos, ed1_pr, ed1_al = cos_docs, pr_docs, al_docs
                 if HEAD_END <= t <= BODY_END:
                     body_cos_list.append(cos_docs)
                     body_pr_list.append(pr_docs)
@@ -156,6 +177,18 @@ def main():
         body_per_doc_cos = torch.stack(body_cos_list, dim=0).nanmedian(dim=0).values
         body_per_doc_pr = torch.stack(body_pr_list, dim=0).nanmedian(dim=0).values
         body_per_doc_al = torch.stack(body_al_list, dim=0).nanmedian(dim=0).values
+
+        def edge_block(v):
+            """Один край (32 значения по документам): медиана + per-doc bootstrap CI."""
+            vf = v[torch.isfinite(v)]
+            return {"median": float(v.nanmedian()),
+                    "ci": (list(bootstrap_ci(vf.numpy(), B=B, seed=SEED))
+                           if vf.numel() >= 2 else None),
+                    "n": int(vf.numel())}
+
+        def ratio_edge(num, den):
+            """body/edge на ОДНОМ агрегате (median-of-medians), NaN-safe (P2)."""
+            return num / den if (np.isfinite(den) and den > 0) else float("nan")
 
         def block(posv, body_flat, body_per_doc):
             # Degenerate (doc, t) with ‖J^T u‖ < 1e-9 → NaN (MEDIUM-5).
@@ -198,11 +231,22 @@ def main():
         # P2 (docs/E38_fixes.md): c0 = NaN → NaN/1e-12 = NaN in JSON;
         # explicit guard (max(NaN, 1e-12) = 1e-12 does NOT save it).
         body_over_pos0 = cb / c0 if (np.isfinite(c0) and c0 > 0) else float("nan")
+        c1 = float(ed1_cos.nanmedian())
         per_layer[str(l)] = {
             "C_b": {**block(pos0_cos, body_cos_flat, body_per_doc_cos),
-                    "body_over_pos0": body_over_pos0},
-            "PR_modes": block(pos0_pr, body_pr_flat, body_per_doc_pr),
-            "align_K1": block(pos0_al, body_al_flat, body_per_doc_al),
+                    "body_over_pos0": body_over_pos0,
+                    "edge_first": {**edge_block(ed1_cos),
+                                   "body_over_edge": ratio_edge(cb, c1)}},
+            "PR_modes": {**block(pos0_pr, body_pr_flat, body_per_doc_pr),
+                         "edge_first": {**edge_block(ed1_pr),
+                                        "body_over_edge": ratio_edge(
+                                            float(body_per_doc_pr.nanmedian()),
+                                            float(ed1_pr.nanmedian()))}},
+            "align_K1": {**block(pos0_al, body_al_flat, body_per_doc_al),
+                         "edge_first": {**edge_block(ed1_al),
+                                        "body_over_edge": ratio_edge(
+                                            float(body_per_doc_al.nanmedian()),
+                                            float(ed1_al.nanmedian()))}},
             "profiles": {"t": prof_t, "C_b": prof_cos,
                          "PR_modes": prof_pr, "align_K1": prof_al},
             "nan_count": nan_count,
@@ -211,8 +255,10 @@ def main():
         r = per_layer[str(l)]
         del Jgf  # ~2.1 GB; free it as soon as the block is written (P2-9)
         print(f"L{l}: C_b pos0={r['C_b']['pos0_median']:.4f} body={r['C_b']['body_median']:.4f} "
-              f"x{r['C_b']['body_over_pos0']:.2f} | PR pos0={r['PR_modes']['pos0_median']:.3f} "
+              f"x{r['C_b']['body_over_pos0']:.2f} | first C_b={r['C_b']['edge_first']['median']:.4f} "
+              f"x{r['C_b']['edge_first']['body_over_edge']:.2f} | PR pos0={r['PR_modes']['pos0_median']:.3f} "
               f"body={r['PR_modes']['body_median']:.3f} | align pos0={r['align_K1']['pos0_median']:.3f} "
+              f"first={r['align_K1']['edge_first']['median']:.3f} "
               f"body={r['align_K1']['body_median']:.3f}")
 
     verdicts = {}
@@ -234,7 +280,17 @@ def main():
                 dlo, dhi = pair_ci
                 if not (dlo <= 0 <= dhi):
                     reasons.append("l22_position_sensitive")
-        if r["align_K1"]["body_median"] > 0.9 and r["align_K1"]["pos0_median"] < 0.7:
+        # Аудит v6 F5: первый прямой позиция (cache t=S-1) может быть НАОБОРОТ
+        # связнее тела (общая «sink»-структура всех документов) — прежняя схема
+        # ловила только понижение C_b на краю и на таком эффекте молчала.
+        cbpd = r["C_b"]["body_per_doc_median"]
+        ef = r["C_b"]["edge_first"]["median"]
+        if np.isfinite(ef) and np.isfinite(cbpd) and ef > 1.5 * max(cbpd, 1e-30):
+            reasons.append("edge_first_enhanced")
+        # align_edge_effect — по первой ПРЯМОЙ позиции (cache t = S-1), а не по pos0:
+        # pos0 это конец документа (аудит v6 F5), на нём ветка была мертва.
+        al_ef = r["align_K1"]["edge_first"]["median"]
+        if r["align_K1"]["body_median"] > 0.9 and np.isfinite(al_ef) and al_ef < 0.7:
             reasons.append("align_edge_effect")
         # P2 (docs/E38_fixes.md): a whole layer degenerate (frac_nan > 0.5)
         # → verdicts are built on noise; label it separately.
@@ -255,6 +311,12 @@ def main():
     out = {
         "params": {"seed": SEED, "B": B, "S": S, "K": K, "layers": list(LAYERS),
                    "body": f"[{HEAD_END},{BODY_END}]", "pos0_baseline": True,
+                   "segment_semantics": "кэш exp27b хранит позиции в обратном прямом "
+                                        "порядке (JR[t] = closed_form(h_post[S-1-t])): "
+                                        "pos0 = cache t=0 = ПОСЛЕДНЯЯ прямая позиция "
+                                        "(конец документа), edge_first = cache t=S-1 = "
+                                        "ПЕРВАЯ прямая позиция (кандидат на attention "
+                                        "sink). Аудит v6 F5.",
                    "cache": "exp27b_jcache_L<layer>.pt (one per layer)",
                    "ci_policy": "pos0 CI: per-doc bootstrap; pos0-vs-body: "
                                 "paired bootstrap over per-doc body medians"},

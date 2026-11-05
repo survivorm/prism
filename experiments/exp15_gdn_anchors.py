@@ -72,7 +72,10 @@ def _run_scheme(
     results = {
         "scheme": scheme_name,
         "pairs": pairs,
-        "bridge": {},
+        # Аудит v6 F3: init был "bridge": {}, а ниже всё читается как results["gap"],
+        # то есть любой запуск падал на KeyError; опубликованный артефакт — от версии
+        # с init "gap".
+        "gap": {},
         "esg_trace": {},
     }
 

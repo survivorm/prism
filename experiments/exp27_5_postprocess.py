@@ -6,7 +6,10 @@ No GPU. Main slice: S=64, K=128, pos=0 (token-gramian C = <J_i,J_j>_F/sqrt(E_i*E
 
 Blocks per docs/Exp27.5.md:
   A. T_domain (permutation B=1000) + spectral null (B_rot=100) + half-split 70 partitions
-  B. Spearman C vs [dh, dH, dsigma_z, dlogE, dg_uni] + entropy-quartile permutation
+  B. Spearman C vs [dh, dH, dsigma_z, dlogE] + entropy-quartile permutation
+     (ось dg_uni ВЫЧЕРКНУТА аудитом v6 F12: на gauge-free J величина g_uni
+     тождественный ноль, значит rho_C_dg_uni = корреляция C с шумом
+     округления ~1e-13; в JSON она остаётся как null + note)
   C. Agglomerative clustering (average) + silhouette + gap (B_gap=100) + rho_NN
      + half-split silhouette (50) + cophenetic
   D. uniform mode: g_uni, Q=uu^T (u=1/sqrt(K) 1), J_rest, delta_C_uni
@@ -371,7 +374,14 @@ def run_layer(l, J, P, U, h, labels, rng, D, ck=None):
     m = mask_from_labels(labels, len(labels))
     iu = np.triu_indices_from(C, 1)
     corr = {'rho_C_' + k: pair_spearman(C, Dp[k]) for k in
-            ['dh', 'dH', 'dsigma_z', 'dlogE', 'dg_uni']}
+            ['dh', 'dH', 'dsigma_z', 'dlogE']}
+    # аудит v6 F12: g_uni на gauge-free J тождественный ноль (uᵗJ = Σ_k J_k/√K = 0),
+    # поэтому dg_uni — разность шумов округления; ось снята с отчёта, в JSON - null
+    corr['rho_C_dg_uni'] = None
+    corr['rho_C_dg_uni_note'] = ('VOID (аудит v6 F12): J здесь gauge-free, значит '
+                                'g_uni = ||QJ||^2/E == 0 тождественно, и rho_C_dg_uni '
+                                'был корреляцией C с шумом округления; прежние числа '
+                                'в закоммиченном JSON (-0.14...-0.39) не интерпретировать')
     # Quartiles by entropy H. argsort(-H) would give the same 4x8 partition
     # with quartile labels 0<->3 swapped; T_ent and its permutation test are
     # invariant to that swap (review C is a no-op for the numbers).
@@ -423,7 +433,8 @@ def corr_per_position(ck, l, labels, n_samples, domains, S=64, K=128):
         Jp = p[:, :, None] * (Jraw - np.einsum('ik,ikd->id', p, Jraw)[:, None, :])
         C, E, Dp = gramian_cosine(Jp, P, None, h)
         out[str(pos)] = {k: pair_spearman(C, Dp[k]) for k in
-                         ['dh', 'dH', 'dlogE', 'dg_uni']}
+                         ['dh', 'dH', 'dlogE']}
+        out[str(pos)]['dg_uni'] = None      # аудит v6 F12: gauge-free J ⇒ g_uni ≡ 0
     return out
 
 

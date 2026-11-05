@@ -113,7 +113,11 @@ def main(
         for l_L, l_S in sampled:
             J = compute_jacobian_for_tokens(model_obj, l_L, ids, attn, token_set)
             if lam == 0.0:
-                loss = jacobian_gap(J, J, E, E, probs)
+                # аудит v6: порог маски у двух веток был разный (у prism.bridge.jacobian_gap
+                # дефолт threshold=0.0, у jacobian_gap_ridge — 1e-6), то есть λ=0 и λ>0
+                # считались на разных множествах строк; плюс в дефолтной сетке lams нуля
+                # нет, так что ветка была недостижима. Порог теперь общий.
+                loss = jacobian_gap(J, J, E, E, probs, threshold=1e-6)
             else:
                 loss = jacobian_gap_ridge(J, J, E, E, probs, lam)
             losses.append(loss)

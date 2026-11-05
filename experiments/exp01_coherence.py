@@ -345,7 +345,21 @@ def main(
             centers, means = coh_curve(cd)
             if len(centers) < 2:
                 return None
+            # аудит v6 (мелочь) + продолжение F2: np.interp ВНЕ диапазона центров
+            # молча отдаёт значение краю, то есть «C(σ_d)» на межсэмпловом канале
+            # было значением первого бина (σ_d лежит ниже всей поддержки на 26–39 %).
+            # Значение оставлено как было (числа карточки не подменяются задним
+            # числом), но молчать больше нельзя: рядом пишется поле support-статуса.
             return float(np.interp(x, centers, means))
+
+        def _support(cd: list[tuple[float, float]], x: float) -> str:
+            centers, _ = coh_curve(cd)
+            if len(centers) < 2:
+                return "no_curve"
+            if centers[0] <= x <= centers[-1]:
+                return "inside"
+            return (f"below_support_min(delta>={centers[0]:.2f})"
+                    if x < centers[0] else f"above_support_max(delta<={centers[-1]:.2f})")
 
         # v5: SPLIT gates, THREE gauge conventions. Canonical = between-sample
         # (b) at sigma_d; intra-sample (a) in all three conventions reported
@@ -354,6 +368,14 @@ def main(
         res["C_at_sigma_d_a"] = _c_at(a_cd, res["sigma_d"])
         res["C_at_sigma_d_a_samepk"] = _c_at(a_cd_same, res["sigma_d"])
         res["C_at_sigma_d_a_nogauge"] = _c_at(a_cd_nog, res["sigma_d"])
+        res["C_at_sigma_d_support"] = {
+            "b": _support(b_cd_pool, res["sigma_d"]),
+            "a_pospk": _support(a_cd, res["sigma_d"]),
+            "a_samepk": _support(a_cd_same, res["sigma_d"]),
+            "a_raw": _support(a_cd_nog, res["sigma_d"]),
+            "note": ("вне поддержки = значение КРАЙНЕГО бина, а не C(σ_d); "
+                     "C(δ) убывает ⇒ это нижняя оценка C(σ_d)"),
+        }
         bc, bm = coh_curve(b_cd_pool)
         ac, am = coh_curve(a_cd)
         res["gate_curve_b"] = {"delta_centers": bc, "C": bm, "n_pairs": len(b_cd_pool)}
@@ -482,6 +504,13 @@ def main(
             f"raw={g['verdict_raw']} b={g['verdict_b']} "
             f"(noise_floor=1/sqrt({D})={NOISE_FLOOR:.4f})"
         )
+
+    # аудит v6: verdict'ы и noise_floor появлялись ПОСЛЕ json.dump, то есть в
+    # записанном артефакте их не было; дописываем JSON после их расчёта (атомарно)
+    tmp = json_path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(all_results, f, indent=2)
+    os.replace(tmp, json_path)
 
 
 def _selfcheck() -> None:

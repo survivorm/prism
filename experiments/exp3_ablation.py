@@ -44,14 +44,29 @@ def jacobian_gap_raw(
     return _weighted_cosine_loss(J_S, J_S_target, probs_L, mask)
 
 
-def random_orthogonal_matrix(rows: int, cols: int, device) -> torch.Tensor:
-    """Generate a random orthogonal matrix via QR decomposition."""
-    M = torch.randn(rows, cols, device=device)
+def random_orthogonal_matrix(rows: int, cols: int, device, seed: int = 0) -> torch.Tensor:
+    """Generate a random orthogonal matrix via QR decomposition.
+
+    багфикс аудита (v6 F7): было `Q * torch.sign(d).clamp(min=0)` — clamp(min=0)
+    превращает -1 в 0, из-за чего ~55 % столбцов обнулялись и QQᵀ ≠ I
+    (max|QQᵀ−I| ≈ 0.71): «случайная ортогональная» матрица ортогональной не была.
+    Канонический знак-фикс — Q ← Q·diag(sign d). Плюс явный seed: прежний RNG
+    не сеялся, значит null-столбец карточки E-3 был невоспроизводим.
+    """
+    g = torch.Generator().manual_seed(seed)
+    M = torch.randn(rows, cols, generator=g).to(device=device, dtype=torch.float32)
     Q, R = torch.linalg.qr(M)
-    # Fix sign ambiguity
-    d = torch.diag(R)
-    Q = Q * torch.sign(d).clamp(min=0)
-    return Q
+    return Q * torch.where(torch.diagonal(R) >= 0, 1.0, -1.0).to(Q.dtype)
+
+
+def _check_orthogonal(n: int = 128) -> None:
+    """Один запускаемый контроль на F7: QQᵀ обязан быть единичным."""
+    Q = random_orthogonal_matrix(n, n, torch.device("cpu"))
+    err = float((Q @ Q.T - torch.eye(n)).abs().max())
+    assert err < 1e-4, f"QR sign-fix сломан: max|QQᵀ−I| = {err:.3e}"
+    nz = float((Q != 0).float().mean())
+    assert abs(nz - 1.0) < 1e-6, f"обнулённые столбцы: ненулевых {nz:.1%}"
+    print(f"ok: max|QQᵀ−I| = {err:.2e}, ненулевых элементов {nz:.0%}")
 
 
 def jacobian_gap_random(
@@ -63,7 +78,8 @@ def jacobian_gap_random(
     """Bridge with RANDOM orthogonal R replacing learned W.
 
     Protocol:
-      1. Build R: random orthogonal in R^{D×D}
+      1. Build R: random orthogonal in R^{D×D} — детерминирована (seed=0), одна и та же
+         на все слои, то есть null парный сравнению, а не перерисовывается на слой
       2. J_rand = J @ R^T
       3. Project both through vocab: J_proj = J @ E^T, J_rand_proj = J_rand @ E^T
       4. Compare cosine similarity
@@ -164,5 +180,12 @@ if __name__ == "__main__":
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--min-length", type=int, default=32)
     parser.add_argument("--results-dir", default="results")
+    parser.add_argument("--check-qr", action="store_true",
+                        help="только контроль ортогональности null-матрицы (аудит v6 F7)")
     args = parser.parse_args()
+    if args.check_qr:
+        args = vars(args)
+        args.pop("check_qr")
+        _check_orthogonal()
+        raise SystemExit(0)
     main(**vars(args))

@@ -140,32 +140,43 @@ def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument('--selfcheck', action='store_true')
+    ap.add_argument('--out', default=JSON,
+                    help="какой exp33r-артефакт править (читать и писать один и тот же); "
+                         "для проверки без касания опубликованного числа скопируй его "
+                         "в /tmp и укажи сюда")
+    ap.add_argument('--ckpt-dir', default=os.path.dirname(E33R._ec.raw_jcache_path(L23)))
     a = ap.parse_args()
     if a.selfcheck:
         selfcheck()
         return
     t0 = time.time()
-    res = json.load(open(JSON))
-    docs = E33R.load_layer(L23)
+    res = json.load(open(a.out))
+    # багфикс аудита (v6 F3): у exp33r_gauge_anatomy.load_layer сигнатура
+    # (ckpt_dir, layer) и она возвращает dict-кэш, а НЕ список doc-словарей с
+    # 'key'/'JR'/'P128'/'RAW' — прежний вызов E33R.load_layer(L23) падал
+    # TypeError до записи JSON. Кэш держим один, дока грузим лениво
+    # ([128,128,1024] fp32 = 67 МБ на дока).
+    ck = E33R.load_layer(a.ckpt_dir, L23)
+    domains = sorted({k[0] for k in ck["JR"]})
+    order = [f"{d}/{si}" for d in domains for si in range(ck["n_samples"])]
     n_docs = res["layers"][str(L23)]["n_docs"]
-    assert len(docs) == n_docs, f"len(docs)={len(docs)} vs n_docs={n_docs}"
-    order = [d['key'] for d in docs]
+    assert len(order) == n_docs, f"len(docs)={len(order)} vs n_docs={n_docs}"
 
     done = {}
     if os.path.exists(CKPT):
         done = json.load(open(CKPT))
         print(f"resume: {len(done)}/{len(order)}")
 
-    for doc in docs:
-        k = doc['key']
+    for k in order:
         if k in done:
             continue
-        Jdoc, Pdoc = doc['JR'].float(), doc['P128'].float()
-        sent = (doc['RAW'].float().sum(-1) < E33R.SENT).numpy()
+        dom, si = k.split("/")
+        Jdoc, Pdoc, sent = E33R.load_doc(ck, dom, int(si))
         done[k] = dgp_for_doc(Jdoc, Pdoc, sent)
         del Jdoc, Pdoc, sent
         json.dump(done, open(CKPT, "w"))
         print(f"  {k}  t={time.time()-t0:.0f}s", flush=True)
+    del ck
 
     # --- update layers[23].diag ---
     diag = res["layers"][str(L23)]["diag"]
@@ -175,7 +186,11 @@ def main():
     # argmax-TЗ 0.17635 / без сентинел 0.1554-0.1570 vs published 0.202142).
     # Published вычислены с ненормированным p0 (Σ≈0.006, P≈diag) — это и есть баг;
     # refit их заменяет, det-check на совпадение намеренно НЕ ставится.
-    old_e16 = {str(dt): diag["E_fixed_p"]["16"][str(dt)]["med"] for dt in DELTA_GRID}
+    # багфикс аудита (v6 F3): в закоммиченном артефакте diag["E_fixed_p"] = {}
+    # (diag-прогон не был закоммичен) — прежняя строка падала KeyError.
+    pub = diag.get("E_fixed_p") or {}
+    old_e16 = ({str(dt): pub["16"][str(dt)]["med"] for dt in DELTA_GRID}
+               if pub else {})
     diag["E_fixed_p"] = {"16": e16}   # целая замена -> ложный ключ "32" исчезает
     diag["E_fixed_p_r"] = {str(rt): {str(dt): agg([done[k][f"dgp_{dt}_r{rt}"] for k in order])
                                      for dt in DELTA_GRID} for rt in (1, 2, 8, 16)}
@@ -202,20 +217,25 @@ def main():
     })
     meta["refit_notes"] = notes
 
-    with open(JSON, "w") as f:
+    with open(a.out, "w") as f:
         json.dump(res, f, indent=2, ensure_ascii=False, allow_nan=False)
     os.remove(CKPT)
 
     # --- MD: idempotent update A/E таблицы + фикс даты 07-07 -> 10-11 ---
-    md = open(MD).read()
-    new1 = e16["1"]["med"]
-    new16 = e16["16"]["med"]
-    md = md.replace("2026-07-07", "2026-10-11")
-    md = set_row(md, "| 1 | 1.461", f"**{new1:.3f}** (refit)")
-    md = set_row(md, "| 16 | 1.567", f"{new16:.3f} (refit)")
-    open(MD, "w").write(md)
-    print(f"done in {time.time()-t0:.0f}s; JSON + MD updated "
-          f"(dgp med dt=1: {new1:.6f}, dt=16: {new16:.6f})")
+    # багфикс аудита (v6 F3): docs/Exp33r2.md в репозитории НЕТ — прежний
+    # open(MD) падал после записи JSON (артефакт уже изменён, MD-часть не сделана).
+    if not os.path.exists(MD):
+        print(f"MD пропущен: {MD} не существует (обещан, но не закоммичен)")
+    else:
+        md = open(MD).read()
+        new1 = e16["1"]["med"]
+        new16 = e16["16"]["med"]
+        md = md.replace("2026-07-07", "2026-10-11")
+        md = set_row(md, "| 1 | 1.461", f"**{new1:.3f}** (refit)")
+        md = set_row(md, "| 16 | 1.567", f"{new16:.3f} (refit)")
+        open(MD, "w").write(md)
+    print(f"done in {time.time()-t0:.0f}s; JSON{'' if not os.path.exists(MD) else ' + MD'} updated "
+          f"(dgp med dt=1: {e16['1']['med']:.6f}, dt=16: {e16['16']['med']:.6f})")
 
 
 if __name__ == "__main__":

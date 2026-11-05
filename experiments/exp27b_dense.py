@@ -1,4 +1,4 @@
-"""Exp 28b — dense J-profile cache, S=128, t=0..127.
+"""Exp 27b — dense J-profile cache, S=128, t=0..127.
 
 One-off GPU cache to feed exp27b/exp28 (leaf structure / curvature) and future
 post-processing: raw J(t) + p128 at EVERY position of the 128-prefix for all
@@ -7,8 +7,11 @@ downstream in exp28/exp27.5 post-processing). Causal prefixes make S=64/32 dense
 slices of this cache (exp27 causal-identity, verified).
 
 24,576 J calls (128 t x 32 samples x 6 layers) ~ 12-16h T4.
-Per-layer checkpoint files results/exp27b_jcache_L{l}.pt (~2.1GB, RAM-safe,
-layer-granular resume). Post-processing stays local (no GPU).
+Per-layer checkpoint files results/exp27b_jcache_L{l}.pt (~2.1 ГБ ДИСКА на слой;
+это НЕ оценка пика RAM — в памяти при сборке живут JR+P128+P128_RAW+H dict'ами
+с Python-объектами на ключ, то есть кратно больше: аудит v6 оценивает прежнюю
+формулировку «RAM-safe» как занижение порядка). Resume — по слоям.
+Post-processing stays local (no GPU).
 
 Each ckpt stores, per (dom, si, t): JR (raw J), P128 (NORMALIZED p128 row,
 sum=1), P128_RAW (RAW sub-stochastic p128 row, sum<1 — added for exp34

@@ -21,7 +21,8 @@ from prism.jacobian import compute_jacobian_for_tokens
 
 def main(
     model="Qwen/Qwen3.5-0.8B",
-    n_samples=4,
+    n_samples=5,   # аудит v6: дефолт 4 не воспроизводил закоммиченный esg_data.json
+                   # (его params.n_samples = 5)
     K=64,
     max_length=64,
     min_length=32,

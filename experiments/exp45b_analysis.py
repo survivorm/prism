@@ -192,7 +192,7 @@ def main():
         log(f"  {f_:>12s} → {tg:<7s}: ρ = {c:+.3f}  z = {z:+5.1f}  n = {n}  "
             f"{'ОТДЕЛИМО от блочного нуля' if abs(z) > 3 else 'не отделимо'}")
     log(f"  … всего пар {len(res)}, из них |z| > 3: {sum(1 for r in res if abs(r[3]) > 3)} "
-        f"(при {len(res)} парах ожидаемое число ложных |z|>3 ≈ 0.002 × {len(res)} = "
+        f"(при {len(res)} парах ожидаемое число ложных |z|>3 ≈ 0.0027 × {len(res)} = "
         f"{0.0027 * len(res):.1f})")
 
     log("\n== 3. «лист как носитель следующего токена» против PCA того же ранга ==")
@@ -214,8 +214,9 @@ def main():
     dmed = {k: np.median(s_leaf[docs == k]) for k in uniq}
     dpca = {k: np.median(s_pca[docs == k]) for k in uniq}
     dif = np.array([dmed[k] - dpca[k] for k in uniq])
-    boot = np.array([np.mean([dmed[k] for k in rng2.choice(uniq, len(uniq))]) -
-                     np.mean([dpca[k] for k in rng2.choice(uniq, len(uniq))])
+    # багфикс аудита (F10): был НЕ парный бутстрап (два независимых ресемпла на лист и
+    # PCA), тогда как точечная оценка диф парная; один ресемпл документов на обе ветки
+    boot = np.array([np.mean([dmed[k] - dpca[k] for k in rng2.choice(uniq, len(uniq))])
                      for _ in range(2000)])
     log(f"  score(лист) медианой по позициям = {np.median(s_leaf[ht]):.3f}, "
         f"score(PCA) = {np.median(s_pca[ht]):.3f}")

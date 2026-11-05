@@ -194,7 +194,10 @@ def doc_metrics(J, H, P, Pr, subs, r, keep=False):
                 'ds_rest': float(ds[vv & ~boundary].mean()) if (vv & ~boundary).any() else float('nan'),
                 'n_boundary': int(bb.sum())})
     if keep:
-        row['_ds'], row['_lab'] = ds[bb], (vv & ~boundary)
+        # Аудит v6 F4: сюда попадали БУЛЕВЫ МАСКИ (vv & ~boundary), а ds_perm_check
+        # конкатенирует второй элемент как ЗНАЧЕНИЯ d_S: obs_diff становился
+        # «среднее значений минус доля True», знак и величина невосстановимы.
+        row['_ds'], row['_lab'] = ds[bb], ds[vv & ~boundary]
     return row
 
 
