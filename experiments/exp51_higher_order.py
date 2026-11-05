@@ -41,6 +41,7 @@ if _HERE not in sys.path:
 import exp47_common as C  # noqa: E402
 from exp49_leaf_info import load_model, smoothed_us, nz  # noqa: E402
 from exp50_gauges import pullback_step, safe_med, boot_ci  # noqa: E402
+import exp50v3_curvature as E50  # noqa: E402  (synth_white_matched — sur-нуль)
 
 TMAX = 96
 N_SW = 2
@@ -68,7 +69,10 @@ def gauge_along_lines(vv, mats):
         gvv.append(T.T @ w)
         if mats is not None:
             gm.append(T.T @ mats[t])
-    return gvv, gm, gdg
+    # _DEV (ревью E51 §6): дрейф ортогональности накопленного T — O(D³) один раз
+    # на документ; численный шум не должен имитировать нетривиальность.
+    dev = float(np.abs(T.T @ T - torch.eye(D, dtype=torch.float64)).max())
+    return gvv, gm, gdg, dev
 
 
 # ------------------------------------------------------------------ инварианты
@@ -172,7 +176,7 @@ def run_controls(T=96, D=400):
             zz = nz(torch.randn(D, dtype=torch.float64, generator=rngp))
             zz = nz(zz - x * (x @ zz))
             pl.append(torch.stack([x, zz], 1))
-        gv, gpl, gdg = gauge_along_lines(vv, pl)
+        gv, gpl, gdg, gdev = gauge_along_lines(vv, pl)
         # I2/I3 — инвариантны (детерминанты Грэма / CR) БЕЗ транспорта; на транспор-
         # тированных рамках они ВЫРОЖДАЮТСЯ (правая композиция: gv ≡ ±v0 точно —
         # тривиализация теоремы E50), поэтому считаются на исходных vv/pl.
@@ -180,7 +184,7 @@ def run_controls(T=96, D=400):
         res[kind] = {"I1_l1": safe_med(I1[1]), "I1_l8": safe_med(I1[8]),
                      "I2_mean": round(float(np.mean(I2)), 3) if I2 else None,
                      "I3_sd": round(float(np.std(I3)), 4) if len(I3) > 3 else None,
-                     "I4_e": safe_med(e)}
+                     "I4_e": safe_med(e), "gauge_dev": round(gdev, 12)}
     def gt(x, thr):   # strict-greater со строгим None-обращением (0.0 — валидное число!)
         return x is not None and x > thr
     ok = ((res["geo"]["I1_l1"] is not None and abs(res["geo"]["I1_l1"] - 1.0) < 0.1)
@@ -189,7 +193,8 @@ def run_controls(T=96, D=400):
           and (res["white"]["I1_l8"] is not None and abs(res["white"]["I1_l8"]) < 0.07)
           and gt(res["white"]["I4_e"], 0.7)
           and gt(res["white"]["I3_sd"], 0.2)
-          and (res["white"]["I2_mean"] is not None and abs(res["white"]["I2_mean"]) < 0.15))
+          and (res["white"]["I2_mean"] is not None and abs(res["white"]["I2_mean"]) < 0.15)
+          and max(res["geo"]["gauge_dev"], res["white"]["gauge_dev"]) < 1e-6)
     res["SELFTEST"] = "ok" if ok else "ВАЛИТСЯ"
     return res
 
@@ -207,14 +212,37 @@ def swap_idx(T, rng):
     return idx
 
 
-def bundle(vv, pl):
-    gv, gpl, gdg = gauge_along_lines(vv, pl)
+def surrogate_lines(v1s, rng):
+    """Step-matched белая прямая (тот же RMS шаг, что у реальных линий v1s) +
+    случайный орт-комплемент: нуль «та же скорость, нулевая динамика» (первичный
+    нуль E50v3). Ревью E51 §2/§9: swap-25% слаб для I1 на малых лагах и для
+    порядка I2/I3 — нужен сильный нуль."""
+    Vs = torch.stack([v.detach() for v in v1s])[:, :, None]  # [n,D,r=1], torch
+    D = Vs.shape[1]
+    vs = E50.synth_white_matched(Vs, D, 1, len(v1s), int(rng.integers(1 << 30)))
+    out_v, out_p = [], []
+    rg = torch.Generator().manual_seed(int(rng.integers(1 << 30)))
+    for x in vs:
+        xt = x.reshape(-1).to(torch.float64)
+        zz = torch.randn(D, dtype=torch.float64, generator=rg)
+        zz = nz(zz - xt * (xt @ zz))
+        out_v.append(xt)
+        out_p.append(torch.stack([xt, zz], 1))
+    return out_v, out_p
+
+
+def bundle(vv, pl, specs=None):
+    gv, gpl, gdg, gdev = gauge_along_lines(vv, pl)
     I1 = inv_I1(gdg); I2 = inv_I2(pl); I3 = inv_I3(vv); e, axd = inv_I4(gdg)
     return dict(I1_1=safe_med(I1[1]), I1_8=safe_med(I1[8]),
                 I1_1_all=I1[1], I1_8_all=I1[8],
                 I2=round(float(np.mean(I2)), 4) if I2 else None,
                 I3_sd=round(float(np.std(I3)), 4) if len(I3) > 3 else None,
-                I4_e=safe_med(e))
+                I4_e=safe_med(e), gauge_dev=round(gdev, 12),
+                I5=(inv_I5(specs) if specs is not None else None))
+
+
+NULL_KEYS = ("I1_1", "I1_8", "I2", "I3_sd", "I4_e")
 
 
 def main():
@@ -224,7 +252,12 @@ def main():
     args = ap.parse_args()
     root = os.path.join(_HERE, "..")
 
-    out = {"model": args.model, "controls": run_controls()}
+    out = {"model": args.model, "controls": run_controls(), "rank_used": 2,
+           "note": "I2/I3 на СЫРЫХ vv/pl (basis-invariant, без транспорта); rank=2 "
+                   "— проекция листа (главные мода/плоскость), не top-16. Нули: "
+                   "sur=step-matched белая прямая (сильный), sw=25% транспозиции "
+                   "(локальный порядок), sh=полный shuffle (весь порядок); paired "
+                   "по документам, CI не пересекает 0 => значимо"}
     print("CONTROLS:", json.dumps(out["controls"], indent=1), flush=True)
     if out["controls"]["SELFTEST"] != "ok":
         sys.exit("controls failed")
@@ -246,42 +279,75 @@ def main():
         for x in us:
             v1, P, sig = leaf_bases(x, A, eps)
             v1s.append(v1); pl.append(P); specs.append(sig)
-        b = bundle(v1s, pl)
+        b = bundle(v1s, pl, specs)
         row = dict(dom=doc["dom"], key=key,
                    I1_1=b["I1_1"], I1_1_ci=boot_mean_ci(b["I1_1_all"]),
                    I1_8=b["I1_8"], I1_8_ci=boot_mean_ci(b["I1_8_all"]),
-                   I2=b["I2"], I3_sd=b["I3_sd"], I4_e=b["I4_e"], I5=inv_I5(specs))
+                   I2=b["I2"], I3_sd=b["I3_sd"], I4_e=b["I4_e"], I5=b["I5"],
+                   gauge_dev=b["gauge_dev"])
+        n_ = len(v1s)
         for j in range(N_SW):
-            idx = swap_idx(len(v1s), rng)
-            bb = bundle([v1s[i] for i in idx], [pl[i] for i in idx])
-            row[f"sw{j}"] = {k: bb[k] for k in ("I1_1", "I1_8", "I2", "I3_sd", "I4_e")}
+            idx = swap_idx(n_, rng)
+            bb = bundle([v1s[i] for i in idx], [pl[i] for i in idx],
+                        [specs[i] for i in idx])
+            row[f"sw{j}"] = {k: bb[k] for k in NULL_KEYS}
+            row[f"sw{j}"]["I5"] = bb["I5"]
+            sh = rng.permutation(n_)
+            bb = bundle([v1s[i] for i in sh], [pl[i] for i in sh],
+                        [specs[i] for i in sh])
+            row[f"sh{j}"] = {k: bb[k] for k in NULL_KEYS}
+            row[f"sh{j}"]["I5"] = bb["I5"]
+            sv, sp = surrogate_lines(v1s, rng)
+            bb = bundle(sv, sp)
+            row[f"sur{j}"] = {k: bb[k] for k in NULL_KEYS}
         rep.setdefault(doc["dom"], []).append(row)
         print(key, "done", flush=True)
 
-    def flat(field, swj=None):
-        vals = []
-        for dom, rows in rep.items():
-            for r in rows:
-                vals.append(r[field] if swj is None else r[f"sw{swj}"][field])
-        return safe_med(vals)
+    FIELDS = ("I1_1", "I1_8", "I2", "I3_sd", "I4_e")
+    NULLS = ("sur", "sw", "sh")
+
+    def paired(rows, f, n):
+        """paired по документу: реальный минус среднее по репликам нулля j."""
+        d = []
+        for r in rows:
+            if r.get(f) is None:
+                continue
+            vals = [r[f"{n}{j}"][f] for j in range(N_SW)
+                    if r.get(f"{n}{j}", {}).get(f) is not None]
+            if vals:
+                d.append(r[f] - float(np.mean(vals)))
+        return d
 
     summ = {}
     for dom, rows in rep.items():
-        summ[dom] = {}
-        for f in ("I1_1", "I1_8", "I2", "I3_sd", "I4_e"):
-            summ[dom][f] = safe_med([r[f] for r in rows])
-            summ[dom]["sw_" + f] = safe_med([r[f"sw{j}"][f] for r in rows for j in range(N_SW)])
-        summ[dom]["I2_signfrac"] = safe_med([abs((r["I2"] or 0)) for r in rows])
+        summ[dom] = {f: safe_med([r[f] for r in rows]) for f in FIELDS}
+        summ[dom]["I5_tau_s1"] = safe_med([r["I5"].get("tau_s1") for r in rows])
     allr = [r for rows in rep.values() for r in rows]
-    summ["_all"] = {}
-    for f in ("I1_1", "I1_8", "I2", "I3_sd", "I4_e"):
-        summ["_all"][f] = [safe_med([r[f] for r in allr]),
-                           boot_ci([r[f] for r in allr])]
-        summ["_all"]["sw_" + f] = [safe_med([r[f"sw{j}"][f] for r in allr for j in range(N_SW)]),
-                                   boot_ci([r[f"sw{j}"][f] for r in allr for j in range(N_SW)])]
-    summ["_all"]["I5_median_tau"] = {f"tau_s{i+1}": safe_med([r["I5"].get(f"tau_s{i+1}") for r in allr])
-                                     for i in range(4)}
-    summ["_all"]["I5_corr_s1_lag16"] = safe_med([r["I5"].get("r1_L16") for r in allr])
+    s = summ["_all"] = {}
+    s["max_gauge_dev"] = max((r["gauge_dev"] for r in allr), default=None)
+    for f in FIELDS:
+        s[f] = [safe_med([r[f] for r in allr]), boot_ci([r[f] for r in allr])]
+    verdict = {}
+    for f in FIELDS:
+        sig = {}
+        for n in NULLS:
+            d = [x for rows in rep.values() for x in paired(rows, f, n)]
+            s[f"vs_{n}_" + f] = [safe_med(d), boot_mean_ci(d)]
+            lo, hi = s[f"vs_{n}_" + f][1]
+            sig[n] = lo is not None and lo * hi > 0
+        verdict[f] = ("directional+ordering" if sig["sur"] and sig["sw"] else
+                      "directional(order-free)" if sig["sur"] else
+                      "local-ordering" if sig["sw"] else
+                      "long-range-only" if sig["sh"] else "null-compatible")
+    for key in ("tau_s1", "r1_L16"):   # I5: paired против полного shuffle (у sur нет specs)
+        d = []
+        for r in allr:
+            a = r["I5"].get(key)
+            bs = [r[f"sh{j}"]["I5"].get(key) for j in range(N_SW)]
+            if a is not None and all(b is not None for b in bs):
+                d.append(a - float(np.mean(bs)))
+        s[f"I5_vs_sh_{key}"] = [safe_med(d), boot_mean_ci(d)]
+    s["verdict"] = verdict
     out["summary"] = summ
     out["per_doc"] = rep
     print(json.dumps(summ["_all"], indent=1), flush=True)
