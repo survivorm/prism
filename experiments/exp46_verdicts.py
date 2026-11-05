@@ -73,8 +73,16 @@ def main():
     for r in rows:
         by_pos[(r["doc"], r["t"])][r["variant"]] = r
     tab = defaultdict(list)
+    n_notarget = 0
     for key, v in by_pos.items():
         if "leaf_lag0" not in v:
+            continue
+        # Аудит E46+ (A5): у t = S-1 нет настоящей цели (следующего токена нет),
+        # nll там считается по pad-токену. Флаг has_target пишется в артефакт с
+        # фиксов exp45b, но здесь не использовался; теперь позиции без цели выбрасываются
+        # целиком (иначе в ΔNLL попадает ~1/128 позиций с фейковой целью).
+        if not v["leaf_lag0"].get("has_target", 1):
+            n_notarget += 1
             continue
         base = max(v["leaf_lag0"]["kl"], 1e-12)
         base_nr = max(v["leaf_lag0"]["kl_nr"], 1e-12)
@@ -83,6 +91,9 @@ def main():
                                   kl_nr=r["kl_nr"], score_nr=r["kl_nr"] / base_nr,
                                   energy=r["energy"],
                                   top5=r["top5"], dnll=r["nll_proj"] - r["nll_true"]))
+
+    log(f"отброшено позиций без цели (t=S-1, has_target=0): {n_notarget} "
+        f"из {len(by_pos)} (аудит E46+ A5)")
 
     log("\n== медианы по всем позициям (score = KL / KL своей рамы; _nr — с восстановлением нормы) ==")
     log(f"{'вариант':>14s} {'KL':>9s} {'score':>7s} {'KL_nr':>9s} {'score_nr':>9s} "
@@ -120,17 +131,23 @@ def main():
         log("  ИТОГ: " + ("лист лучше ВСЕХ null'ей (носитель есть)" if ok_all else
                           "носителя нет: как минимум один null не хуже листа"))
         for nl in DIAG:
-            if nl not in med or prim not in med:
+            if nl not in med or prim not in med or field != "score":
+                # Аудит E46+ (мина): на второй итерации внешнего цикла (field = score_nr)
+                # bs и bs_nr совпадали, и одно и то же число печаталось под двумя ярлыками.
+                # Блок теперь печатается один раз, за оба варианта сразу.
                 continue
             bs = boot_diff(med[prim][field], med[nl][field])
             bs_nr = boot_diff(med[prim]["score_nr"], med[nl]["score_nr"])
+            # Итог по КАЖДОМУ варианту отдельно, без «хотя бы в одном» (это была favorable-
+            # ветка): читатель видит два независимых утверждения.
+            def _w(b):
+                return ("лист лучше" if b["ci"][1] < 0
+                        else ("null лучше" if b["ci"][0] > 0 else "НЕТ различия"))
             log(f"  [диагн] {prim} − {nl:<9s}: Δ(score) = {bs['mean_diff']:+.3f} "
-                f"CI [{bs['ci'][0]:+.3f}, {bs['ci'][1]:+.3f}], Δ(score_nr) = "
+                f"CI [{bs['ci'][0]:+.3f}, {bs['ci'][1]:+.3f}] → {_w(bs)}; "
+                f"Δ(score_nr) = "
                 f"{bs_nr['mean_diff']:+.3f} CI [{bs_nr['ci'][0]:+.3f}, {bs_nr['ci'][1]:+.3f}] → "
-                + ("«любая рама документа» ХУЖЕ листа хотя бы в одном варианте"
-                   if (bs['ci'][1] < 0 or bs_nr['ci'][1] < 0)
-                   else "«любая рама документа» НЕ ХУЖЕ листа: привязка рама↔позиция сама по "
-                        "себе ничего не даёт"))
+                f"{_w(bs_nr)}")
 
     log("\n== лестница лагов (монотонность = медленное вращение рамы) ==")
     lags = [f"leaf_lag{lag}" for lag in d["lags"]]
@@ -145,7 +162,11 @@ def main():
     for i in range(len(docs)):
         y = np.array([per_doc[lg][i] for lg in lags])
         # аудит v6: метрика называлась Spearman, но считалась как Пирсон по
-        # рангу лага против СЫРОГО значения KL; теперь ранги и того, и другого
+        # рангу лага против СЫРОГО значения KL; теперь ранги и того, и другого.
+        # x оставлен как arange СОЗНАТЕЛЬНО: лаги строго возрастают ([0,1,2,4,8]),
+        # поэтому ранги значений лагов совпадают с arange, и Пирсон(arange, ранги KL)
+        # есть точный Спирмен(lag, KL) (проверено численно: max |разница| = 0.0).
+        # Менять на np.asarray(lags) без ранжирования x — наоборот, сломать метрику.
         sp.append(np.corrcoef(np.arange(len(lags)), np.argsort(np.argsort(y)))[0, 1])
     log(f"  Spearman(lag, KL) по документам (ранги обеих осей): медиана {np.median(sp):+.3f}, "
         f"доля > 0: {100 * np.mean(np.array(sp) > 0):.0f} %")

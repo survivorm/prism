@@ -5,7 +5,22 @@
   AUC >= 0.8, фора >= 5 токенов, И ΔAUC против тривиальных фич >= 0.05;
   иначе — «лист не добавляет» (пишется так же отчётливо).
 
-Дизайн (фиксируется здесь, до запуска):
+Дизайн. ВНИМАНИЕ (аудит E46+ A2): ниже зафиксирован дизайн с ТРЕМЯ ОТКЛОНЕНИЯМИ от
+пререгистрации `docs/leaf_dynamics.md` §5.3 — это перерегистрация постфактум, она была
+правильнее оформить как регистрируемое отклонение с самого начала:
+  О1 rolling-окно 16 вместо пререгистрированных 24 шагов (короче окно = меньше истории у
+     обеих сторон, для листа консервативно);
+  О2 главное разделение cross-domain (3 домена → 4-й) вместо leave-one-document-out;
+     строгость выше, чем у пререгистрации (междоменная переносимость труднее внутридоменной),
+     но это ДРУГОЙ объект: «лист предсказывает внутри модели и домена» ≠ «переносится на
+     чужой домен»; leave-one-document-out в коде не считается вообще;
+  О3 «фора» = max Δ с leaf-AUC ≥ 0.8 вместо медианы форы по документам; max-формулировка
+     МЯГЧЕ (достаточно одного горизонта из четырёх), то есть играла бы в пользу утвердительного
+     вердикта; отрицательный вердикт «лист не добавляет» от неё не зависит (он держится на
+     AUC и ΔAUC).
+Сам критерий §6 (AUC ≥ 0.8, фора ≥ 5 токенов, ΔAUC ≥ 0.05) не менялся.
+
+Сам дизайн:
   * данные: СЫРЬЁ P1 без перепрогона — exp47b npz (Qwen) и exp48b npz (LFM3),
     4 домена × 16 документов, фичи per step;
   * target: y_t^(Δ) = «петля объявлена детектором» (onset-маска find_loops) в каком-либо
@@ -63,13 +78,14 @@ def acf_recent(x, w=24, lags=tuple(range(2, 13))):
     return out
 
 
-def build_feats(f, triv_fix=None):
+def build_feats(f, triv_fix=None, triv_kind=None):
     a, s, p = (np.asarray(f[k], float) for k in ("a", "s", "p"))
     ent, top1, eq = (np.asarray(f[k], float) for k in ("ent", "top1", "eq_prev"))
-    if triv_fix is not None:
+    if triv_kind == "zoh":
         # ZOH: полновocab-фичи пересчитаны каждый 8-й шаг -> растягиваем на сетку шагов
         ent = np.repeat(ent, 8)[:len(ent) * 8][:len(a)]
         top1 = np.repeat(top1, 8)[:len(top1) * 8][:len(a)]
+    # triv_kind == "full" — фичи уже по полному вокабуляру и per-step, ничего не надо
     leaf = np.column_stack([a, s, p] + [roll_med(m) for m in (a, s, p)])
     triv = np.column_stack([ent, top1, eq] + [roll_med(m) for m in (ent, top1, eq)]
                            + [acf_recent(s)])
@@ -151,16 +167,29 @@ def main():
     for name, (npz, jpath) in SOURCES.items():
         docs = json.load(open(os.path.join(root, jpath)))["docs"]
         z = np.load(npz, allow_pickle=True)
-        fix = np.load(TRIV_FIX[name]) if name in TRIV_FIX else None
         sets = {}
         for doc in docs:
             key = f"{doc['dom']}_{doc['si']}"
             f = z[key].item()
-            tf = None
-            if fix is not None:
-                tf = True
-                f = dict(f); f["ent"] = fix[key + "_ent"]; f["top1"] = fix[key + "_top1"]
-            leaf, triv = build_feats(f, triv_fix=tf)
+            kind = None
+            if "ent_full" in f:
+                # Фикс мины «TRIV_FIX вне репозитория»: полноваровые фичи теперь пишутся
+                # в тот же npz (exp48b, фикс A1), пересчёт снаружи больше не нужен.
+                f = dict(f)
+                f["ent"], f["top1"] = f["ent_full"], f["top1_full"]
+                kind = "full"
+            elif name in TRIV_FIX:
+                # legacy: пересчёт внешним /tmp-скриптом, ZOH каждый 8-й шаг
+                fix = np.load(TRIV_FIX[name], allow_pickle=True)
+                f = dict(f)
+                f["ent"], f["top1"] = fix[key + "_ent"], fix[key + "_top1"]
+                kind = "zoh"
+            elif name == "lfm3":
+                raise SystemExit(
+                    "lfm3: в npz нет ent_full/top1_full и нет TRIV_FIX — тривиальные "
+                    "конкуренты считались бы по U-срезу (128 колонок) вместо вокабуляра. "
+                    "Перегенерируй exp48b (docs/regen_queue.md).")
+            leaf, triv = build_feats(f, triv_kind=kind)
             T = leaf.shape[0]
             m = onset_mask(doc, T)
             for delta in DELTS:

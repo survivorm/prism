@@ -144,9 +144,13 @@ def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
                 m(input_ids=ids, past_key_values=cache, use_cache=True)
             h = cap["x"].to(dev)                          # [D] double, pre-final-norm
             feats = {"a": [], "s": [], "p": [], "g": [], "ent": [], "top1": [],
+                     "ent_full": [], "top1_full": [],
                      "eq_prev": [], "hnorm": []}
             u = h / h.norm()
             V_prev = None
+            # Кадр при промптной позиции — отдельно от V_prev, чтобы не убирать NaN
+            # у первого шага (s/p на первом шаге не определены по построению).
+            V_at_cur = C.V16_from_J(C.J_analytic(A, h, eps)[0])[0]
             tokens = ids[0].tolist()
             V_stack, u_stack = [], []
             for step in range(max_new):
@@ -159,7 +163,20 @@ def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
                 # полный argmax по всем 128k логитам (head = embed.weight, tied);
                 # срез по U годится только для метрик на U-массе, но не для argmax
                 xn = h.float() * torch.rsqrt(h.pow(2).mean() + eps).float()
-                nxt = int((xn.to(dev) @ W.to(dev).T).argmax())
+                # Аудит E46+ (A1): здесь терялся гейн w финальной нормы. Модель считает
+                # logits = lm_head(w * rms(x)) — это подтверждает route-чек выше
+                # (он сошёлся 1.5e-6 ИМЕННО с A = head_M(W[U], g_n)), и метрики этого
+                # скрипта используют тот же A. Без g_n argmax = greedy от ДРУГОЙ политики
+                # отсчёта, а не greedy модели.
+                lg_full = ((xn * g_n).to(dev) @ W.to(dev).T).float()
+                nxt = int(lg_full.argmax())
+                # Аудит E46+ (мина «TRIV_FIX вне репозитория»): entropy/top1 считались по
+                # U-срезу (128 колонок), а тривиальные конкуренты E-47c обязаны считаться по
+                # полному вокабулярю; пересчёт лежал в /tmp-скрипте без provenance. Теперь
+                # полноваровые фичи пишутся в тот же npz рядом с U-срезными.
+                pf = torch.softmax(lg_full, dim=-1)
+                feats["ent_full"].append(float(-(pf * pf.clamp_min(1e-12).log()).sum()))
+                feats["top1_full"].append(float(pf.max()))
                 feats["eq_prev"].append(int(nxt == tokens[-1]))
                 u_stack.append(u.float().cpu().numpy())
                 tokens.append(nxt)
@@ -172,7 +189,13 @@ def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
                 feats["a"].append(a); feats["s"].append(s)
                 feats["p"].append(pl); feats["g"].append(gg)
                 V_prev, u = V_cur, u_new
-                V_stack.append(V_cur.float().cpu().numpy())
+                # Аудит E46+ (A6): раньше писался V_cur = КАДР СЛЕДУЮЩЕЙ позиции, из-за чего
+                # сохранённые u[i] и V[i] были сдвинуты на шаг (naive офлайн «u[t] против V[t]»
+                # давал систематический перекос). Теперь оба стека на одной позиции i:
+                # u[i] = u после i-го шага, V[i] = кадр там же; фичи a/s/p остаются
+                # шаг-индексированными (шаг i = граница i→i+1).
+                V_stack.append(V_at_cur.float().cpu().numpy())
+                V_at_cur = V_cur
                 h = h_new
             gen_tokens = tokens[prompt_len:]
             loops = C.find_loops(gen_tokens)
@@ -199,6 +222,8 @@ def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
                             "acf_peak_by_loop": [None if x != x else float(x) for x in acf]},
                 "trivial": {"ent_med": float(np.median(feats["ent"])),
                             "top1_med": float(np.median(feats["top1"])),
+                            "ent_full_med": float(np.median(feats["ent_full"])),
+                            "top1_full_med": float(np.median(feats["top1_full"])),
                             "eq_prev_rate": float(np.mean(feats["eq_prev"]))},
                 "gen_sha": _sha(gen_tokens),
             })
@@ -215,6 +240,11 @@ def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
     out = {"params": {"protocol": "docs/leaf_dynamics.md §9 + §5.2", "model": str(model),
                       "n_docs": n_docs, "max_new": max_new, "prompt_len": prompt_len,
                       "decoding": "greedy", "seed": RNG_SEED,
+                      # Аудит E46+ (A1): до 05.11 argmax считался БЕЗ гейна w (xn@W.T), то
+                      # есть поле "decoding": "greedy" было неверно — это greedy от ungated
+                      # readout. Артефакты, помеченные decoding_policy_note ниже, получены
+                      # именно той политикой и требуют перегенерации.
+                      "decoding_policy_note": "with final-norm gain w (фикс A1, 2026-11-05)",
                       "U128": "fresh freq basis on LFM3 pool", "U128_head": U128[:8],
                       "route_decode": rt, "tied": bool(tied)},
            "docs": _nansafe(docs_out)}
