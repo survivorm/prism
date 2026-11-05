@@ -1,0 +1,14 @@
+# Крупные артефакты серии E-45…E-48, которые НЕ лежат в git (results/*.npz, *.pt в .gitignore),
+# и которые НЕ пересоздаются воспроизводимо: они читают calibration-пул потоком с Hub
+# (не закреплён, см. docs/regen_queue.md R1/R12), поэтому повтор команды даёт ДРУГУЮ выборку.
+# Смысл этого файла — идентичность: у закоммиченных выводов серии есть точный контрольный
+# отпечаток источника. Проверка: sha256sum -c results/exp40plus_artifacts.sha256
+# (файлы лежат в рабочем каталоге репозитория, в results/).
+f09ed0c80fc5ac358f38809e4e9c0581ba1ac291eaaba234160facff551a1849  results/exp45b_leaf_table.npz
+0c371740406db14b9bdf59b9744f8a57e36b714e5c81a3a5ccabb3f683faf364  results/exp45_edits_sparse.npz
+16f1dc41567ed0f0b84497c147a0ac24f3b19b70058c668fdcbf6272f42b92f5  results/exp45_flat_rows.pt
+
+# sizes (байт):
+131797659  results/exp45b_leaf_table.npz
+6808691  results/exp45_edits_sparse.npz
+1575081  results/exp45_flat_rows.pt

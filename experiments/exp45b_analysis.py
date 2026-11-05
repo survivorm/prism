@@ -132,12 +132,28 @@ def main():
     log("\n== 1. медианы по доменам ==")
     keys = ("d1_r16", "k2_r16", "pr_sigma", "g_uni", "j_norm", "h_norm", "nll", "ent",
             "copy16", "align_next", "align_rand", "align_pca_next")
+
+    def _med(v):
+        """Медиана по конечным значениям (или nan, если конечных нет).
+
+        `np.median` превращал ОДНУ NaN-позицию в nan всей колонки: `k2_r16` теряет
+        32 строки внутри `has_target` (голономии нужна пара (t,t+1)), и лог печатал
+        `nan`, хотя медиана есть (0.015539) — из-за этого число в docs/E45b_leaf_memory.md
+        §1 не сверялось с логом. Пропуск печатается отдельной строкой, чтобы он был видно.
+        """
+        f = v[np.isfinite(v)]
+        return float(np.median(f)) if f.size else float("nan")
+
     log("  " + f"{'домен':>6s} " + " ".join(f"{k[:9]:>9s}" for k in keys))
     for dom in sorted(set(doms)):
         m = (doms == dom) & ht
-        log("  " + f"{dom:>6s} " + " ".join(f"{np.median(col(k)[m]):9.4f}" for k in keys))
+        log("  " + f"{dom:>6s} " + " ".join(f"{_med(col(k)[m]):9.4f}" for k in keys))
     m = ht
-    log("  " + f"{'ВСЕ':>6s} " + " ".join(f"{np.median(col(k)[m]):9.4f}" for k in keys))
+    log("  " + f"{'ВСЕ':>6s} " + " ".join(f"{_med(col(k)[m]):9.4f}" for k in keys))
+    skipped = {k: int((~np.isfinite(col(k)[m])).sum()) for k in keys}
+    skipped = {k: v for k, v in skipped.items() if v}
+    log("  (пропущено не-чисел в колонках на срезе has_target: "
+        + (", ".join(f"{k}={v}" for k, v in skipped.items()) or "нет") + ")")
 
     log("\n== 1b. конфаунд-аудит (п.8 пререгистрации): лист против ‖h‖ ==")
     rng = np.random.default_rng(SEED)
