@@ -45,7 +45,7 @@ import exp47_common as C  # noqa: E402
 
 RNG_SEED = 47
 # ориентиры Qwen L23 (P0, exp47a_kinematics_cache.json) для T1/T2
-QWEN_REF = {"A_tanh": 0.955, "a0_tanh": 0.235, "p_med": 0.850, "a_med": 0.219}
+QWEN_REF = {"A_tanh": 0.383, "a0_tanh": 0.715, "p_med": 0.850}  # §8.1, фит по бин-средним
 
 
 def pearson(x, y):
@@ -204,17 +204,18 @@ def main() -> None:
     # полный backbone (2 позиции): grad logits[t] по входу нормы через весь граф
     if not args.smoke:
         for dom, si in [("math", 0), ("code", 0)]:
-            ids = pool[dom][si]["input_ids"][:args.S].to(args.device)
+            ids = pool[dom][si]["input_ids"].reshape(-1)[:args.S].to(args.device)
             with torch.enable_grad():
                 out = m(input_ids=ids.unsqueeze(0))
-            xg = cap["x"][0].detach().requires_grad_(True)
-            lgh = (xg * torch.rsqrt(xg.pow(2).mean() + eps)) @ head_W_all.float()[U128].T
+            xg = cap["x"].reshape(ids.shape[0], -1).detach().requires_grad_(True)  # [S,D]
+            # ВАЖНО: rms ПОСЛЕВЫЕ (dim=-1), иначе grad разливается по всем S строкам
+            lgh = (xg.double() * torch.rsqrt(xg.double().pow(2).mean(-1, keepdim=True) + eps)) @ A.T
             t = 60
             Jfull = []
             for k in range(0, args.K, 16):
-                e = torch.zeros(args.K, dtype=lgh.dtype, device=args.device); e[k] = 1.0
-                gfull, = torch.autograd.grad(lgh[t], xg, e)
-                Jfull.append(gfull.double())
+                e = torch.zeros(args.K, dtype=torch.float64, device=args.device); e[k] = 1.0
+                gfull, = torch.autograd.grad(lgh[t], xg, e, retain_graph=True)
+                Jfull.append(gfull[t].double())          # grad по всем S строкам; нужна строка t
             Jfull = torch.stack(Jfull)                        # [8,D]
             Ja, _rho, _u = C.J_analytic(A, xg[t].detach().double(), eps)
             r = float(torch.rsqrt(xg[t].detach().double().pow(2).mean() + eps))
@@ -268,6 +269,16 @@ def main() -> None:
     aa = np.array([x0 for x0, _ in pair_as]); ss = np.array([y for _, y in pair_as])
     ok = ~(np.isnan(aa) | np.isnan(ss))
     tanh = fit_tanh(aa[ok], ss[ok])
+    # честное сравнение с Qwen (§8.1): фит по БИН-СРЕДНИМ (13 квантильных бинов по a),
+    # R² тоже на бин-средних — point-wise R² несопоставим (шум сэмпов доминирует)
+    qa = np.quantile(aa[ok], np.linspace(0, 1, 14))
+    a_edges, mean_s = [], []
+    for i in range(len(qa) - 1):
+        m_ = (aa[ok] >= qa[i]) & (aa[ok] < qa[i + 1])
+        if m_.sum() > 20:
+            a_edges.append(float(np.mean(aa[ok][m_])))
+            mean_s.append(float(np.mean(ss[ok][m_])))
+    tanh_bins = fit_tanh(np.array(a_edges), np.array(mean_s))
     sc["scale_floor_max_rad"] = floor_max
     sc["gap16_positive_frac"] = gap_pos / max(gap_n, 1)
 
@@ -282,10 +293,11 @@ def main() -> None:
         "T0.2": {"floor": floor_max, "gap16": sc["gap16_positive_frac"],
                  "verdict": "ok" if (floor_max <= 1e-5 and sc["gap16_positive_frac"] >= 0.95)
                             else "метод/спектр не переносится"},
-        "T1": {**tanh, "qwen_A": QWEN_REF["A_tanh"], "qwen_a0": QWEN_REF["a0_tanh"],
+        "T1": {**tanh_bins, "A_points": tanh["A"], "a0_points": tanh["a0"], "r2_points": tanh["r2"],
+               "qwen_A": QWEN_REF["A_tanh"], "qwen_a0": QWEN_REF["a0_tanh"],
                "verdict": ("насыщение переносится"
-                           if (tanh["r2"] > 0.8 and 0.5 <= tanh["A"] / QWEN_REF["A_tanh"] <= 2.0
-                               and 0.5 <= tanh["a0"] / QWEN_REF["a0_tanh"] <= 2.0)
+                           if (tanh_bins["r2"] > 0.8 and 0.5 <= tanh_bins["A"] / QWEN_REF["A_tanh"] <= 2.0
+                               and 0.5 <= tanh_bins["a0"] / QWEN_REF["a0_tanh"] <= 2.0)
                            else "форма/масштаб насыщения отличается")},
         "T2": {"p_med": p_med, "qwen_p_med": QWEN_REF["p_med"],
                "verdict": "планарность переносится" if p_med > 0.7 else "не переносится"},
@@ -304,7 +316,8 @@ def main() -> None:
     out = {"meta": {"protocol": "docs/leaf_dynamics.md §9 (E-48a)", "model": args.model,
                     "n_docs": args.n_docs, "S": args.S, "K": args.K, "U128": "fresh freq basis",
                     "elapsed_s": round(time.time() - t0, 1), "smoke": args.smoke},
-           "descriptive": {"per_doc": docs_out, "tanh_fit": tanh,
+           "descriptive": {"per_doc": docs_out, "tanh_fit": tanh, "tanh_fit_bins": tanh_bins,
+                           "a_edges": a_edges, "mean_s_by_abin": mean_s,
                            "a_med_overall": a_med, "p_med_overall": p_med,
                            "domain_excess_a": med},
            "verdicts": verdicts}
