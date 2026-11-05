@@ -1,0 +1,47 @@
+{
+  "anchor": {
+    "overlap_wiki8pin_vs_cache": 0.203125,
+    "exp47b_overlap_fresh_streaming": 0.4375,
+    "pool_note": "пулы разные по построению: у exp47b streaming при max_length=256, здесь тексты пина (отбор при 64)",
+    "jcache": "exp27b_jcache_L23.pt"
+  },
+  "protocol": {
+    "model": "Qwen/Qwen3.5-0.8B",
+    "K": 128,
+    "max_length": 256,
+    "votes": "top-128 логитов последней позиции, по документу",
+    "pool_source": "data/calib_pins (закреплённые тексты)"
+  },
+  "tie_density_wiki8": {
+    "docs": 8,
+    "K": 128,
+    "votes_total": 1024,
+    "distinct_voted_tokens": 628,
+    "selected_with_count_1": 0,
+    "selected_with_count_ge2": 128,
+    "selected_with_count_ge4": 67,
+    "count_of_128th": 2,
+    "ties_at_cut": 58
+  },
+  "overlaps_same_protocol_same_size": {
+    "междоменные_8x8": {
+      "wiki__math": 0.53125,
+      "wiki__code": 0.515625,
+      "wiki__chat": 0.2109375,
+      "math__code": 0.59375,
+      "math__chat": 0.171875,
+      "code__chat": 0.1796875
+    },
+    "wiki_4docs_vs_wiki_4docs_disjoint": 0.5546875,
+    "wiki8_vs_32docs_global": 0.6640625,
+    "cache32_vs_wiki8": 0.203125,
+    "tie_break_matters_heap_vs_sorted": 1.0
+  },
+  "global_basis_size32": {
+    "docs": 32,
+    "votes_total": 4096,
+    "distinct_voted_tokens": 1633,
+    "selected_with_count_1": 0,
+    "overlap_with_cache": 0.21875
+  }
+}
