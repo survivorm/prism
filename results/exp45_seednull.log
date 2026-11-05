@@ -1,0 +1,16 @@
+loading jcache L23 ...
+set A: (4096, 1024) (4 доменов × 8 документов × 128)
+loading model (fp32) ...
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  24%|██▍       | 76/320 [00:00<00:00, 714.08it/s]Loading weights:  52%|█████▏    | 165/320 [00:00<00:00, 791.37it/s]Loading weights:  78%|███████▊  | 248/320 [00:00<00:00, 797.37it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 788.30it/s]
+capturing h for set B (C4 val; readout-only ⇒ h от правки не зависит) ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  val недоступен (Bad split: val. Available splits: ['train', 'validation']), fallback train skip=24576
+set B: (4064, 1024), реальных токенов 3681
+base logits over A ...
+  sentinel A (масса < 0.5): 1050/2048 = 51.3 %
+  cross-check против kl_leash: ours=0.00554644 ref=0.00554647 abs=3.16e-08 rel=5.69e-06
+  sparse-vs-dense kl_be: max|Δ| = 1.80e-06
+  sparse-vs-dense kl_eb: max|Δ| = 1.88e-06
+  sparse-vs-dense tv: max|Δ| = 1.22e-06
+  sparse-vs-dense flip: расхождений 0 из 64
+quantizing GPTQ 4-bit (Гессиан = 4096 позиций кэша) ...
