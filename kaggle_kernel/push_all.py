@@ -29,7 +29,7 @@ KERNELS = {
         "id": "voroninmichael/prism-exp6-l18-snr",
         "title": "Prism: exp6-l18-snr",
         "exp_file": "experiments/exp6_l18_snr.py",
-        "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 256\n",
+        "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 256\nimport os as _os; _os.environ['PRISM_CALIB_PIN_WRITE'] = '1'; _os.environ['PRISM_CALIB_PIN_DIR'] = '/kaggle/working/calib_pins'\n",
         "note": "MANDATORY: data LOST (results/exp6_l18_snr.json absent from "
                 "repo; rho=+2.94 unverifiable). L18 SNR/PR vs r, N=8, K=256, ~2h T4.",
     },
@@ -39,7 +39,7 @@ KERNELS = {
         "id": "voroninmichael/prism-exp2-heatmap",
         "title": "Prism: exp2-heatmap",
         "exp_file": "experiments/exp2_heatmap.py",
-        "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\n",
+        "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\nimport os as _os; _os.environ['PRISM_CALIB_PIN_WRITE'] = '1'; _os.environ['PRISM_CALIB_PIN_DIR'] = '/kaggle/working/calib_pins'\n",
         "note": "optional: full 32x24 heatmap, n=8, K=64 (was thin n=3/K=8).",
     },
     # --- аудит v6: перегенерации, у которых обвязка уже есть или тривиальна ---
@@ -211,6 +211,7 @@ KERNELS = {
         "id": "voroninmichael/prism-exp01-coherence",
         "title": "Prism: exp01-coherence",
         "exp_file": "experiments/exp01_coherence.py",
+        "calib_pins": ["wiki", "math", "code", "chat"],
         "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\n",
         "note": "Exp 0.1 coherence length: C(delta) curves, 4 domains x 4 layers {6,12,18,22}, n=8/K=64. Kill-switch for ESG/Exp 0.2. GPU after quota reset (~09-14).",
     },
@@ -413,6 +414,8 @@ def build(exp_name: str):
         cmd += ["--extra-modules"] + list(meta_dict["extra_modules"])  # type: ignore[union-attr]
     if meta_dict.get("extra_local"):  # type: ignore[union-attr]
         cmd += ["--extra-local"] + list(meta_dict["extra_local"])  # type: ignore[union-attr]
+    if meta_dict.get("calib_pins"):  # закреплённые calibration-пулы в ядро (R1b)
+        cmd += ["--calib-pins"] + list(meta_dict["calib_pins"])
     if "runner_extra" in meta_dict:
         re_ = meta_dict["runner_extra"]
         if isinstance(re_, (list, tuple)):
