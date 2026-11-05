@@ -9,5 +9,6 @@
   "title": "Prism: exp27c-positional-cache",
   "kernel_sources": [
     "voroninmichael/prism-exp27c-positional-cache"
-  ]
+  ],
+  "enable_internet": true
 }
