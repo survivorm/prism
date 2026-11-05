@@ -51,6 +51,7 @@ import numpy as np
 import torch
 
 from prism.calibration import (
+    LAST_POOL_FPS,
     load_calibration_data,
 )
 from prism.jacobian import (
@@ -213,7 +214,10 @@ def main(
         for _s in per_domain[_dom]:
             _h.update(str(_s["input_ids"].tolist()).encode())
     pool_fp = _h.hexdigest()[:16]
-    print(f"pool_fp={pool_fp}", flush=True)
+    # Отпечаток по сырым текстам (из закреплённого пула, prism.calibration): не зависит от
+    # токенизатора, поэтому сравним между моделями и протоколами.
+    pool_fp_text = "|".join(f"{d}:{LAST_POOL_FPS.get(d, '?')}" for d in domains)
+    print(f"pool_fp={pool_fp} pool_fp_text={pool_fp_text}", flush=True)
     if expect_pool_fp and expect_pool_fp != pool_fp:
         raise SystemExit(
             f"пул не совпал с пререгистрированным: {pool_fp} != {expect_pool_fp}. "
@@ -437,6 +441,7 @@ def main(
             "n_bins": N_BINS,
             "token_set_size": len(token_set),
             "pool_fp": pool_fp,
+            "pool_fp_text": pool_fp_text,
         },
     }
     os.makedirs(results_dir, exist_ok=True)
