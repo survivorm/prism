@@ -351,25 +351,30 @@ def build_kernel(
         import glob as _glob
         import json as _json
 
+        # Все пины домена (не один): локально в data/calib_pins/ у домена лежит по одному
+        # файлу на протокол (n/min/max/offset), а `prism.calibration` выбирает по ключу.
+        # Значит и в ядро кладём все — пусть рантайм решит по ключу и упадёт, если ключа нет
+        # (REQUIRE_PIN=1 ниже).
         hits = sorted(_glob.glob(os.path.join(ROOT, "data", "calib_pins", f"{dom}__*.json")))
-        if len(hits) != 1:
+        if not hits:
             raise SystemExit(
-                f"--calib-pins {dom}: ожидался ровно один пин в data/calib_pins/, найдено {len(hits)}"
+                f"--calib-pins {dom}: в data/calib_pins/ нет ни одного пина этого домена"
             )
-        pin_obj = _json.loads(open(hits[0], encoding="utf-8").read())
-        _pin_cell = (
-            f"# ---------- pinned calibration pool: {dom} ----------\n"
-            f"import json as _json, os as _os, pathlib as _pathlib\n"
-            f"_PIN = {pin_obj!r}\n"
-            f"_pin_dir = _os.environ.get('PRISM_CALIB_PIN_DIR', '/kaggle/working/calib_pins')\n"
-            f"_pathlib.Path(_pin_dir).mkdir(parents=True, exist_ok=True)\n"
-            f"_pathlib.Path(_pin_dir, {os.path.basename(hits[0])!r}).write_text(\n"
-            f"    _json.dumps(_PIN, ensure_ascii=False), encoding='utf-8')\n"
-            f"_os.environ['PRISM_CALIB_PIN_DIR'] = _pin_dir\n"
-            f"_os.environ['PRISM_CALIB_REQUIRE_PIN'] = '1'\n"
-            f"print('[calib-pin] {dom}: fp=' + _PIN['fp'] + ' n=' + str(len(_PIN['texts'])) + ' ключ=' + str(_PIN['protocol']))\n"
-        )
-        cells.append(code_cell(_pin_cell))
+        for hit in hits:
+            pin_obj = _json.loads(open(hit, encoding="utf-8").read())
+            _pin_cell = (
+                f"# ---------- pinned calibration pool: {dom} ----------\n"
+                f"import json as _json, os as _os, pathlib as _pathlib\n"
+                f"_PIN = {pin_obj!r}\n"
+                f"_pin_dir = _os.environ.get('PRISM_CALIB_PIN_DIR', '/kaggle/working/calib_pins')\n"
+                f"_pathlib.Path(_pin_dir).mkdir(parents=True, exist_ok=True)\n"
+                f"_pathlib.Path(_pin_dir, {os.path.basename(hit)!r}).write_text(\n"
+                f"    _json.dumps(_PIN, ensure_ascii=False), encoding='utf-8')\n"
+                f"_os.environ['PRISM_CALIB_PIN_DIR'] = _pin_dir\n"
+                f"_os.environ['PRISM_CALIB_REQUIRE_PIN'] = '1'\n"
+                f"print('[calib-pin] {dom}: fp=' + _PIN['fp'] + ' n=' + str(len(_PIN['texts'])) + ' ключ=' + str(_PIN['protocol']))\n"
+            )
+            cells.append(code_cell(_pin_cell))
 
     # Experiment file
     src = strip_docstring(exp_src)
