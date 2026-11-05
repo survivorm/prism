@@ -239,6 +239,7 @@ def load_model(args):
     if head is not None and head.weight.data_ptr() != W_head.data_ptr():
         W_head = head.weight.detach()
     A = C.head_M(W_head.float()[U], g)
+    load_model.last_g = g          # для e52a: пересборка A из изменённых строк head
     return A, U, eps, npz, jp
 
 
