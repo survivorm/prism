@@ -1,11 +1,44 @@
 """Calibration: data loading, tokenization, global token set, layer mapping."""
 
+import hashlib
+import json
+import os
+import re
 import warnings
 from collections import Counter
+from pathlib import Path
 
 import torch
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# --- закрепление пула (PLAN «Запрос 11»: все результаты воспроизводимы) -------------------
+# Порядок streaming-потока на Hub ничем не закреплён, поэтому «первые подходящие строки»
+# меняются от прогона к прогону: E-0.1 при идентичных params дал другой top-token набор
+# (pk_hash 5c12c174… -> 30d82ade…) и сдвинул C_b(sigma_d) до x31. Пин = сырые тексты принятых
+# строк + отпечаток; при наличии пина поток не читается вообще, значит прогон воспроизводим
+# и офлайн. Тексты (не тензоры): input_ids по-прежнему производит токенизатор.
+PIN_DIR_ENV = "PRISM_CALIB_PIN_DIR"
+PIN_WRITE_ENV = "PRISM_CALIB_PIN_WRITE"      # =1: разрешить записать новый пин
+PIN_REQUIRE_ENV = "PRISM_CALIB_REQUIRE_PIN"  # =1: отсутствие пина = громкий отказ
+LAST_POOL_FPS: dict[str, str] = {}           # domain -> отпечаток последнего загруженного пула
+
+
+def pool_fingerprint(texts: list[str]) -> str:
+    """Отпечаток пула по сырым текстам (от токенизатора не зависит)."""
+    h = hashlib.sha256()
+    for t in texts:
+        h.update(t.encode("utf-8"))
+        h.update(b"\x00")
+    return h.hexdigest()[:16]
+
+
+def _pin_path(domain, model_name, n_samples, min_length, max_length, save_offset_mapping) -> Path:
+    root = os.environ.get(PIN_DIR_ENV)
+    base = Path(root) if root else Path(__file__).resolve().parent.parent / "data" / "calib_pins"
+    slug = re.sub(r"[^0-9A-Za-z.]+", "_", model_name)
+    mode = "offset" if save_offset_mapping else "plain"
+    return base / f"{domain}__{slug}__n{n_samples}__min{min_length}__max{max_length}__{mode}.json"
 
 
 def uniform_layer_mapping(n_layers_large: int, n_layers_small: int) -> dict[int, int]:
@@ -98,12 +131,26 @@ def load_calibration_data(
     `offset_mapping` to each sample (E-31 sentence boundaries).
     """
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    ds_id, cfg, split, field = _load_dataset_for_domain(domain)
-    kw: dict[str, object] = {"split": split, "streaming": True}
-    if cfg is not None:
-        kw["name"] = cfg
-    dataset = load_dataset(ds_id, **kw)  # type: ignore[call-overload]
-
+    pin = _pin_path(domain, model_name, n_samples, min_length, max_length, save_offset_mapping)
+    texts: list[str] | None = None
+    ds_id = cfg = split = field = None
+    if pin.exists():
+        meta = json.loads(pin.read_text(encoding="utf-8"))
+        texts = list(meta["texts"])
+        print(f"[calib] {domain}: пин {pin.name}, строк={len(texts)}, "
+              f"pool_fp={meta['fp']}, поток не читается", flush=True)
+    elif os.environ.get(PIN_REQUIRE_ENV) == "1":
+        raise RuntimeError(
+            f"нет пина пула {pin} при {PIN_REQUIRE_ENV}=1: прогон на потоке с Hub недопустим, "
+            f"иначе числа не воспроизводимы. Сгенерируйте пин с {PIN_WRITE_ENV}=1 один раз и "
+            f"закоммитьте его."
+        )
+    else:
+        ds_id, cfg, split, field = _load_dataset_for_domain(domain)
+        kw: dict[str, object] = {"split": split, "streaming": True}
+        if cfg is not None:
+            kw["name"] = cfg
+        dataset = load_dataset(ds_id, **kw)  # type: ignore[call-overload]
     samples = []
     # NOTE (audit4 Q9): the offset-mapping path tokenizes with
     # add_special_tokens=False, the plain path with the tokenizer default (True).
@@ -112,8 +159,12 @@ def load_calibration_data(
     # consumers. Consequence to keep in mind: a token set / calibration built
     # through the offset path is NOT the same sequence as the mainline E-16
     # calibration of the same text — do not mix their token sets.
-    for raw in dataset:
-        text = _extract_text_from_sample(raw, field)
+    accepted: list[str] = []
+    # Из пина идут уже извлечённые тексты (извлечение = _extract_text_from_sample на момент
+    # записи пина); с потока идут сырые строки.
+    rows = ((t, None) for t in texts) if texts is not None else ((None, raw) for raw in dataset)
+    for pinned_text, raw in rows:
+        text = pinned_text if pinned_text is not None else _extract_text_from_sample(raw, field)
         if not text:
             continue
         if save_offset_mapping:
@@ -125,6 +176,7 @@ def load_calibration_data(
                 add_special_tokens=False, return_offsets_mapping=True,
             )
             if len(toks["input_ids"]) >= min_length:
+                accepted.append(text)
                 samples.append({
                     "input_ids": toks["input_ids"],
                     "offset_mapping": torch.tensor(
@@ -137,9 +189,41 @@ def load_calibration_data(
                 return_tensors="pt",
             )
             if tokens["input_ids"].shape[1] >= min_length:
+                accepted.append(text)
                 samples.append(tokens)
         if len(samples) >= n_samples:
             break
+
+    if texts is None:
+        texts = accepted
+        fp = pool_fingerprint(texts)
+        print(f"[calib] {domain}: поток с Hub, строк={len(texts)}, pool_fp={fp}", flush=True)
+        if os.environ.get(PIN_WRITE_ENV) == "1":
+            pin.parent.mkdir(parents=True, exist_ok=True)
+            pin.write_text(
+                json.dumps(
+                    {
+                        "protocol": {"domain": domain, "model": model_name, "n_samples": n_samples,
+                                     "min_length": min_length, "max_length": max_length,
+                                     "offset_mapping": bool(save_offset_mapping)},
+                        "source": {"dataset": ds_id, "config": cfg, "split": split, "field": field},
+                        "fp": fp,
+                        "texts": texts,
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            print(f"[calib] {domain}: пин записан -> {pin}", flush=True)
+    else:
+        fp = pool_fingerprint(texts)
+        if len(samples) < n_samples:
+            raise RuntimeError(
+                f"пин {pin.name} дал {len(samples)} строк вместо {n_samples}: токенизатор или "
+                f"фильтр длины изменились относительно момента записи пина (pool_fp={fp}). "
+                f"Молча читать другой пул нельзя — числа стали бы невоспроизводимыми."
+            )
+    LAST_POOL_FPS[domain] = fp
     return samples
 
 
