@@ -14,7 +14,8 @@
   M1 лаг-кривая s(lag), lag ∈ {1,2,4,8,16,32} (full-length серии, без прореживания);
   M2 когерентность τ = [s(t,t+1)+s(t+1,t+2)−s(t,t+2)]/s(t,t+1)  (0 = связное движение,
      1 = белое; главный дискриминант, работает даже когда лаг-кривая насыщена);
-  M3 голономия окна L=8 vs shuffled-null с bootstrap CI по документам;
+  M3 голономия окна L=8 — НЕ ЗАПУСКАЛАСЬ в production-сетке (функция holonomy()
+     есть, не вызывалась; исправлено по ревью E49 §1.2 — заявка снята);
   M4 v1-угол со знакомым транспортом (r=1 чувствителен к знаку — фиксируем трассировкой).
 
 КОНТРОЛИ (падение этапа, если не различились):
@@ -63,12 +64,15 @@ def boot_ci(v, B=2000):
 # ------------------------------------------------------------------ каркас метрик
 
 def frame_in_metric(J, r, L):
-    """Базис top-r инвариантного подпространства JᵀJ, G-ортонормированный:
-    L: G=LᵀL; возврат — ортонорм. базис L·span(V) (метрика встроена в евклидовы углы)."""
+    """Базис top-r инвариантного подпространства JᵀJ, G-ортонормированный.
+    Фикс (ревью E49 §1.1): torch.linalg.cholesky даёт G = L·Lᵀ (НЕ LᵀL), значит
+    ‖x‖_G = ‖Lᵀx‖₂ и G-ортонорм — qr(LᵀV), а не qr(LV). ПРЕЖНИЕ M-ячейки сетки
+    exp49_leaf_info_*.json считали метрику LᵀL ≠ G — НЕИНТЕРПРЕТИРУЕМЫ (евклидовы
+    H2-выводы exp49b2 не затронуты: там L=None)."""
     V = C.V16_from_J(J, r=r)[0]                       # [D,r] ортонорм (евклид)
     if L is None:
         return V
-    Wm = L @ V
+    Wm = L.T @ V
     return torch.linalg.qr(Wm)[0]
 
 
@@ -187,19 +191,22 @@ def smoothed_us(u, nrm, W):
 def load_model(args):
     from transformers import AutoConfig, AutoModelForCausalLM  # type: ignore
     if args.model == "qwen":
-        mp = "/data/Qwen/Qwen3.5-0.8B"
-        ck = torch.load("/data/prism_kernels/exp27b/results/exp27b_jcache_L23.pt",
+        mp = os.environ.get("PRISM_QWEN_DIR", "/data/Qwen/Qwen3.5-0.8B")
+        ck = torch.load(os.environ.get("PRISM_JCACHE",
+                        "/data/prism_kernels/exp27b/results/exp27b_jcache_L23.pt"),
                         map_location="cpu", weights_only=False)
         U = ck["U128"]
         U = U.tolist() if torch.is_tensor(U) else list(U)
         cfg = AutoConfig.from_pretrained(mp)
         m = AutoModelForCausalLM.from_pretrained(mp, dtype=torch.float32).eval()
         g = 1.0 + m.model.norm.weight.detach().float()
-        npz, jp, eps = ("/data/prism_kernels/exp47b/exp47b_gen_kinematics.npz",
-                        "results/exp47b_gen_kinematics.json", EPS_QWEN)
+        npz, jp, eps = (os.environ.get("PRISM_NPZ",
+                        "/data/prism_kernels/exp47b/exp47b_gen_kinematics.npz"),
+                        os.environ.get("PRISM_DOCS_JSON",
+                                       "results/exp47b_gen_kinematics.json"), EPS_QWEN)
     else:
         from transformers.cache_utils import LinearAttentionLayer  # type: ignore
-        mp = "/data/LiquidAI/LFM3-1.7B"
+        mp = os.environ.get("PRISM_LFM3_DIR", "/data/LiquidAI/LFM3-1.7B")
         cfg = AutoConfig.from_pretrained(mp, trust_remote_code=True)
         cfg.layer_types = list(json.load(open(os.path.join(mp, "config.json")))["layer_types"])
         _o = LinearAttentionLayer.update_conv_state
@@ -212,8 +219,13 @@ def load_model(args):
         npz, jp, eps = ("/data/prism_kernels/exp48b/exp48b_lfm3_gen_kinematics.npz",
                         "results/exp48b_lfm3_gen_kinematics.json", EPS_LFM)
     W_head = m.get_input_embeddings().weight.detach()
-    if args.model == "qwen" and not (m.lm_head.weight.data_ptr() == W_head.data_ptr()):
-        W_head = m.lm_head.weight.detach()
+    # tied-проверка универсальная (ревью E49 §1.4/1.6): у LFM3-1.7B
+    # tie_word_embeddings=True и lm_head в чекпоинте ОТСУТСТВУЕТ (проверено
+    # 2026-11-06 по config/safetensors) — head ≡ embeddings, A был верным;
+    # для untied-моделей берём output head.
+    head = getattr(m, "lm_head", None)
+    if head is not None and head.weight.data_ptr() != W_head.data_ptr():
+        W_head = head.weight.detach()
     A = C.head_M(W_head.float()[U], g)
     return A, U, eps, npz, jp
 
