@@ -27,10 +27,26 @@ NULL И ЗНАК (пере-декларация ДО первых κ-чисел 
 соседних кадров — почти TOждественное преобразование: swap-ноль почти не ломает петли
 (L=16 переживает перестановку пары). Поэтому ГЛАВНЫЙ null — sur: суррогат с тем же
 средним шагом и случайными направлениями (конструкция валидирована 9/9+generic:
-κ_coh/κ_sur ≈ 1000×); вердикт по paired-CI(κ_real − κ_sur) > 0.
-Swap остаётся ВТОРИЧНЫМ диагностиком d16_swap (чувствительность к локальному порядку).
-Процедурная валидация знака: white_matched_d16_sign ≈ 0 (null не даёт сигнала),
-coh≫sur по абсолютному κ — знак «структура ⇒ κ выше ноля».
+κ_coh/κ_sur ≈ 1000×); прямая процедурная валидация знака: coh_d16_sur_sign > 0 и
+white_d16_sur_sign ≈ 0 (те же коды, что к данным).
+Swap — ВТОРИЧНЫЙ диагностик d16_swap (чувствительность к локальному порядку).
+ТРИХОТОМИЧЕСКИЙ вердикт по paired-CI(Δ), Δ = κ_real − κ_sur (пере-декларация ДО
+любых κ_real данных — пер-документные κ в логи не печатались ни разу):
+  CI_ло > 0  => "curvature_structure": систематическая кривизна (усилие, force);
+  CI_хи < 0  => "sub_geodesic": real глаже step-matched случайности — динамика
+                почти геодезическая, кривизна на масштабе L пренебрежима
+                (это НЕ провал — это режим «rigid-but-curved», κ→0 с геодезич.
+                нулём; предсказание эволюции e47/e49);
+  иначе      => "none_random_compatible": случайная динамика.
+ОЖИДАНИЕ ДО ДАННЫХ (paper.md E-28, «rigid-but-curved» κ~0.01): на реальных данных
+вердикт должен быть sub_geodesic — это УСПЕХ гипотезы (динамика почти геодезическая
+в масштабе L относительно step-matched случайности), а НЕ провал; curv_structure
+означал бы систематическое «усилие» (force), none — случайность.
+ОГРАНИЧЕНИЯ: N_SUR=2 (дисперсия null входит в Δ вдвое легче, при пограничном CI
+поднять); sur матчит СРЕДНИЙ шаг, не спектр приращений — следить mean_step_real
+vs mean_step_sur и форму k_real(L)/k_sur(L); generic-контроль — прецессирующие
+плотные skew (наст. кривизна rank-D; прежняя фиксированная A была 1p-группой=
+winding-артефакт, из gates убрано, остаётся отчётом).
 ГЛАВНЫЙ ЛАГ L=16: фиксирован до чисел; середина диапазона, где swap-null ещё
 сильно искажает петли, но окно не съедает половину T.
 ПАРА: d16 — средние по позициям ВНУТРИ документа, затем парный bootstrap по
@@ -120,14 +136,17 @@ def synth_coh(D, r, T, seed, delta=0.02, generic=False):
     g = torch.Generator().manual_seed(seed)
     V0 = torch.linalg.qr(torch.randn(D, r, dtype=torch.float64, generator=g))[0]
     if generic:
-        A = torch.randn(D, D, dtype=torch.float64, generator=g)
-        A = A - A.T
+        A0 = torch.randn(D, D, dtype=torch.float64, generator=g)
+        A0 = A0 - A0.T
+        A1 = torch.randn(D, D, dtype=torch.float64, generator=g)
+        A1 = A1 - A1.T
         Vs = []
         V = V0.clone()
         for t in range(T):
             Vs.append(torch.linalg.qr(V)[0])
-            V = torch.matrix_exp(delta * A) @ V
-        return Vs
+            A = math.cos(0.05 * t) * A0 + math.sin(0.05 * t) * A1   # ПРЕЦЕССИЯ: не 1p-группа
+            V = torch.matrix_exp(delta * A) @ V                     # => наст. кривизна,
+        return Vs                                                   # не winding-артефакт
     a = torch.randn(D, r, dtype=torch.float64, generator=g)
     a = a - V0 @ (V0.T @ a)
     A0 = V0 @ a.T - a @ V0.T
@@ -144,15 +163,17 @@ def synth_coh(D, r, T, seed, delta=0.02, generic=False):
 
 
 def synth_white_matched(Vs_ref, D, r, T, seed):
-    """Белые рамки с тем же СРЕДНИМ шагом (норма), но не с тем же спектром
-    приращений — это матчинг масштаба, не распределения."""
-    step = float(np.mean([1.0 - float((Vs_ref[t] * Vs_ref[t + 1]).sum())
-                          for t in range(len(Vs_ref) - 1)]))
-    step = min(max(step, 1e-3), 0.3)
+    """Белые рамки с тем же RMS-углом шага (метрика frame_kinematics — та же, в
+    которой κ), но не с тем же спектром приращений — матчинг масштаба, не
+    распределения. (До фикса раунда-6 «шаг» считался как 1−tr(VᵀV') ≈ −15 и
+    clamp'ился в константу — матчинг был мнимый.)"""
+    step = mean_step(Vs_ref)                 # = ||Θ||_2 (та же метрика, что κ)
+    step = min(max(step, 5e-4), 0.6)
+    ang_step = step / math.sqrt(r)           # суррогат вращает все r плоскостей на ang:
+    ang = ang_step                           # его ||Θ||_2 = √r·ang = step (точный матчинг)
     g = torch.Generator().manual_seed(seed)
     V = torch.linalg.qr(torch.randn(D, r, dtype=torch.float64, generator=g))[0]
     Vs = []
-    ang = math.sqrt(step)
     for _ in range(T):
         Vs.append(V.clone())
         z = torch.randn(D, r, dtype=torch.float64, generator=g)
@@ -167,6 +188,23 @@ def _d16_of(Vs, rng, nrep=N_SW):
     ks = [kappa_curve(swap_order(Vs, rng), (MAIN_LAG,))[MAIN_LAG] for _ in range(nrep)]
     return float(np.mean([k0[i] - np.mean([ks[j][i] for j in range(nrep)
                                            if i < len(ks[j])]) for i in range(len(k0))]))
+
+
+def _d16_sur_of(Vs, tag, nrep=N_SUR):
+    """То же, что вердикт к данным: sur-null (step-matched), среднее по позициям."""
+    D = Vs[0].shape[0]; r = Vs[0].shape[1]
+    k0 = kappa_curve(Vs, (MAIN_LAG,))[MAIN_LAG]
+    ks = [kappa_curve(synth_white_matched(Vs, D, r, len(Vs), det_seed(f"{tag}_s{j}")),
+                      (MAIN_LAG,))[MAIN_LAG] for j in range(nrep)]
+    return float(np.mean([k0[i] - np.mean([ks[j][i] for j in range(nrep)
+                                           if i < len(ks[j])]) for i in range(len(k0))]))
+
+
+def mean_step(Vs):
+    """RMS главный угол между соседними кадрами (метрика frame_kinematics, та же,
+    в которой κ). ПреЖняя формула 1−tr(VᵀV') давала ≈−(r−1) при r=16 (ревью-6 П0)."""
+    return float(np.mean([C.frame_kinematics(Vs[t], Vs[t + 1])[0]
+                          for t in range(len(Vs) - 1)]))
 
 
 def controls():
@@ -212,14 +250,18 @@ def controls():
     sign_ok = all(by_delta[0.02]) and all(by_delta[0.04])
     rng_s = np.random.default_rng(det_seed("sign_ctrl"))
     coh0 = synth_coh(D, r, T, 7, 0.02)
-    res["coh_d16_sign"] = round(_d16_of(coh0, rng_s), 4)
+    res["coh_d16_sign"] = round(_d16_of(coh0, rng_s), 4)              # swap-процедура (диагн.)
     res["white_matched_d16_sign"] = round(_d16_of(synth_white_matched(coh0, D, r, T, 8),
                                                   rng_s), 4)
+    # ПРЯМАЯ процедурная валидация ГЛАВНОГО нуля (та же sur-процедура, что к данным)
+    res["coh_d16_sur_sign"] = round(_d16_sur_of(coh0, "coh0"), 4)
+    res["white_d16_sur_sign"] = round(_d16_sur_of(synth_white_matched(coh0, D, r, T, 8),
+                                                  "wm0"), 4)
     ok = (res["geo_k16"] is not None and res["geo_k16"] < 1e-5
           and res["white_k16"] is not None and res["white_k16"] > 0.3
           and sign_ok
-          and res["generic_coh_k16"] is not None and res["generic_wm_k16"] is not None
-          and res["generic_coh_k16"] > 100 * res["generic_wm_k16"]
+          and res["coh_d16_sur_sign"] > 0.01
+          and abs(res["white_d16_sur_sign"]) < 0.05
           and res["white_matched_d16_sign"] is not None
           and abs(res["white_matched_d16_sign"]) < 0.05)
     res["SELFTEST"] = "ok" if ok else "ВАЛИТСЯ"
@@ -284,11 +326,15 @@ def main():
                     ks[L].append(vv)
             row["k_swap"] = {str(L): safe_med([x for sub in ks[L] for x in sub]) for L in LAGS}
             ku = {L: [] for L in LAGS}                      # ГЛАВНЫЙ null: sur
+            steps_sur = []
             for j in range(N_SUR):
                 sur = synth_white_matched(Vs, D_, r_, len(Vs), det_seed(f"{key}_W{W}_sur{j}"))
+                steps_sur.append(mean_step(sur))
                 for L, vv in kappa_curve(sur).items():
                     ku[L].append(vv)
             row["k_sur"] = {str(L): safe_med([x for sub in ku[L] for x in sub]) for L in LAGS}
+            row["mean_step_real"] = round(mean_step(Vs), 5)   # контроль матчинга null'а
+            row["mean_step_sur"] = round(float(np.mean(steps_sur)), 5)
             # ПАРА по ДОКУМЕНТУ: среднее по позициям (для парного bootstrap по n_doc)
             row["d16_mean"] = None
             row["d16_swap_mean"] = None
@@ -317,7 +363,11 @@ def main():
             "paired_d16_by_doc": [safe_med(dd), boot_ci(dd)],          # real − sur (ГЛАВНЫЙ)
             "paired_swap_by_doc_DIAGNOSTIC":
                 [safe_med([r["d16_swap_mean"] for r in rows
-                           if r["d16_swap_mean"] is not None]), None],
+                           if r["d16_swap_mean"] is not None]),
+                 boot_ci([r["d16_swap_mean"] for r in rows
+                          if r["d16_swap_mean"] is not None])],
+            "mean_step_real": safe_med([r["mean_step_real"] for r in rows], 5),
+            "mean_step_sur": safe_med([r["mean_step_sur"] for r in rows], 5),
             "k_white_control": out["controls"].get("white_k16"),
             "k_coh_control": out["controls"].get("coh_k16_med"),
             "k_white_matched_control": out["controls"].get("white_matched_k16_med"),
@@ -325,9 +375,12 @@ def main():
             "max_nonorthogonality": dict(_DEV),   #кумулятив по всему прогону (safety-метр)
             "n_docs": len(dd),
         }
-        lo = summ[tag]["paired_d16_by_doc"][1][0]
-        summ[tag]["verdict"] = ("curvature_structure" if (lo is not None and lo > 0)
-                                else "none")
+        lo, hi = summ[tag]["paired_d16_by_doc"][1]
+        mean_d = summ[tag]["paired_d16_by_doc"][0]
+        summ[tag]["verdict"] = ("inconclusive" if (lo is None or mean_d is None) else
+                                "curvature_structure" if lo > 0 else
+                                "sub_geodesic" if hi < 0 else
+                                "none_random_compatible")
         print(tag, json.dumps(summ[tag]), flush=True)
     out["summary"] = summ
     out["per_doc"] = rep
