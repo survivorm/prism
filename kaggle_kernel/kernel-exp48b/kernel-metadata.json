@@ -1,0 +1,19 @@
+{
+  "id": "voroninmichael/prism-exp48b-lfm3-gen-kinematics",
+  "title": "Prism: exp48b-lfm3-gen-kinematics",
+  "code_file": "kernel.ipynb",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "is_gpu_enabled": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "accelerator": "gpu",
+  "enable_gpu": true,
+  "enable_internet": true,
+  "language": "python",
+  "dataset_sources": [
+    "voroninmichael/prism-code-48b"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": []
+}
