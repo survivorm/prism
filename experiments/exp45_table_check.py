@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""E-45: проверить, что таблицы в `docs/E45_damage.md` совпадают с артефактами.
+"""E-45: проверить, что таблицы-записи E-45 в `docs/ref-exp.md` совпадают с артефактами.
 
 Зачем. Таблица §4 два раза переписывалась в документ руками из `*.partial.json` (прогон падал на
 якорях до записи финального JSON), колонка `κ(gf)` в §7 добавлялась скриптом. Числа в статье живут
@@ -20,7 +20,8 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DOC = os.path.join(HERE, "..", "docs", "E45_damage.md")
+# 05.11: документ свёрнут в git history (`07c27df`), таблицы-записи перенесены в ref-exp
+DOC = os.path.join(HERE, "..", "docs", "ref-exp.md")
 if len(sys.argv) > 1:                      # негативная половина проверки: свой файл
     DOC = sys.argv[1]
 D45 = os.path.join(HERE, "..", "results", "exp45_damage_vs_structure.json")
