@@ -79,7 +79,12 @@ def test_3_нет_пика_и_нет_dyadic():
 def test_4_ставка_и_H4():
     d = art("4_intersection")
     L22 = d["per_layer"]["22"]
-    assert L22["r_cross"] == 127.0 and L22["bootstrap_CI95"] == [127.0, 129.0]
+    # CI вырожден: все реплики с пересечением дают тот же r_cross (артефакт v2, 37b9045).
+    # docs/E40_tier0.md до 2026-11-05 обещал [127, 129] — это было число из более раннего
+    # прогона; свёрстано по артефакту, ширина здесь неинформативна, см. frac_boot_no_crossing
+    assert L22["r_cross"] == 127.0 and L22["bootstrap_CI95"] == [127.0, 127.0]
+    assert abs(d["per_layer"]["18"]["frac_boot_no_crossing"] - 0.41) < 5e-3
+    assert abs(L22["frac_boot_no_crossing"] - 0.569) < 5e-3
     assert d["prediction_check"]["verdict"] == "miss" and d["prediction_check"]["predicted"] == 60
     assert d["H4_strong_status"] == "alive"
     for L in ("18", "22"):  # мёртвый столбец S04 притворяется независимостью (E40_8, раунд 1)
