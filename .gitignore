@@ -59,3 +59,7 @@ results/exp17/
 *.ckpt
 *.gguf
 kaggle_kernel/.hf_cache/
+
+# артефакты прогонов E-45b/E-46 (скалярные колонки и строки проекций): пересоздаются
+# скриптами из experiments/, в git входят только логи.
+results/*.json.gz

@@ -67,7 +67,10 @@ TOL_QJ_DRIFT = 1e-4             # дрейф QJ (gauged-free проекция) �
 TOL_QJ_OVER_J = 1e-3            # …и относительно дрейфа сырого J: подавление минимум в 1000×
 TOL_KL = 1e-4                   # KL/TV на fp32-подлоге: под измерен ~2e-06
 TOL_TV = 1e-4
-TOL_KAPPA_REL = 1e-6            # κ(QJ) — тот же остаток, что QJ
+TOL_KAPPA_REL = 1e-4            # κ(QJ): пол не машинный, а float32 — document_profile внутри
+                                # кастует J в fp32 (замер: 2.7e-05 при подавлении в 3e7 раз),
+                                # и это на два порядка меньше самой мелкой информативной
+                                # разницы κ в таблице E-45 (0.16 %) и её полосы (0.58 %)
 TOL_PRED_REL = 1e-8             # остаток против предсказанного ранг-1 члена
 TOL_FP64_KL = 1e-10             # KL, пересчитанный в fp64: доказательство, что под = округление
 MIN_CONTROL_KL = 1e-4
@@ -222,19 +225,22 @@ def main():
         dQ_max, dQ_med = drift_of(Hst, g_np, Pst, rows_base, rows_e, True)
         kap_q = kappa_chunk(Hst, g_np, rows_e, True, Pst)
         m = E45.dense_metrics(Ha[::METRIC_STRIDE], W_e, W)
+        kap_raw = kappa_chunk(Hst, g_np, rows_e, False)
         row = dict(name=name, alpha=alpha, c_norm=float(c.norm()),
                    drift_J_max=dJ_max, drift_J_med=dJ_med,
                    drift_QJ_max=dQ_max, drift_QJ_med=dQ_med,
                    drift_QJ_over_J=dQ_max / max(dJ_max, 1e-300),
                    pred_rank1_rel_resid=pred_rel,
-                   kappa=kap_base, kappa_QJ=kap_q, kappa_QJ_base=kap_base_q,
+                   kappa=kap_raw, kappa_rel_dev=abs(kap_raw - kap_base) / max(kap_base, 1e-30),
+                   kappa_QJ=kap_q, kappa_QJ_base=kap_base_q,
                    kappa_QJ_rel_dev=abs(kap_q - kap_base_q) / max(kap_base_q, 1e-30),
                    kl_be_max=float(m["kl_be"].max()), kl_be_mean=float(m["kl_be"].mean()),
                    tv_max=float(m["tv"].max()), flip=float(m["flip"].mean()))
         rows.append(row)
         E45.log(f"  {name:>18s} ‖c‖={row['c_norm']:.3e}: drift J = {dJ_med:.2e} (max {dJ_max:.2e})"
                 f"  против ранг-1 предсказ. остаток {pred_rel:.2e}")
-        E45.log(f"  {'':>18s} drift QJ = {dQ_med:.2e}  κ(QJ) = {row['kappa_QJ']:.8f} "
+        E45.log(f"  {'':>18s} drift QJ = {dQ_med:.2e}  κ(J) = {kap_raw:.8f} "
+                f"(отн. {row['kappa_rel_dev']:.2e})  κ(QJ) = {kap_q:.8f} "
                 f"(отн. {row['kappa_QJ_rel_dev']:.2e})  KL_max = {row['kl_be_max']:.2e}  "
                 f"TV_max = {row['tv_max']:.2e}  top1→ = {row['flip']:.4f}")
         del W_e, m

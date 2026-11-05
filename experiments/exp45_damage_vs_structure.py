@@ -539,7 +539,12 @@ def main():
     n_sn = int(os.environ.get("E45_SEEDNULL", "0"))
     for k in range(n_sn):
         Gk = np.random.default_rng(100 + k).standard_normal((K_TOK, D)) * float(WU0.std())
-        sk = SEEDNULL_DRIFT / drift_med(J0, J_of_spec(Gk))[0]   # дрейф линеен по σ
+        # ОЦЕНКА σ: drift_med берётся от ПРАВКИ WU0+Gk, как в lin_K выше. Первая версия звала
+        # drift_med(J0, J_of_spec(Gk)), то есть меряла расстояние между J шума и J базы вместо
+        # нормы J самого шума: числитель завышен в √2, σ занижен в те же 0.71, и фактический
+        # дрейф draw'ей выходил 0.0855 вместо заказанных 0.12 (полоса разброса при этом была
+        # бы не на том дрейфе, что строки rand_*).
+        sk = SEEDNULL_DRIFT / drift_med(J0, J_of_spec(WU0 + Gk))[0]   # дрейф линеен по σ
         edits.append(dict(name=f"seednull_s{k}", kind="sparse",
                           rows=W[U128] + sk * torch.from_numpy(Gk).float(), sigma=sk))
     if n_sn:

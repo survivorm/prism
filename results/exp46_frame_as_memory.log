@@ -1,0 +1,47 @@
+# stdout этого прогона записан из results/chain_e45b.log / chain_e46.log (цепочка печатала
+# в один лог). Два предыдущих прогона этой же скрипти умерли: E-45b на собственном assert'е
+# Haar-нуля, E-46 на отсутствующем артефакте E-45b — обе починки и тексты ошибок записаны в
+# PLAN.md, блок «E-45b/E-46»; артефакты в results/* соответствуют именно этому stdout.
+
+таблица E-45b: 32 доков × S=128 × r=16
+проекторы: ‖P²−P‖max = 7.76e-06, |tr P − r|max = 2.01e-04, ‖VᵗV−I‖max = 7.99e-05
+loading model (fp32, нужен только lm_head) ...
+
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]
+Loading weights:  40%|████      | 128/320 [00:00<00:00, 1222.70it/s]
+Loading weights:  78%|███████▊  | 251/320 [00:00<00:00, 1072.49it/s]
+Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1098.55it/s]
+  док 0 (wiki) готов, медианный KL: leaf_lag0=9.52e+00  leaf_lag1=6.10e+00  leaf_lag2=5.81e+00  leaf_lag4=5.44e+00  leaf_lag8=5.34e+00  pca_doc=3.41e+00  pca_doc_raw=1.11e+00  pca_win=5.65e+00  haar=9.19e+00  mean_dir=3.47e+00  leaf_perm=5.13e+00   t=20 с
+  док 1 (wiki) готов, медианный KL: leaf_lag0=9.68e+00  leaf_lag1=5.94e+00  leaf_lag2=5.62e+00  leaf_lag4=5.20e+00  leaf_lag8=4.70e+00  pca_doc=3.75e+00  pca_doc_raw=1.17e+00  pca_win=5.37e+00  haar=9.48e+00  mean_dir=4.62e+00  leaf_perm=4.65e+00   t=38 с
+  док 2 (wiki) готов, медианный KL: leaf_lag0=9.94e+00  leaf_lag1=5.71e+00  leaf_lag2=4.93e+00  leaf_lag4=4.52e+00  leaf_lag8=4.71e+00  pca_doc=3.15e+00  pca_doc_raw=1.16e+00  pca_win=5.49e+00  haar=9.61e+00  mean_dir=4.14e+00  leaf_perm=4.45e+00   t=54 с
+  док 3 (wiki) готов, медианный KL: leaf_lag0=9.66e+00  leaf_lag1=5.54e+00  leaf_lag2=4.94e+00  leaf_lag4=4.58e+00  leaf_lag8=4.20e+00  pca_doc=3.27e+00  pca_doc_raw=9.42e-01  pca_win=5.39e+00  haar=9.26e+00  mean_dir=3.63e+00  leaf_perm=4.60e+00   t=71 с
+  док 4 (wiki) готов, медианный KL: leaf_lag0=1.02e+01  leaf_lag1=6.73e+00  leaf_lag2=5.99e+00  leaf_lag4=5.58e+00  leaf_lag8=4.93e+00  pca_doc=3.10e+00  pca_doc_raw=8.19e-01  pca_win=5.67e+00  haar=1.00e+01  mean_dir=4.11e+00  leaf_perm=5.23e+00   t=88 с
+  док 5 (wiki) готов, медианный KL: leaf_lag0=9.48e+00  leaf_lag1=5.93e+00  leaf_lag2=5.28e+00  leaf_lag4=5.05e+00  leaf_lag8=4.67e+00  pca_doc=3.27e+00  pca_doc_raw=9.17e-01  pca_win=5.58e+00  haar=9.14e+00  mean_dir=3.63e+00  leaf_perm=4.75e+00   t=105 с
+  док 6 (wiki) готов, медианный KL: leaf_lag0=9.08e+00  leaf_lag1=5.80e+00  leaf_lag2=5.32e+00  leaf_lag4=5.37e+00  leaf_lag8=5.06e+00  pca_doc=3.55e+00  pca_doc_raw=1.02e+00  pca_win=5.71e+00  haar=8.85e+00  mean_dir=3.92e+00  leaf_perm=5.19e+00   t=120 с
+  док 7 (wiki) готов, медианный KL: leaf_lag0=9.66e+00  leaf_lag1=6.28e+00  leaf_lag2=6.10e+00  leaf_lag4=6.41e+00  leaf_lag8=6.10e+00  pca_doc=3.12e+00  pca_doc_raw=9.95e-01  pca_win=5.26e+00  haar=9.10e+00  mean_dir=3.76e+00  leaf_perm=5.87e+00   t=133 с
+  док 8 (math) готов, медианный KL: leaf_lag0=1.19e+01  leaf_lag1=5.71e+00  leaf_lag2=4.19e+00  leaf_lag4=6.19e+00  leaf_lag8=5.93e+00  pca_doc=1.79e+00  pca_doc_raw=1.14e-01  pca_win=5.69e+00  haar=1.15e+01  mean_dir=2.97e+00  leaf_perm=4.93e+00   t=146 с
+  док 9 (math) готов, медианный KL: leaf_lag0=1.17e+01  leaf_lag1=5.02e+00  leaf_lag2=5.13e+00  leaf_lag4=5.14e+00  leaf_lag8=5.40e+00  pca_doc=2.53e+00  pca_doc_raw=9.60e-01  pca_win=5.84e+00  haar=1.13e+01  mean_dir=5.56e+00  leaf_perm=4.59e+00   t=159 с
+  док 10 (math) готов, медианный KL: leaf_lag0=1.16e+01  leaf_lag1=4.17e+00  leaf_lag2=4.54e+00  leaf_lag4=4.37e+00  leaf_lag8=3.91e+00  pca_doc=2.08e+00  pca_doc_raw=6.83e-01  pca_win=3.88e+00  haar=1.12e+01  mean_dir=5.26e+00  leaf_perm=4.34e+00   t=173 с
+  док 11 (math) готов, медианный KL: leaf_lag0=1.16e+01  leaf_lag1=5.82e+00  leaf_lag2=6.84e+00  leaf_lag4=5.69e+00  leaf_lag8=5.65e+00  pca_doc=1.99e+00  pca_doc_raw=7.32e-01  pca_win=4.41e+00  haar=1.11e+01  mean_dir=5.05e+00  leaf_perm=5.81e+00   t=186 с
+  док 12 (math) готов, медианный KL: leaf_lag0=1.12e+01  leaf_lag1=4.80e+00  leaf_lag2=4.76e+00  leaf_lag4=4.62e+00  leaf_lag8=4.62e+00  pca_doc=2.42e+00  pca_doc_raw=5.35e-01  pca_win=5.39e+00  haar=1.09e+01  mean_dir=4.42e+00  leaf_perm=4.71e+00   t=199 с
+  док 13 (math) готов, медианный KL: leaf_lag0=1.08e+01  leaf_lag1=4.55e+00  leaf_lag2=4.30e+00  leaf_lag4=4.53e+00  leaf_lag8=4.18e+00  pca_doc=2.43e+00  pca_doc_raw=1.04e+00  pca_win=4.89e+00  haar=1.05e+01  mean_dir=5.52e+00  leaf_perm=4.58e+00   t=212 с
+  док 14 (math) готов, медианный KL: leaf_lag0=1.08e+01  leaf_lag1=5.92e+00  leaf_lag2=5.59e+00  leaf_lag4=5.57e+00  leaf_lag8=4.94e+00  pca_doc=3.41e+00  pca_doc_raw=1.10e+00  pca_win=5.65e+00  haar=1.06e+01  mean_dir=5.41e+00  leaf_perm=5.50e+00   t=226 с
+  док 15 (math) готов, медианный KL: leaf_lag0=1.15e+01  leaf_lag1=5.51e+00  leaf_lag2=5.11e+00  leaf_lag4=4.85e+00  leaf_lag8=5.51e+00  pca_doc=2.41e+00  pca_doc_raw=9.19e-01  pca_win=5.57e+00  haar=1.10e+01  mean_dir=5.43e+00  leaf_perm=4.94e+00   t=239 с
+  док 16 (code) готов, медианный KL: leaf_lag0=9.91e+00  leaf_lag1=6.49e+00  leaf_lag2=6.04e+00  leaf_lag4=5.68e+00  leaf_lag8=5.56e+00  pca_doc=3.03e+00  pca_doc_raw=1.10e+00  pca_win=5.43e+00  haar=9.74e+00  mean_dir=4.89e+00  leaf_perm=5.51e+00   t=251 с
+  док 17 (code) готов, медианный KL: leaf_lag0=9.27e+00  leaf_lag1=5.95e+00  leaf_lag2=4.98e+00  leaf_lag4=5.30e+00  leaf_lag8=5.16e+00  pca_doc=2.86e+00  pca_doc_raw=1.23e+00  pca_win=5.15e+00  haar=9.17e+00  mean_dir=4.33e+00  leaf_perm=4.88e+00   t=263 с
+  док 18 (code) готов, медианный KL: leaf_lag0=9.97e+00  leaf_lag1=7.17e+00  leaf_lag2=6.61e+00  leaf_lag4=6.54e+00  leaf_lag8=6.24e+00  pca_doc=3.40e+00  pca_doc_raw=1.19e+00  pca_win=5.29e+00  haar=9.61e+00  mean_dir=5.00e+00  leaf_perm=6.23e+00   t=276 с
+  док 19 (code) готов, медианный KL: leaf_lag0=1.08e+01  leaf_lag1=5.35e+00  leaf_lag2=4.75e+00  leaf_lag4=3.39e+00  leaf_lag8=4.85e+00  pca_doc=3.41e+00  pca_doc_raw=6.89e-01  pca_win=5.93e+00  haar=1.05e+01  mean_dir=4.49e+00  leaf_perm=4.01e+00   t=289 с
+  док 20 (code) готов, медианный KL: leaf_lag0=9.66e+00  leaf_lag1=6.07e+00  leaf_lag2=4.45e+00  leaf_lag4=4.28e+00  leaf_lag8=3.92e+00  pca_doc=3.67e+00  pca_doc_raw=7.13e-01  pca_win=5.08e+00  haar=9.60e+00  mean_dir=3.83e+00  leaf_perm=4.12e+00   t=301 с
+  док 21 (code) готов, медианный KL: leaf_lag0=9.67e+00  leaf_lag1=5.51e+00  leaf_lag2=5.05e+00  leaf_lag4=4.66e+00  leaf_lag8=4.54e+00  pca_doc=3.35e+00  pca_doc_raw=8.05e-01  pca_win=5.25e+00  haar=9.42e+00  mean_dir=3.74e+00  leaf_perm=4.45e+00   t=314 с
+  док 22 (code) готов, медианный KL: leaf_lag0=9.96e+00  leaf_lag1=5.19e+00  leaf_lag2=4.80e+00  leaf_lag4=4.23e+00  leaf_lag8=3.89e+00  pca_doc=3.09e+00  pca_doc_raw=7.40e-01  pca_win=5.22e+00  haar=9.61e+00  mean_dir=3.63e+00  leaf_perm=3.62e+00   t=326 с
+  док 23 (code) готов, медианный KL: leaf_lag0=9.99e+00  leaf_lag1=5.87e+00  leaf_lag2=4.76e+00  leaf_lag4=4.69e+00  leaf_lag8=4.39e+00  pca_doc=3.35e+00  pca_doc_raw=7.94e-01  pca_win=5.08e+00  haar=9.68e+00  mean_dir=3.85e+00  leaf_perm=4.02e+00   t=339 с
+  док 24 (chat) готов, медианный KL: leaf_lag0=1.00e+01  leaf_lag1=5.44e+00  leaf_lag2=5.02e+00  leaf_lag4=4.90e+00  leaf_lag8=4.89e+00  pca_doc=2.66e+00  pca_doc_raw=9.11e-01  pca_win=4.89e+00  haar=9.88e+00  mean_dir=4.19e+00  leaf_perm=4.59e+00   t=352 с
+  док 25 (chat) готов, медианный KL: leaf_lag0=9.77e+00  leaf_lag1=5.96e+00  leaf_lag2=5.12e+00  leaf_lag4=5.06e+00  leaf_lag8=4.61e+00  pca_doc=3.57e+00  pca_doc_raw=8.88e-01  pca_win=5.30e+00  haar=9.48e+00  mean_dir=4.27e+00  leaf_perm=4.82e+00   t=365 с
+  док 26 (chat) готов, медианный KL: leaf_lag0=1.04e+01  leaf_lag1=6.59e+00  leaf_lag2=5.83e+00  leaf_lag4=5.48e+00  leaf_lag8=5.65e+00  pca_doc=3.36e+00  pca_doc_raw=1.01e+00  pca_win=5.74e+00  haar=1.02e+01  mean_dir=4.39e+00  leaf_perm=5.23e+00   t=378 с
+  док 27 (chat) готов, медианный KL: leaf_lag0=9.11e+00  leaf_lag1=5.58e+00  leaf_lag2=5.24e+00  leaf_lag4=5.08e+00  leaf_lag8=4.91e+00  pca_doc=3.20e+00  pca_doc_raw=1.07e+00  pca_win=5.37e+00  haar=8.77e+00  mean_dir=3.80e+00  leaf_perm=4.38e+00   t=391 с
+  док 28 (chat) готов, медианный KL: leaf_lag0=1.09e+01  leaf_lag1=6.46e+00  leaf_lag2=6.12e+00  leaf_lag4=6.27e+00  leaf_lag8=6.13e+00  pca_doc=3.44e+00  pca_doc_raw=1.28e+00  pca_win=5.93e+00  haar=1.05e+01  mean_dir=4.40e+00  leaf_perm=5.87e+00   t=405 с
+  док 29 (chat) готов, медианный KL: leaf_lag0=9.48e+00  leaf_lag1=5.95e+00  leaf_lag2=5.66e+00  leaf_lag4=5.44e+00  leaf_lag8=5.29e+00  pca_doc=3.32e+00  pca_doc_raw=1.14e+00  pca_win=5.72e+00  haar=9.26e+00  mean_dir=3.95e+00  leaf_perm=5.16e+00   t=418 с
+  док 30 (chat) готов, медианный KL: leaf_lag0=1.03e+01  leaf_lag1=5.97e+00  leaf_lag2=6.36e+00  leaf_lag4=5.71e+00  leaf_lag8=5.50e+00  pca_doc=2.91e+00  pca_doc_raw=1.02e+00  pca_win=5.80e+00  haar=9.96e+00  mean_dir=4.04e+00  leaf_perm=5.55e+00   t=430 с
+  док 31 (chat) готов, медианный KL: leaf_lag0=1.08e+01  leaf_lag1=6.49e+00  leaf_lag2=5.81e+00  leaf_lag4=5.21e+00  leaf_lag8=4.97e+00  pca_doc=2.91e+00  pca_doc_raw=1.02e+00  pca_win=5.77e+00  haar=1.03e+01  mean_dir=5.38e+00  leaf_perm=4.68e+00   t=443 с
+готово за 446 с → results/exp46_frame_as_memory.json.gz
+rc(exp46_frame_as_memory.py)=0 at 10:13:15

@@ -8,7 +8,8 @@
 одна строка на позицию.
 
 Артефакты:
-  results/exp45b_leaf_table.json.gz — скалярные колонки по всем позициям (коммитится);
+  results/exp45b_leaf_table.json.gz — скалярные колонки по всем позициям (в git не входит,
+                                      пересоздаётся этой же командой; в git входит лог прогона);
   results/exp45b_leaf_table.npz     — V_r [N,S,D,r] и h [N,S,D] fp16 (локальный кэш, в git не
                                       входит, пересоздаётся этой же командой).
 
@@ -195,8 +196,8 @@ def main():
         k2s = {r: np.full((N, S), np.nan, np.float32) for r in R_LIST}
         scal = {k: np.zeros((N, S), np.float32) for k in
                 ("j_norm", "pr_sigma", "g_uni", "h_norm", "gap_r16", "s16_over_s1",
-                 "align_next", "align_emit", "align_rand", "align_pca_next", "align_pca_rand",
-                 "align_mean_next")}
+                 "align_next", "align_emit", "align_rand", "align_haar",
+                 "align_pca_next", "align_pca_rand", "align_mean_next")}
         Vd = torch.empty(N, S, D, R_MAIN, dtype=torch.float16)
 
         def align(col_ids, V16):
@@ -223,6 +224,15 @@ def main():
             rr = rng.integers(0, V, size=(S, 8))
             scal["align_rand"][i] = np.mean(
                 [align(torch.from_numpy(rr[:, c]), V16) for c in range(8)], axis=0)
+            # Haar-нуль: равномерное направление в R^D. НЕ путать с align_rand: строки словаря
+            # анизотропны, их средняя проекция на лист меряет перекос эмбеддинга, а не уровень
+            # шума. E‖P ŵ‖² = r/D — механическая проверка, что V16 действительно ортонормированный
+            # ранг-r базис (operator-null по п. 23 `docs/paper.md` §6).
+            Gh = torch.from_numpy(rng.standard_normal((8, S, D)).astype(np.float32))
+            Gh = Gh / Gh.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+            scal["align_haar"][i] = np.mean(
+                [(V16.transpose(1, 2) @ Gh[c][:, :, None])[:, :, 0].norm(dim=-1).numpy()
+                 for c in range(8)], axis=0)
             # Конкуренты той же размерности: нецентрированный PCA облака h по документу (линейный
             # метод имеет полное право занять «массивное» среднее направление, листу оно недоступно
             # по построению) и ранг-1 направление среднего (несправедлив по размерности, отмечаем).
@@ -271,6 +281,7 @@ def main():
                            align_next=float(scal["align_next"][i, t]),
                            align_emit=float(scal["align_emit"][i, t]),
                            align_rand=float(scal["align_rand"][i, t]),
+                           align_haar=float(scal["align_haar"][i, t]),
                            align_pca_next=float(scal["align_pca_next"][i, t]),
                            align_pca_rand=float(scal["align_pca_rand"][i, t]),
                            align_mean_next=float(scal["align_mean_next"][i, t]),
@@ -285,28 +296,38 @@ def main():
         log(f"  {dom}: {n} позиций, PPL={np.exp(nll.mean()):.2f}, t={time.time() - t0:.0f} с")
 
     # ---------------- самопроверки ----------------
+    # Артефакт пишется ДО assert'ов: первая версия проверяла Haar-уровень уже после всей работы и
+    # роняла 1.7-часовой прогон, не оставив ни строки данных (проверка была неверной по
+    # предпосылке: случайный токен — не Haar-направление).
+    checks: dict = {}
     k2 = np.array([r["k2_r16"] for r in rows], dtype=np.float64)
     kmed = float(np.nanmedian(k2))
-    log(f"κ(r=16) медиана на свежем тексте = {kmed:.5f}  (кэш exp27b: {KAPPA_CACHE})")
-    assert 0.5 * KAPPA_CACHE < kmed < 2.0 * KAPPA_CACHE, f"масштаб κ ушёл: {kmed:.5f}"
+    checks["kappa_scale"] = bool(0.5 * KAPPA_CACHE < kmed < 2.0 * KAPPA_CACHE)
+    log(f"κ(r=16) медиана на свежем тексте = {kmed:.5f}  (кэш exp27b: {KAPPA_CACHE}) "
+        f"ok={checks['kappa_scale']}")
+    ah = np.array([r["align_haar"] for r in rows])
     ar = np.array([r["align_rand"] for r in rows])
     theory = (R_MAIN / D) ** 0.5
-    log(f"align_rand = {ar.mean():.4f} против Haar-ориентира √(r/D) = {theory:.4f} "
-        f"(E‖P ŵ‖² = r/D; для нормы поправка ~1 %)")
-    assert abs(ar.mean() / theory - 1) < 0.05, "Haar-нулевой уровень проекций не сошёлся"
+    checks["haar_level"] = bool(abs(ah.mean() / theory - 1) < 0.05)
+    log(f"align_haar = {ah.mean():.4f} против Haar-ориентира √(r/D) = {theory:.4f} "
+        f"ok={checks['haar_level']}")
+    log(f"align_rand (случайный токен) = {ar.mean():.4f} = ×{ar.mean() / ah.mean():.2f} от Haar: "
+        f"строки словаря анизотропны, это content-null, не механический уровень")
     ht = np.array([r["has_target"] for r in rows], dtype=bool)
     ppl = float(np.exp(np.mean(np.array([r["nll"] for r in rows], dtype=np.float64)[ht])))
+    checks["ppl_plausible"] = bool(5.0 < ppl < 200.0)
     log(f"PPL таблицы = {ppl:.2f} (позиции всех четырёх доменов, {int(ht.sum())} из {len(rows)}"
-        f" с целью)")
-    assert 5.0 < ppl < 200.0, f"PPL таблицы неправдоподобен: {ppl:.2f}"
+        f" с целью) ok={checks['ppl_plausible']}")
     d1 = np.array([r["d1_r16"] for r in rows], dtype=np.float64)
-    assert np.nanmax(np.abs(d1)) <= 1.5708 + 1e-6, "Δ_SVD вне [0, π/2]"
+    checks["d1_range"] = bool(np.nanmax(np.abs(d1)) <= 1.5708 + 1e-6)
+    log(f"Δ_SVD ∈ [0, π/2]: ok={checks['d1_range']}")
 
     meta.update(dict(experiment="E-45b", model=MODEL_DIR, L=L, r_main=R_MAIN,
                      r_list=R_LIST, domains=DOMAINS, n_per_domain=N_PER_DOMAIN, S=S,
                      n_rows=len(rows), n_with_target=int(ht.sum()),
                      kappa_median_r16=kmed, kappa_cache=KAPPA_CACHE,
-                     align_rand_mean=float(ar.mean()), align_haar_theory=theory,
+                     align_rand_mean=float(ar.mean()), align_haar_mean=float(ah.mean()),
+                     align_haar_theory=theory, checks=checks,
                      ppl_table=ppl, wall_sec=time.time() - t0,
                      note=("границы предложений — прокси по строкам токена; "
                            "J — readout-линеаризованный слой 23")))
@@ -315,6 +336,8 @@ def main():
     np.savez_compressed("../results/exp45b_leaf_table.npz",
                         V=torch.cat(Vbuf, 0).numpy(), H=torch.cat(Hbuf, 0).numpy())
     log(f"готово за {time.time() - t0:.0f} с → results/exp45b_leaf_table.json.gz (+.npz)")
+    bad = [k for k, ok in checks.items() if not ok]
+    assert not bad, f"самопроверки не прошли: {bad} (артефакт на диске, meta.checks)"
 
 
 if __name__ == "__main__":
