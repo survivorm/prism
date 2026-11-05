@@ -8,7 +8,7 @@
   "is_private": true,
   "enable_internet": true,
   "id": "voroninmichael/prism-exp52k-scale-curve-real-ptq",
-  "title": "Prism Exp52k Scale Curve Real Ptq",
+  "title": "prism-exp52k-scale-curve-real-ptq",
   "kernel_sources": [
     "voroninmichael/prism-exp52k-scale-curve-real-ptq"
   ],

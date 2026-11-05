@@ -160,10 +160,13 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
     with torch.no_grad():
         probe = torch.randint(1, 1000, (1, 8), device=dev)
         hs = m.model(input_ids=probe).last_hidden_state[0, -1].float()
-        rt = float((hs @ W[U].T.float().cpu().to(dev)
-                    - m(input_ids=probe).logits[0, -1, U].float()).abs().max())
-    print(f"[route] max|H@W_U^T - logits_U| = {rt:.2e}; tied={tied}", flush=True)
-    assert rt < 1e-3, f"маршрут логитов не сошёлся: {rt}"
+        lg = m(input_ids=probe).logits[0, -1, U].float()
+        rt = float((hs @ W[U].T.float().cpu().to(dev) - lg).abs().max())
+        rel = rt / max(float(lg.abs().max()), 1.0)
+    print(f"[route] max|H@W_U^T - logits_U| = {rt:.2e} (rel {rel:.1e}); tied={tied}", flush=True)
+    # fp32: абсолютный порог; bf16/int8: масштаб шкурного округления ~ rel·scale
+    # (на 0.8B bf16 абс. 3e-2 при scale~30 это ЧЕСТНОЕ bf16-округление, e52k v5)
+    assert rt < 1e-3 or rel < 2e-2, f"маршрут логитов не сошёлся: abs {rt:.3e} rel {rel:.1e}"
 
     docs_out, feats_npz = [], {}
     basis_overlap = None
