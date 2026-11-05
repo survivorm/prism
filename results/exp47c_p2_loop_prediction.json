@@ -52,63 +52,79 @@
    "AUC_all_d16": 0.725,
    "delta_auc_all_vs_triv": -0.008,
    "lead_tokens_leaf_ge08": 0,
-   "verdict": "лист не добавляет (по пререгистрации §6 P2)"
+   "verdict": "лист не добавляет (по пререгистрации §6 P2)",
+   "legs": {
+    "AUC_leaf_ge_0.8": false,
+    "lead_ge_5": false,
+    "delta_auc_ge_0.05": false
+   },
+   "triv_feature_source": [
+    "None"
+   ]
   }
  },
  "lfm3": {
   "auc_cross_domain_by_delta": {
    "5": {
-    "leaf": 0.745,
-    "triv": 0.839,
-    "all": 0.851,
+    "leaf": 0.761,
+    "triv": 0.754,
+    "all": 0.836,
     "folds_leaf": {
-     "chat": 0.808,
-     "code": 0.704,
-     "math": 0.957,
-     "wiki": 0.51
+     "chat": 0.625,
+     "code": 0.789,
+     "math": 0.958,
+     "wiki": 0.671
     }
    },
    "16": {
-    "leaf": 0.752,
-    "triv": 0.825,
-    "all": 0.842,
+    "leaf": 0.763,
+    "triv": 0.735,
+    "all": 0.823,
     "folds_leaf": {
-     "chat": 0.82,
-     "code": 0.696,
-     "math": 0.961,
-     "wiki": 0.531
+     "chat": 0.628,
+     "code": 0.781,
+     "math": 0.962,
+     "wiki": 0.682
     }
    },
    "32": {
-    "leaf": 0.762,
-    "triv": 0.812,
-    "all": 0.835,
+    "leaf": 0.768,
+    "triv": 0.709,
+    "all": 0.807,
     "folds_leaf": {
-     "chat": 0.831,
-     "code": 0.684,
+     "chat": 0.633,
+     "code": 0.771,
      "math": 0.965,
-     "wiki": 0.57
+     "wiki": 0.702
     }
    },
    "64": {
-    "leaf": 0.774,
-    "triv": 0.8,
-    "all": 0.829,
+    "leaf": 0.77,
+    "triv": 0.694,
+    "all": 0.791,
     "folds_leaf": {
-     "chat": 0.843,
-     "code": 0.674,
-     "math": 0.97,
-     "wiki": 0.607
+     "chat": 0.63,
+     "code": 0.758,
+     "math": 0.963,
+     "wiki": 0.729
     }
    }
   },
   "verdict": {
-   "AUC_leaf_d16": 0.752,
-   "AUC_triv_d16": 0.825,
-   "AUC_all_d16": 0.842,
-   "delta_auc_all_vs_triv": 0.017,
+   "AUC_leaf_d16": 0.763,
+   "AUC_triv_d16": 0.735,
+   "AUC_all_d16": 0.823,
+   "delta_auc_all_vs_triv": 0.088,
    "lead_tokens_leaf_ge08": 0,
-   "verdict": "лист не добавляет (по пререгистрации §6 P2)"
+   "verdict": "лист не добавляет (по пререгистрации §6 P2)",
+   "legs": {
+    "AUC_leaf_ge_0.8": false,
+    "lead_ge_5": false,
+    "delta_auc_ge_0.05": true
+   },
+   "triv_feature_source": [
+    "full"
+   ]
   }
  }
 }
