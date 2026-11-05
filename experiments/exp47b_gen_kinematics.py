@@ -45,6 +45,9 @@ import torch
 _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
+_ROOT = os.path.dirname(_HERE)          # Kaggle: бандл примонтирован как <root>/{prism,experiments}
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
 
 import exp47_common as C   # noqa: E402
 from prism.calibration import build_global_token_set, load_calibration_data  # noqa: E402
@@ -173,10 +176,12 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
             pp = np.array(feats["p"], dtype=float)
             # посегментная сводка (in-loop по ДЕТЕРМИНИРОВАННОМУ детектору; вне — всё остальное)
             in_mask = np.zeros(max_new, dtype=bool)
-            for onset, _j, e, p_, k in loops:
-                in_mask[min(onset, max_new - 1): min(e, max_new)] = True
-            acf = [C.autocorr_peak(torch.from_numpy(ss[min(onset):min(e, len(ss))] -
-                  np.nanmean(ss)), p_) for onset, _j, e, p_, k in loops]
+            for lp in loops:
+                on0 = min(lp[0], max_new - 1)
+                in_mask[on0: min(lp[2], max_new)] = True
+            acf = [C.autocorr_peak(torch.from_numpy(
+                       ss[min(lp[0], len(ss)-1):min(lp[2], len(ss))] - np.nanmean(ss)), lp[3])
+                   for lp in loops]
             r_seg = float("nan")
             if in_mask.any() and (~in_mask).sum() > 20:
                 x, y = ss[in_mask], aa[in_mask]
@@ -188,7 +193,7 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
             docs_out.append({
                 "dom": dom, "si": si, "prompt_sha": prompt_sha,
                 "n_loops": len(loops),
-                "loops": [[o, j, e, p_, k] for o, j, e, p_, k in loops],
+                "loops": [list(lp) for lp in loops],
                 "a_med": float(np.nanmedian(aa)), "s_med": float(np.nanmedian(ss)),
                 "p_med": float(np.nanmedian(pp)),
                 "g_med": float(np.nanmedian(feats["g"])),
