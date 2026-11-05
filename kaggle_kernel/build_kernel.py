@@ -177,6 +177,7 @@ def build_kernel(
     runner_extra: str = "",
     extra_modules: list[str] | None = None,
     extra_local: list[str] | None = None,
+    calib_pins: list[str] | None = None,
 ):
     """Build kernel.ipynb and kernel-metadata.json for one experiment."""
     # Read deps from pyproject.toml
@@ -341,6 +342,35 @@ def build_kernel(
             src = strip_docstring(f.read())
         cells.append(code_cell(src))
 
+    # Закреплённые calibration-пулы (R1b). В flattening-ядре `__file__` нет, поэтому
+    # `_default_pin_dir()` там возвращает None и пины не найти даже когда они закоммичены:
+    # единственный канал — положить тексты прямо в notebook и указать PRISM_CALIB_PIN_DIR.
+    # REQUIRE_PIN=1 нарочно: ядро, которому не хватило пина, должно упасть, а не молча
+    # поехать на потоке с Hub (урок R1: при идентичных params другой пул сдвинул C_b на ×31).
+    for dom in calib_pins or []:
+        import glob as _glob
+        import json as _json
+
+        hits = sorted(_glob.glob(os.path.join(ROOT, "data", "calib_pins", f"{dom}__*.json")))
+        if len(hits) != 1:
+            raise SystemExit(
+                f"--calib-pins {dom}: ожидался ровно один пин в data/calib_pins/, найдено {len(hits)}"
+            )
+        pin_obj = _json.loads(open(hits[0], encoding="utf-8").read())
+        _pin_cell = (
+            f"# ---------- pinned calibration pool: {dom} ----------\n"
+            f"import json as _json, os as _os, pathlib as _pathlib\n"
+            f"_PIN = {pin_obj!r}\n"
+            f"_pin_dir = _os.environ.get('PRISM_CALIB_PIN_DIR', '/kaggle/working/calib_pins')\n"
+            f"_pathlib.Path(_pin_dir).mkdir(parents=True, exist_ok=True)\n"
+            f"_pathlib.Path(_pin_dir, {os.path.basename(hits[0])!r}).write_text(\n"
+            f"    _json.dumps(_PIN, ensure_ascii=False), encoding='utf-8')\n"
+            f"_os.environ['PRISM_CALIB_PIN_DIR'] = _pin_dir\n"
+            f"_os.environ['PRISM_CALIB_REQUIRE_PIN'] = '1'\n"
+            f"print('[calib-pin] {dom}: fp=' + _PIN['fp'] + ' n=' + str(len(_PIN['texts'])) + ' ключ=' + str(_PIN['protocol']))\n"
+        )
+        cells.append(code_cell(_pin_cell))
+
     # Experiment file
     src = strip_docstring(exp_src)
     src = strip_prism_imports(src)
@@ -492,6 +522,10 @@ if __name__ == "__main__":
         "--extra-local", default=[], nargs="*",
         help="local experiment helpers to inline (basenames), e.g. _e38_cache",
     )
+    parser.add_argument(
+        "--calib-pins", default=[], nargs="*",
+        help="домены чьи закреплённые пулы (data/calib_pins/<dom>__*.json) инлайнятся в ядро",
+    )
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
     build_kernel(
@@ -504,4 +538,5 @@ if __name__ == "__main__":
         runner_extra=args.runner_extra,
         extra_modules=args.extra_modules,
         extra_local=args.extra_local,
+        calib_pins=args.calib_pins,
     )
