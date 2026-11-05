@@ -285,7 +285,8 @@ def main(
             kind.append("end")
         kind = "+".join(kind) if kind else "other"
         tps = d.get("turning_points", [])
-        tps_str = ",".join(f"L{t[0]}:{t[1]}" for t in tps) if tps else "-"
+        tps_flat = [tp for group in tps for tp in group]
+        tps_str = ",".join(f"L{tp[0]}:{tp[1]}" for tp in tps_flat) if tps_flat else "-"
         print(f"{a:>4} {d['proportional']:>5} {d['end']:>4} "
               f"{str(d['valley_l_S']):>7} {d['valley_gap']:>8.4f}  {kind}  {tps_str}")
 
