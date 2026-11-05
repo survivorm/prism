@@ -17,6 +17,8 @@ for p in (_HERE, os.path.join(_HERE, "..")):
     if p not in sys.path:
         sys.path.insert(0, p)
 import exp47_common as C  # noqa: E402
+
+_HERE2 = os.path.dirname(os.path.abspath(__file__))
 from exp49_leaf_info import load_model, smoothed_us  # noqa: E402
 from exp52a_perturb_axis import rtn  # noqa: E402
 
@@ -34,9 +36,9 @@ def sig_series(A, us, eps):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n-docs", type=int, default=8)
-    ap.add_argument("--model-dir", default="../models/Qwen3.5-4B")
-    ap.add_argument("--npz", default="../results/e52_4b/exp47b_gen_kinematics.npz")
-    ap.add_argument("--docs-json", default="../results/e52_4b/exp47b_gen_kinematics.json")
+    ap.add_argument("--model-dir", default=os.path.join(_HERE2, "..", "models", "Qwen3.5-4B"))
+    ap.add_argument("--npz", default=os.path.join(_HERE2, "..", "results", "e52_4b", "exp47b_gen_kinematics.npz"))
+    ap.add_argument("--docs-json", default=os.path.join(_HERE2, "..", "results", "e52_4b", "exp47b_gen_kinematics.json"))
     a = ap.parse_args()
     ns = argparse.Namespace(model="qwen")
     A0, U, eps, npz, jp = load_model(ns)
@@ -49,6 +51,14 @@ def main():
         g = normw.double() if float(normw.abs().mean()) > 0.5 else 1.0 + normw.double()
     A0 = C.head_M(head[torch.as_tensor(U)], g)
     A2 = rtn(A0, 2)
+    # U128 из кэша 0.8B: для model-dir-моделей обязателен общий словарь (ревью §6)
+    from transformers import AutoTokenizer  # type: ignore
+    tk0 = AutoTokenizer.from_pretrained(os.environ.get("PRISM_QWEN_DIR", "/data/Qwen/Qwen3.5-0.8B"))
+    tk1 = AutoTokenizer.from_pretrained(a.model_dir)
+    assert tk0.vocab_size == tk1.vocab_size, "словари разные — U128 невалиден"
+    assert all(tk0.convert_ids_to_tokens(int(i)) == tk1.convert_ids_to_tokens(int(i))
+               for i in list(U)[:64]), "U128 токенизуется в 4B иначе"
+    print("[U-check] словарь и первые 64 id U128 совпадают", flush=True)
     # разрешение сетки A: rtn2 симметричный lev=1 ⇒ A ∈ {−sc_row, 0, +sc_row}
     docs = json.load(open(a.docs_json))["docs"][: a.n_docs]
     z = np.load(a.npz, allow_pickle=True)
