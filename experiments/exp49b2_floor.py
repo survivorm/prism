@@ -56,10 +56,12 @@ def synth_white(T, D, seed):
 
 
 def synth_coh(T, D, seed, delta=0.02):
-    """ГЕОДЕЗИЧЕСКИЙ когерентный контроль. Фикс (ревью E49 §1.1/exp49b2): w теперь
-    ортогонален u всегда (инициализация + после каждого шага), шаг cos(δ)u+sin(δ)w —
-    точная геодезическая на δ; раньше w не ортогонализовался, CB на LFM3 был
-    невалиден (CB > CA)."""
+    """КОНТРОЛЬ ПОЛА (geodesic floor): точный геодезический ряд, τ≈O(δ²)≈4e-4.
+    Роль (ревью E49-6 §2.2): подтверждает, что пайплайн УМЕЕТ давать τ≈0; тест
+    разрешения (отличить 0.44 от 0.50) — НЕ CB, а block/blockmix в диапазоне real.
+    Фикс (ревью E49 §1.1/exp49b2): w ортогонален u всегда (инициализация + после
+    каждого шага), шаг cos(δ)u+sin(δ)w — точная геодезическая на δ; раньше w не
+    ортогонализовался, CB на LFM3 был невалиден (CB > CA)."""
     g = torch.Generator().manual_seed(seed)
     u = nz(torch.randn(D, dtype=torch.float64, generator=g))
     w = nz(torch.randn(D, dtype=torch.float64, generator=g))
@@ -118,8 +120,11 @@ def main():
     D = int(A.shape[1])
     docs = json.load(open(os.path.join(root, jp)))["docs"]
     z = np.load(npz, allow_pickle=True)
-    out = {"model": args.model, "n_rep": N_REP, "n_syn": N_SYN,
-           "verdict_rule": "paired(real−block)<0 AND bootdiff(real−CA)<0 AND paired(real−blockmix)<0"}
+    out = {"model": args.model, "n_rep": N_REP, "n_syn": args.syn_n,
+           "verdict_rule": "paired(real−block)<0 AND bootdiff(real−CA)<0 AND paired(real−blockmix)<0",
+           "controls_note": "synth_C* = floor/ceiling-тесты шкалы; различающие нули "
+                            "вердикта — block/blockmix; other_doc — вне правила "
+                            "(диагностик документ-специфичности)"}
 
     for W in (4, 16):
         fr = {}
