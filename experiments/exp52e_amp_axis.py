@@ -39,36 +39,38 @@ def per_doc_metrics(A, us, eps):
     for x in us:
         Jt, _, _ = C.J_analytic(A, x, eps)
         J.append(Jt.double().numpy())
-    svs = {}
+    # ЕДИНЫЙ SVD на все кадры (аудит ревью E52 §6): раньше tau_amp2 пересчитывал
+    # SVD, а kinetic брал кеш; теперь один список и там и там
+    allsv = [np.linalg.svd(j, full_matrices=False) for j in J]
     num = den = 0.0
     amb = lin_bad = 0
     n_pair = 0
     for t in range(len(J) - 1):
-        for i in (t, t + 1):
-            if i not in svs:
-                svs[i] = np.linalg.svd(J[i], full_matrices=False)
-                if len(svs) > 8:
-                    svs.pop(min(svs))
-        kd = kinetic_decomposition(J[t], J[t + 1], r=R, svds=(svs[t], svs[t + 1]))
+        kd = kinetic_decomposition(J[t], J[t + 1], r=R, svds=(allsv[t], allsv[t + 1]))
         num += kd["E_radial"]; den += kd["norm_dJ_sq"]; n_pair += 1
         if "E_radial" in kd.get("ambiguous", []):
             amb += 1
         lin_bad += 0 if kd.get("linearization_valid", True) else 1
-    # τ_amp² на s_[:R]
-    S = [sv[1][:R] for sv in svs.values()] if set(svs) == set(range(len(J))) else [np.linalg.svd(j, full_matrices=False)[1][:R] for j in J]
+    # τ_amp² на s_[:R] (тот же SVD)
+    S = [sv[1][:R] for sv in allsv]
     ad = []
     for t in range(len(S) - 2):
         a = float(np.linalg.norm(S[t] - S[t + 1])); b = float(np.linalg.norm(S[t + 1] - S[t + 2]))
         c = float(np.linalg.norm(S[t] - S[t + 2]))
         if a > 1e-12:
             ad.append((a + b - c) / a)
-    st = [np.linalg.svd(j, full_matrices=False)[1] for j in J]
+    # σ-перескоки: доля соседних пар, где разрыв σ_r-границы меньше шага —
+    # τ_amp² на СОРТИРОВАННЫХ σ чувствителен к перестановке (ревью §3)
+    jump = float(np.median([float(np.abs(S[t] - S[t + 1]).max()) for t in range(len(S) - 1)]))
+    gap = float(np.median([float(np.median(np.diff(-np.sort(-allsv[t][1])))) for t in range(len(allsv))]))
+    st = [sv[1] for sv in allsv]
     tr = [float((s ** 2).sum()) for s in st]
     reff = [float(np.exp(-(p := (s ** 2) / max((s ** 2).sum(), 1e-30)) *
                           np.log(np.maximum(p, 1e-30))).sum()) for s in st]
     rcan = [float((s ** 2)[0] / max((s ** 2).sum(), 1e-30)) for s in st]
     return {"radial_share": num / max(den, 1e-30), "n_pairs": n_pair,
             "amb_frac": amb / max(n_pair, 1), "linbad_frac": lin_bad / max(n_pair, 1),
+            "jump_gap_ratio": jump / max(gap, 1e-30),
             "tau_amp2": float(np.median(ad)) if ad else None,
             "tr_med": float(np.median(tr)), "reff_med": float(np.median(reff)),
             "rcan_med": float(np.median(rcan))}
