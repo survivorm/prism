@@ -178,11 +178,19 @@ def build_driver_kernel(driver_file: str, bundle_files: list[str], out_dir: str,
     n = 0
     for rel in bundle_files:
         path = os.path.join(ROOT, rel)
-        with open(path, encoding="utf-8") as fh:
-            src = fh.read()
-        w.append(f"p = pathlib.Path(ROOT, {rel!r}); p.parent.mkdir(parents=True, exist_ok=True)\n")
-        w.append(f"p.write_text({src!r}, encoding='utf-8')\n")
-        n += 1
+        rels = [rel]
+        if os.path.isdir(path):      # каталог → все *.py рекурсивно
+            rels = []
+            for dirpath, _dn, fns in os.walk(path):
+                for fn in sorted(fns):
+                    if fn.endswith(".py"):
+                        rels.append(os.path.relpath(os.path.join(dirpath, fn), ROOT))
+        for r in rels:
+            with open(os.path.join(ROOT, r), encoding="utf-8") as fh:
+                src = fh.read()
+            w.append(f"p = pathlib.Path(ROOT, {r!r}); p.parent.mkdir(parents=True, exist_ok=True)\n")
+            w.append(f"p.write_text({src!r}, encoding='utf-8')\n")
+            n += 1
     w.append(f"print('[bundle] wrote {n} files under', ROOT)\n")
     cells.append(code_cell("".join(w)))
     with open(driver_file, encoding="utf-8") as fh:
