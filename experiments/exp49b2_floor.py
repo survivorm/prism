@@ -167,6 +167,7 @@ def main():
                 t_, s_ = cond([v for b in bid for v in bl[b]]); put("block", t_, s_)
                 blk_d.append(t_)
                 ok_ = fr[others[RNG.integers(len(others))]]
+                assert len(ok_) >= T, f"чужой документ короче T={T} (ревью §2.4)"
                 # blockmix: блоки длины W из чужого документа (без шва: целиковые блоки)
                 obl = [ok_[i * W:(i + 1) * W] for i in range(T // W)]
                 obid = RNG.permutation(T // W)
