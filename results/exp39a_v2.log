@@ -1,21 +1,0 @@
-'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
-Retrying in 1s [Retry 1/5].
-'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
-Retrying in 2s [Retry 2/5].
-'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
-Retrying in 4s [Retry 3/5].
-'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
-Retrying in 8s [Retry 4/5].
-'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
-Retrying in 8s [Retry 5/5].
-'[Errno -3] Temporary failure in name resolution' thrown while requesting HEAD https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/model.safetensors
-κ baseline: SVD over 4096 positions ...
-  κ_base = 0.01623 CI [0.004914949125136207, 0.03773082356814916] (ref 38d = 0.0162)
-loading model (protocol-only, no forward) ...
-Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  52%|█████▏    | 166/320 [00:00<00:00, 1642.16it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1575.85it/s]
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-r_obs(full SVD) = 1024, r_eff(0.05, body) = 178, mode = bottom_64_right_svs_of_U (no true null space), feasibility = surgery_approximate_bottom_svs
-V_a·V_b max |overlap| = 0.3440 (distinct strategies)
-
-E-39a done in 989.3s → /home/survivor/work/prism/results/exp39a_u_obs_rank.json
-verdict: surgery_approximate_bottom_svs,rank_regime_moderate_178,dryrun_kappa_min_0.0005

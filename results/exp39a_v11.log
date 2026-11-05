@@ -1,12 +1,0 @@
-/home/survivor/work/prism/experiments/exp39a_u_obs_rank.py:529: UserWarning: 241 Procrustes triples with det(R01) < 0 (reflections; E-28 convention has no det-fix — the frequency is the indicator to watch)
-  warnings.warn(f"{neg_det0} Procrustes triples with det(R01) < 0 "
-κ baseline: SVD over 4096 positions ...
-  κ_base = 0.016233441237030133 CI [0.004914949125136207, 0.03773082356814916] (ref 38d = 0.0162)
-loading model weights (M_K only, offline, no forward) ...
-Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<05:22,  1.01s/it]Loading weights:  62%|██████▏   | 199/320 [00:01<00:00, 241.17it/s]Loading weights:  94%|█████████▍| 300/320 [00:01<00:00, 256.67it/s]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 205.65it/s]
-r_obs(full SVD) = 1024, r_eff(0.05, body) = 178, mode = bottom_64_right_svs_of_U (no true null space), feasibility = surgery_approximate_bottom_svs
-V_a vs V_b: projector Frobenius dist = 4.9050, max principal angle = 89.7° (distinct strategies)
-    d_noop_V_top16 (control): κ' (all-triples) = 0.016233442977952824 (expect ≈ κ_base = 0.016233441237030133, tol 1e-3, ok)
-
-E-39a done in 230.1s → /home/survivor/work/prism/results/exp39a_u_obs_rank.json
-verdict: surgery_approximate_bottom_svs,rank_regime_moderate_178,dryrun_kappa_min_0.0040
