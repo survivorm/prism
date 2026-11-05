@@ -19,7 +19,15 @@ from prism.calibration import (
 
 
 def cka_similarity(X: torch.Tensor, Y: torch.Tensor) -> float:
-    """Linear CKA between two sets of vectors [N, D]."""
+    """Legacy-«CKA» (НЕ CKA) между двумя наборами векторов [N, D].
+
+    Числитель — ‖H(XYᵀ)H‖²_F, а не tr(K_c L_c); определение и проверку см. в
+    `exp7_cka_baseline.cka_similarity` (`--self-check`, results/exp7_cka_selfcheck.json).
+    Следствие для этого скрипта: при N=2 эта величина тождественно равна cos²(Δx, Δy), то есть
+    ≈ 1/D, и «identity-контроль» на непересекающихся группах по 2 объекта НЕ обязан давать ~1 —
+    печать «(expect high, ~1.0)» ниже неверна по алгебре, оставлена как есть только чтобы лог
+    соответствовал закоммиченному артефакту.
+    """
     if X.shape[0] != Y.shape[0]:
         raise ValueError(
             f"CKA сравнвает представления на ОДНОМ числе объектов: N={X.shape[0]} против "
@@ -154,7 +162,7 @@ def main(
         H2 = identity_cka(model_L, l, grp_B)
         cka = cka_similarity(H1, H2)
         results["large_identity"][f"L{l}"] = cka
-        print(f"  L{l}: CKA={cka:.6f} (expect high, ~1.0)")
+        print(f"  L{l}: legacy-CKA={cka:.6f} (ожидаемое при N=2: ~1/D, НЕ ~1 — см. докстринг)")
 
     # Small model identity
     print("\n=== CKA(Small->Small) identity (disjoint sample groups) ===")
@@ -163,7 +171,7 @@ def main(
         H2 = identity_cka(model_S, l, grp_B)
         cka = cka_similarity(H1, H2)
         results["small_identity"][f"L{l}"] = cka
-        print(f"  L{l}: CKA={cka:.6f} (expect high, ~1.0)")
+        print(f"  L{l}: legacy-CKA={cka:.6f} (ожидаемое при N=2: ~1/D, НЕ ~1 — см. докстринг)")
 
     # Save
     os.makedirs(results_dir, exist_ok=True)

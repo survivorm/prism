@@ -171,6 +171,20 @@ need(f"CI [{r8['bootstrap_CI_PR'][0]:.2f}, {r8['bootstrap_CI_PR'][1]:.2f}]", "E-
 chk(a8["R1_R2_R3_outcome"] == "R3", "E-40.8: вердикт R3 поехал")
 need(f3(a8["inter_cluster_mean_abs_rho"]), "E-40.8 межкластерный |ρ|")
 
+# ---------------------------------------------------------------- E-7: CKA снят (legacy-функциональность)
+ck = art("exp7_cka_selfcheck")
+for label, val in (("нуль настоящего CKA на форме E-7", ck["null"]["standard/e7_5_2560x1024"]),
+                   ("положительный контроль настоящего CKA", ck["control"]["standard/e7_5_2560x1024"])):
+    chk(0.9 < val <= 1.0, f"E-7 {label}: {val:.5f} вне ожидаемого «вырождение к 1»")
+    need_in("4.2", f"{val:.5f}", f"E-7 {label}")
+chk(ck["control"]["legacy/64x128"] < ck["null"]["legacy/64x128"],
+    "E-7: legacy-функциональность перестала быть неупорядоченной (контроль > нуля) — тезис надо пересмотреть")
+need_in("4.2", "0.284", "E-7: legacy-контроль ниже нуля")
+need_in("4.2", "0.329", "E-7: legacy-нуль при 64×128")
+for banned in ("далеко ниже null", "CKA ≈ 0 при структурированном мосте (E-7, H1 подтверждена)"):
+    chk(banned not in PAPER, f"E-7: в статье снова живёт снятая формулировка «{banned}»")
+chk("CKA" in SEC_TXT.get([k for k in SEC_TXT if "4.2" in k][0], ""), "E-7: пункт E-7 исчез из §4.2")
+
 # ---------------------------------------------------------------- E-3: тождество и null'ы
 e3 = art("exp3_ablation")
 import statistics as _st  # noqa: E402
