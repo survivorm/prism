@@ -124,7 +124,10 @@ def main(model="/data/Qwen/Qwen3.5-0.8B", n_docs=8, max_new=384, prompt_len=64,
     norm = m.model.norm
     eps = float(getattr(norm, "variance_epsilon",
                         getattr(norm, "eps", m.config.rms_norm_eps)))
-    wn = norm.weight.detach().float()
+    # e52k падал здесь на GPU: `pre`/`raw` ниже снимаются на CPU, а `wn` оставался на
+    # cuda:0, и проверка g-режима (голый w против 1+w) давала cuda/cpu mismatch. wn дальше
+    # употребляется только через .cpu() (C.head_M, feats), поэтому CPU-размещение безопасно.
+    wn = norm.weight.detach().float().cpu()
     # эмпирика семантики RMSNorm: gemma-style g=1+w против голого g=w (Qwen2/3)
     with torch.no_grad():
         prb = torch.randint(1, 1000, (1, 8), device=dev)
