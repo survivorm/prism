@@ -30,8 +30,13 @@ KERNELS = {
         "title": "Prism: exp6-l18-snr",
         "exp_file": "experiments/exp6_l18_snr.py",
         "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 256\nimport os as _os; _os.environ['PRISM_CALIB_PIN_WRITE'] = '1'; _os.environ['PRISM_CALIB_PIN_DIR'] = '/kaggle/working/calib_pins'\n",
-        "note": "MANDATORY: data LOST (results/exp6_l18_snr.json absent from "
-                "repo; rho=+2.94 unverifiable). L18 SNR/PR vs r, N=8, K=256, ~2h T4.",
+        "note": "строка была устаревшей: артефакт НЕ терялся — он восстановлен ещё в 969ad49 "
+                "(проверять `git log -- results/<файл>`, а не верити заметке в реестре). "
+                "Пересъёмка 05.11 (v4) воспроизвела его на ДРУГОМ пуле до 4-7 значащих: "
+                "SNR 27531.65088→27531.65063, gauge_share 0.602→0.198 (r=4→64), "
+                "PR 2.149→16.912. Вывод: метрики E-6/L18 при N=8 нечувствительны к "
+                "выборке пула; новый прогон лежит отдельным файлом "
+                "results/exp6_l18_snr_redo0511.json, канонический не перезаписан.",
     },
     "exp2_heatmap": {
         "dir": "kernel-exp2",
@@ -214,6 +219,15 @@ KERNELS = {
         "calib_pins": ["wiki", "math", "code", "chat"],
         "runner_extra": "kwargs['n_samples'] = 8\nkwargs['K'] = 64\n",
         "note": "Exp 0.1 coherence length: C(delta) curves, 4 domains x 4 layers {6,12,18,22}, n=8/K=64. Kill-switch for ESG/Exp 0.2. GPU after quota reset (~09-14).",
+    },
+    "exp7_cka": {
+        "dir": "kernel-exp7",
+        "slug": "prism-exp7-cka-baseline",
+        "id": "voroninmichael/prism-exp7-cka-baseline",
+        "title": "Prism: exp7-cka-baseline",
+        "exp_file": "experiments/exp7_cka_baseline.py",
+        "runner_extra": "import json as _j, os as _o, os as _os\n_gap_prev = {\"0->0\": 1.026447, \"3->2\": 0.976696, \"6->4\": 0.970848, \"9->7\": 0.923365, \"12->9\": 0.877483, \"15->11\": 0.7959, \"18->13\": 0.730435, \"21->16\": 0.712299, \"24->18\": 0.687682, \"27->20\": 0.69311, \"30->22\": 0.500969}\n_o.makedirs('/kaggle/working/prev', exist_ok=True)\n_j.dump({'gap': _gap_prev}, open('/kaggle/working/prev/exp7_cka_baseline.json', 'w'))\nkwargs['reuse_gap_from'] = '/kaggle/working/prev/exp7_cka_baseline.json'\nkwargs['n_samples'] = 1024\nkwargs['dtype'] = 'float16'\nkwargs['max_length'] = 64\nkwargs['min_length'] = 32\n_os.environ['PRISM_CALIB_PIN_WRITE'] = '1'\n_os.environ['PRISM_CALIB_PIN_DIR'] = '/kaggle/working/calib_pins'\n",
+        "note": "R14: E-7 на настоящем CKA (standard) при N=1024 — при N=5 метрика вырождена (нуль 0.99713 против контроля 0.99790), а посаженный общий фактор даёт над perm-нулём +0.18 только при N=1024. 4B в fp16: в fp32 16 ГБ весов не влезает на T4 рядом с 0.8B. Шаг gap не пересчитывается (fp16-автограду нет доверия), берётся из закоммиченного артефакта, те же 11 пар слоёв. Пин пула (N=1024, min32/max64) пишется в вывод.",
     },
     "exp27": {
         "dir": "kernel-exp27",
