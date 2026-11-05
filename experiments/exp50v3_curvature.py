@@ -74,7 +74,51 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 import exp47_common as C  # noqa: E402
 from exp49_leaf_info import load_model, smoothed_us  # noqa: E402
-from exp50_gauges import pullback_step, safe_med, boot_ci, det_seed  # noqa: E402
+# ---------------------------------------------------------------- primitives
+# мигрировали из exp50_gauges (слияние E50 в один живой скрипт; gauges =
+# SUPERSEDED-демо левой композиции, import'ит их обратно отсюда)
+
+def pullback_step(Va, Vb, M):
+    """M := 𝓡(Va→Vb)ᵀ M — геодезический ambient pullback.
+    exp(+θG)=I+s(pqᵀ−qpᵀ)+(c−1)(ppᵀ+qqᵀ), G=pqᵀ−qpᵀ, q_j=(Vb·Y_j−c_j p_j)/s_j.
+    θ<1e-4: вклад O(θ) ничтожен; θ→π: no-op ОСОЗНАННО (метрика subspace-инвариантна,
+    знак базиса не наблюдается)."""
+    U, Cj, Wt = torch.linalg.svd(Va.T @ Vb, full_matrices=False)
+    P = Va @ U
+    c = Cj.clamp(-1 + 1e-12, 1 - 1e-12)
+    th = torch.acos(c)
+    s = torch.sin(th)
+    live = (th > 1e-4) & (th < math.pi - 1e-3)
+    Q = (Vb @ Wt.T - P * c) / s.where(live, torch.ones_like(s)).unsqueeze(0)
+    s = torch.where(live, s, torch.zeros_like(s))
+    cm1 = torch.where(live, c - 1.0, torch.zeros_like(c))
+    A1, A2 = P.T @ M, Q.T @ M
+    return M + P @ (cm1.unsqueeze(1) * A1 + s.unsqueeze(1) * A2) \
+             + Q @ (-s.unsqueeze(1) * A1 + cm1.unsqueeze(1) * A2)
+
+
+def safe_med(x, nd=4):
+    x = np.asarray([v for v in x if v is not None], float)
+    x = x[np.isfinite(x)]
+    return round(float(np.median(x)), nd) if len(x) else None
+
+
+def boot_ci(v, B=2000):
+    v = np.asarray([x for x in v if x is not None], float)
+    v = v[np.isfinite(v)]
+    if len(v) < 3:
+        return [None, None]
+    idx = np.random.default_rng(5).integers(0, len(v), (B, len(v)))
+    m = np.median(v[idx], axis=1)
+    return [round(float(np.quantile(m, 0.025)), 4), round(float(np.quantile(m, 0.975)), 4)]
+
+
+# ---------------------------------------------------------------- юнит-контроли
+
+
+def det_seed(s):
+    return int.from_bytes(hashlib.sha256(str(s).encode()).digest()[:8], "little")
+
 
 TMAX = 96
 MIN_STEP = 5e-4

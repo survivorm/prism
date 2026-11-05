@@ -35,7 +35,10 @@ NULL (трёхступенчатый): sur = step-matched белая пряма�
   "long-range-only"         — только sh;
   "domain-dependent"        — overall значимо, но <3/4 доменов (не подтверждён);
   "null-compatible"         — ни против одного нуля не значимо.
-Для I5 — только vs sh (у sur нет σ-ряда).
+Для I5 — только vs sh (у sur нет σ-ряда). dom_need=⌈0.75·ndom⌉; при ndom=4 → 3;
+при ndom<4 (подвыборка) критерий вырождается — вердикт на подвыборке не выносится.
+CI `I*_ci_DIAGNOSTIC` по позициям — диагностика (позиции внутри дока не iid);
+валидные CI — по документам в summary._all.
 """
 from __future__ import annotations
 
@@ -54,7 +57,7 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 import exp47_common as C  # noqa: E402
 from exp49_leaf_info import load_model, smoothed_us, nz  # noqa: E402
-from exp50_gauges import pullback_step, safe_med, boot_ci  # noqa: E402
+from exp50v3_curvature import pullback_step, safe_med, boot_ci  # noqa: E402
 import exp50v3_curvature as E50  # noqa: E402  (synth_white_matched — sur-нуль)
 
 TMAX = 96
@@ -102,9 +105,6 @@ def leaf_bases(x, A, eps):
     sig = torch.sqrt(torch.linalg.eigvalsh(Gm)[-4:].flip(0).clamp(min=0))
     return v1, torch.stack([v1, v2], 1), sig.tolist()
 
-
-def increments(gdg):
-    return gdg        # уже привезены в начало координат
 
 
 def inv_I1(gdg, lags=(1, 2, 4, 8, 16)):
@@ -173,7 +173,7 @@ def boot_mean_ci(v, B=2000):
 
 # ------------------------------------------------------------------ контроли
 
-def run_controls(T=96, D=400):
+def run_controls(T=256, D=400):
     res = {}
     g = torch.Generator().manual_seed(3)
     u0 = nz(torch.randn(D, dtype=torch.float64, generator=g))
@@ -258,6 +258,10 @@ def surrogate_lines(v1s, key, j):
     return out_v, out_p
 
 
+def _stack1(vs):
+    return torch.stack([v.detach().reshape(-1) for v in vs])[:, :, None]   # [n,D,1]
+
+
 def bundle(vv, pl, specs=None):
     gv, gpl, gdg, gdev = gauge_along_lines(vv, pl)
     I1 = inv_I1(gdg); I2 = inv_I2(pl); I3 = inv_I3(vv); e, _dr = inv_I4(gdg)
@@ -308,8 +312,8 @@ def main():
             v1s.append(v1); pl.append(P); specs.append(sig)
         b = bundle(v1s, pl, specs)
         row = dict(dom=doc["dom"], key=key,
-                   I1_1=b["I1_1"], I1_1_ci=boot_mean_ci(b["I1_1_all"]),
-                   I1_8=b["I1_8"], I1_8_ci=boot_mean_ci(b["I1_8_all"]),
+                   I1_1=b["I1_1"], I1_1_ci_DIAGNOSTIC=boot_mean_ci(b["I1_1_all"]),
+                   I1_8=b["I1_8"], I1_8_ci_DIAGNOSTIC=boot_mean_ci(b["I1_8_all"]),
                    I2=b["I2"], I3_sd=b["I3_sd"], I4_e=b["I4_e"], I5=b["I5"],
                    gauge_dev=b["gauge_dev"])
         S2 = np.asarray(specs, dtype=float)   # П1-1: rank-deficiency v2
@@ -319,20 +323,26 @@ def main():
             row["gap_s3s2"] = (safe_med((S2[:, 2] / np.maximum(S2[:, 1], 1e-12)).tolist())
                                if S2.shape[1] > 2 else None)
         n_ = len(v1s)
+        row["step_real"] = round(E50.mean_step(_stack1(v1s)), 5)   # matching audit
+        if (row["step_real"] or 0) < 6e-4:
+            row["sur_step_clamped"] = True   # sur шаг упрётся в MIN_STEP=5e-4 (E50v3)
         for j in range(N_SW):
             idx = swap_idx(n_, rng)
             bb = bundle([v1s[i] for i in idx], [pl[i] for i in idx],
                         [specs[i] for i in idx])
             row[f"sw{j}"] = {k: bb[k] for k in NULL_KEYS}
             row[f"sw{j}"]["I5"] = bb["I5"]
+            row[f"sw{j}"]["step"] = round(E50.mean_step(_stack1([v1s[i] for i in idx])), 5)
             sh = rng.permutation(n_)
             bb = bundle([v1s[i] for i in sh], [pl[i] for i in sh],
                         [specs[i] for i in sh])
             row[f"sh{j}"] = {k: bb[k] for k in NULL_KEYS}
             row[f"sh{j}"]["I5"] = bb["I5"]
+            row[f"sh{j}"]["step"] = round(E50.mean_step(_stack1([v1s[i] for i in sh])), 5)
             sv, sp = surrogate_lines(v1s, key, j)
             bb = bundle(sv, sp)
             row[f"sur{j}"] = {k: bb[k] for k in NULL_KEYS}
+            row[f"sur{j}"]["step"] = round(E50.mean_step(_stack1(sv)), 5)
         rep.setdefault(doc["dom"], []).append(row)
         print(key, "done", flush=True)
 
@@ -371,17 +381,21 @@ def main():
         sig, domc = {}, {}
         for n in NULLS:
             d = [x for rows in rep.values() for x in paired(rows, f, n)]
-            s[f"vs_{n}_" + f] = [safe_med(d), boot_mean_ci(d)]
+            # point=медиана ⇒ CI медианы (boot_ci), согласованные estimand (ревью §1)
+            s[f"vs_{n}_" + f] = [safe_med(d), boot_ci(d)]
             lo, hi = s[f"vs_{n}_" + f][1]
             sig[n] = lo is not None and lo * hi > 0
             dc = 0
             for rows in rep.values():
-                dlo, dhi = boot_mean_ci(paired(rows, f, n))[1]
+                dlo, dhi = boot_ci(paired(rows, f, n))[1]
                 if dlo is not None and dlo * dhi > 0:
                     dc += 1
             domc[n] = dc
             s[f"doms_{n}_" + f] = dc
         rob = {n: sig[n] and domc[n] >= dom_need for n in NULLS}
+        s[f"sig_{f}"] = {n: bool(sig[n]) for n in NULLS}
+        s[f"rob_{f}"] = {n: bool(rob[n]) for n in NULLS}
+        s[f"notrobust_{f}"] = bool(any(sig.values()) and not any(rob.values()))
         verdict[f] = ("directional+ordering" if rob["sur"] and rob["sw"] else
                       "directional(order-free)" if rob["sur"] else
                       "local-ordering" if rob["sw"] else
@@ -395,7 +409,9 @@ def main():
             bs = [r[f"sh{j}"]["I5"].get(key) for j in range(N_SW)]
             if a is not None and all(b is not None for b in bs):
                 d.append(a - float(np.mean(bs)))
-        s[f"I5_vs_sh_{key}"] = [safe_med(d), boot_mean_ci(d)]
+        s[f"I5_vs_sh_{key}"] = [safe_med(d), boot_ci(d)]
+        lo, hi = s[f"I5_vs_sh_{key}"][1]
+        s[f"I5_vs_sh_{key}_sig"] = lo is not None and lo * hi > 0
     s["verdict"] = verdict
     out["summary"] = summ
     out["per_doc"] = rep

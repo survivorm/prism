@@ -56,7 +56,8 @@ def boot_ci(v, B=2000):
     v = np.asarray(v, float); v = v[np.isfinite(v)]
     if len(v) < 3:
         return [None, None]
-    idx = RNG.integers(0, len(v), (B, len(v)))
+    # seed фиксирован НА ВЫЗОВ (ревью §2.6): CI не зависит от порядка вызовов
+    idx = np.random.default_rng(47).integers(0, len(v), (B, len(v)))
     m = np.median(v[idx], axis=1)
     return [round(float(np.quantile(m, 0.025)), 4), round(float(np.quantile(m, 0.975)), 4)]
 
@@ -66,7 +67,10 @@ def boot_ci(v, B=2000):
 def frame_in_metric(J, r, L):
     """Базис top-r инвариантного подпространства JᵀJ, G-ортонормированный.
     Фикс (ревью E49 §1.1): torch.linalg.cholesky даёт G = L·Lᵀ (НЕ LᵀL), значит
-    ‖x‖_G = ‖Lᵀx‖₂ и G-ортонорм — qr(LᵀV), а не qr(LV). ПРЕЖНИЕ M-ячейки сетки
+    ‖x‖_G = ‖Lᵀx‖₂ и G-ортонорм — qr(LᵀV), а не qr(LV). Возвращаемый базис —
+    Lᵀ·span(V) (НЕ span(V)); углы между подпространствами в G-метрике равны
+    евклидовым углам между Lᵀ-образами — это то, зачем встроивание нужно.
+    ПРЕЖНИЕ M-ячейки сетки
     exp49_leaf_info_*.json считали метрику LᵀL ≠ G — НЕИНТЕРПРЕТИРУЕМЫ (евклидовы
     H2-выводы exp49b2 не затронуты: там L=None)."""
     V = C.V16_from_J(J, r=r)[0]                       # [D,r] ортонорм (евклид)
@@ -148,16 +152,20 @@ def control_white(T, D):
 
 
 def control_coherent(T, D, delta=0.02):
+    """ГЕОДЕЗИЧЕСКИЙ контроль (фикс ревью E49-4 §2.1 — та же ортогонализация, что в
+    synth_coh exp49b2; прежняя версия без w⟂u давала невалидный CB)."""
     g = torch.Generator().manual_seed(11)
     u = nz(torch.randn(D, dtype=torch.float64, generator=g))
     w = nz(torch.randn(D, dtype=torch.float64, generator=g))
+    w = nz(w - u * (u @ w))
     out = []
     for t in range(T):
         out.append(u.clone())
         u2 = math.cos(delta) * u + math.sin(delta) * w
+        u = nz(u2)
         z = nz(torch.randn(D, dtype=torch.float64, generator=g))
         w = nz(w + 0.05 * (z - (z @ u) * u - (z @ w) * w))
-        u = nz(u2)
+        w = nz(w - u * (u @ w))
     return out
 
 
