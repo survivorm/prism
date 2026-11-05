@@ -59,4 +59,22 @@ if pin.exists():
 else:
     print(f"3–4. пропущено: нет пина {pin.name}")
 
+# 5. flattening-Kaggle-ядро: модуля нет на диске, `__file__` не определён. Именно на этом
+# упал exp3 после введения пинов (NameError в _pin_path) — ядро собиралось и падало на загрузке
+# данных, поэтому проверка входит в самопроверку, а не остаётся на совести ревью.
+src = (Path(__file__).resolve().parent.parent / "prism" / "calibration.py").read_text()
+g: dict = {"__name__": "calib_flattened"}
+old_root = os.environ.pop("PRISM_CALIB_PIN_DIR", None)
+try:
+    exec(compile(src, "calibration.py(ядро)", "exec"), g)
+    assert g["_pin_path"]("wiki", MODEL, 8, 64, 64, False) is None, "без __file__ пин-пути быть не должно"
+    g["os"].environ["PRISM_CALIB_PIN_DIR"] = "/tmp/pins"
+    q = g["_pin_path"]("wiki", MODEL, 8, 64, 64, False)
+    assert q is not None and q.name.startswith("wiki__"), q
+finally:
+    if old_root is not None:
+        os.environ["PRISM_CALIB_PIN_DIR"] = old_root
+    g["os"].environ.pop("PRISM_CALIB_PIN_DIR", None)
+print("5. без __file__ (flattening-ядро) пин-путь = None, с PRISM_CALIB_PIN_DIR = путь — ок")
+
 print("OK")
