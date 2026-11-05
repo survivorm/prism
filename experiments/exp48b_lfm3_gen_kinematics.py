@@ -74,6 +74,17 @@ def _step(V_prev, u_prev, u_cur, A, eps, h_cur):
     return a, s, p, g, Vb
 
 
+def _nansafe(o):
+    """NaN/Inf -> None рекурсивно (json allow_nan=False; NaN в первом шаге легален)."""
+    if isinstance(o, dict):
+        return {k: _nansafe(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_nansafe(v) for v in o]
+    if isinstance(o, float) and (o != o or o in (float("inf"), float("-inf"))):
+        return None
+    return o
+
+
 def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
          device="cpu", results_dir="results"):
     torch.set_num_threads(4)
@@ -117,8 +128,8 @@ def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
         for _ in range(2):
             out = m(input_ids=nxt, past_key_values=cache, use_cache=True)
             nxt = out.logits[0, -1].argmax().view(1, 1)
-        rt = float((cap["x"].float() * torch.rsqrt(cap["x"].pow(2).mean() + eps) @ A.T
-                    - out.logits[0, -1, U].cpu().double()).abs().max())
+        rt = float((cap["x"] * torch.rsqrt(cap["x"].pow(2).mean() + eps) @ A.T
+                    - out.logits[0, -1, U].double().to(cap["x"].device)).abs().max())
     print(f"[decode-smoke] route max|J-route - logits_U| = {rt:.2e}; tied={tied}", flush=True)
     assert rt < 1e-2, f"маршрут на декоде не сошёлся: {rt}"
 
@@ -139,7 +150,7 @@ def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
             tokens = ids[0].tolist()
             V_stack, u_stack = [], []
             for step in range(max_new):
-                z = (h * torch.rsqrt(h.pow(2).mean() + eps)) @ A.T     # [128] fp64 (U-подпространство)
+                z = (h.double() * torch.rsqrt(h.pow(2).mean() + eps)) @ A.T     # [128] fp64 (U-подпространство)
                 pfull = torch.softmax(z.float(), dim=-1)               # на U — конкурирующие фичи
                 feats["ent"].append(float(-(pfull.clamp_min(1e-12) *
                                             pfull.clamp_min(1e-12).log()).sum()))
@@ -169,14 +180,15 @@ def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
             ss = np.array(feats["s"], dtype=float)
             pp = np.array(feats["p"], dtype=float)
             in_mask = np.zeros(max_new, dtype=bool)
-            for onset, _j, e, p_, k in loops:
-                in_mask[min(onset, max_new - 1): min(e, max_new)] = True
-            acf = [C.autocorr_peak(torch.from_numpy(ss[min(o):min(e, len(ss))] -
-                  np.nanmean(ss)), p_) for o, _j, e, p_, k in loops]
+            for lp in loops:
+                in_mask[min(lp[0], max_new - 1): min(lp[2], max_new)] = True
+            acf = [C.autocorr_peak(torch.from_numpy(
+                       ss[min(lp[0], len(ss)-1):min(lp[2], len(ss))] - np.nanmean(ss)), lp[3])
+                   for lp in loops]
             docs_out.append({
                 "dom": dom, "si": si, "prompt_sha": prompt_sha,
                 "n_loops": len(loops),
-                "loops": [[o, j, e, p_, k] for o, j, e, p_, k in loops],
+                "loops": [list(lp) for lp in loops],
                 "a_med": float(np.nanmedian(aa)), "s_med": float(np.nanmedian(ss)),
                 "p_med": float(np.nanmedian(pp)), "g_med": float(np.nanmedian(feats["g"])),
                 "excess_a": C.band_power(torch.from_numpy(np.nan_to_num(aa))),
@@ -205,7 +217,7 @@ def main(model="/data/LiquidAI/LFM3-1.7B", n_docs=8, max_new=384, prompt_len=64,
                       "decoding": "greedy", "seed": RNG_SEED,
                       "U128": "fresh freq basis on LFM3 pool", "U128_head": U128[:8],
                       "route_decode": rt, "tied": bool(tied)},
-           "docs": docs_out}
+           "docs": _nansafe(docs_out)}
     with open(os.path.join(results_dir, "exp48b_lfm3_gen_kinematics.json"), "w") as f:
         json.dump(out, f, ensure_ascii=False, allow_nan=False)
     np.savez_compressed(os.path.join(results_dir, "exp48b_lfm3_gen_kinematics.npz"), **feats_npz)
