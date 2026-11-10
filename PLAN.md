@@ -266,17 +266,29 @@ f51350f/e0ebdeb; старая история Nov-9/10 после filter-repo н�
 off-by-one, не та сущность, не тот отсчёт, проекция (gauge/центр.), CI/нули.
 
 - [x] инвентарь + сверка с GitHub (rc=0, дерево чистое)
-- [ ] ref-math.md — полный проход, выписать эталоны (формулы, константы, правила)
-- [ ] слой 1 (математика): jacobian, p_algebra, invariants, holonomy, spectral,
+- [x] ref-math.md — полный проход, выписать эталоны (формулы, константы, правила)
+- [x] слой 1 (математика): jacobian, p_algebra, invariants, holonomy, spectral,
       esg, kinetic, nulls_and_stats, operator_checks, permutation, noise,
       topology, transport, cheap_invariants
-- [ ] слой 2 (инфраструктура): cache, cache_io, calibration, pipeline,
+- [x] слой 2 (инфраструктура): cache, cache_io, calibration, pipeline,
       interventions, behavior, bridge, diagnostics, exp38_hi_common, json_utils,
       jstruct, layer_selection, profiles, svd_bundle, tag, __init__
-- [ ] скоростной проход: python-циклы по тензорам, O(n²), лишние clone/.to(),
+- [x] скоростной проход: python-циклы по тензорам, O(n²), лишние clone/.to(),
       отсутствие batch/BLAS, повторные forward
-- [ ] docs/prism_core_audit.md + фиксы (только если найденные баги — в том же
+- [x] docs/prism_core_audit.md + фиксы (только если найденные баги — в том же
       коммите) + коммит явными путями
+
+**DONE (11.11)**: 31 файл прочитан построчно. Найденное: P1×2 (c_pred —
+«изотропный предиктор» vs формула-спектральная-плоскостность, A_alignment
+в 38× отличается от A из E-40-дока — на решение пользователя; ref-math
+gauge_share без 1/K — только к акту), P2×2 исправлены в коммите
+(KL_lin: фикс. 1e-8 → _check_p; channel_energy_matrix: fail-loud при
+permU≠permV), P3×1 исправлен (interventions docstring KL-порядок). Designed-
+сценарии guard'ов протестированы exec; тесты: test_transport_kinetic +
+test_audit_core_v2 + test_operator_invariants = 25 passed, test_nulls_tag_gate
+8, test_e40_acceptance 20, test_p_algebra 11, test_layer_selection 5, 
+test_interventions 25/26 PASSED (последний — тяжёлый model-forward, за
+таймаут; правка там docstring-only).
 
 Границы: не трогать experiments/ (аудитировалось отдельно), kaggle_kernel/,
 docs/ кроме нового аудит-дока; коммит явными путями (дерево общее);
