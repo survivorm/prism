@@ -1,0 +1,14 @@
+{
+ "id": "voroninmichael/prism-kv-saliency",
+ "title": "prism-kv-saliency",
+ "code_file": "kv_saliency.py",
+ "language": "python",
+ "kernel_type": "script",
+ "is_private": "true",
+ "enable_gpu": "true",
+ "enable_tpu": "false",
+ "enable_internet": "true",
+ "dataset_sources": ["voroninmichael/prism-calib-pins-qwen"],
+ "competition_sources": [],
+ "kernel_sources": []
+}
