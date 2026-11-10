@@ -253,3 +253,31 @@
   «P1 — алгебра» (стояла дважды подряд) удалён.
 - Пустые ссылки на несуществующие артефакты/доки (например `results/exp49b2_floor_*.json` — теперь
   закоммичены `24762d9`).
+
+## Аудит ядра prism/ (11.11, «методология, логика, скорость, математика vs ref-math, off-by-one/сущность/отсчёт/проекция/CI»)
+
+Запрос: въедливый аудит ядра `prism/` (31 файл, 7947 строк, = GitHub main 5b52eda
+побайтово — сверено diff -rq) по тому же стандарту, что аудит скриптов.
+Контекст: рабочее дерево было восстановлено параллельной сессией 11.11 21:19
+(docs/, prism/, experiments/ вернулись; git = 5b52eda + 2 коммита восстановления
+f51350f/e0ebdeb; старая история Nov-9/10 после filter-repo недоступна).
+
+Критерий математики: docs/ref-math.md (218 строк). Фокус-классы ошибок:
+off-by-one, не та сущность, не тот отсчёт, проекция (gauge/центр.), CI/нули.
+
+- [x] инвентарь + сверка с GitHub (rc=0, дерево чистое)
+- [ ] ref-math.md — полный проход, выписать эталоны (формулы, константы, правила)
+- [ ] слой 1 (математика): jacobian, p_algebra, invariants, holonomy, spectral,
+      esg, kinetic, nulls_and_stats, operator_checks, permutation, noise,
+      topology, transport, cheap_invariants
+- [ ] слой 2 (инфраструктура): cache, cache_io, calibration, pipeline,
+      interventions, behavior, bridge, diagnostics, exp38_hi_common, json_utils,
+      jstruct, layer_selection, profiles, svd_bundle, tag, __init__
+- [ ] скоростной проход: python-циклы по тензорам, O(n²), лишние clone/.to(),
+      отсутствие batch/BLAS, повторные forward
+- [ ] docs/prism_core_audit.md + фиксы (только если найденные баги — в том же
+      коммите) + коммит явными путями
+
+Границы: не трогать experiments/ (аудитировалось отдельно), kaggle_kernel/,
+docs/ кроме нового аудит-дока; коммит явными путями (дерево общее);
+не запускать тяжёлые прогоны.

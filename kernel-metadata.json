@@ -1,0 +1,14 @@
+{
+ "id": "voroninmichael/prism-greedy-proto",
+ "title": "prism-greedy-proto",
+ "code_file": "greedy_proto.py",
+ "language": "python",
+ "kernel_type": "script",
+ "is_private": "true",
+ "enable_gpu": "true",
+ "enable_tpu": "false",
+ "enable_internet": "true",
+ "dataset_sources": ["voroninmichael/prism-calib-pins-qwen","voroninmichael/qwen35-08b-weights"],
+ "competition_sources": [],
+ "kernel_sources": []
+}

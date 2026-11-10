@@ -1,1 +1,9 @@
-{"info": {"datasetId": 11757781, "datasetSlug": "prism-exp16-targets", "ownerUser": "voroninmichael", "usabilityRating": 0.375, "totalViews": 1, "title": "Prism Exp16 Stage0 Target Jacobian Cache", "subtitle": "", "description": "", "isPrivate": true, "keywords": ["pre-trained model"], "licenses": [{"name": "CC0-1.0"}], "expectedUpdateFrequency": "not specified"}}
+{"title":"prism calib pins qwen","id":"voroninmichael/prism-calib-pins-qwen","is_private":true,
+ "licenses":[{"name":"other"}],
+ "resources":[
+  {"path":"wiki___data_Qwen_Qwen3.5_0.8B__n16__min64__max256__plain.json","description":"wiki","roles":["data"]},
+  {"path":"math___data_Qwen_Qwen3.5_0.8B__n16__min64__max256__plain.json","description":"math","roles":["data"]},
+  {"path":"code___data_Qwen_Qwen3.5_0.8B__n16__min64__max256__plain.json","description":"code","roles":["data"]},
+  {"path":"chat___data_Qwen_Qwen3.5_0.8B__n16__min64__max256__plain.json","description":"chat","roles":["data"]},
+  {"path":"calibration.py","description":"loader","roles":["data"]},
+  {"path":"exp47b_gen_kinematics.json","description":"ref","roles":["data"]}]}
