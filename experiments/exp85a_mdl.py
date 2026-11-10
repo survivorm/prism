@@ -50,7 +50,6 @@ res=dict(corpus_cost_early=float(early.mean()),corpus_cost_late=float(late.mean(
 print("corpus MDL: early/late tok cost %.2f/%.2f ratio %.2f; novelty-kernel(k=1..6) %s"%(
   res["corpus_cost_early"],res["corpus_cost_late"],res["corpus_cost_ratio_late_over_early"],
   np.round(N[:6],2).tolist()),flush=True)
-json.dump(res,open(OUT/"MDL_corpus.json","w"),indent=1)
 # --- own (когда есть REPLAY с gen_ids; путь: results/e81, не e81b!) ---
 try:
     b=json.load(open(ROOT/"results"/"e81"/"REPLAY.json"))
@@ -80,4 +79,10 @@ try:
         print("REPLAY.json без gen_ids — own-ветка пропущена")
 except FileNotFoundError:
     print("own: ждём REPLAY.json (e81b v3, results/e81/) — корпус-калибровка готова")
-json.dump(res,open(OUT/"MDL_corpus.json","w"),indent=1)
+def _clean(o):
+    if isinstance(o,(float,np.floating)):
+        o=float(o); return None if np.isnan(o) else o
+    if isinstance(o,dict): return {k:_clean(v) for k,v in o.items()}
+    if isinstance(o,(list,tuple)): return [_clean(v) for v in o]
+    return o
+(OUT/"MDL_corpus.json").write_text(json.dumps(_clean(res),indent=1,ensure_ascii=False,default=float,allow_nan=False))

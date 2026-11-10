@@ -249,7 +249,16 @@ def channel_energy_matrix(J_t: np.ndarray, J_t1: np.ndarray, r: int = 16,
         (U1, S1, W1) = _check_svd(svds[1], J_t1, "svds[1]")
     U0a, S0r, V0 = U0[:, :r], S0[:r], W0[:r].T
     U1a, _, fU = align_signs_and_columns(U0a, U1[:, :r])
-    V1 = align_signs_and_columns(V0, W1[:r].T)[1]
+    V1, _, fV = align_signs_and_columns(V0, W1[:r].T)
+    if fU["perm"] != fV["perm"]:
+        raise ValueError(
+            "channel_energy_matrix: U- and V-frame alignments disagree "
+            "(permU != permV — near-degenerate top-r σ spectrum): the σ "
+            "order implied by the two frames is inconsistent and the channel "
+            "Gram would mix channels silently (the closure sum(G) = ‖ΔJ‖² "
+            "still holds — Pythagoras — so no consumer assert catches it). "
+            "kinetic_decomposition flags this case 'ambiguous'; here we "
+            "refuse instead of reporting mixed energies.")
     S1r = S1[:r][fU["perm"]]                      # σ follows the frame (M2)
     dJ = J_t1 - J_t
     M = transport_log(polar_factor(U0a.T @ U1a))

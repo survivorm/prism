@@ -9,6 +9,7 @@ K(k)=P(x_{t+k}=x_t) по ГЕНЕРАЦИИ (без промпта — пром�
 (_baseline, анти-эхо калибр) и СОБСТВЕННЫМ unigram-нулём перестановки.
 Вердикт-гейт: sign-flip excess на k=2..6 (корпус минус, own плюс) = петля/эхо.
 Ранняя/поздняя половина генерации — сегменты early/late (парный контраст в доке).
+OMC-CI: own-медиана бустрапится по докам, корпусный контраст фиксирован ((cor-CN)[:,k]).
 """
 import json, numpy as np, torch
 from pathlib import Path
@@ -39,11 +40,10 @@ CN=corN.reshape(16,2,K).mean(1)          # средний null дока
 exc_c=cor-CN                             # попарно, 16×24
 med_c=np.median(exc_c,0)
 # ---- own генерации ----
-gen_k=[];gen_null=[];seg_early=[];seg_late=[];RNG=np.random.default_rng(83)
+gen_k=[];gen_null=[];seg_early=[];seg_late=[];gen_toks=[];RNG=np.random.default_rng(83)
 for i in range(16):
     ids=tk(pin["texts"][i],add_special_tokens=False)["input_ids"]
     toks=[]
-    torch.manual_seed(830+i)
     with torch.no_grad():
         o=m(torch.tensor([ids])); past=o.past_key_values
         nxt=torch.argmax(o.logits[0,-1])
@@ -52,12 +52,21 @@ for i in range(16):
             o=m(nxt.view(1,1),past_key_values=past,use_cache=True); past=o.past_key_values
             nxt=torch.argmax(o.logits[0,-1]); toks.append(int(nxt))
     gen_only=toks                        # БЕЗ промпта (промпт = дословно корпус, анти-эхо)
+    gen_toks.append(gen_only)
     gen_k.append(kernel(gen_only))
     gen_null.append(null_kernel(gen_only,RNG))
     mlen=len(gen_only)//2
     seg_early.append(kernel(gen_only[:mlen])); seg_late.append(kernel(gen_only[mlen:]))
     print(f"w{i}: K_gen(1..6) {np.round(gen_k[-1][:6],4).tolist()}",flush=True)
 G=np.array(gen_k); GN=np.array(gen_null)
+# СВЕРКА С e81b: обе greedy на тех же пинах — генерации обязаны совпасть побайтово
+try:
+    bR=json.load(open(ROOT/"results"/"e81"/"REPLAY.json"))
+    if "gen_ids" in bR:
+        eq=[sum(a==b for a,b in zip(gt,bR["gen_ids"][f"w{j}"])) for j,gt in enumerate(gen_toks)]
+        print("сверка e83↔e81b (совпавших токенов из 384 по докам):",eq[:8],"...",flush=True)
+except FileNotFoundError:
+    print("e81b REPLAY.json ещё нет — сверка отложена",flush=True)
 exc=G-GN                                 # excess own-дока над ЕГО OWN unigram-нулём
 med_g=np.median(exc,0)
 ci=[]

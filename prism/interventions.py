@@ -151,7 +151,7 @@ def make_readout_pull(
     """E-16a protocol: Adam on lm_head.weight[token_set] rows only (TZ §4.3).
 
     Loss per step: (1 − cos(J_S_p, target_J_p)).mean() +
-    kl_leash_weight · KL(p_base ‖ p_edit), where
+    kl_leash_weight · KL(p_edit ‖ p_base), where
       - J_S_p [K, D_S] via compute_hidden_jacobian_rows(create_graph=True)
         (reused from jacobian.py — the only create_graph site; its inner
         _clone_gdn_states_on_entry handles the GDN state),

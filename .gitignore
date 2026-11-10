@@ -71,3 +71,7 @@ results/*.json.gz
 models/
 results/e*/**
 !docs/**
+
+# daemon/временные логи (правило 10.11, после замечания ревью)
+logs/e51_*.log
+kaggle_daemon.log

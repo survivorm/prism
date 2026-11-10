@@ -18,6 +18,8 @@ from __future__ import annotations
 import numpy as np
 from scipy.stats import spearmanr
 
+from .p_algebra import _check_p
+
 __all__ = ["b_mag", "b_lin", "b_res", "lq_coupling", "b_qual", "KL_lin"]
 
 
@@ -91,12 +93,14 @@ def KL_lin(J: np.ndarray, p: np.ndarray, eps: float, v: np.ndarray) -> float:
     ``½ ε² (Jv)ᵀ P(p) (Jv)`` with the Fisher–Rao metric ``P(p)`` (ТЗ §III.10:
     the factor is ``diag(p) − ppᵀ``, not ``I``)."""
     J = np.asarray(J, dtype=np.float64)
-    p = np.asarray(p, dtype=np.float64)
+    # _check_p — the SAME adaptive normalization guard (max(1e-8, K·eps32))
+    # as p_algebra (audit3_math п. 2Б: the fixed 1e-8 here rejected 88 % of
+    # real fp32 cache rows, |Σp−1| up to 2.8e-7); one code path, plus
+    # finiteness/negative/ndim checks.
+    p = _check_p(p)
     v = np.asarray(v, dtype=np.float64)
     if p.ndim != 1 or J.shape[-2] != p.size:
         raise ValueError(f"p [K] must match J token axis {J.shape}")
-    if abs(p.sum() - 1.0) > 1e-8:
-        raise ValueError("KL_lin: p must be normalized (Σp = 1)")
     nv = float(np.linalg.norm(v))
     if nv <= 0:
         raise ValueError("KL_lin: v must be non-zero (same guard as b_lin; "
