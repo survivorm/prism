@@ -76,6 +76,7 @@ for i in range(16):
     print(f"w{i}: gate r={r:.3f} rep8 med {np.median(reps[8][off:]):.2f} onset8 {onsets[8]} p1 {np.median(p1g):.3f}",flush=True)
 res["gate_pass"]=f"{match}/16"
 if match<12: res["replay_mismatch"]=True   # обещание докстринга: артефакт помечен, C/прочее не читается
+if tails is None: print("C: TAIL16.json отсутствует — C-часть пропущена (нужен перепуск e81 для lex-порядка)",flush=True)
 if match>=12 and tails is not None:
     keys=[k for k in (tail_keys if tail_keys else sorted(res["docs"])) if k in res["docs"]]
     if tail_keys is None or len(keys)!=len(tails):
@@ -88,7 +89,8 @@ if match>=12 and tails is not None:
         rng=np.random.default_rng(8181)
         obs=spear(tails,rf8)
         nl=[spear(rng.permutation(tails),rf8) for _ in range(2000)]
-        res["C_tail_vs_rep8"]=dict(rho=round(obs,3),null=[round(float(np.percentile(nl,2.5)),3),round(float(np.percentile(nl,97.5)),3)])
-        print(f"C: tail vs rep8 rho {obs:+.3f} null[{np.percentile(nl,2.5):+.3f},{np.percentile(nl,97.5):+.3f}]",flush=True)
+        if np.isfinite(obs):
+            res["C_tail_vs_rep8"]=dict(rho=round(obs,3),null=[round(float(np.percentile(nl,2.5)),3),round(float(np.percentile(nl,97.5)),3)])
+            print(f"C: tail vs rep8 rho {obs:+.3f} null[{np.percentile(nl,2.5):+.3f},{np.percentile(nl,97.5):+.3f}]",flush=True)
 (OUT/"REPLAY.json").write_text(json.dumps(res,indent=1,ensure_ascii=False,default=float))
 print("E81B DONE",flush=True)

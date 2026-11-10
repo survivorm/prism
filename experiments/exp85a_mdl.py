@@ -60,7 +60,9 @@ try:
             full=list(pids)+list(toks)
             c=mdl_curve(full)
             pc=mdl_curve(list(pids))                 # L0-страж: own-префикс == корпус 1-в-1
-            l0.append(float(np.max(np.abs(pc-c[:len(pids)]))))
+            # сравнение КРОМЕ последнего prompt-токена: pc[-1] включает финальный flush
+            # автономного prompt-потока (~6B), которого нет в непрерывном потоке full-версии
+            l0.append(float(np.max(np.abs(pc[:-1]-c[:len(pids)-1]))))
             gc=c[len(pids):]                         # gen-стоимость НА ПОТОКЕ (с контекстом промпта)
             oc.append(gc); on.append(mdl_after_novelty(gc,list(toks)))
         L0max=float(np.max(l0))
