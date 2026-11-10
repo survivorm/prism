@@ -22,7 +22,10 @@ tk=AutoTokenizer.from_pretrained(BASE)
 m=AutoModelForCausalLM.from_pretrained(BASE,dtype=torch.float32).eval()
 m.requires_grad_(False)
 pin=json.load(open(ROOT/"data"/"calib_pins"/"wiki___data_Qwen_Qwen3.5_0.8B__n16__min64__max256__plain.json"))
-prompts=[tk(pin["texts"][i],add_special_tokens=False)["input_ids"] for i in range(16)]
+prompts=[tk(pin["texts"][i],add_special_tokens=False)["input_ids"][:64] for i in range(16)]
+# ВНИМАНИЕ (ревью A/qwen 10.11 Б1): E-64 генерил строго из ПЕРВЫХ 64 ТОКЕНОВ
+# (experiments/kaggle_e64/e64_tpu.py:173 ids[0,:64]); полный текст ломает гейт навсегда
+# (teacher-forcing corr 1.000 на 64 vs 0.93–0.98 на полном).
 zo=np.load(D/"P1_own.npz")
 def rep_flags(ids,n):
     seen=set(); out=[]

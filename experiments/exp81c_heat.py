@@ -41,8 +41,8 @@ def gen(ids,T):
     hid=[]; toks=[]
     with torch.no_grad():
         o=m(torch.tensor([ids])); past=o.past_key_values
-        h=F.normalize(o.hidden_states[-1][0,-1].float(),dim=-1).numpy() if hasattr(o,'hidden_states') else None
-        # hidden_states не просили — снимем через выход модели: используем logits только для выбора,
+        # hidden_states не просили (o.hidden_states is None при output_hidden_states=False;
+        # hasattr==True ловушка — ревью A/qwen Б3): состояния снимаем hook'ом ниже.
         # состояния — отдельным hook'ом
     hs={}
     def hk(mod,a,out2):
