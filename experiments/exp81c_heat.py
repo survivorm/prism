@@ -36,7 +36,7 @@ for U in Uo+Uc:
 Mm=np.linalg.solve(sum(x.T@x for x in Xs).T,sum(x.T@y for x,y in zip(Xs,Ys)).T).T
 w,Vv=np.linalg.eigh(.5*(Mm+Mm.T));pl=Vv[:,np.argsort(w)[:2]]
 import torch.nn.functional as F
-Bt=torch.tensor(B.T,dtype=torch.float32); Plt=torch.tensor(pl,dtype=torch.float32)
+_ = F  # (импорт оставлен для F.normalize в будуших вариантах; сейчас состояния идут hook'ом)
 def gen(ids,T):
     hid=[]; toks=[]
     with torch.no_grad():
@@ -55,7 +55,7 @@ def gen(ids,T):
         lg=o.logits[0,-1].float()
         nxt=torch.argmax(lg) if T==0 else torch.multinomial(torch.softmax(lg/T,0),1)
         toks.append(int(nxt)); hid.append(hs["h"].copy())
-        for _ in range(N-2):
+        for _ in range(N-1):   # 1 seed + 383 = ровно 384 (ревью A/qwen #12: было N-2=383)
             o=m(nxt.view(1,1),past_key_values=past,use_cache=True); past=o.past_key_values
             lg=o.logits[0,-1].float()
             nxt=torch.argmax(lg) if T==0 else torch.multinomial(torch.softmax(lg/T,0),1)

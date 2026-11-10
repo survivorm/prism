@@ -22,8 +22,8 @@ m=AutoModelForCausalLM.from_pretrained(BASE,dtype=torch.float32).eval(); m.requi
 pin=json.load(open(ROOT/"data"/"calib_pins"/"wiki___data_Qwen_Qwen3.5_0.8B__n16__min64__max256__plain.json"))
 def kernel(ids):
     return np.array([np.mean([ids[t]==ids[t+k] for t in range(len(ids)-k)]) if len(ids)>k else np.nan for k in range(1,K+1)])
-def null_kernel(ids,rng,reps=3):
-    return np.median([kernel(list(rng.permutation(ids))) for _ in range(reps)],0)
+def null_kernel(ids,rng,reps=2):
+    return np.mean([kernel(list(rng.permutation(ids))) for _ in range(reps)],0)  # mean-2 = КОНВЕНЦИЯ КОРПУСА (ревью A/qwen #7: median-3 сдвигал own_excess на +0.001)
 # ---- корпусный baseline v2 (rows + 2 null-пермута на док, порядок doc-major) ----
 BP=OUT/"KERNEL_BASELINE.json"
 if not BP.exists():
@@ -76,6 +76,7 @@ for k in range(K):
 out=dict(own_kernel=[float(x) for x in np.median(G,0)],
          own_excess=[float(x) for x in med_g],corpus_excess=[float(x) for x in med_c],
          own_boot_ci=ci,
+         raw=dict(G=G.tolist(),GN=GN.tolist(),cor=cor.tolist(),CN=CN.tolist()),   # побайтовая база для omc-пересчёта без регегена
          early_excess=[float(x) for x in np.median(np.array(seg_early)-GN,0)],
          late_excess=[float(x) for x in np.median(np.array(seg_late)-GN,0)])
 print("\nown  excess:",np.round(med_g,4).tolist())
@@ -91,5 +92,5 @@ for k in range(K):
 out["own_minus_corpus"]=[float(x) for x in diff]; out["omc_boot_ci"]=cd
 print("own−cor      :",np.round(diff,4).tolist())
 print("sig(k)       :",[int(l>0 or h<0) for l,h in cd],flush=True)
-(OUT/"GEN_KERNEL.json").write_text(json.dumps(out,indent=1))
+(OUT/"GEN_KERNEL.json").write_text(json.dumps(out,indent=1,allow_nan=False))
 print("E83 DONE",flush=True)
