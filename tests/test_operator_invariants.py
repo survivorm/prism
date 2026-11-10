@@ -124,6 +124,27 @@ def test_c_pred_and_A(data):
     assert A_alignment(J, p) == pytest.approx(c(J, p) / cp, rel=1e-12)
 
 
+def test_c_pred_is_the_isotropic_predictor():
+    """P1-1: c_pred = tr P / K is the value c takes under isotropic J —
+    orthonormal rows (exact) and iid entries (concentrated). The old formula
+    trP/√(K·trP²) (spectral flatness of P) does not predict c (70–330× off
+    on real p; docs/prism_core_audit.md P1-1)."""
+    from prism.p_algebra import trace_P
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal(32) * 2.0
+    p = np.exp(x) / np.exp(x).sum()
+    expect = trace_P(p) / 32
+    # orthonormal rows: c = tr(P·QQᵀ)/tr(QQᵀ) = trP/K exactly
+    Q, _ = np.linalg.qr(rng.standard_normal((32, 64)))
+    assert c(Q[None, :, :], p) == pytest.approx(expect, rel=1e-10)
+    # iid entries: concentrates around trP/K (same scale as test_iid_null)
+    X = rng.standard_normal((4000, 32, 64))
+    assert c(X, p) == pytest.approx(expect, rel=0.02)
+    # c_pred IS this predictor: reverting to trP/√(K·trP²) fails both
+    assert c_pred(p) == pytest.approx(c(Q[None, :, :], p), rel=1e-10)
+    assert c_pred(p) == pytest.approx(c(X, p), rel=0.02)
+
+
 def test_lq_coupling_and_eps3_order():
     """Патч v2 §1.1: b_res = ε³⟨Jv,H[v,v]⟩ + O(ε⁴). Квадратичное отображение с
     известной Hessian-формой: масштаб b_res ~ ε³ (не ε⁴), коэффициент = lq_coupling."""

@@ -36,7 +36,7 @@ paper.md §ref-math §1 и карточки ref-exp.md **ссылаются** н
 | `σ_1 ≥ σ_2 ≥ …` | скаляры | сингулярные значения `J^(p)` | §paper §3 |
 | `uniformity(u)` | скаляр `∈ [0,1]` | доля направления `u` вдоль uniform-режима `𝒮`; определён только для векторов token-пространства | §paper §3 |
 | `g_uni` | скаляр | `‖Q J‖_F² / ‖J‖_F²`, `Q = uu^T`, `u = 1/√K` — доля энергии **сырого** `J` в uniform-режиме (убиваемая gauge-часть) | §paper §3 |
-| `gauge_share` (ESG) | скаляр | доля энергии `JJ^T` на uniform-направлении (token space): `Σ_k (u_k^T 1)²λ_k / Σ_k λ_k` (SVD `J = UΛV^T`); top-1 proxy `λ₁·uniformity(u₁)/trace` — E-10a | §paper §3 |
+| `gauge_share` (ESG) | скаляр | доля энергии `JJ^T` на uniform-направлении (token space): `Σ_k (u_k^T 1)²λ_k / (K·Σ_k λ_k)` (`λ_k` — собственные значения `JJ^T`, т.е. σ_k²; SVD `J = UΛV^T`); top-1 proxy `λ₁·uniformity(u₁)/trace` — E-10a | §paper §3 |
 | `r_eff` | скаляр | эффективный ранг: энтропический `exp(−Σ p_k log p_k)`; вторичные — stable rank, participation ratio | §paper §3, §ref-exp (блок 4.3) |
 | `r_KL` | скаляр | функциональный ранг: минимальное `r`, при котором KL defrag-r аппроксимации совпадает с KL полной `J^(p)` | §paper §3 |
 | `u_g`, `v_g` | векторы | левый (token) / правый (hidden) сингулярный вектор `J`, максимизирующий `\|cos(u_g, 1)\|` | §paper §3 |

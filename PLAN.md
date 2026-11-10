@@ -293,3 +293,17 @@ test_interventions 25/26 PASSED (последний — тяжёлый model-for
 Границы: не трогать experiments/ (аудитировалось отдельно), kaggle_kernel/,
 docs/ кроме нового аудит-дока; коммит явными путями (дерево общее);
 не запускать тяжёлые прогоны.
+
+## P1-фиксы аудита ядра (11.11, «продолжай»)
+
+- [x] P1-1: `c_pred` формула → `tr P / K` (изотропный предиктор, канон E-40
+  дока `A`); модуль/функция docstring; test_c_pred_is_the_isotropic_predictor
+  (ортонорм. строки точно + iid концентрация); ref-impl строка.
+- [x] P1-2: 1/K в спектральной формуле gauge_share во всех 6 местах
+  (ref-math:39, paper 214/326/218, ref-exp 1091/1610) + уточнение λ_k = σ_k².
+- [x] тесты (test_operator_invariants, test_audit_core_v2, test_p_algebra,
+  test_layer_selection) зелёные.
+- [x] mixed-script скан рус. доков; коммит явными путями.
+
+Границы: только формулы/подписи, никаких новых чисел; experiments/,
+kaggle_kernel/ не трогать; коммит явными путями (дерево общее).
