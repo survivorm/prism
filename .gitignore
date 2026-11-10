@@ -1,14 +1,73 @@
-# ПРАВИЛО 10.11: кеши/артефакты >10MB — на диске, НЕ в git
-*.npz
-*.npy
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# venv
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Pi internals
+.pi/
+
+# Until-done state
+.until-done/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ruff cache
+.ruff_cache/
+
+# Results (heavy artifacts)
+results/.gramians
+results/*.npz
+results/archive/
+results/v2check/
+
+# Local model/dataset caches + run logs (heavy, never in git)
+.hf_cache/
+prism-*.log
+
+# Misc
+.DS_Store
+*.orig
+_auto_chain/exp27_v9/
+results/*.json
+
+results/exp27_jcache.pt
+
+# Model weights + caches (never in git — ship via Kaggle datasets)
+.hf_hub/
+_auto_chain/
+results/targets/
+results/exp17/
 *.pt
 *.safetensors
+*.bin
+*.ckpt
+*.gguf
+kaggle_kernel/.hf_cache/
+
+# артефакты прогонов E-45b/E-46 (скалярные колонки и строки проекций): пересоздаются
+# скриптами из experiments/, в git входят только логи.
+results/*.json.gz
+
+# === 10.11 ЖЁСТКОЕ ПРАВИЛО: кеши/тяжёлые артефакты — на диске, никогда в git ===
+*.npz
+*.npy
 *.jsonl
 models/
-.hf_cache/
-.idea/
-.pi/
-__pycache__/
-*.pyc
-.venv/
-logs/*.log
+results/e*/**
+!docs/**
