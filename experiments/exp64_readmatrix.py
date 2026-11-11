@@ -18,8 +18,8 @@ def curves(meta,pref):
     out={}
     for k,v in meta.items():
         if not k.startswith(pref): continue
-        c=v["curves"].get(L) or v["curves"].get(str(23))
-        if c: out[k]=np.array([c.get(kk,np.nan) for kk in ks],dtype=float)
+        cd=(v["curves"].get(L) or v["curves"].get(str(23)) or {}).get("curve") or {}
+        if cd: out[k]=np.array([cd.get(kk,np.nan) for kk in ks],dtype=float)
     return out
 def summarize(name,C):
     if not C: return None

@@ -71,8 +71,8 @@ for T in ["1.2","1.5","2.0"]:
         lad[T]=dict(dip=md([v["curves"]["23"]["dip"] for k,v in m.items()]),
             hump=md([v["curves"]["23"]["hump"] for k,v in m.items()]),
             plateau=md([v["curves"]["23"]["plateau"] for k,v in m.items()]),
-            rep16=md([v["rep16"] for k,v in m.items()]),
-            lookup=md([v["lookup"] for k,v in m.items()]),n=len(m))
+            rep16=md([v.get("rep16") for k,v in m.items()]),
+            lookup=md([v.get("lookup") for k,v in m.items()]),n=len(m))
 if lad: R["LADDER"]=lad
 # ---- degenerate состав (wiki T=0)
 if m1:

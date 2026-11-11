@@ -443,21 +443,47 @@ kaggle_kernel/);
 оригиналов — в /tmp, не в репо); npz в tpu/tpu_v8/ не трогать; e81-e85 regenerated — не
 перепускать; numbers из сессии — эталон верификации.
 
-- [ ] **Ф1. Kaggle: pull kernel output prism-e64-tpu (v8 и v-до-P4) → meta-JSON в
-      tpu_v8/ и tpu/**; сверка размеров с инвентарем 09.11 09:29 (P1_own_meta 217143,
-      P2c 128040, P2_corpus 150809, P3_rnull 346402, P4_T1.2 192984 / T1.5 192619 /
-      T2.0 192449, STATUS 335)
-- [ ] **Ф2. Локальные генераторы TPU-батареи:** JUDGMENTS (exp64_tpu_report.py),
-      LAMBDA1/READMATRIX/P5_shift/STATUS (найти генераторы в сессии), EIGEN.json
-      (exp76 final), EIGEN_L/LATE/M/k (e82/e82b/76k), EIGEN_J+cor_p1 (exp79_jlens) —
-      перепустить по npz (на диске); верификация по числам сессии
-- [ ] **Ф3. e69:** реконструкция оригинала exp69_therapy.py (v1, pre-21:26: attach()
-      только q/k/v/o, зашитый anchor [3.19,-0.174], без seed) из сессии → /tmp,
-      прогон `setsid nohup .venv/bin/python ...`; эталон: nll 10.219→6.567, dip
-      -0.2956→-0.2593, verdict p/r_recovered false
-- [ ] **Ф4. e71:** прогон exp71_soliton.py (диск = оригинал 06:29, проверить маркер);
-      эталон: A-кривая dip_med (0.0…-0.005 @λ≤0.5, -0.207 @0.7, -0.235 @0.8),
-      B: wiki_0 -0.179→-0.19 … wiki_7 -0.137→-0.157
-- [ ] **Ф5. e75:** прогон exp75_tmpl_family.py; эталон — из сессии (U-D/U-E клетки)
-- [ ] **Ф6. SOLITON_COLLISION.json ← `[]`** (2 байта, из сессии head -c 400)
+- [x] **Ф1. Kaggle: pull kernel output prism-e64-gpu → meta-JSON в tpu_v8/ и tpu/**
+      (ядро = voroninmichael/prism-e64-gpu, COMPLETE; все 4 npz побайто = диск,
+      размеры meta = инвентарь 09.11 09:29: P1_own_meta 217143, P2c 128040, P2_corpus
+      150809, P3_rnull 346402, P4_T1.2 192984 / T1.5 192619 / T2.0 192449, STATUS 335 —
+      все совпали; P5_shift 2085). P4_T*.npz в tpu/ на момент инцидента НЕ БЫЛО
+      (их нет в инвентаре 09:29) — не докачивать.
+- [ ] **Ф2. Локальные генераторы TPU-батареи:**
+      - [x] JUDGMENTS.json — exp64_tpu_report.py (репо + v.get-фикс 22385); 2604B
+        (инцидент 2623B); числа = доковые: RNULL dip 4.1e-6 (полоса ±1.6e-5), trained
+        −0.111, MATRIX −0.167/−0.111, LL asym 0.0039 «симметрично».
+      - [x] READMATRIX.json — exp64_readmatrix.py: on-disk читал плоский формат meta,
+        а meta (Kaggle) вложенный ('curve') → All-NaN; перенесён 2-строчный фикс из
+        патча 22385. 749B (инцидент 655B — артефакт был от более старой версии);
+        числа верифицированы: dip_corpus −0.1671, dip_own −0.1111, xdoc_cos 0.193,
+        NO-AUTO-VERDICT (audit2 B4).
+      - [x] LAMBDA1.json — exp64_lambda1.py exit=0 (28.9K ≈ инцидент 29577B).
+      - [x] P5_shift.json / STATUS.json — из Kaggle (Ф1).
+      - [ ] EIGEN.json — ФОРЕНЗИКА ЗАКРЫТА: генератор = v2 «в-файле общий базис»
+        (lift_docs без M; v2-патч утерян из лога, old-текст восстановлен из цитаты
+        патча 23187). Побайто-верификация по дампу сессии 23145 (11-09 11:19):
+        L1 0.231/0.873/λcor [−1.103,−0.748] λown [−1.184,−0.955]; L11 0.244/0.939/
+        [−0.875,−0.497]/[−0.915,−0.837]; L23 0.510/0.800/[−0.907,−0.526]/[−1.199,
+        −1.127] — ВСЁ совпало по данным с диска (npz целы). Перепуск по честной
+        v3-сборке (10:30 + v2 lift_docs) запущен.
+      - [ ] EIGEN_k/EIGEN_L/EIGEN_J — цепочка запущена: финальные сессионные версии
+        exp76k/exp76l/exp79 реконструированы (write+патчи, песочница, все применились
+        с подтверждениями) — on-disk были stale; e64_gpu.py для exp76k — из Kaggle-
+        источника (все нужные функции: dcurve/vpath_units/curves_series/prompt_ids).
+- [ ] **Ф3. e69:** генератор THERAPY.json = v2, НЕ v1: v1 (write 11-08 19:03) +
+      attach-патч 21:26 (generic LoRA-scan: все Linear c out_features>=1024 в attention,
+      n=66) — v1-ран (21:22) не дожил. transformers 5.x: Qwen3_5 = linear_attn
+      (L6/12/18/22: in_proj_qkv/z/b/a, out_proj) + self_attn (L23) — generic scan
+      покрывает оба. Запущен (очередь после e75). Эталон: [t0] nll 10.219 dip −0.2956
+      (lora n=66).
+- [ ] **Ф4. e71:** v1-оригинал + зачистка хвоста (heredoc-извлечение подмешало shell-
+      текст после EOF; обрезан по `E71 DONE`). Эталон: A-кривая dip_med (0.0…-0.005
+      @λ≤0.5, -0.207 @0.7, -0.235 @0.8), B: wiki_0 -0.179→-0.19 … wiki_7 -0.137→-0.157.
+- [x] **Ф5. e75:** TMPL_FAMILY.json 7.5K, «E75 DONE» (qwen raw/tmpl + lfm, verdict).
+- [x] **Ф6. SOLITON_COLLISION.json ← `[]`** (2 байта, из сессии head -c 400; 24/24 —
+      неподтверждённое, из ТЗ/статей снято — артефакт-пустышка, как был)
+- [x] **Ф2-бис: НЕВЫПОЛНИМО реплеем:** EIGEN_M.json и EIGEN_LATE.json — генераторы
+      были /tmp-скретчи сессии, не в репо; в сессии только чтения, не запись. Отмечено
+      в отчёте.
 - [ ] **Ф7.** PLAN.md + коммит (explicit paths) + отчёт
