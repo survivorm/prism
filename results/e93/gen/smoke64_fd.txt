@@ -1,0 +1,112 @@
+=== sample 1 16:42:02 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 2 16:42:03 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 3 16:42:03 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 4 16:42:04 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 5 16:42:05 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 6 16:42:05 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 7 16:42:06 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 8 16:42:07 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 9 16:42:07 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 10 16:42:08 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 11 16:42:09 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 12 16:42:09 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 13 16:42:10 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 14 16:42:11 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 15 16:42:12 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=15 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 16 16:42:12 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=14 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 17 16:42:13 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 18 16:42:14 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 19 16:42:14 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 20 16:42:15 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 21 16:42:16 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 22 16:42:17 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 23 16:42:18 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 24 16:42:19 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 25 16:42:20 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 26 16:42:21 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 27 16:42:22 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null
+=== sample 28 16:42:23 pgrep -x llama-cli -> [3042624]
+  pid=3042624 comm=llama-cli fd_count=17 children=[]
+          2 /dev/dri/renderD128
+          1 /dev/null

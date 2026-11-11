@@ -60,7 +60,9 @@ for nm in ok:
             U,H=blk_path(u,hn,zlib.crc32(f"{nm}|{b}|{sd}".encode())%2**32,b)
             c1=cos1(curve_u(U,H))
             msk,unm,frac=masked_unmasked(c1,b)
-            ctrl=[float(np.median(c1[rngc.choice(len(c1),max(int(frac*len(c1)),2),replace=False)])) for _ in range(NC)]
+            # контроль ПОЗИЦИОННОГО отбора: тот же размер подотбора, но из НЕшаффленного c1 (real)
+            c1r=c1real[nm]; msk_sz=max(int(frac*len(c1)),2)
+            ctrl=[float(np.median(c1r[rngc.choice(len(c1r),min(msk_sz,len(c1r)),replace=False)])) for _ in range(NC)]
             per[b][(nm,sd)]=dict(masked=msk,unmasked=unm,control=float(np.median(ctrl)))
 def medsel(b,key,sel):
     v=[per[b][k][key] for k in per[b] if k[0] in sel]

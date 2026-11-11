@@ -1,0 +1,87 @@
+{
+ "stage": "R9-17 S0 (пины/смоук; S1-S3 не запускались)",
+ "date": "11.11",
+ "binary": "/home/survivor/work/llama.cpp-vk/build/bin/llama-cli",
+ "build": "b12277-7c2653acc",
+ "ld_library_path_note": "реальные .so лежат в build/bin (RUNPATH=/home/survivor/work/llama.cpp-vk/build/bin); в build/ggml/src и build/src .so ОТСУТСТВУЮТ, поэтому LD_LIBRARY_PATH=build/ggml/src:build/src из ТЗ ни на что не влияет — рабочий вариант build/bin",
+ "model": "/data/Qwen/qwen3.5-0.8B-f32.gguf",
+ "model_meta": {
+  "ftype": "all F32",
+  "arch": "qwen35",
+  "block_count": 25,
+  "context_length": 262144,
+  "chat_template_present": true,
+  "add_bos_token": false,
+  "eos_token_id": 248046
+ },
+ "device": "Vulkan0: Intel(R) Iris(R) Xe Graphics (ADL GT2)",
+ "flags_this_build": {
+  "temperature": "--temp N (--temperature), default 0.80 => greedy: --temp 0  [T-КЛЕТКА ЕСТЬ]",
+  "seed": "-s SEED (--seed), default -1",
+  "n_predict": "-n N (--predict/--n-predict)",
+  "device": "-dev NAME (--device), --list-devices для списка",
+  "gpu_layers": "-ngl N (--gpu-layers/--n-gpu-layers)",
+  "threads": "-t N (--threads)",
+  "no_conversation": "НЕТ: -cnv/--conversation/-no-cnv зарегистрированы только для LLAMA_EXAMPLE_COMPLETION (common/arg.cpp:1873-1882) и в llama-cli -h отсутствуют => llama-cli их ОТКАЗЫВАЕТСЯ парсить",
+  "single_turn": "-st (--single-turn) — единственный доступный в llama-cli аналог «одного хода»",
+  "raw_continuation": "обязательно --chat-template '{% for message in messages %}{{ message[\"content\"] }}{% endfor %}' (+ --skip-chat-parsing -rea off --reasoning-format none), иначе -p уходит в /v1/chat/completions встроенного сервера с чат-шаблоном модели",
+  "other_used": [
+   "-c 2048",
+   "--no-display-prompt",
+   "--no-show-timings",
+   "--simple-io",
+   "-o FILE",
+   "-v (для логов Vulkan/ids)"
+  ],
+  "sampling_off_switches": [
+   "--top-k 0",
+   "--top-p 1.0",
+   "--min-p 0.0",
+   "--xtc-probability 0.0",
+   "--dry-multiplier 0.0",
+   "--repeat-penalty 1.0",
+   "--presence-penalty 0.0",
+   "--frequency-penalty 0.0"
+  ]
+ },
+ "sampler_chain_log": "logits -> ?penalties -> ?dry -> ?top-n-sigma -> ?top-k -> ?typical -> ?top-p -> ?min-p -> ?xtc -> temp-ext -> greedy",
+ "smoke": {
+  "prompt": "Beginners BBQ Class Taking Place in Missoula!",
+  "attempt1": "флаг --chat-template '{{ message[\"content\"] }}' (без цикла) => пустой форматированный промпт, predicted_n=0, RUN_RC=0 — молча пустой ген, артефакт smoke64_out.txt был 65 байт; попытка ЗАБРАКОВANA",
+  "attempt2_cmd_file": "/tmp/r917/smoke.sh (запуск через ./run_one.sh r917smoke bash /tmp/r917/smoke.sh)",
+  "prompt_tokens": 11,
+  "predicted_n": 64,
+  "tok_per_s": 8.29,
+  "layers_offloaded": "26/26 -> Vulkan0",
+  "gen_text": "The BBQ Class is a great way to get to know the community and learn about the local culture.\nThe class is a great way to get to know the community and learn about the local culture.\nThe class is a great way to get to know the community and learn about the local culture.\nThe class",
+  "gpu_fd_proof": "28 снимков (0.5 с) pgrep -x llama-cli -> pid 3042624, comm=llama-cli, детей нет, в /proc/<pid>/fd два /dev/dri/renderD128 (+ /dev/null); встроенный llama-server работает тредами в том же процессе (tools/cli/cli-server.h:33-46 std::thread), поэтому renderD-fd держит именно llama-cli",
+  "leftover_processes": "после завершения pgrep -x llama-cli пуст",
+  "smoke_script": "/tmp/r917/smoke.sh (права: /tmp, не в репозитории; команда целиком продублирована в flags_this_build)"
+ },
+ "cpu_metric_on_smoke": {
+  "tokenizer": "torch transformers 5.15.1 CPU, /data/Qwen/Qwen3.5-0.8B",
+  "prompt_tokens_torch": 11,
+  "greedy_parity": "первые 63 из 64 id совпали ПОБИТОВО (log 'slot decode token, id=' vs torch do_sample=False); llama-cli обрезает ведущий \\n в content, поэтому текст в -o без него, а re-tokenize даёт 63 id",
+  "rep4_med": 1.0,
+  "rep8_med": 1.0,
+  "rep16_med": 0.0,
+  "onset4": 24,
+  "onset8": 28,
+  "onset8_llama_text_variant": 27,
+  "caveat": "реализация rep_flags/onset дословно из exp81b_replay.py; onset на 64-токенном smoke = нижняя граница, для S1 (n=1024) окно 16 осмысленно",
+  "greedy_parity_artifact": "results/e93/gen/smoke64_llama_ids.json sha16 71d5b410552a83d4 (llama_ids == torch_ids[:63], first_mismatch_index=null)"
+ },
+ "prompt_extraction": {
+  "out": "results/e93/prompts.json",
+  "source": "experiments/exp81b_replay.py (в ТЗ назван exp81b_therapy.py — такого файла нет ни в дереве, ни в git-истории: git log --all --diff-filter=ADR по experiments/*therapy* даёт только exp69_therapy.py)",
+  "roundtrip_fail": 0,
+  "n_tokens_each": 64
+ },
+ "artifacts_uncommitted": {
+  "smoke64_out.txt": "0201369492dd0474",
+  "smoke64_fd.txt": "a4b77b4ea3fe8f2d",
+  "smoke64_cpu_check.json": "5fcd8e6b882e3661",
+  "smoke64_llama_ids.json": "71d5b410552a83d4",
+  "S0_PINS.json_self": "см. sha16 в git-объекте не фиксируется (не коммичен по ТЗ)"
+ }
+}
