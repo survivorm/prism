@@ -169,3 +169,20 @@ format-гейтом (len==384 или фикс. стоп, prompt-count==64); serv
    поддерживается ли этим форком (если нет — спайк зафиксирует, харнесс не
    шлёт неподдерживаемое поле)?
 8. Прочее: всё, что ломает одноисполнительность или делает Q невыполненным.
+
+## 8. Уточнения r2.1 (пост-коммитная сверка имён полей с исходниками)
+
+1. Реальные имена полей запроса `/completion` (grep `tools/server/server-task.cpp:97-130`):
+   `temperature, top_k, top_p, min_p, top_n_sigma, xtc_probability, xtc_threshold, typical_p,
+   repeat_last_n, repeat_penalty, presence_penalty, frequency_penalty, dry_multiplier, dry_base,
+   dry_allowed_length, dry_penalty_last_n, dry_sequence_breakers, mirostat, mirostat_tau, mirostat_eta,
+   adaptive_target, adaptive_decay, stop, max_tokens, n_predict, n_keep, n_discard, ignore_eos, stream,
+   logit_bias, n_probs, min_keep, seed`. Плюс `logprobs`/`top_logprobs` (`server-common.cpp:1381-1388` → `n_probs`)
+   и `cache_prompt` (`server-schema.cpp:31`).
+2. Фантомов в запросе быть не должно: полей `anti_reverse`, `penalty_last_n`, `dry_penalty`, `dynatop_p`
+   в этом форке нет (grep `tools/server/*.cpp` = 0; совпадения — только в vendored `tools/mtmd/.../llama-sweep`).
+   В §2b засылать только имена из п.1.
+3. `task_params::to_json(only_metrics)` используется для метрик, поэтому **эха применённых sampling-параметров
+   в ответе `/completion` нет** → проверка штрафов делается поведенчески в спайке: тот же `w0` с
+   `repeat_penalty: 1.1`; id-поток не изменился → штрафы в билде не применяются (записать в NOTES как
+   ограничение; заодно подтверждает, что основной penalty-free поток не искажён).
