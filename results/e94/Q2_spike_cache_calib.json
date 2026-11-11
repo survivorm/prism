@@ -1,0 +1,133 @@
+{
+ "phase": "q2",
+ "started_unix": 1794440519,
+ "docs": [
+  "w0",
+  "w2",
+  "w4",
+  "w9",
+  "w13",
+  "w14"
+ ],
+ "per_position": {},
+ "summary": {},
+ "body_template": {
+  "prompt": [],
+  "n_predict": 1,
+  "temperature": 0,
+  "stream": false,
+  "return_tokens": true,
+  "logprobs": true,
+  "top_logprobs": 20,
+  "cache_prompt": true,
+  "seed": 8181,
+  "repeat_penalty": 1.0,
+  "presence_penalty": 0.0,
+  "frequency_penalty": 0.0,
+  "repeat_last_n": 0,
+  "dry_multiplier": 1.0,
+  "dry_base": 1.0,
+  "xtc_probability": 0.0,
+  "mirostat": 0,
+  "n_probs": 20,
+  "top_k": 400,
+  "top_p": 1.0,
+  "min_p": 0.0,
+  "typical_p": 1.0
+ },
+ "port": 8110,
+ "server_pid": 391698,
+ "t_load_s": 10.06,
+ "fd_after_health": [
+  "/dev/dri/renderD128",
+  "/dev/dri/renderD128"
+ ],
+ "spike_g2": {
+  "order": [
+   64,
+   64,
+   128,
+   128,
+   192,
+   192
+  ],
+  "rows": [
+   {
+    "k": 64,
+    "req": 1,
+    "r2": false,
+    "tokens_evaluated": 64,
+    "cache_n": 0,
+    "prompt_n": 64,
+    "prompt_ms": 453.048,
+    "wall_s": 0.528,
+    "wall_per_pos": 0.008257
+   },
+   {
+    "k": 64,
+    "req": 2,
+    "r2": true,
+    "tokens_evaluated": 64,
+    "cache_n": 60,
+    "prompt_n": 4,
+    "prompt_ms": 265.50100000000003,
+    "wall_s": 0.365,
+    "wall_per_pos": 0.005706
+   },
+   {
+    "k": 128,
+    "req": 3,
+    "r2": false,
+    "tokens_evaluated": 128,
+    "cache_n": 64,
+    "prompt_n": 64,
+    "prompt_ms": 478.692,
+    "wall_s": 0.58,
+    "wall_per_pos": 0.004529
+   },
+   {
+    "k": 128,
+    "req": 4,
+    "r2": true,
+    "tokens_evaluated": 128,
+    "cache_n": 124,
+    "prompt_n": 4,
+    "prompt_ms": 227.633,
+    "wall_s": 0.335,
+    "wall_per_pos": 0.002617
+   },
+   {
+    "k": 192,
+    "req": 5,
+    "r2": false,
+    "tokens_evaluated": 192,
+    "cache_n": 128,
+    "prompt_n": 64,
+    "prompt_ms": 493.789,
+    "wall_s": 0.6,
+    "wall_per_pos": 0.003123
+   },
+   {
+    "k": 192,
+    "req": 6,
+    "r2": true,
+    "tokens_evaluated": 192,
+    "cache_n": 188,
+    "prompt_n": 4,
+    "prompt_ms": 263.259,
+    "wall_s": 0.372,
+    "wall_per_pos": 0.001939
+   }
+  ],
+  "pass": false,
+  "failures": [
+   "G2 k=64: cache_n=60 < k-2=62",
+   "G2 k=128: cache_n=124 < k-2=126",
+   "G2 k=192: cache_n=188 < k-2=190"
+  ]
+ },
+ "spike_g2_note": "спайк-гейт упал — НЕ чиним; в NOTES предлагается скоуп 2 дока (w0, w4) вместо 6",
+ "rc": 2,
+ "halt_reason": "спайк: G2 k=64: cache_n=60 < k-2=62; G2 k=128: cache_n=124 < k-2=126; G2 k=192: cache_n=188 < k-2=190",
+ "t_total_s": 12.84
+}
