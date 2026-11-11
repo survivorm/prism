@@ -69,8 +69,14 @@ results/*.json.gz
 *.npy
 *.jsonl
 models/
-results/e*/**
 !docs/**
+# 11.11 (audit4 S2): `results/e*/**` СНЯТ — мелкие артефакты новой серии (json/log/md/txt/sha256/png,
+# все <5М) в git: иначе «ни один результат после 05.11 не имеет тела в репозитории».
+# Тяжёлые типы (*.pt/*.npz/*.npy/*.jsonl) остаются глобально игнорируемыми. Исключения:
+results/exp36_gauge_anatomy.json
+results/e50v3_out/qwen35-08b/tokenizer.json
+results/e*/*.log.gz
+results/e*/qwen35-08b/
 
 # daemon/временные логи (правило 10.11, после замечания ревью)
 logs/e51_*.log

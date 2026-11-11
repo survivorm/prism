@@ -4,7 +4,12 @@
 # канал: если после CE-терапии ритм сам вернётся в норму — двухосевой чек-ап валидируется как
 # мониторинг восстановления; если ритм НЕ вернётся при нормальном nll — каналы независимы и
 # «психотерапии» нужен специальный лосс по R-каналу).
-# Arтефакт: results/e69/THERAPY.json — trajectory по эпохам (nll, dip L23, loopy-прокси rep16).
+# Arтефакт: results/e69/THERAPY.json — trajectory по эпохам (nll, dip L23).
+# FIX 11.11 (audit2 B6/D3/D10): (1) healthy_anchor СЧИТАЕТСЯ этим же скриптом на тех же 8 доках
+#   тем же evalm (был зашит [3.19,-0.174] — медиана по 12 докам E-65 против среднего по 8: Б8 в коде);
+#   (2) .eval(); (3) rep16 НЕ СЧИТАЕТСЯ (докстринг обещал, код не считал) — заявка «ритм вылечился,
+#   не лупы убраны» НЕ ЗАКРЫТА альтернативой «убрали лупы» — см. audit2 B6; (4) nll здесь — train-nll
+#   на тех же 8 доках обучения; holdout E-69c (math/code/chat) НЕ ИМЕЕТ КОДА в репо (audit2 D4) — в очереди.
 import ast, json, os, time, math
 import numpy as np, torch
 torch.set_num_threads(10)
@@ -65,7 +70,10 @@ def evalm(m,grad=False):
         rows.append((float(nll),c["dip"]))
     for h in hs: h.remove()
     return float(np.mean([r[0] for r in rows])),float(np.median([r[1] for r in rows]))
-m=svd8(AutoModelForCausalLM.from_pretrained(B,dtype=torch.float32))
+m=AutoModelForCausalLM.from_pretrained(B,dtype=torch.float32).eval()  # FIX audit2 D10
+anchor_nll,anchor_dip=evalm(m)  # FIX audit2 D3: якорь = те же 8 доков, тот же evalm, ДО поражения
+res["healthy_anchor_measured"]=[round(float(anchor_nll),3),round(float(anchor_dip),4)]
+m=svd8(m)
 n=attach(m)
 for p in m.parameters(): p.requires_grad_(False)
 for mod in m.modules():
@@ -88,7 +96,9 @@ for ep in range(EPOCHS):
     res["traj"].append(dict(epoch=ep,ce_mean=round(tot/len(docs),3),nll=round(nv,3),dip=round(dv,4)))
     print(f"[ep{ep}] CE {tot/len(docs):.3f} | eval nll {nv:.3f} | dip {dv:+.4f}",flush=True); save()
 res["verdict"]=dict(start=[n0,round(d0,4)],end=[res["traj"][-1]["nll"],res["traj"][-1]["dip"]],
-    healthy_anchor=[3.19,-0.174],
-    p_recovered=bool(abs(res["traj"][-1]["nll"]-3.19)<0.4),
-    r_recovered=bool(abs(res["traj"][-1]["dip"]-(-0.174))<0.04))
+    # FIX audit2 D3: якорь из замера выше (те же 8 доков), не зашитая медиана-12
+    healthy_anchor=[anchor_nll,anchor_dip],
+    p_recovered=bool(abs(res["traj"][-1]["nll"]-anchor_nll)<0.4),
+    r_recovered=bool(abs(res["traj"][-1]["dip"]-anchor_dip)<0.04),
+    caveat="rep16 не считается (audit2 B6): «лечение» не отделено от «убрали лупы»; nll — train на 8 доках")
 save(); print(json.dumps(res["verdict"],indent=1),flush=True); print("E69 DONE",flush=True)

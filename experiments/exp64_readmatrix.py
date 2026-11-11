@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """exp64_readmatrix.py — сводка матрицы чтения (own vs corpus vs rnull-клетки) + gap×lookup.
 Вход: P1_own_meta.json, P2_corpus_meta.json (TPU). Профили: нормированные кривые k=1..48;
-own-vs-xdoc контроль — по P1 между документами; gap_doc = own-профиль минус средний чужой.
+own-vs-xdoc контроль — по P1 между документами; xdoc_cos_mean = СРЕДНЯЯ КОСИНУСНАЯ ПОХОЖЕСТЬ кривых own (НЕ «gap»: v1-докстринг обещал
+«own-профиль минус средний чужий», код считает cos — audit2 D5). FIX 11.11 (audit2 B4/D6):
+авто-вердикт СНЯТ — порядок corpus(−0.167)>crossdom(−0.141)>own(−0.111) совпадает ни с одной
+пре-рег сигнатурой; «читатель > писатель» неотделим от «естественный > вырожденный» (own 63% лупов)
+до E-72/E-73.
 Сигнатуры линз: corpus≈own (текст), own>corpus (петля), оба≫null (выученность)."""
 import numpy as np, json, os, sys
 d=sys.argv[1] if len(sys.argv)>1 else "results/e64/tpu"
@@ -44,7 +48,7 @@ if m2:
 if m1 and m2:
     o=res["own"]; c=res["corpus"]
     res["lens_read"]=dict(dip_own=o["dip"],dip_corpus=c["dip"],
-        verdict=("текстодостаточная линза (dip совпадают)" if abs(o["dip"]-c["dip"])<0.02 else
-                 "петлевая/политическая добавка (dip различаются)"))
+        # FIX audit2 B4/D6: авто-вердикт снят (числа — в артефакт, вердикт — человеком после E-72/E-73)
+        verdict="NO-AUTO-VERDICT (audit2 B4): порядок ни с одной пре-рег сигнатурой не совпадает; naturalness-конфаунд открыт до E-72/E-73")
 print(json.dumps(res,indent=1,ensure_ascii=False))
 json.dump(res,open(os.path.join(d,"READMATRIX.json"),"w"),indent=1,ensure_ascii=False)

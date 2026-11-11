@@ -4,7 +4,14 @@
 (гипотеза «32 = предложение пула», не модель).
 САМОАУДИТ: перемешиваем u и hn БЛОКАМИ вместе (тот же путь, что t25 blk32); seed crc32(nm|blk);
 невырожденные 36 (wiki=1 — только в пул non-wiki); фичи: dip=d(1), горб=max d(2..8), плато=median d(9..96);
-bootstrap CI 2000; sentence: id чьи строки коротки и кончаются на .!? — грубый прокси, зафлаган."""
+95% CI (перцентиль 2.5/97.5 по 2000 бутстрапов, НЕ размах — audit2 H1); sentence: id чьи строки
+коротки и кончаются на .!? — грубый прокси, зафлаган.
+FIX 11.11 (audit2 B1): dcurve считает ТОЛЬКО внутриблочные пары (маска t//b==(t+k)//b) —
+без маски лестница измеряет долю уцелевших пар (1−1/b), а не масштаб явления:
+измеренное/real 0.444/0.708/0.806/0.917/0.986/0.986 против 1−1/b = 0.50/0.75/0.875/0.94/0.97/0.984.
+Числа прежнего артефакта P3_ladder.json НЕ В СИЛЕ; «масштаб ≤16 → 2–4» — не установлен.
+FIX 11.11 (audit2 H1): CI — перцентиль, не min/max.
+"""
 import json, os, sys, zlib
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"2")
 import numpy as np, sys as _s; _s.path.insert(0,'.')
@@ -22,9 +29,15 @@ def blk_path(u,hn,seed,blk):
     U=np.concatenate([u[b*blk:(b+1)*blk] for b in idx],0); H=np.concatenate([hn[b*blk:(b+1)*blk] for b in idx],0)
     if nb*blk<T: U=np.concatenate([U,u[nb*blk:]]); H=np.concatenate([H,hn[nb*blk:]])
     return U,H
-def dcurve(P,kk):
+def dcurve(P,kk,blk):
+    # FIX audit2 B1: только внутриблочные пары — швы (1/b пар) выкидываются.
     Pn=P/np.maximum(np.linalg.norm(P,axis=1,keepdims=True),1e-12)
-    return np.array([float(np.median(np.einsum("ij,ij->i",Pn[:-k],Pn[k:]))) for k in kk])
+    t=np.arange(len(P)); out=[]
+    for k in kk:
+        c=np.einsum("ij,ij->i",Pn[:-k],Pn[k:])
+        m=(t[:-k]//blk)==((t[:-k]+k)//blk)
+        out.append(float(np.median(c[m])))
+    return np.array(out)
 rng=np.random.default_rng(77)
 BLKS=[2,4,8,16,32,64]
 cur={b:{} for b in BLKS}
@@ -32,7 +45,7 @@ for i,nm in enumerate(names):
     u=np.asarray(z[f"{nm}_L{L}_u"],dtype=np.float64); hn=np.asarray(z[f"{nm}_L{L}_hn"],dtype=np.float64)
     for b in BLKS:
         U,H=blk_path(u,hn,f"{nm}|{b}",b)
-        cur[b][nm]=dcurve(curve_u(U,H),np.arange(1,KM+1))
+        cur[b][nm]=dcurve(curve_u(U,H),np.arange(1,KM+1),b)
     if i%16==15: print("P3",i+1,flush=True)
 def feats(c): return np.array([c[0], c[1:8].max(), np.median(c[8:96])])
 out={"features":["dip","hump","plateau"],"by_blk":{}}
@@ -44,8 +57,9 @@ for b in BLKS:
     for k,Fv in F.items():
         A=np.array(Fv); med=np.median(A,0)
         bs=np.median(A[rng.integers(0,len(A),(2000,len(A)))],0)
+        ci=np.percentile(bs,[2.5,97.5],axis=0)  # FIX audit2 H1: 95% CI, не размах
         row[k]={"med":[round(float(x),4) for x in med],
-                "ci":[[round(float(bs[:,j].min()),4),round(float(bs[:,j].max()),4)] for j in range(3)]}
+                "ci":[[round(float(ci[j,l]),4) for l in range(2)] for j in range(3)]}
     out["by_blk"][b]=row
 # reference real (t25)
 Fr=np.array([feats(t25["curves_k1_96"]["real"][n]) for n in nw])

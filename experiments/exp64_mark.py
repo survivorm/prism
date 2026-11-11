@@ -45,7 +45,11 @@ for i,nm in enumerate(names):
     V=curve_u(u,hn); y=[]; sg=[]
     for k in K:
         P=np.einsum("ij,ij->i",V[:-k],V[k:]); y.append(float(np.median(P)))
-        sg.append(max(float(np.median(P[rng.integers(0,len(P),(200,len(P)))],axis=1).std()),2e-3))
+        # FIX audit2 D7: iid-ресемплинг позиций по АУТОКОРРЕЛИРОВАННОМУ ряду занижал σ
+        # (=> w=1/σ² завышен, qosc/qexp систематически завышены) — moving-block, блок 16.
+        BLK=16; nb=len(P)//BLK
+        sel=np.concatenate([np.arange(b*BLK,(b+1)*BLK)[None] for b in rng.integers(0,nb,(200,8))]).ravel()
+        sg.append(max(float(np.median(P[sel],axis=1).std()),2e-3))
     y=np.array(y); sd=np.array(sg); w=1.0/sd**2; tot=float(np.sum(w*y**2))
     best=None
     for om in WG:
@@ -54,6 +58,8 @@ for i,nm in enumerate(names):
         if best is None or f<best[0]: best=(f,float(om))
     be=min((wls(y,w,[a**K,b**K,ONES]),float(a),float(b)) for a,b in pairs2)
     fit[nm]={"om":best[1],"qosc":1-best[0]/tot,"qexp":1-be[0]/tot,
+             # FIX audit2 D8: «win» = best-SSE из ~3300 фитов против ~300 пар без null-калибровки:
+             # поле НЕ свидетельствует до порога «как часто osc выигрывает на шуме» (rnull-калибровка — в очереди)
              "win":"osc" if best[0]<be[0] else "exp","r2":be[1],"r2b":be[2]}
     if i%16==15: print("fit",i+1,flush=True)
 
@@ -71,5 +77,5 @@ out={"spearman_joint_om":spearman(jointv,omv),"spearman_joint_osc":spearman(join
                   "om_med_osc":float(np.median([fit[n]["om"] for n in names if dom[n]==d and fit[n]["win"]=="osc"] or [float("nan")])),
                   "osc_frac":float(np.mean([fit[n]["win"]=="osc" for n in names if dom[n]==d]))} for d in ["wiki","math","code","chat"]}}
 print("spearman joint~om:",round(out["spearman_joint_om"],3)," joint~osc:",round(out["spearman_joint_om_osc"] if False else out["spearman_joint_osc"],3))
-json.dump(out,open("../results/e64/e64c_markov.json","w"))
+json.dump(out,open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"results/e64/e64c_markov.json"),"w"))  # FIX audit4 S5: от ROOT, не "../"
 print("saved e64c_markov.json")

@@ -127,7 +127,7 @@ def main():
         V_big = (J.T @ J) @ torch.linalg.eigh((J.T @ J).double())[1][:, -16:]  # [D,D]
         ang = torch.acos(torch.linalg.svdvals(
             torch.linalg.qr(V_small)[0].T @ torch.linalg.qr(V_big)[0]).clamp(-1 + 1e-12, 1 - 1e-12))
-        assert float(ang.max()) < 1e-4, f"128-трюк расходится с [D,D]: {float(ang.max())}"  # 1.4e-6实测
+        assert float(ang.max()) < 1e-4, f"128-трюк расходится с [D,D]: {float(ang.max())}"  # 1.4e-6 (замер)
 
     variants = [("base", A0, None)]
     if "flat" in fams and args.model == "qwen":

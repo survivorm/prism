@@ -6,10 +6,20 @@
 #     |S|>2 => нет совместного колмогоровского распределения (КОНТЕКСТУАЛЬНОСТЬ, не «квантовый мозг»).
 #  T3 мнимая мощность спектра lift-оператора: доля |Im λ| в ||λ|| — «вращательность» обновления.
 # Null'ы: те же тесты на P3_rnull (3 сида) — если random такие же числа, эффект не выучен.
+# FIX 11.11 (audit2 H3/H3b/H3c, S5):
+#  T2 CHSH МЁРТВ: все 4 наблюдаемые — детерминированные функции одной пары (h_t,h_{t+1}),
+#  поточечно |S|=2 тождественно => тест не может дать ничего, кроме "classical". Оставлен в коде
+#  с вердиктом "degenerate".
+#  T1 g2 = 1 + Cov_1(I) (I нормирована на mean 1) — это переименованный дип (анти-персистентность
+#  интенсивности), не оптический g2. Вердикт помечен.
+#  rdocs: k[:-3] при суффиксе _L23 (4 символа) => KeyError на random-ветке; исправлено на k[:-4].
+#  добавлены import os и os.makedirs("results/e67") — раньше скрипт падал ПОСЛЕ печати trained-чисел.
+import os
 import numpy as np, json
-zT=np.load("results/e64/tpu/P2_corpus.npz")  # corpus-скан: h [n,H] по слоям (реальный текст!)
-zR=np.load("results/e64/tpu/P3_rnull.npz")
-m2=json.load(open("results/e64/tpu/P2_corpus_meta.json"))
+ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # FIX audit4 S5: пути от ROOT, не от cwd
+zT=np.load(os.path.join(ROOT,"results/e64/tpu/P2_corpus.npz"))  # corpus-скан: h [n,H] по слоям (реальный текст!)
+zR=np.load(os.path.join(ROOT,"results/e64/tpu/P3_rnull.npz"))
+m2=json.load(open(os.path.join(ROOT,"results/e64/tpu/P2_corpus_meta.json")))
 docsT=[k for k in m2 if k.startswith("cor_w")]
 rng=np.random.default_rng(0)
 def lift(H,rank=64,ridge=1e-3):
@@ -50,11 +60,12 @@ def run(z,nms,tag):
     return dict(tag=tag,n=len(rows),g2=round(med("g2"),3),chsh=round(med("chsh"),3),
                 impow=round(med("impow"),3),per=[{k:round(v,3) if isinstance(v,float) else v for k,v in r.items()} for r in rows])
 t=run(zT,docsT,"trained_corpus")
-rdocs=[k[:-3] for k in zR.files if k.endswith("_L23")]
+rdocs=[k[:-4] for k in zR.files if k.endswith("_L23")]  # FIX audit2 H3c: было k[:-3]
 r=run(zR,rdocs[:24],"random3sid")
 res=dict(trained=t,random=r,
- verdict_chsh=("contextual (|S|>2 — нет колмогоровской joint-модели)" if t["chsh"]>2 else "classical (|S|<=2)"),
- verdict_g2=("анти-группировка (<1)" if t["g2"]<1 else "классическая когерентность (>=1)"),
+ verdict_chsh="DEGENERATE TEST (audit2 H3): ко-измеренные наблюдаемые => |S|≤2 тождественно, значение = "+str(t["chsh"]),
+ verdict_g2=("анти-персистентность интенсивности (g2 = 1+Cov_1, переименованный дип — audit2 H3b)" if t["g2"]<1 else "кисп. когерентность (>=1)"),
  learned=dict(chsh=t["chsh"]-r["chsh"],g2=t["g2"]-r["g2"],impow=t["impow"]-r["impow"]))
 print(json.dumps({k:v for k,v in res.items() if k not in("trained","random")},indent=1))
-json.dump(res,open("results/e67/QUANTOLIKE.json","w"),indent=1)
+os.makedirs(os.path.join(ROOT,"results/e67"),exist_ok=True)  # FIX audit2 H3c
+json.dump(res,open(os.path.join(ROOT,"results/e67/QUANTOLIKE.json"),"w"),indent=1)
