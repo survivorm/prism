@@ -420,3 +420,44 @@ kaggle_kernel/);
 - Источники за пределами git: сессионный jsonl (120M, ~/.pi/agent/sessions/
   --home-survivor-work-prism--/2026-10-28T11-15-...) — из него и был сделан replay;
   пересобирать что-либо из него без команды не стал («не пиши сам»).
+
+## Реплей артефактов Nov6–10 из сессии (11.11, «сгенерировать как было, именно реплеить»)
+
+Запрос: восстановить потерянные артефакты реплеем генерации (не писанием от руки).
+Сессия-источник: pig `~/.pig/agent/sessions/--home-survivor-work-prism--/
+2026-10-13T13-52-27-235Z_01a13589...jsonl` (13.10→11.11, 25097 строк).
+
+Потеряно (сверено с диском + сессией; e81/e82/e83/e85 — уже regenerated 11.10 18:26
+сессией-реставром, на месте):
+- results/e69/THERAPY.json (прогон exp69_therapy.py, 10-11 21:22, ~40 мин CPU)
+- results/e71/SOLITON.json (exp71_soliton.py, 09.11, ~10-30 мин CPU)
+- results/e75/TMPL_FAMILY.json (exp75_tmpl_family.py, 09.11; Qwen0.8B + LFM3-1.7B, CPU)
+- results/e64/tpu/: P*_meta.json (×4), P4_T*_meta.json (×3), STATUS.json, P5_shift.json,
+  JUDGMENTS.json, LAMBDA1.json, READMATRIX.json, EIGEN.json, EIGEN_J.json, EIGEN_L.json,
+  EIGEN_LATE.json, EIGEN_M.json, EIGEN_k.json, cor_p1.npz (из инвентаря 09.11 09:29 в сессии)
+- results/e64/tpu_v8/: P*_meta.json (×7), STATUS.json (kernel output v8)
+- results/e64/SOLITON_COLLISION.json (содержимое в сессии: буквально `[]`, 24/24 —
+  неподтверждённое, из ТЗ/статей снято)
+
+Границы (не менять): scripts с audit-фиксами на месте НЕ откатывать (replay-копии
+оригиналов — в /tmp, не в репо); npz в tpu/tpu_v8/ не трогать; e81-e85 regenerated — не
+перепускать; numbers из сессии — эталон верификации.
+
+- [ ] **Ф1. Kaggle: pull kernel output prism-e64-tpu (v8 и v-до-P4) → meta-JSON в
+      tpu_v8/ и tpu/**; сверка размеров с инвентарем 09.11 09:29 (P1_own_meta 217143,
+      P2c 128040, P2_corpus 150809, P3_rnull 346402, P4_T1.2 192984 / T1.5 192619 /
+      T2.0 192449, STATUS 335)
+- [ ] **Ф2. Локальные генераторы TPU-батареи:** JUDGMENTS (exp64_tpu_report.py),
+      LAMBDA1/READMATRIX/P5_shift/STATUS (найти генераторы в сессии), EIGEN.json
+      (exp76 final), EIGEN_L/LATE/M/k (e82/e82b/76k), EIGEN_J+cor_p1 (exp79_jlens) —
+      перепустить по npz (на диске); верификация по числам сессии
+- [ ] **Ф3. e69:** реконструкция оригинала exp69_therapy.py (v1, pre-21:26: attach()
+      только q/k/v/o, зашитый anchor [3.19,-0.174], без seed) из сессии → /tmp,
+      прогон `setsid nohup .venv/bin/python ...`; эталон: nll 10.219→6.567, dip
+      -0.2956→-0.2593, verdict p/r_recovered false
+- [ ] **Ф4. e71:** прогон exp71_soliton.py (диск = оригинал 06:29, проверить маркер);
+      эталон: A-кривая dip_med (0.0…-0.005 @λ≤0.5, -0.207 @0.7, -0.235 @0.8),
+      B: wiki_0 -0.179→-0.19 … wiki_7 -0.137→-0.157
+- [ ] **Ф5. e75:** прогон exp75_tmpl_family.py; эталон — из сессии (U-D/U-E клетки)
+- [ ] **Ф6. SOLITON_COLLISION.json ← `[]`** (2 байта, из сессии head -c 400)
+- [ ] **Ф7.** PLAN.md + коммит (explicit paths) + отчёт
