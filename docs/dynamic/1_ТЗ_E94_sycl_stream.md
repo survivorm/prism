@@ -56,11 +56,16 @@
 не участвует; drift токенизаторов становится измеряемым результатом (§3.4), а не скрытым конфаундом.
 
 Поля запроса — только проверенные имена (`ФЧ` §r2.1 + `server-task.cpp:97-130`, `server-common.cpp:1381-1388`,
-`server-schema.cpp:31`): `prompt`, `n_predict`, `temperature`, `stream`, `logprobs`, `top_logprobs`,
+`server-schema.cpp:31,34`): `prompt`, `n_predict`, `temperature`, **`stream` (всегда `false`)**, `logprobs`,
+`top_logprobs`, **`return_tokens: true`** (`server-schema.cpp:34`; без него `tokens[]` пуст —
+`server-task.h:54` default false, `server-context.cpp:1839`),
 `cache_prompt`, `repeat_penalty`, `presence_penalty`, `frequency_penalty`, `repeat_last_n`,
-`dry_multiplier`, `dry_base`, `xtc_probability`, `mirostat`, `seed`. Явно запрещённые (их нет):
+`dry_multiplier`, `dry_base`, `xtc_probability`, `mirostat`, `seed` (`seed` при `temperature:0` — no-op,
+не баг). Явно запрещённые (их нет):
 `anti_reverse`, `penalty_last_n` как *поле запроса*, `dry_penalty`, `dynatop_p`, `echo`
 (при `echo:true` сервер кидает «Only no echo is supported» — `server-common.cpp:1034-1035`).
+`stream:false` обязателен во **всех** `/completion`-запросах: `completion_probabilities` выдаётся только
+при `!stream` и непустом `probs_output` (`server-task.cpp:358-360`).
 Sampling-штрафы обнуляются явно во всех запросах (дефолты берутся из GGUF-метаданных модели,
 `common.cpp:1267`); `top_k/top_p/min_p` не трогаем — цепочка как в e93, и расхождение на
 низкоуверенных позициях есть ожидаемый сигнал, а не баг. `logprobs` и `top_logprobs` засылаются
@@ -78,14 +83,22 @@ Sampling-штрафы обнуляются явно во всех запроса
 и обязывает длины совпадать (`len(tokens) == len(completion_probabilities)`), иначе `RUN_RC=2`.
 Отсюда три обязательных гейта:
 - **prompt-count гейт (главный, на каждом запросе):** `tokens_evaluated == len(<отправленный id-массив>)`
-  (Q1: 64, probe: k). Расхождение ⇒ сработал чат-шаблон или BOS ⇒ сравнивать нечего → `RUN_RC=13`.
-  Это закрывает hazard, который ревью r2 оставил PARTIAL; статически шаблон применяется только
-  в OAI-chat-билдере (`server-common.cpp:1134` `oaicompat_chat_params_parse`, применение `:1338`),
-  а legacy `/completion` к нему не относится — но гейт обязателен и на этом.
-- **гейт кэша (для Q2):** начиная со **второго** запроса данного дока `tokens_cached ≥ k-2` (на первом
-  запросе дока кэша нет by design — гейт к нему не применяется, иначе ложный `RUN_RC=2`); динамика
-  стоимости меряется **клиентским wall-clock**, а не полями `timings` (их схема в этом форке не
-  верифицирована — не использовать).
+  (Q1: 64, probe: k). Это безопасно при `cache_prompt:true`: `n_prompt_tokens` присваивается
+  `slot.task->n_tokens()`, то есть полная длина промпта, а не «новые» токены
+  (`server-context.cpp:2116`; отдельно отдаётся `n_prompt_tokens_cache`, `:2117`) — но спайк обязан
+  подтвердить это живым запросом (повтор `k=128`: `tokens_evaluated == 128` при прогретом кэше) и
+  записать в `FORMAT.md`. Расхождение ⇒ сработал чат-шаблон или BOS ⇒ сравнивать нечего → `RUN_RC=13`.
+  Это закрывает hazard, который ревью r2 оставило PARTIAL; статически шаблон применяется только
+  в OAI-chat-билдере (`server-common.cpp:1134`, применение `:1338`), а legacy `/completion` к нему
+  не относится — но гейт обязателен и на этом.
+- **гейт кэша (для Q2) — переделан, прежний был мёртвым.** В ответе `/completion` поле `tokens_cached`
+  равно `slot.prompt.n_tokens()`, то есть **длине промпта, а не числу переиспользованных токенов**
+  (`server-context.cpp:2118`) ⇒ `tokens_cached ≥ k-2` истинно всегда и ничего не измеряет. Реальные
+  счётчики живут в дампе слотов: `GET /slots` (`server.cpp:285`) отдаёт на слот
+  `n_prompt_tokens`, `n_prompt_tokens_processed`, `n_prompt_tokens_cache` (`server-context.cpp:700-702`).
+  поэтому гейт: со **второго** запроса дока `n_prompt_tokens_processed ≤ 2` **и**
+  `n_prompt_tokens_cache ≥ k-2` при `n_prompt_tokens == k`, плюс клиентский wall-clock на позицию не
+  растёт с `k`. Значения пишутся в `FORMAT.md` как есть.
 - **проверка штрафов:** по эху `generation_settings` первого запроса (значения penalties/mirostat
   должны равняться посланным); поведенческий контроль (`repeat_penalty:1.1` меняет id-поток) — вторичный.
   ⚠ Поправка к ФЧ §3: эхо sampling-параметров в ответе **есть** (`generation_settings`), я утверждал обратное.
@@ -189,3 +202,23 @@ results/e94/
 6. **Логистика одного исполнителя:** один сервер, идемпотентность, диск 14 G, /tmp, `run_one`, паузы,
    судьба Q1/Q2/Q3 при провале каждого гейта по отдельности.
 7. **Что ТЗ всё ещё обещает лишнего** в §0 (полный vocab/entropy — уже снято; проверить остальное).
+
+## 8. Дополнение r5 (закрыть остаток ревью r3b, `1_REVIEW_ТЗ_E94_r3b.md`)
+
+1. **B1 (закрыт выше):** `return_tokens:true` в whitelist; id берутся из `completion_probabilities[].id`,
+   `tokens[]` — перекрёстная проверка (`[p.id for p in completion_probabilities] == tokens`, иначе
+   `RUN_RC=2`); `stream:false` во всех запросах.
+2. **Спайк-пре-чек (до Q1):** первый же ответ должен содержать `completion_probabilities[0].logprob`
+   **и** `top_logprobs` длины 2; иначе `RUN_RC=2` (метрики Q2 физически не из чего считать).
+3. **M4 (мощность при n=16):** в артефакт и NOTES обязательно идут (а) полный per-doc массив
+   `rep8_llama/rep8_cpu/Δ`, (б) bootstrap-CI медианы |Δ| (10 000 ресемплов, seed 8181, percentile 2.5/97.5),
+   (в) rho и p пермутационного null. **Запрещено** формулировать что-либо как «эффект/механизм», если CI
+   медианы накрывает 0 или effect size (медиана |Δ|) меньше ширины насыщенной полосы rep8 (0.839–0.974).
+4. **m1 (цензура):** `top-2 hit rate` отчитывается с подписью «miss = ранг ≥3, истинный ранг цензурирован»;
+   доля `len(top_logprobs) < 2` по позициям идёт отдельным числом.
+5. **m3 (perplexity-fallback, если до него дойдёт):** заранее признать — пишутся только позиции
+   `first..n_ctx-2` при `first = n_ctx/2` (`perplexity.cpp:544,617-620`), вход требует `tokens ≥ 2·n_ctx`
+   (`:480-484`), ряд квантован в uint16; при `n_ctx=512` на доке 448 id доступно лишь ~`j=192..383`
+   (то есть ~половина позиций), и padding обязан это покрытие зафиксировать ДО запуска.
+6. **m4 (закрыто проверкой):** `/data/Qwen/qwen3.5-0.8B-f16.gguf` подтверждён на диске
+   (`ls /data/Qwen/*.gguf` → f16 1485.5 MB, f32 2958.6 MB; Q4_K_M отсутствует).
