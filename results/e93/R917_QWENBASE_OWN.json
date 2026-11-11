@@ -1,0 +1,141 @@
+{
+ "model": "qwen3.5-0.8B-f32-GGUF (base, НЕ CT)",
+ "engine": "llama.cpp-vk Vulkan0 greedy T=0 n=1024 seed0",
+ "docs": {
+  "w0": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1095
+  },
+  "w1": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1096
+  },
+  "w2": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 0.0,
+   "onset8": 7,
+   "n_gen": 1096
+  },
+  "w3": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1095
+  },
+  "w4": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1096
+  },
+  "w5": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1096
+  },
+  "w6": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 6,
+   "n_gen": 1094
+  },
+  "w7": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1097
+  },
+  "w8": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1094
+  },
+  "w9": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1097
+  },
+  "w10": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1096
+  },
+  "w11": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1095
+  },
+  "w12": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1096
+  },
+  "w13": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 0.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1096
+  },
+  "w14": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1096
+  },
+  "w15": {
+   "rep8_med_1024": 1.0,
+   "rep8_med_384": 1.0,
+   "rep16_med": 1.0,
+   "onset8": 7,
+   "n_gen": 1095
+  }
+ },
+ "summary": {
+  "rep8_ge09_1024": "16/16",
+  "rep8_med1024_median": 1.0,
+  "rep8_eq1_384": "15/16",
+  "onset8_median": 7.0,
+  "onset8_range": [
+   6,
+   7
+  ]
+ },
+ "pins_lfm2_ct0": {
+  "src": "results/e81/REPLAY.json",
+  "rep8_eq1": "14/16",
+  "onset8_approx": 17,
+  "gen_n": 384
+ },
+ "verdict": "rep8>=0.9 в 16/16 (порог >=12/16): rep-аттрактор НЕ специфичен для CT — он в base-модели/домене, onset у base РАНЬШЕ (6-7 против ~17). rep8 сам по себе не диагностичен.",
+ "caveats": [
+  "не-орт контроль: другая модель/семья/архитектура",
+  "prompt-only llama: -o обрезает ведущий \\n, re-tokenize drift ~1 токен (S0: 63/64 pin)",
+  "промпты wiki-how — домен-приманка для лупов; вывод про домен+семью, не про 'всю NLG'",
+  "токенов сгенерировано 1095-1097 из-за chat-template хвоста — медиана по факту gen"
+ ]
+}

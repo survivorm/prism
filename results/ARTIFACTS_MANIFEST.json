@@ -1,6 +1,6 @@
 {
  "generated": "2026-11-11",
- "note": "\u043c\u0430\u043d\u0438\u0444\u0435\u0441\u0442 \u0437\u0430\u043a\u043e\u043c\u043c\u0438\u0447\u0435\u043d\u043d\u044b\u0445 \u0430\u0440\u0442\u0435\u0444\u0430\u043a\u0442\u043e\u0432 E-50+ (audit4 S2/S4): sha256-16 + \u0440\u0430\u0437\u043c\u0435\u0440 + \u0434\u0430\u0442\u0430; \u0442\u044f\u0436\u0451\u043b\u044b\u0435 \u0442\u0438\u043f\u044b (*.pt/*.npz) \u043d\u0435 \u0432 git, \u0441\u043c. .gitignore; \u043e\u0446\u0435\u043d\u0449\u0438\u043a e64_gpu.py \u2014 experiments/kaggle_e64gpu/e64_gpu.py + results/e64/ESTIMATOR_PIN.json",
+ "note": "манифест закоммиченных артефактов E-50+ (audit4 S2/S4): sha256-16 + размер + дата; тяжёлые типы (*.pt/*.npz) не в git, см. .gitignore; оценщик e64_gpu.py — experiments/kaggle_e64gpu/e64_gpu.py + results/e64/ESTIMATOR_PIN.json",
  "dirs": {
   "e50v3_out": [
    {
@@ -138,5 +138,10 @@
   "sha256_16": "c4085c7b7e5bc20f",
   "size": 25614,
   "date": "2026-11-10T22:50:14"
+ },
+ "e93/R917_QWENBASE_OWN.json": {
+  "sha16": "7df3d96e82e4b0f6",
+  "ts": "2026-11-11T18:25",
+  "note": "R9-17 base-model rep-контроль"
  }
 }
