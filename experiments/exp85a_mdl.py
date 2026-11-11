@@ -67,7 +67,8 @@ try:
             oc.append(gc); on.append(mdl_after_novelty(gc,list(toks)))
         L0max=float(np.max(l0))
         assert L0max<1e-9, f"L0 pipeline guard BROKEN: max|diff|={L0max}"
-        oe=np.array([x[4:28] for x in oc])                      # то же окно, что у корпуса (ревью A/qwen #9); ol=np.array([x[-24:] for x in oc])
+        oe=np.array([x[4:28] for x in oc])                      # то же окно, что у корпуса (ревью A/qwen #9)
+        ol=np.array([x[-24:] for x in oc])
         res.update(L0_pipeline_guard=dict(max_abs_diff=L0max,status="OK"),
                    own_cost_early=float(oe.mean()),own_cost_late=float(ol.mean()),
                    own_cost_ratio=float(ol.mean()/max(oe.mean(),1e-9)),

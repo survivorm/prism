@@ -1,0 +1,112 @@
+{
+ "generated": "2026-11-11",
+ "note": "манифест закоммиченных артефактов E-50+ (audit4 S2/S4): sha256-16 + размер + дата; тяжёлые типы (*.pt/*.npz) не в git, см. .gitignore; оценщик e64_gpu.py — experiments/kaggle_e64gpu/e64_gpu.py + results/e64/ESTIMATOR_PIN.json",
+ "dirs": {
+  "e50v3_out": [
+   {
+    "file": "e50v3_out/prism-exp50v3-loop-curvature-qwen.log",
+    "sha256_16": "b00677df2613be3c",
+    "bytes": 14868,
+    "mtime": "2026-11-05"
+   }
+  ],
+  "e64": [
+   {
+    "file": "e64/ESTIMATOR_PIN.json",
+    "sha256_16": "b10a5f2024027a7c",
+    "bytes": 784,
+    "mtime": "2026-11-11"
+   },
+   {
+    "file": "e64/kag_out/prism-b4-temperature-pool.log",
+    "sha256_16": "c0ba382dee1d467b",
+    "bytes": 4571,
+    "mtime": "2026-11-08"
+   },
+   {
+    "file": "e64/tpu_v8/prism-e64-gpu.log",
+    "sha256_16": "91d9e9b7bf428c7a",
+    "bytes": 16712,
+    "mtime": "2026-11-08"
+   }
+  ],
+  "e64gpu_out_old": [
+   {
+    "file": "e64gpu_out_old/prism-e64-gpu.log",
+    "sha256_16": "3d8340bc96c7e9b0",
+    "bytes": 5374,
+    "mtime": "2026-11-08"
+   }
+  ],
+  "e81": [
+   {
+    "file": "e81/HEAT.json",
+    "sha256_16": "f2e3d203cf6eb8e1",
+    "bytes": 29856,
+    "mtime": "2026-11-11"
+   },
+   {
+    "file": "e81/TAIL16.json",
+    "sha256_16": "a3f903ffbdba8f9d",
+    "bytes": 498,
+    "mtime": "2026-11-10"
+   },
+   {
+    "file": "e81/REPLAY.json",
+    "sha256_16": "5580d8f2c8341e9a",
+    "bytes": 201076,
+    "mtime": "2026-11-11"
+   }
+  ],
+  "e82": [
+   {
+    "file": "e82/LUMI_FIX.json",
+    "sha256_16": "29cb6e47c553b14d",
+    "bytes": 1645,
+    "mtime": "2026-11-10"
+   }
+  ],
+  "e83": [
+   {
+    "file": "e83/KERNEL_BASELINE.json",
+    "sha256_16": "c4085c7b7e5bc20f",
+    "bytes": 25614,
+    "mtime": "2026-11-10"
+   }
+  ],
+  "e85": [
+   {
+    "file": "e85/MDL_corpus.json",
+    "sha256_16": "99ec7b193ca85358",
+    "bytes": 436,
+    "mtime": "2026-11-10"
+   },
+   {
+    "file": "e85/LANDMARKS.json",
+    "sha256_16": "bac928182a38bbcf",
+    "bytes": 3505,
+    "mtime": "2026-11-10"
+   }
+  ],
+  "exp39m": [
+   {
+    "file": "exp39m/exp39m_flat_ptq_quant.json",
+    "sha256_16": "dc7d5b7f1ef0f75f",
+    "bytes": 10138,
+    "mtime": "2026-11-10"
+   },
+   {
+    "file": "exp39m/run.log",
+    "sha256_16": "a0cc8a9fed022133",
+    "bytes": 20596,
+    "mtime": "2026-11-10"
+   },
+   {
+    "file": "exp39m/exp39m_flat_ptq_train.json",
+    "sha256_16": "77e6696369af36ea",
+    "bytes": 5933,
+    "mtime": "2026-11-10"
+   }
+  ]
+ }
+}

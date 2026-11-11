@@ -45,6 +45,8 @@ prism-*.log
 *.orig
 _auto_chain/exp27_v9/
 results/*.json
+# 11.11 (audit4 S2): манифест артефактов — в git
+!results/ARTIFACTS_MANIFEST.json
 
 results/exp27_jcache.pt
 
