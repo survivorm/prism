@@ -5,7 +5,7 @@
 
 ## M1. dip (V-оценщик)
 - Формула: u_t=h_t/‖h_t‖; V_t=u_{t+1}−(u_{t+1}·u_t)u_t; dip=median cos(V_t,V_{t+1}).
-- Реализация: curve_u+dcurve в experiments/exp62_batt_lib.py; пин восстановленного
+- Реализация: curve_u в exp62_batt_lib.py (dip инлайн в run()/dip1); dcurve — копии в exp63_t17_dipnull.py/exp64_*; пин восстановленного
   оригинала results/e64/ESTIMATOR_PIN.json (sha pyc 3/3 совпадение).
 - **Границы (r1-D1): при <2 пар — nan (fail-loud). Ноль — только результат, не default.**
 - Канон-уровень: corpus real dip=−0.0722 (L23, pooled nonwiki, ladder v2b); регресс-допуск
