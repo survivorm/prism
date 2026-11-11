@@ -18,3 +18,12 @@
 Вывод: наpig-сборке этой машины TS-расширения субагентов не стартуют; python-SDK вариант
 работает (сквозная проба SMOKE_DONE). Если Pig-рантайм починят/обновятся бандлы —
 замена на готовое = `pig install npm:pi-subagents`, это расширение retire.
+
+## 11.11 вечер: ОБНОВЛЕНО — готовые субагенты поставлены
+pig обновлён npm-ом 0.2.0+pi0.87.1 → 0.7.0+pi1.5.0; на новом рантайме 
+`pig install npm:pi-subagents` (глобально) валидируется и работает. Модели зафиксированы:
+subagents.defaultModel=obleth/ngenix-llm + agentOverrides (reviewer/oracle/worker/scout)
+в ~/.pi/agent/settings.json И ~/.pig/agent/settings.json (расширение читает pi-путь).
+Кастомные агенты: .pi/agents/{prism-reviewer,prism-runner}.md (зеркало .pig/agents —
+расширение ищет pi-пути). Проба: prism-reviewer проверил MARKERS M5/M6 — ок.
+Это расширение = fallback (детектор трупов/RC-маркеров); основной путь — subagent-инструмент.
