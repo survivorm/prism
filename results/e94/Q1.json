@@ -365,7 +365,7 @@
   "missing": [],
   "pass": true
  },
- "t_rebuild_s": 3.09,
+ "t_rebuild_s": 2.67,
  "idempotence": {
   "runs": 2,
   "artifact_identical": true,
