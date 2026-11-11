@@ -49,5 +49,27 @@
 - torch.manual_seed(S) перед from_config; S=11,12 (exp91); значение фиксируется до
   прогона и пишется в артефакт. Вердиктная клетка — half-random (обученные emb/norms).
 
+## M10. E94 Q1 id-поток/повтор (SYCL vs CPU-реплей)
+- Формулы (ТЗ E94 §2.1, дословно exp81b через exp94_sycl_common): prefix_len = длина общего
+  префикса llama-gen vs REPLAY.gen_ids, norm /384; rep8 = mean(12 сегментов по 32, off=64)
+  по конкатенации 64+384 id обеих сторон (тот же реплай на CPU-стриме); главная = медиана |Δrep8|
+  + bootstrap 10000 (seed 8181, 2.5/97.5); Spearman avg-ranks + перм-null 2000 (seed 8181);
+  repro_rate = доля совпавших id r1/r2 (тот же сервер/тело/флаги), гейт медианы ≥0.95, иначе
+  метка `non-interpretable (determinism)`.
+- Реализация: experiments/exp94_q1.py (запуск: exp94_sycl_stream.py --phase q1), артефакт
+  results/e94/Q1.json, raw /tmp/e94raw/q1_*.json. RUN_RC: 0/10/11/13/1 (ТЗ §3).
+- Поля сводки (ревью r1, 12.11): `n_docs_repro_identical` (r1≡r2, экс-`n_identical_docs`),
+  `n_docs_prefix_full` (prefix_len==384), `spearman.p_definition` (two-sided на |rho|, MC-доля
+  без +1, n_perm=2000, seed 8181, avg-ranks, пермутируется llama-массив против фикс. cpu),
+  `spearman.p_mc_se` = sqrt(p(1-p)/n_perm), `interpretability`/`interpretability_reason`
+  (CI медианы |Δrep8| накрывает 0 ⇒ "not interpretable as an effect"), `bifurcation_note`
+  (w4 — единичная бифуркация 1/16: f16/SYCL vs fp32/CPU, не «iGPU теряет повторы»),
+  `idempotence` (2 пересборки из raw, canonical sha256 сводки+per_doc).
+- Конвенция: только числа+гейты, «механизм»-выводы запрещены (ТЗ §2.1, M4-аналог: CI накрывает 0 →
+  эффект не формулируется).
+
 ## CHANGELOG
 - 11.11: создан по r1/r2 ревью (D1,D4,C1,H1,H6,E3; B5,H4 — старые долги).
+- 12.11: +M10 (E94 Q1: prefix_len/rep8-Δ bootstrap/Spearman-perm/repro_rate, exp94_q1.py).
+- 12.11: M10 hygiene (ревью r1): n_docs_repro_identical/n_docs_prefix_full, p_definition/p_mc_se,
+  interpretability, bifurcation_note, idempotence (exp94_q1.py --from-raw ×2).

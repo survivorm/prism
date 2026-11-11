@@ -1,7 +1,280 @@
 {
  "phase": "q1",
  "started_unix": 1794435755,
- "per_doc": [],
+ "per_doc": [
+  {
+   "doc": "w0",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 23,
+   "prefix_len_norm": 0.059896,
+   "rep8_llama": 0.9036458333333334,
+   "rep8_cpu": 0.9088541666666666,
+   "delta_rep8": -0.005208333333333259,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w1",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 40,
+   "prefix_len_norm": 0.104167,
+   "rep8_llama": 0.8828125,
+   "rep8_cpu": 0.890625,
+   "delta_rep8": -0.0078125,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w2",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 14,
+   "prefix_len_norm": 0.036458,
+   "rep8_llama": 0.4375,
+   "rep8_cpu": 0.5052083333333334,
+   "delta_rep8": -0.06770833333333337,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w3",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 1,
+   "prefix_len_norm": 0.002604,
+   "rep8_llama": 0.8645833333333334,
+   "rep8_cpu": 0.8385416666666666,
+   "delta_rep8": 0.02604166666666674,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w4",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 6,
+   "prefix_len_norm": 0.015625,
+   "rep8_llama": 0.0026041666666666665,
+   "rep8_cpu": 0.953125,
+   "delta_rep8": -0.9505208333333334,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w5",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 1,
+   "prefix_len_norm": 0.002604,
+   "rep8_llama": 0.9635416666666666,
+   "rep8_cpu": 0.9348958333333334,
+   "delta_rep8": 0.02864583333333326,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w6",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 41,
+   "prefix_len_norm": 0.106771,
+   "rep8_llama": 0.8697916666666666,
+   "rep8_cpu": 0.9114583333333334,
+   "delta_rep8": -0.04166666666666674,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w7",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 30,
+   "prefix_len_norm": 0.078125,
+   "rep8_llama": 0.9140625,
+   "rep8_cpu": 0.9270833333333334,
+   "delta_rep8": -0.01302083333333337,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w8",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 8,
+   "prefix_len_norm": 0.020833,
+   "rep8_llama": 0.9479166666666666,
+   "rep8_cpu": 0.9739583333333334,
+   "delta_rep8": -0.02604166666666674,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w9",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 384,
+   "prefix_len_norm": 1.0,
+   "rep8_llama": 0.9661458333333334,
+   "rep8_cpu": 0.9661458333333334,
+   "delta_rep8": 0.0,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w10",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 384,
+   "prefix_len_norm": 1.0,
+   "rep8_llama": 0.9427083333333334,
+   "rep8_cpu": 0.9427083333333334,
+   "delta_rep8": 0.0,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w11",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 384,
+   "prefix_len_norm": 1.0,
+   "rep8_llama": 0.9739583333333334,
+   "rep8_cpu": 0.9739583333333334,
+   "delta_rep8": 0.0,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w12",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 384,
+   "prefix_len_norm": 1.0,
+   "rep8_llama": 0.9583333333333334,
+   "rep8_cpu": 0.9583333333333334,
+   "delta_rep8": 0.0,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w13",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 53,
+   "prefix_len_norm": 0.138021,
+   "rep8_llama": 0.234375,
+   "rep8_cpu": 0.2578125,
+   "delta_rep8": -0.0234375,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w14",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 22,
+   "prefix_len_norm": 0.057292,
+   "rep8_llama": 0.8125,
+   "rep8_cpu": 0.9296875,
+   "delta_rep8": -0.1171875,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  },
+  {
+   "doc": "w15",
+   "ok": true,
+   "errors": {
+    "r1": null,
+    "r2": null,
+    "cpu": null
+   },
+   "prefix_len": 384,
+   "prefix_len_norm": 1.0,
+   "rep8_llama": 0.953125,
+   "rep8_cpu": 0.953125,
+   "delta_rep8": 0.0,
+   "repro_rate": 1.0,
+   "n_tokens_r1": 384,
+   "n_tokens_r2": 384
+  }
+ ],
  "summary": {
   "median_abs_delta_rep8": 0.018229166666666685,
   "bootstrap_ci_2.5_97.5": [
@@ -10,6 +283,9 @@
   ],
   "n_bootstrap": 10000,
   "seed": 8181,
+  "interpretability": "not interpretable as an effect",
+  "interpretability_reason": "CI медианы |Δrep8| накрывает 0 ([0, 0.0325846]); медиана 0.0182292 < ширины насыщенной полосы rep8 0.839–0.974 (0.135) [ревью r1]",
+  "bifurcation_note": "w4 Δrep8=-0.9505 = единичная бифуркация (1/16): расхождение движков f16/SYCL против fp32/CPU (низкоуверенные позиции, argmax-flip при temp=0), а не «iGPU теряет повторы»",
   "spearman": {
    "rho": 0.7039771994004667,
    "p_perm": 0.003,
@@ -18,7 +294,9 @@
     0.5007737389668275
    ],
    "n_perm": 2000,
-   "seed": 8181
+   "seed": 8181,
+   "p_definition": "two-sided on |rho|: MC fraction of permutations with |rho_perm| >= |rho_obs| (no +1 correction), llama array permuted against fixed cpu, avg-ranks on ties, n_perm=2000, seed=8181",
+   "p_mc_se": 0.0012229063741758812
   },
   "distinct_rep8": {
    "llama": 16,
@@ -29,7 +307,11 @@
    "gate": 0.95,
    "pass": true,
    "label": null
-  }
+  },
+  "median_prefix_len": 35.0,
+  "frac_prefix_full": 0.3125,
+  "n_docs_prefix_full": 5,
+  "n_docs_repro_identical": 16
  },
  "port": 8110,
  "server_pid": 169854,
@@ -74,5 +356,19 @@
  "selfcheck_cpu_rep8_max_abs_delta": 0.0,
  "rc": 0,
  "halt_reason": null,
- "t_total_s": 851.68
+ "t_total_s": 851.68,
+ "independent_crosscheck": {
+  "source": "/tmp/q1_independent_perdoc.json",
+  "n_docs": 16,
+  "prefix_len_exact_matches": 16,
+  "max_abs_delta_rep8": 0.0,
+  "missing": [],
+  "pass": true
+ },
+ "t_rebuild_s": 3.09,
+ "idempotence": {
+  "runs": 2,
+  "artifact_identical": true,
+  "sha256": "8e64191d69ec8c8cdce13e4b6189872d61505f39b39bf0578fff787fb788044e"
+ }
 }

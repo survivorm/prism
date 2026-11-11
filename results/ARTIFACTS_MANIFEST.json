@@ -107,6 +107,26 @@
     "bytes": 5933,
     "mtime": "2026-11-10"
    }
+  ],
+  "e94": [
+   {
+    "file": "e94/Q1.json",
+    "sha256_16": "f7b98892d207b158",
+    "bytes": 7884,
+    "mtime": "2026-11-12"
+   },
+   {
+    "file": "e94/SPIKE.json",
+    "sha256_16": "a5c918c89f14972b",
+    "bytes": 11048,
+    "mtime": "2026-11-12"
+   },
+   {
+    "file": "e94/FORMAT.md",
+    "sha256_16": "22336d9b6966c6e8",
+    "bytes": 9842,
+    "mtime": "2026-11-12"
+   }
   ]
  },
  "results/e90/LADDER_V2.json": {

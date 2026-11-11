@@ -405,7 +405,12 @@ def write_artifacts(R):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--phase", required=True)
+    ap.add_argument("--from-raw", action="store_true",
+                    help="q1: пересборка артефакта из /tmp/e94raw без сервера")
     a = ap.parse_args()
+    if a.phase == "q1":
+        from exp94_q1 import run_q1, run_q1_from_raw
+        sys.exit(run_q1_from_raw() if a.from_raw else run_q1())
     if a.phase != "spike":
         print("E94: phase=%s не реализован в этом прогоне исполнителя (spike only);"
               " см. 0_E94_EXEC_NOTES.md" % a.phase)
