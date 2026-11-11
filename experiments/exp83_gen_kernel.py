@@ -45,9 +45,9 @@ for i in range(16):
     ids=tk(pin["texts"][i],add_special_tokens=False)["input_ids"]
     CF=OUT/f"gen_w{i}.json"   # per-doc кэш: перезжог после смерти процесса не перерегенерит готовые доки
     if CF.exists():
-        toks=json.load(open(CF))["toks"]
-        assert len(toks)==N, f"кэш {CF} неполный ({len(toks)}!={N}) — регенерация"
-        CF.unlink()
+        _d=json.load(open(CF))
+        if len(_d["toks"])==N: toks=_d["toks"]
+        else: CF.unlink()      # неполный кэш — выбросить и перегенерить (полный НЕ трогаем)
     if not CF.exists():
         toks=[]
         with torch.no_grad():
