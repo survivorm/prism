@@ -1,0 +1,573 @@
+{
+ "phase": "spike",
+ "started_unix": 1794432828,
+ "port": 8110,
+ "model": "qwen3.5-0.8B-f16.gguf",
+ "server_cmd": [
+  "/home/survivor/work/llama.cpp/build/bin/llama-server",
+  "-m",
+  "/data/Qwen/qwen3.5-0.8B-f16.gguf",
+  "-sm",
+  "none",
+  "-mg",
+  "0",
+  "-ngl",
+  "99",
+  "-fa",
+  "on",
+  "-c",
+  "2048",
+  "-np",
+  "1",
+  "--slots",
+  "--host",
+  "127.0.0.1",
+  "--port",
+  "8110",
+  "--log-disable"
+ ],
+ "server_pid": 29425,
+ "t_load_s": 10.07,
+ "fd_after_health": [
+  "/dev/dri/renderD128",
+  "/dev/dri/renderD128"
+ ],
+ "fd_gate": {
+  "n_samples": 20,
+  "interval_s": 0.05,
+  "n_samples_with_dri": 20,
+  "dri_union": [
+   "/dev/dri/renderD128"
+  ],
+  "request_wall_s": 4.834,
+  "request_timings": {
+   "cache_n": 0,
+   "prompt_n": 64,
+   "prompt_ms": 506.038,
+   "prompt_per_token_ms": 7.90684375,
+   "prompt_per_second": 126.47271548776969,
+   "predicted_n": 64,
+   "predicted_ms": 4235.783,
+   "predicted_per_token_ms": 67.2346507936508,
+   "predicted_per_second": 14.873283168660905
+  },
+  "ok": true
+ },
+ "main": {
+  "wall_s": 4.834,
+  "per_pos_s": 0.0755,
+  "n_tokens": 64,
+  "tokens": [
+   220,
+   18,
+   20580,
+   523,
+   383,
+   1204,
+   310,
+   1236,
+   17387,
+   43768,
+   13,
+   198,
+   760,
+   523,
+   668,
+   381,
+   5467,
+   506,
+   279,
+   436,
+   33961,
+   277,
+   51416,
+   40501,
+   303,
+   8637,
+   282,
+   4120,
+   11,
+   18513,
+   13,
+   198,
+   760,
+   523,
+   668,
+   381,
+   5467,
+   506,
+   279,
+   436,
+   33961,
+   277,
+   51416,
+   40501,
+   303,
+   8637,
+   282,
+   4120,
+   11,
+   18513,
+   13,
+   198,
+   760,
+   523,
+   668,
+   381,
+   5467,
+   506,
+   279,
+   436,
+   33961,
+   277,
+   51416,
+   40501
+  ],
+  "content": " 3-hour class on how to make delicious BBQ.\nThe class will be held at the Lonestar Smoke Ranch in Missoula, MT.\nThe class will be held at the Lonestar Smoke Ranch in Missoula, MT.\nThe class will be held at the Lonestar Smoke Ranch",
+  "tokens_evaluated": 64,
+  "tokens_cached": 127,
+  "id_slot": 0
+ },
+ "gate_prompt_count": {
+  "ok": true,
+  "detail": "tokens_evaluated=64 sent=64"
+ },
+ "gate_schema": {
+  "ok": true,
+  "detail": "cp_len=64 tokens_len=64"
+ },
+ "gate_top_logprobs_len": {
+  "tz_required": 2,
+  "observed": {
+   "1": 64
+  },
+  "ok": false,
+  "treated_as": "finding (steering): определяет контракт Q2, не hard-гейт"
+ },
+ "gate_generation_settings": {
+  "ok": true,
+  "missing_field": false,
+  "mismatch": {},
+  "got": {
+   "seed": 8181,
+   "temperature": 0.0,
+   "repeat_penalty": 1.0,
+   "presence_penalty": 0.0,
+   "frequency_penalty": 0.0,
+   "repeat_last_n": 0,
+   "dry_multiplier": 1.0,
+   "dry_base": 1.0,
+   "xtc_probability": 0.0,
+   "mirostat": 0,
+   "n_predict": 64
+  },
+  "note": "logprobs:true(bool)→n_probs=1; top_logprobs вне legacy-схемы (server-schema.cpp:179 поле n_probs, alias logprobs)"
+ },
+ "sweep": {
+  "tl2": {
+   "overrides": {
+    "top_logprobs": 2
+   },
+   "len_hist": {
+    "1": 4
+   },
+   "pos": [
+    {
+     "pos": 0,
+     "id": 220,
+     "logprob": -1.3568916320800781,
+     "p_max": 0.2574598142865921,
+     "n_tl": 1,
+     "sum_list": 0.2574598142865921,
+     "all_finite": true
+    },
+    {
+     "pos": 1,
+     "id": 18,
+     "logprob": -1.6585968732833862,
+     "p_max": 0.1904059564413871,
+     "n_tl": 1,
+     "sum_list": 0.1904059564413871,
+     "all_finite": true
+    },
+    {
+     "pos": 2,
+     "id": 20580,
+     "logprob": -1.1886686086654663,
+     "p_max": 0.30462657137291027,
+     "n_tl": 1,
+     "sum_list": 0.30462657137291027,
+     "all_finite": true
+    },
+    {
+     "pos": 3,
+     "id": 523,
+     "logprob": -1.4955534934997559,
+     "p_max": 0.2241245189289978,
+     "n_tl": 1,
+     "sum_list": 0.2241245189289978,
+     "all_finite": true
+    }
+   ],
+   "wall_s": 0.925
+  },
+  "tl5": {
+   "overrides": {
+    "top_logprobs": 5
+   },
+   "len_hist": {
+    "1": 4
+   },
+   "pos": [
+    {
+     "pos": 0,
+     "id": 220,
+     "logprob": -1.3568512201309204,
+     "p_max": 0.25747021894975214,
+     "n_tl": 1,
+     "sum_list": 0.25747021894975214,
+     "all_finite": true
+    },
+    {
+     "pos": 1,
+     "id": 18,
+     "logprob": -1.6584959030151367,
+     "p_max": 0.19042518275251188,
+     "n_tl": 1,
+     "sum_list": 0.19042518275251188,
+     "all_finite": true
+    },
+    {
+     "pos": 2,
+     "id": 20580,
+     "logprob": -1.1884851455688477,
+     "p_max": 0.3046824642339886,
+     "n_tl": 1,
+     "sum_list": 0.3046824642339886,
+     "all_finite": true
+    },
+    {
+     "pos": 3,
+     "id": 523,
+     "logprob": -1.4951879978179932,
+     "p_max": 0.22420645044473902,
+     "n_tl": 1,
+     "sum_list": 0.22420645044473902,
+     "all_finite": true
+    }
+   ],
+   "wall_s": 0.87
+  },
+  "tl20": {
+   "overrides": {
+    "top_logprobs": 20,
+    "n_probs": 20
+   },
+   "len_hist": {
+    "20": 4
+   },
+   "pos": [
+    {
+     "pos": 0,
+     "id": 220,
+     "logprob": -1.3567739725112915,
+     "p_max": 0.25749010867949856,
+     "n_tl": 20,
+     "sum_list": 0.6900501835809862,
+     "all_finite": true
+    },
+    {
+     "pos": 1,
+     "id": 18,
+     "logprob": -1.6584376096725464,
+     "p_max": 0.1904362835964774,
+     "n_tl": 20,
+     "sum_list": 0.9995544300751253,
+     "all_finite": true
+    },
+    {
+     "pos": 2,
+     "id": 20580,
+     "logprob": -1.188650131225586,
+     "p_max": 0.3046322001440712,
+     "n_tl": 20,
+     "sum_list": 0.9144538103565173,
+     "all_finite": true
+    },
+    {
+     "pos": 3,
+     "id": 523,
+     "logprob": -1.4950662851333618,
+     "p_max": 0.22423374087449635,
+     "n_tl": 20,
+     "sum_list": 0.7148762187406601,
+     "all_finite": true
+    }
+   ],
+   "wall_s": 0.903
+  },
+  "np2": {
+   "overrides": {
+    "n_probs": 2
+   },
+   "len_hist": {
+    "2": 4
+   },
+   "pos": [
+    {
+     "pos": 0,
+     "id": 220,
+     "logprob": -1.3568693399429321,
+     "p_max": 0.2574655536800532,
+     "n_tl": 2,
+     "sum_list": 0.32952361214807857,
+     "all_finite": true
+    },
+    {
+     "pos": 1,
+     "id": 18,
+     "logprob": -1.6585161685943604,
+     "p_max": 0.19042132371498757,
+     "n_tl": 2,
+     "sum_list": 0.3762102872368669,
+     "all_finite": true
+    },
+    {
+     "pos": 2,
+     "id": 20580,
+     "logprob": -1.1885573863983154,
+     "p_max": 0.30466045451505774,
+     "n_tl": 2,
+     "sum_list": 0.573302935371367,
+     "all_finite": true
+    },
+    {
+     "pos": 3,
+     "id": 523,
+     "logprob": -1.4950072765350342,
+     "p_max": 0.22424697298364338,
+     "n_tl": 2,
+     "sum_list": 0.3668631664302177,
+     "all_finite": true
+    }
+   ],
+   "wall_s": 0.927
+  },
+  "np5": {
+   "overrides": {
+    "n_probs": 5
+   },
+   "len_hist": {
+    "5": 4
+   },
+   "pos": [
+    {
+     "pos": 0,
+     "id": 220,
+     "logprob": -1.3566585779190063,
+     "p_max": 0.2575198233600309,
+     "n_tl": 5,
+     "sum_list": 0.487279396632592,
+     "all_finite": true
+    },
+    {
+     "pos": 1,
+     "id": 18,
+     "logprob": -1.6584850549697876,
+     "p_max": 0.19042724850473466,
+     "n_tl": 5,
+     "sum_list": 0.8139097056436705,
+     "all_finite": true
+    },
+    {
+     "pos": 2,
+     "id": 20580,
+     "logprob": -1.1887308359146118,
+     "p_max": 0.30460761588913704,
+     "n_tl": 5,
+     "sum_list": 0.7489150120568469,
+     "all_finite": true
+    },
+    {
+     "pos": 3,
+     "id": 523,
+     "logprob": -1.4948689937591553,
+     "p_max": 0.2242779846216883,
+     "n_tl": 5,
+     "sum_list": 0.5665058067835186,
+     "all_finite": true
+    }
+   ],
+   "wall_s": 0.8
+  }
+ },
+ "A": {
+  "len_hist": {
+   "20": 4
+  },
+  "pos": [
+   {
+    "pos": 0,
+    "id": 220,
+    "logprob": -1.3567739725112915,
+    "p_max": 0.25749010867949856,
+    "n_tl": 20,
+    "sum_list": 0.6900501835809862,
+    "all_finite": true
+   },
+   {
+    "pos": 1,
+    "id": 18,
+    "logprob": -1.6584376096725464,
+    "p_max": 0.1904362835964774,
+    "n_tl": 20,
+    "sum_list": 0.9995544300751253,
+    "all_finite": true
+   },
+   {
+    "pos": 2,
+    "id": 20580,
+    "logprob": -1.188650131225586,
+    "p_max": 0.3046322001440712,
+    "n_tl": 20,
+    "sum_list": 0.9144538103565173,
+    "all_finite": true
+   },
+   {
+    "pos": 3,
+    "id": 523,
+    "logprob": -1.4950662851333618,
+    "p_max": 0.22423374087449635,
+    "n_tl": 20,
+    "sum_list": 0.7148762187406601,
+    "all_finite": true
+   }
+  ]
+ },
+ "B": {
+  "overrides": {
+   "top_logprobs": 20,
+   "n_probs": 20,
+   "top_k": 400,
+   "top_p": 1.0,
+   "min_p": 0.0,
+   "typical_p": 1.0,
+   "xtc_probability": 0.0
+  },
+  "len_hist": {
+   "20": 4
+  },
+  "pos": [
+   {
+    "pos": 0,
+    "id": 220,
+    "logprob": -1.357191801071167,
+    "p_max": 0.2573825444314792,
+    "n_tl": 20,
+    "sum_list": 0.6900194627982923,
+    "all_finite": true
+   },
+   {
+    "pos": 1,
+    "id": 18,
+    "logprob": -1.6585452556610107,
+    "p_max": 0.19041578499780593,
+    "n_tl": 20,
+    "sum_list": 0.9995542532021126,
+    "all_finite": true
+   },
+   {
+    "pos": 2,
+    "id": 20580,
+    "logprob": -1.1884984970092773,
+    "p_max": 0.3046783963113737,
+    "n_tl": 20,
+    "sum_list": 0.9144724355568377,
+    "all_finite": true
+   },
+   {
+    "pos": 3,
+    "id": 523,
+    "logprob": -1.4955075979232788,
+    "p_max": 0.22413480548904868,
+    "n_tl": 20,
+    "sum_list": 0.7148155365679821,
+    "all_finite": true
+   }
+  ],
+  "wall_s": 0.78
+ },
+ "n_probe": {
+  "NprobeA": {
+   "overrides": {
+    "n_probs": 400
+   },
+   "N_observed": 400
+  },
+  "NprobeB": {
+   "overrides": {
+    "n_probs": 400,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0
+   },
+   "N_observed": 400
+  }
+ },
+ "d_pmax": {
+  "per_pos": [
+   0.00010756424801938724,
+   2.0498598671481183e-05,
+   4.619616730250353e-05,
+   9.893538544766822e-05
+  ],
+  "median_abs_diff": 7.256577637508588e-05,
+  "a_renormalized": true
+ },
+ "greedy": {
+  "n_cmp": 384,
+  "agree": 384,
+  "frac": 1.0,
+  "first_diff": null,
+  "c1_wall_s": 26.063,
+  "c2_wall_s": 26.153,
+  "q1_body_is_B": false,
+  "note": "C1 = Q1-тело (top_k=40/top_p=0.95/min_p=0.05 из GGUF), C2 = (B)-тело"
+ },
+ "gate_cache": {
+  "64": {
+   "wall_s_r2": 0.421,
+   "per_pos_s": 0.421,
+   "slots": {
+    "n_prompt_tokens": 64,
+    "n_prompt_tokens_processed": 0,
+    "n_prompt_tokens_cache": 0
+   },
+   "ok": false
+  },
+  "128": {
+   "wall_s_r2": 0.349,
+   "per_pos_s": 0.349,
+   "slots": {
+    "n_prompt_tokens": 64,
+    "n_prompt_tokens_processed": 0,
+    "n_prompt_tokens_cache": 0
+   },
+   "ok": false
+  },
+  "192": {
+   "wall_s_r2": 0.349,
+   "per_pos_s": 0.349,
+   "slots": {
+    "n_prompt_tokens": 64,
+    "n_prompt_tokens_processed": 0,
+    "n_prompt_tokens_cache": 0
+   },
+   "ok": false
+  }
+ },
+ "rc": 2,
+ "halt_reason": "cache gate failed: {\"64\": {\"wall_s_r2\": 0.421, \"per_pos_s\": 0.421, \"slots\": {\"n_prompt_tokens\": 64, \"n_prompt_tokens_processed\": 0, \"n_prompt_tokens_cache\": 0}, \"ok\": false}, \"128\": {\"wall_s_r2\": 0.349, \"per_pos_s\": 0.349, \"slots\": {\"n_prompt_tokens\": 64, \"n_prompt_tokens_processed\": 0, \"n_prompt_tokens_cache\": 0}, \"ok\": false}, \"192\": {\"wall_s_r2\": 0.349, \"per_pos_s\": 0.349, \"slots\": {\"n_prompt_tokens\": 64, \"n_prompt_tokens_processed\": 0, \"n_prompt_tokens_cache\": 0}, \"ok\": false}}"
+}
