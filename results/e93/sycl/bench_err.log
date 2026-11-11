@@ -1,0 +1,10 @@
+warning: asserts enabled, performance may be affected
+[TEMP-SDPA] Intel(R) Iris(R) Xe Graphics: has_xmx=0 arch=12582912 family=0
+[TEMP] SYCL dev 0: arch=intel_gpu_adl_p family=0 has_xmx=0 (name=Intel(R) Iris(R) Xe Graphics)
+register_backend: registered backend SYCL (1 devices)
+register_device: registered device SYCL0 (Intel(R) Iris(R) Xe Graphics)
+register_backend: registered backend CPU (1 devices)
+register_device: registered device CPU (12th Gen Intel(R) Core(TM) i7-1255U)
+load_backend: failed to find ggml_backend_init in /home/survivor/work/llama.cpp/build/bin/libggml-sycl.so
+load_backend: failed to find ggml_backend_init in /home/survivor/work/llama.cpp/build/bin/libggml-cpu.so
+DEPRECATED: -mmp and --mmap are deprecated in favour of --load-mode. Please use --load-mode mmap instead.
