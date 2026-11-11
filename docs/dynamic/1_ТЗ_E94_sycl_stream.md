@@ -106,7 +106,8 @@ Sampling-штрафы обнуляются явно во всех запроса
 ### 2.1 Фаза Q1 — свободная жадная генерация (16 доков × r=2)
 `POST /completion {prompt: <HF ids 64>, n_predict: 384, temperature: 0, stream: false,
 logprobs: true, top_logprobs: 2, cache_prompt: false, <нулевые штрафы>, seed: 8181}`.
-Из ответа: id-стрим генерации из `tokens` (384), p_max/top2 из `completion_probabilities`, `content`.
+Из ответа: id-стрим генерации (`tokens` при `return_tokens:true`, и он обязан совпадать с
+`[p.id for p in completion_probabilities]`), p_max/top2 из `completion_probabilities`, `content`.
 Сырой ответ → `results/e94/raw/q1_<doc>_r<r>.json` (идемпотентно: существующий файл не перезапрашивается).
 
 Метрики (только по докам с полным ответом):
@@ -122,9 +123,12 @@ logprobs: true, top_logprobs: 2, cache_prompt: false, <нулевые штраф
 Для выбранного подset'а доков и каждого `k = 64..447` (`k` — длина отправляемого префикса;
 предсказывается позиция `k`, то есть покрываются `gen_p1[j]` при `j = k-64`; `k=448` не шлём —
 за последним токеном последовательности предсказывать нечего):
-`POST /completion {prompt: <ids[:k]> (448-id поток референса), n_predict: 1, logprobs: true,
-top_logprobs: 2, cache_prompt: true, temperature: 0, <нулевые штрафы>}` → позиция `k−1`:
-`p_max = exp(tokens[0].logprob)`, `top1_id = tokens[0].id`, `top2` из `top_logprobs`.
+`POST /completion {prompt: <ids[:k]> (448-id поток референса), n_predict: 1, stream: false,
+return_tokens: true, logprobs: true, top_logprobs: 2, cache_prompt: true, temperature: 0,
+<нулевые штрафы>}` → предсказание позиции `k` берётся из **`completion_probabilities[0]`**
+(не из `tokens[0]` — там при `return_tokens:true` лежит тот же id, но logprob'а нет):
+`p_max = exp(completion_probabilities[0].logprob)`, `top1_id = completion_probabilities[0].id`,
+`top2` из `completion_probabilities[0].top_logprobs`.
 CPU-сторона: transformers fp32, один forward по тем же `ids[:448]`, берётся `p_max`, `top1_id`, `top2_id`
 на каждой позиции. Конвенция зафиксирована по коду референса (`exp81b_replay.py:42-53`:
 `nxt=argmax(logits[0,-1])`, `p1=softmax(logits[0,-1])[nxt]`) ⇒ `gen_p1[j]` — это `p_max` **после**
@@ -145,10 +149,13 @@ CPU-сторона: transformers fp32, один forward по тем же `ids[:4
 берётся максимум доков, который влезает (минимум 2), и число фиксируется в `FORMAT.md` **до** полного
 прогона. Линейная экстраполяция считается по медиане первых 32 позиций, а не по первой.
 
-**Спайк-гейт кэша (обязателен до метрик):** на одном доке прогнать `k=64`, `k=128`, `k=192` при
-`cache_prompt:true`; со второго запроса `tokens_cached ≥ k-2`, а клиентский wall-clock на позицию не
-растёт с `k` (кэш бьёт). Если префикс не переиспользуется — маршрут закрывается (`RUN_RC=2`), в NOTES —
-переход на perplexity-путь (ФЧ §2) как следующий кандидат. Это единственный допустимый исход «не туда».
+**Спайк-гейт кэша (обязателен до метрик):** на одном доке прогнать `k=64`, `k=128`, `k=192` (каждый дважды)
+при `cache_prompt:true`; со **второго** запроса того же `k` смотреть `GET /slots`:
+`n_prompt_tokens == k`, `n_prompt_tokens_processed ≤ 2`, `n_prompt_tokens_cache ≥ k-2`, и клиентский
+wall-clock на позицию не растёт с `k`. Поле `tokens_cached` из ответа — не метрика кэша
+(`server-context.cpp:2118`), в гейте не участвует. Если префикс не переиспользуется — маршрут закрывается
+(`RUN_RC=2`), в NOTES — переход на perplexity-путь (ФЧ §2) с преддекларированным покрытием позиций
+(см. §8.5). Это единственный допустимый исход «не туда».
 
 ### 2.3 Фаза Q3 — logit-side против rep8, **внутри каждого движка**
 По Q2-позициям каждого дока: `margin := p_top1 − p_top2` (не `p − p_chosen`: на teacher-forced позиции
