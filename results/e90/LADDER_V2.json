@@ -47,7 +47,8 @@
    5
   ],
   "L": "23",
-  "note": "dip k=1; hump/plateau лестницей с маской НЕ измеримы (нет пар k>=blk); масштаб сверх локальности — R9-6 surrogate"
+  "note": "dip k=1; hump/plateau лестницей с маской НЕ измеримы (нет пар k>=blk); масштаб сверх локальности — R9-6 surrogate",
+  "seam_delta_method": "median of per-doc paired deltas (unmasked−(1−1/b)·masked), cluster bootstrap by docs; pooled-median difference differs up to 0.0014 (see seam_pooled)"
  },
  "real_pooled": -0.0722,
  "dip_table_pooled_nonwiki": {
@@ -123,5 +124,13 @@
    ],
    "n_docs": 35
   }
+ },
+ "seam_pooled": {
+  "blk2": -0.0045,
+  "blk4": 0.0006,
+  "blk8": 0.0006,
+  "blk16": 0.001,
+  "blk32": -0.001,
+  "blk64": -0.0007
  }
 }
