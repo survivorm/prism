@@ -26,6 +26,11 @@ Shuffled-последовательности ОДНИ для всех клет�
 import hashlib, inspect, json, os, sys
 from datetime import datetime
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"4")
+# CPU-only: transformers.use_kernel_func_from_hub_with_fallback безусловно импортирует fla
+# (USE_HUB_KERNELS=NO его не глушит), а fla-l2norm поднимает triton-драйвер и крашится
+# "0 active drivers". sys.modules[...]=False делает импорт ModuleNotFoundError ->
+# чистый torch-fallback (тот же референсный путь, что в ранних CPU-прогонах).
+sys.modules["fla"]=False; sys.modules["fla.ops"]=False
 import numpy as np, torch, transformers
 torch.set_num_threads(4)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

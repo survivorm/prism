@@ -11,6 +11,9 @@ K(k)=P(x_{t+k}=x_t) по ГЕНЕРАЦИИ (без промпта — пром�
 Ранняя/поздняя половина генерации — сегменты early/late (парный контраст в доке).
 OMC-CI: own-медиана бустрапится по докам, корпусный контраст фиксирован ((cor-CN)[:,k]).
 """
+import os, sys
+# CPU-only: заглушка fla -> torch-reference путь (см. exp91: triton "0 active drivers")
+sys.modules["fla"]=False; sys.modules["fla.ops"]=False
 import json, numpy as np, torch
 from pathlib import Path
 from transformers import AutoModelForCausalLM,AutoTokenizer
