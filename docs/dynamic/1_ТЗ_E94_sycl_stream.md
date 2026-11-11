@@ -52,7 +52,24 @@
 (при `echo:true` сервер кидает «Only no echo is supported» — `server-common.cpp:1034-1035`).
 Sampling-штрафы обнуляются явно во всех запросах (дефолты берутся из GGUF-метаданных модели,
 `common.cpp:1267`); `top_k/top_p/min_p` не трогаем — цепочка как в e93, и расхождение на
-низкоуверенных позициях есть ожидаемый сигнал, а не баг.
+низкоуверенных позициях есть ожидаемый сигнал, а не баг. `logprobs` и `top_logprobs` засылаются
+**только парой**: `top_logprobs` без `logprobs:true` — исключение (`server-common.cpp:1381-1389`).
+
+**Поля ответа нон-OAI `/completion` (проверены в исходниках, `server-task.cpp:349-357`)** — на них
+держатся гейты, выдуманных имён в ТЗ нет:
+`tokens_evaluated` (=число разобраных prompt-токенов), `tokens_predicted`, `stop_type`, `stopping_word`,
+`tokens_cached`, `timings`, `generation_settings` (=эхо применённых sampling-параметров,
+`server-task.cpp:350` → `task_params::to_json`), `tokens[]` с `id`/`logprob`/`top_logprobs`.
+Отсюда три обязательных гейта:
+- **prompt-count гейт (главный, на каждом запросе):** `tokens_evaluated == len(<отправленный id-массив>)`
+  (Q1: 64, probe: k). Расхождение ⇒ сработал чат-шаблон или BOS ⇒ сравнивать нечего → `RUN_RC=13`.
+  Это закрывает hazard, который ревью r2 оставил PARTIAL; статически шаблон применяется только
+  в OAI-chat-билдере (`server-common.cpp:1134` `oaicompat_chat_params_parse`, применение `:1338`),
+  а legacy `/completion` к нему не относится — но гейт обязателен и на этом.
+- **гейт кэша (для Q2):** `tokens_cached ≥ k-2` и отсутствие роста `timings` prompt-части с `k`.
+- **проверка штрафов:** по эху `generation_settings` первого запроса (значения penalties/mirostat
+  должны равняться посланным); поведенческий контроль (`repeat_penalty:1.1` меняет id-поток) — вторичный.
+  ⚠ Поправка к ФЧ §3: эхо sampling-параметров в ответе **есть** (`generation_settings`), я утверждал обратное.
 
 ### 2.1 Фаза Q1 — свободная жадная генерация (16 доков × r=2)
 `POST /completion {prompt: <HF ids 64>, n_predict: 384, temperature: 0, stream: false,
@@ -122,7 +139,8 @@ results/e94/
   pp ≈ 280 t/s, decode ≈ 6–11 t/s) → Q1 ≈ 15 мин, Q2 по замеру спайка, потолок 40 мин.
 - Память/запуск: `RUN_ONE_MIN_MEM=3 ./run_one.sh e94 …`; в лончере читать `LAUNCHED|BUSY` (не rc);
   один свой сервер, kill только по своему PID, пауза ≥5 с; `pgrep -x llama-server` до старта (чужой = STOP).
-- `RUN_RC`: 0 успех · 2 гейт спайка · 10 device-гейт · 11 ≥4 неудавшихся дока · 12 сервер умер дважды.
+- `RUN_RC`: 0 успех · 2 гейт спайка · 10 device-гейт · 11 ≥4 неудавшихся дока · 12 сервер умер дважды ·
+  13 prompt-count-гейт (`tokens_evaluated` ≠ длина отправленного id-массива).
   JSON пишется и при STOP (с полем `halt_reason`) — иначе артефакт неаудитабелен.
 - Числа в отчёт — только из артефакта/лога. `RUN_RC=0` без артефакта = прогон не выполнен.
 
