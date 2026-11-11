@@ -1,0 +1,146 @@
+[
+ {
+  "doc": "w0",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 23,
+  "rep8_llama": 0.9036458333333334,
+  "rep8_cpu": 0.9088541666666666,
+  "delta": -0.005208333333333259
+ },
+ {
+  "doc": "w1",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 40,
+  "rep8_llama": 0.8828125,
+  "rep8_cpu": 0.890625,
+  "delta": -0.0078125
+ },
+ {
+  "doc": "w2",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 14,
+  "rep8_llama": 0.4375,
+  "rep8_cpu": 0.5052083333333334,
+  "delta": -0.06770833333333337
+ },
+ {
+  "doc": "w3",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 1,
+  "rep8_llama": 0.8645833333333334,
+  "rep8_cpu": 0.8385416666666666,
+  "delta": 0.02604166666666674
+ },
+ {
+  "doc": "w4",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 6,
+  "rep8_llama": 0.0026041666666666665,
+  "rep8_cpu": 0.953125,
+  "delta": -0.9505208333333334
+ },
+ {
+  "doc": "w5",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 1,
+  "rep8_llama": 0.9635416666666666,
+  "rep8_cpu": 0.9348958333333334,
+  "delta": 0.02864583333333326
+ },
+ {
+  "doc": "w6",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 41,
+  "rep8_llama": 0.8697916666666666,
+  "rep8_cpu": 0.9114583333333334,
+  "delta": -0.04166666666666674
+ },
+ {
+  "doc": "w7",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 30,
+  "rep8_llama": 0.9140625,
+  "rep8_cpu": 0.9270833333333334,
+  "delta": -0.01302083333333337
+ },
+ {
+  "doc": "w8",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 8,
+  "rep8_llama": 0.9479166666666666,
+  "rep8_cpu": 0.9739583333333334,
+  "delta": -0.02604166666666674
+ },
+ {
+  "doc": "w9",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 384,
+  "rep8_llama": 0.9661458333333334,
+  "rep8_cpu": 0.9661458333333334,
+  "delta": 0.0
+ },
+ {
+  "doc": "w10",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 384,
+  "rep8_llama": 0.9427083333333334,
+  "rep8_cpu": 0.9427083333333334,
+  "delta": 0.0
+ },
+ {
+  "doc": "w11",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 384,
+  "rep8_llama": 0.9739583333333334,
+  "rep8_cpu": 0.9739583333333334,
+  "delta": 0.0
+ },
+ {
+  "doc": "w12",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 384,
+  "rep8_llama": 0.9583333333333334,
+  "rep8_cpu": 0.9583333333333334,
+  "delta": 0.0
+ },
+ {
+  "doc": "w13",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 53,
+  "rep8_llama": 0.234375,
+  "rep8_cpu": 0.2578125,
+  "delta": -0.0234375
+ },
+ {
+  "doc": "w14",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 22,
+  "rep8_llama": 0.8125,
+  "rep8_cpu": 0.9296875,
+  "delta": -0.1171875
+ },
+ {
+  "doc": "w15",
+  "n_tokens": 384,
+  "tokens_evaluated": 64,
+  "prefix_len": 384,
+  "rep8_llama": 0.953125,
+  "rep8_cpu": 0.953125,
+  "delta": 0.0
+ }
+]

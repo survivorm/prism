@@ -1,0 +1,78 @@
+{
+ "phase": "q1",
+ "started_unix": 1794435755,
+ "per_doc": [],
+ "summary": {
+  "median_abs_delta_rep8": 0.018229166666666685,
+  "bootstrap_ci_2.5_97.5": [
+   0.0,
+   0.03258463541666623
+  ],
+  "n_bootstrap": 10000,
+  "seed": 8181,
+  "spearman": {
+   "rho": 0.7039771994004667,
+   "p_perm": 0.003,
+   "null_ci": [
+    -0.5037560691525724,
+    0.5007737389668275
+   ],
+   "n_perm": 2000,
+   "seed": 8181
+  },
+  "distinct_rep8": {
+   "llama": 16,
+   "cpu": 14
+  },
+  "repro": {
+   "median": 1.0,
+   "gate": 0.95,
+   "pass": true,
+   "label": null
+  }
+ },
+ "port": 8110,
+ "server_pid": 169854,
+ "t_load_s": 14.07,
+ "fd_after_health": [
+  "/dev/dri/renderD128",
+  "/dev/dri/renderD128"
+ ],
+ "body_template": {
+  "prompt": [],
+  "n_predict": 384,
+  "temperature": 0,
+  "stream": false,
+  "return_tokens": true,
+  "logprobs": true,
+  "top_logprobs": 20,
+  "cache_prompt": false,
+  "seed": 8181,
+  "repeat_penalty": 1.0,
+  "presence_penalty": 0.0,
+  "frequency_penalty": 0.0,
+  "repeat_last_n": 0,
+  "dry_multiplier": 1.0,
+  "dry_base": 1.0,
+  "xtc_probability": 0.0,
+  "mirostat": 0,
+  "n_probs": 20,
+  "top_k": 400,
+  "top_p": 1.0,
+  "min_p": 0.0,
+  "typical_p": 1.0
+ },
+ "fd_first_request": {
+  "n_samples": 20,
+  "n_samples_with_dri": 20,
+  "dri_union": [
+   "/dev/dri/renderD128"
+  ]
+ },
+ "n_docs_ok": 16,
+ "n_docs_failed": 0,
+ "selfcheck_cpu_rep8_max_abs_delta": 0.0,
+ "rc": 0,
+ "halt_reason": null,
+ "t_total_s": 851.68
+}
