@@ -1,0 +1,127 @@
+{
+ "meta": {
+  "n_docs": 64,
+  "nonloopy": [
+   "wiki_13",
+   "math_0",
+   "math_1",
+   "math_2",
+   "math_3",
+   "math_4",
+   "math_5",
+   "math_6",
+   "math_7",
+   "math_8",
+   "math_9",
+   "math_10",
+   "math_11",
+   "math_12",
+   "math_13",
+   "math_14",
+   "math_15",
+   "code_2",
+   "code_4",
+   "code_5",
+   "code_7",
+   "code_9",
+   "code_11",
+   "code_12",
+   "code_15",
+   "chat_1",
+   "chat_2",
+   "chat_4",
+   "chat_5",
+   "chat_6",
+   "chat_7",
+   "chat_8",
+   "chat_11",
+   "chat_12",
+   "chat_13",
+   "chat_14"
+  ],
+  "seeds": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "L": "23",
+  "note": "dip k=1; hump/plateau лестницей с маской НЕ измеримы (нет пар k>=blk); масштаб сверх локальности — R9-6 surrogate"
+ },
+ "real_pooled": -0.0722,
+ "dip_table_pooled_nonwiki": {
+  "blk2": {
+   "real": -0.0722,
+   "masked": -0.0534,
+   "unmasked": -0.0312,
+   "control": -0.0724,
+   "seam_delta": -0.0042,
+   "ci": [
+    -0.0083,
+    -0.0032
+   ],
+   "n_docs": 35
+  },
+  "blk4": {
+   "real": -0.0722,
+   "masked": -0.0644,
+   "unmasked": -0.0477,
+   "control": -0.0719,
+   "seam_delta": 0.0007,
+   "ci": [
+    -0.0019,
+    0.0022
+   ],
+   "n_docs": 35
+  },
+  "blk8": {
+   "real": -0.0722,
+   "masked": -0.0674,
+   "unmasked": -0.0584,
+   "control": -0.0723,
+   "seam_delta": -0.0004,
+   "ci": [
+    -0.0019,
+    0.0012
+   ],
+   "n_docs": 35
+  },
+  "blk16": {
+   "real": -0.0722,
+   "masked": -0.0714,
+   "unmasked": -0.0659,
+   "control": -0.0724,
+   "seam_delta": -0.0004,
+   "ci": [
+    -0.0016,
+    0.0002
+   ],
+   "n_docs": 35
+  },
+  "blk32": {
+   "real": -0.0722,
+   "masked": -0.0725,
+   "unmasked": -0.0712,
+   "control": -0.072,
+   "seam_delta": -0.0001,
+   "ci": [
+    -0.0007,
+    0.0001
+   ],
+   "n_docs": 35
+  },
+  "blk64": {
+   "real": -0.0722,
+   "masked": -0.072,
+   "unmasked": -0.0716,
+   "control": -0.0722,
+   "seam_delta": -0.0006,
+   "ci": [
+    -0.0007,
+    -0.0003
+   ],
+   "n_docs": 35
+  }
+ }
+}
