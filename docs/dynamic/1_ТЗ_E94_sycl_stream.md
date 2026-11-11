@@ -24,7 +24,7 @@
 | Что | Источник | Проверено |
 |---|---|---|
 | 16 промптов (HF ids, 64 токена) | `results/e93/prompts.json` → `d['docs']['w*']['ids']` (пинованный round-trip 16/16, `pin_file_sha16 083c732ff67c04f8`) | e93 |
-| CPU id-поток генерации (384) и p1-трек | `results/e81/REPLAY.json` → `docs.w*.gen_ids`, `gen_p1`, `segments` | e81 |
+| CPU id-поток генерации (384) и p1-трек | `results/e81/REPLAY.json` → `gen_ids[w*]`, `gen_p1[w*]` (это **верхние** словари, не `docs.w*`; в `docs.w*` лежат `segments/onset/p1_med`) | e81 |
 | Формулы rep8 / rep_flags / spear | `experiments/exp81b_replay.py` (копировать дословно, не переизобретать) | e81b |
 | SYCL-канал и модель | `/data/Qwen/Qwen3.5-0.8B-Q4_K_M.gguf`, `-sm none -mg 0 -ngl 99 -fa on -c 2048 -np 1` | e93 (`results/e93/sycl/`) |
 | i915/IGC-предосторожности | `~/work/llama.cpp/PLAN.md` (пауза ≥5 с между стартами; asserts-build; DMMV не ставить для f16) | PLAN.md |
@@ -92,8 +92,12 @@ logprobs: true, top_logprobs: 2, cache_prompt: false, <нулевые штраф
 top_logprobs: 2, cache_prompt: true, temperature: 0, <нулевые штрафы>}` → позиция `k−1`:
 `p_max = exp(tokens[0].logprob)`, `top1_id = tokens[0].id`, `top2` из `top_logprobs`.
 CPU-сторона: transformers fp32, один forward по тем же `ids[:448]`, берётся `p_max`, `top1_id`, `top2_id`
-на каждой позиции (та же конвенция «предсказание следующего», сдвиг на 1 — зафиксировать в коде комментарием
-и проверить на известном примере).
+на каждой позиции. Конвенция зафиксирована по коду референса (`exp81b_replay.py:42-53`:
+`nxt=argmax(logits[0,-1])`, `p1=softmax(logits[0,-1])[nxt]`) ⇒ `gen_p1[j]` — это `p_max` **после**
+`prompt+gen[:j]`, то есть teacher-forced позиция `k = 64 + j`. Проверить это не глазами, а гейтом:
+**CPU-референс обязан воспроизвести `REPLAY.gen_p1` с `max|Δ| < 1e-3`** (иначе наша свежая CPU-проходка
+не согласована с замороженным базисом → `RUN_RC=14`, сравнение не проводится). После гейта `p_max_cpu`
+на позициях 64..447 берётся из проходки, а `gen_p1` служит её контрольной сверкой.
 
 Метрики Q2 (по позициям, где обе стороны посчитаны):
 - главная — **медиана |Δp_max|**; затем доля позиций с |Δp_max| < 0.05;
@@ -140,7 +144,8 @@ results/e94/
 - Память/запуск: `RUN_ONE_MIN_MEM=3 ./run_one.sh e94 …`; в лончере читать `LAUNCHED|BUSY` (не rc);
   один свой сервер, kill только по своему PID, пауза ≥5 с; `pgrep -x llama-server` до старта (чужой = STOP).
 - `RUN_RC`: 0 успех · 2 гейт спайка · 10 device-гейт · 11 ≥4 неудавшихся дока · 12 сервер умер дважды ·
-  13 prompt-count-гейт (`tokens_evaluated` ≠ длина отправленного id-массива).
+  13 prompt-count-гейт (`tokens_evaluated` ≠ длина отправленного id-массива) ·
+  14 CPU-референс не воспроизвёл `REPLAY.gen_p1` (max|Δ| ≥ 1e-3).
   JSON пишется и при STOP (с полем `halt_reason`) — иначе артефакт неаудитабелен.
 - Числа в отчёт — только из артефакта/лога. `RUN_RC=0` без артефакта = прогон не выполнен.
 
