@@ -49,7 +49,9 @@ if not names:
 def dip_path(model,toks):
     with torch.no_grad():
         o=model(input_ids=torch.tensor([toks]),output_hidden_states=True)
-    h=o.hidden_states[L][0,:len(toks)].double().numpy()
+    # npz-ключ "L23" = forward_hook на m.model.layers[23] = ВЫХОД слоя 23 = hidden_states[24]
+    # (hidden_states[0]=эмбеддинги). Взяли hidden_states[L+1]; hs[L] был off-by-one (PIN FAIL 11.11).
+    h=o.hidden_states[L+1][0,:len(toks)].double().numpy()
     hn=np.linalg.norm(h,axis=1,keepdims=True); u=h/np.maximum(hn,1e-12)
     P=curve_u(u,hn.ravel()); Pn=P/np.maximum(np.linalg.norm(P,axis=1,keepdims=True),1e-12)
     c1=np.einsum("ij,ij->i",Pn[:-1],Pn[1:])
@@ -58,7 +60,7 @@ def dip_path(model,toks):
 docs=[]
 for nm in names:
     toks=np.asarray(z[f"{nm}_tok"]).ravel().astype(int).tolist()
-    if len(toks)>=64: docs.append((nm,toks[:256]))
+    if len(toks)>=64: docs.append((nm,toks))  # полная npz-длина (384), сравнимо с пином
 print(f"docs={len(docs)}",flush=True)
 # shuffled-последовательности общие для всех клеток (парное сравнение, M2)
 rngl=np.random.default_rng(7)
@@ -102,8 +104,18 @@ mt=AutoModelForCausalLM.from_pretrained(BASE,dtype=torch.float32).eval(); mt.req
 res["trained"]=cells(mt,docs2); print("trained готов",flush=True)
 # (b) регресс-пин ДО доверия random-клеткам
 tv=float(np.median(res["trained"]["corpus"]))
-t_ok=abs(tv-PIN_DIP)<=PIN_TOL
-print(f"SANITY(b) PIN trained×corpus dip={tv:.4f} (target {PIN_DIP}±{PIN_TOL}) -> {'PASS' if t_ok else 'FAIL'}",flush=True)
+# пин воспроизводим ТЕМ ЖЕ npz-пайплайном (numpy, без torch): pool35=names, кривые из npz
+def _npz_dip(nm_):
+    u_=np.asarray(z[f"{nm_}_L{L}_u"],dtype=np.float64)
+    hn_=np.asarray(z[f"{nm_}_L{L}_hn"],dtype=np.float64).reshape(-1,1)
+    P_=curve_u(u_,hn_.ravel()); Pn_=P_/np.maximum(np.linalg.norm(P_,axis=1,keepdims=True),1e-12)
+    return float(np.median(np.einsum("ij,ij->i",Pn_[:-1],Pn_[1:])))
+pin_npz=float(np.median([_npz_dip(n) for n in names]))
+repro_ok=abs(pin_npz-PIN_DIP)<=0.0005
+print(f"SANITY(b1) NPZ-пин pool35(n={len(names)}) median={pin_npz:.4f} (цель {PIN_DIP}±0.0005) -> {'PASS' if repro_ok else 'FAIL'}",flush=True)
+ENG_TOL=0.006  # reference-vs-fla дрейф по докам 0.001–0.009 (диаг 11.11), по медиане пула — меньше
+t_ok=repro_ok and abs(tv-pin_npz)<=ENG_TOL
+print(f"SANITY(b2) torch trained×corpus dip={tv:.4f} vs npz-пин {pin_npz:.4f} (допуск {ENG_TOL}) -> {'PASS' if t_ok else 'FAIL'}",flush=True)
 if not t_ok:
     for nm,v in zip([d[0] for d in docs2],res["trained"]["corpus"]):
         print(f"  per-doc {nm}: {v:.4f}",flush=True)
@@ -177,7 +189,7 @@ out=dict(
  n_docs=len(docs),
  pool_source="results/e90/LADDER_V2.json meta.nonloopy ∩ nonwiki (канон-пул пина −0.0722, M1)",
  docs=[d[0] for d in docs2],
- pool="nonwiki, len>=64, первые 256 ток, L=23, fp32, пересчёт (не npz)",
+ pool="pool35 LADDER (nonloopy∩nonwiki), полные 384 npz-токена, L=23 hs[L+1]=выход слоя (hook-семантика npz), fp32-пересчёт",
  L=L,dtype="float32",
  seeds=SEEDS,
  init_seed_policy="torch.manual_seed(S) перед from_config (M9)",

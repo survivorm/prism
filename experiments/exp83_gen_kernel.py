@@ -43,14 +43,21 @@ med_c=np.median(exc_c,0)
 gen_k=[];gen_null=[];seg_early=[];seg_late=[];gen_toks=[];RNG=np.random.default_rng(83)
 for i in range(16):
     ids=tk(pin["texts"][i],add_special_tokens=False)["input_ids"]
-    toks=[]
-    with torch.no_grad():
-        o=m(torch.tensor([ids])); past=o.past_key_values
-        nxt=torch.argmax(o.logits[0,-1])
-        toks.append(int(nxt))
-        for _ in range(N-1):
-            o=m(nxt.view(1,1),past_key_values=past,use_cache=True); past=o.past_key_values
-            nxt=torch.argmax(o.logits[0,-1]); toks.append(int(nxt))
+    CF=OUT/f"gen_w{i}.json"   # per-doc кэш: перезжог после смерти процесса не перерегенерит готовые доки
+    if CF.exists():
+        toks=json.load(open(CF))["toks"]
+        assert len(toks)==N, f"кэш {CF} неполный ({len(toks)}!={N}) — регенерация"
+        CF.unlink()
+    if not CF.exists():
+        toks=[]
+        with torch.no_grad():
+            o=m(torch.tensor([ids])); past=o.past_key_values
+            nxt=torch.argmax(o.logits[0,-1])
+            toks.append(int(nxt))
+            for _ in range(N-1):
+                o=m(nxt.view(1,1),past_key_values=past,use_cache=True); past=o.past_key_values
+                nxt=torch.argmax(o.logits[0,-1]); toks.append(int(nxt))
+        CF.write_text(json.dumps({"toks":toks}))
     gen_only=toks                        # БЕЗ промпта (промпт = дословно корпус, анти-эхо)
     gen_toks.append(gen_only)
     gen_k.append(kernel(gen_only))
