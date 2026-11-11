@@ -61,7 +61,10 @@
 `server-task.h:54` default false, `server-context.cpp:1839`),
 `cache_prompt`, `repeat_penalty`, `presence_penalty`, `frequency_penalty`, `repeat_last_n`,
 `dry_multiplier`, `dry_base`, `xtc_probability`, `mirostat`, `seed` (`seed` при `temperature:0` — no-op,
-не баг). Явно запрещённые (их нет):
+не баг). **Канон тела (по живому спайку, ФЧ §8.4):** `top_logprobs: 20` (никогда не 2 — при 2 сервер
+возвращает 1 запись) + снятие прореживания `top_k: 400, top_p: 1.0, min_p: 0.0, typical_p: 1.0,
+xtc_probability: 0.0`; жадный поток от этого не меняется (384/384 совпадения), а кандидатное множество
+становится ≥400, то есть p_max ближе к полному vocab. Одно и то же тело — для Q1/Q2/Q3. Явно запрещённые (их нет):
 `anti_reverse`, `penalty_last_n` как *поле запроса*, `dry_penalty`, `dynatop_p`, `echo`
 (при `echo:true` сервер кидает «Only no echo is supported» — `server-common.cpp:1034-1035`).
 `stream:false` обязателен во **всех** `/completion`-запросах: `completion_probabilities` выдаётся только
@@ -96,9 +99,11 @@ Sampling-штрафы обнуляются явно во всех запроса
   (`server-context.cpp:2118`) ⇒ `tokens_cached ≥ k-2` истинно всегда и ничего не измеряет. Реальные
   счётчики живут в дампе слотов: `GET /slots` (`server.cpp:285`) отдаёт на слот
   `n_prompt_tokens`, `n_prompt_tokens_processed`, `n_prompt_tokens_cache` (`server-context.cpp:700-702`).
-  поэтому гейт: со **второго** запроса дока `n_prompt_tokens_processed ≤ 2` **и**
-  `n_prompt_tokens_cache ≥ k-2` при `n_prompt_tokens == k`, плюс клиентский wall-clock на позицию не
-  растёт с `k`. Значения пишутся в `FORMAT.md` как есть.
+  поэтому гейт: со **второго** запроса дока **`timings.cache_n ≥ k-2`** (поля `timings` измерены живым
+  спайком: `cache_n, prompt_n, prompt_ms, prompt_per_token_ms, prompt_per_second, predicted_n`), плюс
+  клиентский wall-clock на позицию не растёт с `k`. `GET /slots` для этой метрики **непригоден**
+  (отдаёт `task_prev`: при k=64/128/192 показывал `n_prompt_tokens=64, processed=0, cache=0`).
+  Значения пишутся в `FORMAT.md` как есть (ФЧ §8.3).
 - **проверка штрафов:** по эху `generation_settings` первого запроса (значения penalties/mirostat
   должны равняться посланным); поведенческий контроль (`repeat_penalty:1.1` меняет id-поток) — вторичный.
   ⚠ Поправка к ФЧ §3: эхо sampling-параметров в ответе **есть** (`generation_settings`), я утверждал обратное.
