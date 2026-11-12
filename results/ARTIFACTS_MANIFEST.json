@@ -177,15 +177,21 @@
   "note": "R9-17 base-model rep-контроль"
  },
  "results/e94/Q3.json": {
-  "sha256_16": "cc90ca03a94511df",
-  "size": 264518,
-  "date": "2026-11-12T03:41:40",
-  "note": "E94 Q3: margin vs rep8, single engine, from raw_q1"
+  "sha256_16": "711ac08a79a02507",
+  "size": 265024,
+  "date": "2026-11-12T04:03:04",
+  "note": "E94 Q3: margin vs rep8, single engine, from raw_q1; rebuild +summary.d_per_doc_rho (unit=document, MAJOR-1) +p_note"
  },
  "results/e94/Q2.json": {
   "sha256_16": "e3d9fb568fb12cf5",
   "size": 532295,
   "date": "2026-11-12T03:52:07",
   "note": "E94 Q2: MINOR fixes re-derivation (from-raw, no server); metrics identical to pre-fix run; +g2_violations/g2_offline_check/device_gate_source/idempotence"
+ },
+ "results/e94/Q3cpu.json": {
+  "sha256_16": "f466f3bd626b68ce",
+  "size": 350811,
+  "date": "2026-11-12T04:16:33",
+  "note": "E94 Q3cpu: один HF fp32 forward на док, margin vs rep8, гейт gen_p1 16/16 (max|Δ|=1.67e-4), unit=document, ρ=0.3529 [0.2975,0.4370]; перезапуск кодом из git после ревью r1 — per-doc ρ/Δ сошлись с 8a463b3 побитово"
  }
 }

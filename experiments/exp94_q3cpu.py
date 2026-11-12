@@ -1,197 +1,339 @@
-"""E94/Q3cpu — CPU-аналог Q3: ОДИН forward на документ (не на позицию).
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""E94 Q3 CPU-side reference arm: per-position confidence margin vs repetitions.
 
-Зачем: внешнее ревью Q3 (docs/dynamic/2_REVIEW_E94_Q3_exec_r1.md, MAJOR-3) показало, что я ошибся —
-CPU-вторая-кандидат-трек стоит 16 форвардов, а не 6144, поэтому обещанное ТЗ сравнение «корреляция
-против корреляции» выполнимо сегодня.
+Зачем. GPU-сторона Q3 (experiments/exp94_q3.py, results/e94/Q3.json) измерила
+связь маржи top1-top2 с восьмикратными повторами ВНУТРИ движка llama/SYCL.
+Внешнее ревью (docs/dynamic/2_REVIEW_E94_Q3_exec_r1.md, MAJOR-3) показало, что
+CPU-аналог НЕ дорог: один teacher-forced прогон HF fp32 на документ даёт логиты
+всех 384 позиций, то есть весь трек стоит 16 прогонов, а не 6144. ТЗ требовало
+сравнения корреляций между движками — без этого файла ТЗ закрыто быть не может.
 
-Конвенция — ДОСЛОВНО как в exp94_q3.py (иначе сравнение движков невалидно):
-  ids448 = prompt(64) + REPLAY.gen_ids[key](384); t = OFF + j метит ГЕНЕРИРУЕМЫЙ токен g_j;
-  margin_t = p1 - p2 из softmax(логитов позиции OFF-1+j) = распределение, породившее g_j;
-  flag_t  = rep_flags(ids448, 8)[OFF + j] (дословная копия exp81b);
-  воспроизведение: p1(OFF-1+j) обязан совпасть с REPLAY.gen_p1[j] (тот же трек, та же конвенция).
+Конвенция выравнивания — та же, что на GPU-стороне (иначе сравнение невалидно):
+  ids448 = prompts.json docs[i].ids (64) + REPLAY.json gen_ids[doc] (384);
+  индекс t = OFF + j (OFF = 64) метит СГЕНЕРИРОВАННЫЙ токен g_j;
+  маржа для него берётся из строки логитов OFF-1+j — распределения, которое его
+      породило (на строку раньше собственного индекса токена);
+  флаг повтора = rep_flags(ids448, 8)[OFF + j]  (флаг и строка логитов сдвинуты
+      друг относительно друга на единицу — так же, как на GPU);
+  лаговые члены используют flag[p + L], позиции с p + L >= len(ids) отбрасываются;
+  позиции без второго кандидата исключаются со счётчиком (здесь их не бывает).
 
-Встроенный гейт (не «поверь мне»): если max|Δp1| > REPRO_TOL хотя бы на REPRO_MIN_DOCS документах —
-rc=2 и CPU-числа не публикуются. rc: 0 ок, 2 гейт воспроизведения не пройден, 1 ошибка.
-Артефакт: results/e94/Q3cpu.json (пер-доковые массивы обязательны).
+Встроенный гейт воспроизведения: та же строка логитов 63+j породила замороженную
+CPU-вероятность REPLAY.gen_p1[j], поэтому свежий p_max обязан сойтись с ней, а
+аргмакс — с gen_ids[j]. max|Δ| >= TOL хотя бы на одном из первых REPRO_DOCS
+документов => rc=2, вывод не публикуется.
+
+Статистика: первична ВЕЛИЧИНА НА УРОВНЕ ДОКУМЕНТА (per-doc Spearman) с
+bootstrap-интервалом по документам; пул из 6144 позиций даётся только справочно,
+с честной формулировкой p (MAJOR-2 ревью r1: p_perm=0 писать нельзя).
+
+rc (смысл обязан быть описан, MINOR-1 ревью r1):
+  0  — прогон доделан, summary есть;
+  1  — исключение (см. лог, halt_reason='exception (see log)');
+  2  — гейт воспроизведения gen_p1 не пройден, summary=None, вывод не публикуется;
+  -1 — частичный прогон: артефакт записан после каждого документа, процесс до
+       финала не дожил (например убит). summary отсутствует — это НЕ результат.
+
+Правило (MAJOR-1 ревью r1): smoke/dry/калибровочные прогоны НЕ пишут на путь
+прогонного артефакта — у этого скрипта режима smoke нет вовсе, чтобы не было и
+соблазна; отдельная ветка --smoke обязана писать в другой путь.
+
+Запуск: RUN_ONE_MIN_MEM=12 ./run_one.sh e94q3cpu python3 experiments/exp94_q3cpu.py
 """
-
 import json
 import os
 import sys
 import time
+import traceback
 
-# ВАЖНО (найдено этой ночью): torch-сборка на этой коробке не даёт triton выбрать драйвер
-# (RuntimeError: 0 active drivers ([])), а `fla` (flash-linear-attention) зовёт triton-ядра.
-# Блокируем импорт fla ДО импорта transformers — тогда transformers сам берёт torch-реализацию
-# `torch_chunk_gated_delta_rule` (см. transformers/integrations/hub_kernels.py: порядок приоритетов
-# hub -> пакет -> torch). Численность этой замены проверяется встроенным гейтом gen_p1.
-sys.modules["fla"] = None
 os.environ.setdefault("USE_HUB_KERNELS", "NO")
+sys.modules.setdefault("fla", None)   # fla тянет triton, triton здесь падает
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
 
-import numpy as np
-
+torch.set_num_threads(min(8, os.cpu_count() or 4))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from exp94_sycl_common import rep_flags, spear, bootstrap_ci_median, san  # noqa: E402
+from exp94_sycl_common import (  # noqa: E402
+    bootstrap_ci_median, perm_null, rep_flags, san, spear)
 
 BASE = "/data/Qwen/Qwen3.5-0.8B"
-OFF, GEN = 64, 384
-LAGS = (1, 4, 8, 16)
-REPRO_TOL, REPRO_MIN_DOCS = 1e-3, 3
-BOOT_N, BOOT_SEED, N_PERM = 10000, 8181, 2000
 PROMPTS = "results/e93/prompts.json"
 REPLAY = "results/e81/REPLAY.json"
 Q3 = "results/e94/Q3.json"
 OUT = "results/e94/Q3cpu.json"
 
+OFF = 64            # длина промпта в ids448
+N = 384             # длина замороженной генерации
+REP = 8             # длина повтора, как в rep8
+LAGS = (1, 4, 8, 16)
+TOL = 1e-3          # допуск гейта воспроизведения gen_p1
+N_PERM = 2000
+BOOT_N = 10000
+BOOT_SEED = 8181
+REPRO_DOCS = 3      # первые документы проверяются на воспроизведение строже всех
 
-def doc_metrics(key, rec, lg, gp1):
-    """Один док: lg = torch-логиты (448, V) fp32, gp1 = замороженный трек p_max."""
-    import torch
+R = {"phase": "q3cpu", "per_doc": [], "rc": -1, "halt_reason": None}
 
-    ids = list(rec["ids"]) + list(rec["gen"])
-    flag = rep_flags(ids, 8)
-    pos, m, fl, d_p1 = [], [], [], []
-    id_mismatch = 0
-    for j in range(GEN):
-        row = lg[OFF - 1 + j]
-        lse = torch.logsumexp(row, dim=-1)
-        top2 = torch.topk(row, k=2).values
-        p1 = float(torch.exp(top2[0] - lse))
-        p2 = float(torch.exp(top2[1] - lse))
-        arg = int(torch.argmax(row))
-        pos.append(OFF + j)
-        m.append(p1 - p2)
-        fl.append(bool(flag[OFF + j]))
-        d_p1.append(abs(p1 - float(gp1[j])))
-        if arg != int(rec["gen"][j]):
-            id_mismatch += 1
-    mv, fv = np.array(m), np.array(fl)
-    e = {"doc": key, "n_used": int(len(mv)), "margin": [round(x, 8) for x in m],
-         "flag": [int(x) for x in fl], "pos": [int(p) for p in pos],
-         "flag_full": [int(x) for x in flag],
-         "repro_max_abs_d_p1": float(np.max(d_p1)),
-         "repro_median_abs_d_p1": float(np.median(d_p1)),
-         "repro_pass": bool(np.max(d_p1) < REPRO_TOL),
-         "argmax_vs_gen_ids_mismatches": int(id_mismatch),
-         "n_flag1": int(fv.sum()), "n_flag0": int(len(fv) - fv.sum())}
-    e["spear_a"] = spear(mv, fv)
-    b, dropped = {}, {}
+
+def top2(row):
+    """(p_max, p_top2) из строки логитов без полной softmax: p_i = exp(z_i - lse)."""
+    v = torch.topk(row, k=2).values.float()
+    lse = torch.logsumexp(row.float(), dim=0)
+    p = torch.exp(v - lse)
+    return float(p[0]), float(p[1])
+
+
+def paired(m, f):
+    """Убирает позиции без маржи (None/nan): nan в spear утёк бы в median как nan."""
+    mm, ff = [], []
+    for x, y in zip(m, f):
+        if x is None or x != x:
+            continue
+        mm.append(float(x))
+        ff.append(float(y))
+    return mm, ff
+
+
+def one_doc(doc, ids448, gen_ids, gen_p1, model):
+    """Один teacher-forced прогон -> по-позиционные p_max, маржа, флаги повторов."""
+    assert len(ids448) == OFF + N, "%s: len(ids448)=%d" % (doc, len(ids448))
+    flags_all = rep_flags(list(ids448), REP)
+    with torch.no_grad():
+        out = model(input_ids=torch.tensor([ids448], device=model.device))
+    lg = out.logits[0].float()                       # (448, vocab)
+    assert lg.shape[0] == OFF + N, lg.shape
+
+    margin, pmax, flag = [], [], []
+    d_p1_max, arg_bad, n_no2 = 0.0, 0, 0
+    for j in range(N):
+        row = lg[OFF - 1 + j]                        # распределение, породившее g_j
+        argmax = int(torch.argmax(row).item())
+        p1, p2 = top2(row)
+        del row
+        d_p1_max = max(d_p1_max, abs(p1 - float(gen_p1[j])))
+        if argmax != int(gen_ids[j]):
+            arg_bad += 1
+        if p2 <= 0.0 or p1 <= p2:                    # нет валидной пары кандидатов
+            n_no2 += 1
+            margin.append(None)
+            pmax.append(None)
+            flag.append(int(bool(flags_all[OFF + j])))
+            continue
+        margin.append(p1 - p2)
+        pmax.append(p1)
+        flag.append(int(bool(flags_all[OFF + j])))
+
+    m, f = paired(margin, flag)
+    row_out = {
+        "doc": doc,
+        "margin": margin,
+        "p_max": pmax,
+        "flag": flag,
+        "n_positions": N,
+        "n_used": len(m),
+        "n_excluded_no_pair": n_no2,
+        "repro_max_abs_d_p1": d_p1_max,
+        "repro_pass": bool(d_p1_max < TOL),
+        "n_argmax_ne_gen": arg_bad,
+        "n_flag1": int(sum(flag)),
+        "spear_a": spear(m, f),
+        "delta_median": (float(np.median(np.asarray(m)[np.asarray(f) == 1])
+                              - np.median(np.asarray(m)[np.asarray(f) == 0]))
+                         if (np.asarray(f) == 1).any() and (np.asarray(f) == 0).any()
+                         else None),
+    }
+    sb = {}
+    for L in LAGS:                                   # flag[p+L], хвост короче на L
+        mm, ff = paired(margin[:len(margin) - L], flag[L:])
+        sb[str(L)] = spear(mm, ff) if len(mm) >= 3 else None
+    row_out["spear_b"] = sb
+    print("%s: max|dP1|=%.3e pass=%s argmax_bad=%d n_flag1=%d rho=%s delta=%s"
+          % (doc, d_p1_max, row_out["repro_pass"], row_out["n_argmax_ne_gen"],
+             row_out["n_flag1"], row_out["spear_a"], row_out["delta_median"]), flush=True)
+    del lg, out
+    return row_out
+
+
+def summarize():
+    S = {}
+    rho = [e["spear_a"] for e in R["per_doc"] if e["spear_a"] is not None]
+    med, ci = bootstrap_ci_median(rho, n=BOOT_N, seed=BOOT_SEED)
+    S["d_per_doc_rho"] = {
+        "median": med, "ci_2.5_97.5": ci, "n_docs": len(rho),
+        "resample_unit": "document", "n_boot": BOOT_N, "seed": BOOT_SEED,
+        "primary": True,
+    }
+    S["n_docs_rho_positive"] = int(sum(1 for x in rho if x > 0))
+    S["n_docs_rho_negative"] = int(sum(1 for x in rho if x < 0))
+    S["repro_gate"] = {
+        "max_abs_d_p1_all_docs": float(max(e["repro_max_abs_d_p1"] for e in R["per_doc"])),
+        "n_docs_pass": int(sum(1 for e in R["per_doc"] if e["repro_pass"])),
+        "n_docs": len(R["per_doc"]),
+        "tolerance": TOL,
+        "n_argmax_ne_gen_total": int(sum(e["n_argmax_ne_gen"] for e in R["per_doc"])),
+        "n_excluded_no_pair_total": int(sum(e["n_excluded_no_pair"] for e in R["per_doc"])),
+        "meaning": ("свежие HF fp32 p_max совпадают с замороженным REPLAY.gen_p1, аргмакс "
+                    "совпадает с gen_ids => трек построен на том же conditioning"),
+    }
+    allm, allf = [], []
+    for e in R["per_doc"]:
+        mm, ff = paired(e["margin"], e["flag"])
+        allm += mm
+        allf += ff
+    o, p, nci = perm_null(np.asarray(allm), np.asarray(allf), n=N_PERM, seed=BOOT_SEED)
+    S["pooled_positions"] = {
+        "rho": o, "p_perm": p, "null_ci": nci, "n_positions": len(allm),
+        "n_perm": N_PERM, "seed": BOOT_SEED,
+        "p_definition": "two-sided on |rho|, доля попаданий без +1",
+        "p_note": ("если ни одна из %d перестановок не превзошла наблюдение, корректно "
+                   "писать p<=%.5f=1/(B+1), а не 0; MC-ошибка ~sqrt(p(1-p)/B). Пул позиций "
+                   "из %d документов НЕ первичная статистика (внутридоковая "
+                   "автокорреляция) — первична per-doc величина выше."
+                   % (N_PERM, 1.0 / (N_PERM + 1), len(R["per_doc"]))),
+        "status": "справочно, НЕ первичная статистика",
+    }
+    lag = {}
+    lag_none = {}
     for L in LAGS:
-        pair = [(mv[i], flag[p + L]) for i, p in enumerate(pos) if p + L < len(ids)]
-        b[L] = spear(np.array([x[0] for x in pair]), np.array([x[1] for x in pair]))
-        dropped[L] = int(len(mv) - len(pair))
-    e["spear_b"], e["n_dropped_lag"] = {str(k): v for k, v in b.items()}, dropped
-    f1, f0 = mv[fv == 1], mv[fv == 0]
-    e["med_flag1"] = float(np.median(f1)) if len(f1) else None
-    e["med_flag0"] = float(np.median(f0)) if len(f0) else None
-    e["delta_median"] = (e["med_flag1"] - e["med_flag0"]) if len(f1) and len(f0) else None
-    e["delta_ci_2.5_97.5"] = (list(bootstrap_ci_median(
-        f1 - np.median(f0), n=1000, seed=BOOT_SEED)[1]) if len(f1) > 20 and len(f0) > 20 else None)
-    return e
+        v, nn = [], []
+        for e in R["per_doc"]:
+            r = e["spear_b"].get(str(L))
+            if r is None:
+                nn.append(e["doc"])
+            else:
+                v.append(r)
+        lm, lci = bootstrap_ci_median(v, n=BOOT_N, seed=BOOT_SEED)
+        lag["L%d" % L] = {"median_per_doc_rho": lm, "ci_2.5_97.5": lci, "n_docs": len(v),
+                          "docs_none": nn}
+        lag_none["L%d" % L] = nn
+    S["lags_per_doc"] = lag
+    S["lags_note"] = ("%d лага — нескорректированные множественные сравнения; rho=None значит "
+                      "spear вырожден (все флаги после усечения одинаковы либо годных позиций "
+                      "<3), а не пропуск: " % len(LAGS)) + json.dumps(lag_none, sort_keys=True)
+    dl = [e["delta_median"] for e in R["per_doc"] if e["delta_median"] is not None]
+    dm, dci = bootstrap_ci_median(dl, n=BOOT_N, seed=BOOT_SEED)
+    S["delta_median_margin"] = {
+        "median_over_docs": dm, "ci_2.5_97.5": dci, "n_docs": len(dl),
+        "resample_unit": "document",
+        "sign_note": "положительно = повторы стоят на боЛЕЕ уверенных позициях",
+    }
+    lmap = {e["doc"]: e.get("spear_a") for e in json.load(open(Q3))["per_doc"]}
+    pairs = [(e["spear_a"], lmap[e["doc"]]) for e in R["per_doc"]
+             if e["spear_a"] is not None and lmap.get(e["doc"]) is not None]
+    mine = [a for a, _ in pairs]
+    ll = [b for _, b in pairs]
+    lmed, lci = bootstrap_ci_median(ll, n=BOOT_N, seed=BOOT_SEED)
+    dmed, dci = bootstrap_ci_median([a - b for a, b in pairs], n=BOOT_N, seed=BOOT_SEED)
+    S["cross_engine"] = {
+        "cpu": {"median_per_doc_rho": med, "ci_2.5_97.5": ci, "n": len(rho)},
+        "llama": {"median_per_doc_rho": lmed, "ci_2.5_97.5": lci, "n": len(ll), "source": Q3},
+        "paired_diff_cpu_minus_llama": {"median": dmed, "ci_2.5_97.5": dci,
+                                        "n": len(pairs), "resample_unit": "document"},
+        "reading": ("перекрывание интервалов и парная разница с интервалом, накрывающим 0, "
+                    "означают «разницы не обнаружено». Это НЕ утверждение эквивалентности "
+                    "движков: тест не обладал бы мощностью доказать равенство."),
+        "caveat": ("корреляции считаются по РАЗНЫМ потокам id: CPU-сторона на замороженном "
+                   "референсном потоке exp81b, llama-сторона на собственном жадном потоке, "
+                   "а полный префикс у них лишь у 5/16 документов (Q1). Значит rep8-флаги в "
+                   "двух руках — РАЗНЫЕ реализации потока, и корреляции считаются по разным "
+                   "флаг-массивам. Перекрывающийся интервал поэтому поддерживает вывод "
+                   "«ассоциация робастна к реализации потока», а не «эффект принадлежит "
+                   "тексту, а не бэкенду» и не «движки эквивалентны»."),
+    }
+    R["summary"] = S
+    R["limitations"] = [
+        "единица анализа — документ (n=%d); пул позиций только справочный" % len(R["per_doc"]),
+        "корреляция, а не механизм: ни одна ветка не вмешивалась в генерацию",
+        "CPU-рука считает флаги по замороженному референс-потоку, llama-рука — по своему "
+        "жадному; это разные флаг-массивы (см. cross_engine.caveat)",
+        "проверен детерминизм лишь части прогонов: независимый пересчёт ревьюером — w0/w14",
+        "провенанс замороженного REPLAY.gen_ids/gen_p1 (движок exp81b) не перепроверялся",
+        "лага 1/4/8/16 — нескорректированные множественные сравнения",
+    ]
 
 
 def main():
     t0 = time.time()
-    R = {"phase": "q3cpu", "engine": "HF fp32 CPU (transformers), model " + BASE,
-         "convention": {"ids448": "prompt(64) + REPLAY.gen_ids[key](384)",
-                        "margin_t": "p1-p2 из softmax(логитов позиции OFF-1+j), t = OFF+j",
-                        "flag_t": "rep_flags(ids448, 8)[OFF+j] — дословно exp81b/exp94_q3",
-                        "repro_gate": "p1(OFF-1+j) против REPLAY.gen_p1[j], tol %g на >=%d доках"
-                                      % (REPRO_TOL, REPRO_MIN_DOCS)},
-         "unit_of_analysis": "document (первично); пул позиций — справочно",
-         "per_doc": [], "rc": 1, "halt_reason": None}
-    try:
-        prompts = json.load(open(PROMPTS))["docs"]
-        replay = json.load(open(REPLAY))
-        q3 = json.load(open(Q3))
-        import torch
-        from transformers import AutoModelForCausalLM
+    prompts = {d["key"]: d["ids"] for d in json.load(open(PROMPTS))["docs"]}
+    rep = json.load(open(REPLAY))
+    q3 = json.load(open(Q3))
+    docs = [d["doc"] for d in q3["per_doc"]]          # тот же набор, что на GPU-стороне
+    R.update({
+        "engine": "hf-fp32-cpu (reference arm)",
+        "docs": docs,
+        "n_docs": len(docs),
+        "convention": ("index t=OFF+j labels generated token g_j; margin from logit row "
+                       "OFF-1+j (the distribution that produced g_j); flag = "
+                       "rep_flags(ids448,8)[OFF+j]; lag uses flag[p+L] dropping p+L>=len; "
+                       "OFF=%d N=%d REP=%d; identical to the llama-side Q3 convention"
+                       % (OFF, N, REP)),
+        "unit_of_analysis": "per-doc spearman, bootstrap CI over documents",
+        "tolerance_repro": TOL,
+        "per_doc": [],
+        "halt_reason": None,
+    })
+    print("docs=%d %s" % (len(docs), docs), flush=True)
 
-        torch.set_num_threads(min(8, os.cpu_count() or 4))
-        model = AutoModelForCausalLM.from_pretrained(BASE, dtype=torch.float32).eval()
-        for rec in prompts:
-            key = rec["key"]
-            rec = dict(rec)
-            rec["gen"] = replay["gen_ids"][key]
-            if len(rec["gen"]) != GEN:
-                raise RuntimeError("%s: gen_ids len %d != %d" % (key, len(rec["gen"]), GEN))
-            with torch.no_grad():
-                lg = model(input_ids=torch.tensor([list(rec["ids"]) + list(rec["gen"])]),
-                           ).logits[0].float()
-            e = doc_metrics(key, rec, lg, replay["gen_p1"][key])
-            del lg
-            R["per_doc"].append(e)
-            R["rc"] = -1  # промежуточная запись: частичный результат переживает обрыв
-            os.makedirs(os.path.dirname(OUT), exist_ok=True)
-            with open(OUT, "w", encoding="utf-8") as f:
-                json.dump(san(R), f, ensure_ascii=False, indent=1)
-            print("%s: repro max|dp1|=%.3e pass=%s argmax_mismatch=%d rho_a=%s" % (
-                key, e["repro_max_abs_d_p1"], e["repro_pass"],
-                e["argmax_vs_gen_ids_mismatches"],
-                None if e["spear_a"] is None else round(e["spear_a"], 4)), flush=True)
+    from transformers import AutoModelForCausalLM
+    model = AutoModelForCausalLM.from_pretrained(BASE, torch_dtype=torch.float32,
+                                                 trust_remote_code=True)
+    model.eval()
+    print("model loaded dtype=%s device=%s vocab=%d"
+          % (next(model.parameters()).dtype, model.device, model.get_input_embeddings().weight.shape[0]),
+          flush=True)
 
-        n_pass = sum(1 for e in R["per_doc"] if e["repro_pass"])
-        R["repro_gate_pass_docs"] = n_pass
-        R["repro_max_abs_all"] = float(max(e["repro_max_abs_d_p1"] for e in R["per_doc"]))
-        if n_pass < REPRO_MIN_DOCS:
-            R["halt_reason"] = "гейт воспроизведения gen_p1: только %d/%d доков с max|dp1| < %g" % (
-                n_pass, len(R["per_doc"]), REPRO_TOL)
-            R["rc"] = 2
-            return R
-
-        rho = [e["spear_a"] for e in R["per_doc"] if e["spear_a"] is not None]
-        med, ci = bootstrap_ci_median(rho, n=BOOT_N, seed=BOOT_SEED)
-        S = {"d_per_doc_rho": {"median": med, "ci_2.5_97.5": ci, "n_docs": len(rho),
-                               "n_positive": int(sum(1 for v in rho if v > 0)),
-                               "n_bootstrap": BOOT_N, "seed": BOOT_SEED,
-                               "resample_unit": "document"},
-             "p_note": "первичная статистика — d_per_doc_rho; пермутационный p по пулу позиций "
-                       "оптимистичен из-за внутридоковой автокорреляции"}
-        allm = np.concatenate([np.array(e["margin"]) for e in R["per_doc"]])
-        allf = np.concatenate([np.array(e["flag"]) for e in R["per_doc"]])
-        o, p, nci = __import__("exp94_sycl_common").perm_null(allm, allf, n=N_PERM, seed=BOOT_SEED)
-        S["pooled_positions"] = {"rho": o, "p_perm": p, "null_ci": nci, "n_positions": int(len(allm)),
-                                 "n_perm": N_PERM, "seed": BOOT_SEED,
-                                 "p_definition": "two-sided on |rho|, MC доля без +1",
-                                 "status": "справочно, НЕ первичная статистика"}
-        lag = {}
-        for L in LAGS:
-            v = [e["spear_b"][str(L)] for e in R["per_doc"] if e["spear_b"].get(str(L)) is not None]
-            lm, lci = bootstrap_ci_median(v, n=BOOT_N, seed=BOOT_SEED)
-            lag["L%d" % L] = {"median_per_doc_rho": lm, "ci_2.5_97.5": lci, "n_docs": len(v)}
-        S["lags_per_doc"] = lag
-        dl = [e["delta_median"] for e in R["per_doc"] if e["delta_median"] is not None]
-        dm, dci = bootstrap_ci_median(dl, n=BOOT_N, seed=BOOT_SEED)
-        S["delta_median_margin"] = {"median_over_docs": dm, "ci_2.5_97.5": dci, "n_docs": len(dl),
-                                    "resample_unit": "document",
-                                    "sign_note": "положительно = повторы на боЛЕЕ уверенных позициях"}
-        # сравнение движков: корреляции как интервалы (llama-числа берём из Q3.json, не пересчитываем)
-        lrho = [x.get("spear_a") for x in q3["per_doc"] if x.get("spear_a") is not None]
-        lmed, lci = bootstrap_ci_median(lrho, n=BOOT_N, seed=BOOT_SEED)
-        S["cross_engine"] = {"cpu": {"median_per_doc_rho": med, "ci_2.5_97.5": ci},
-                             "llama": {"median_per_doc_rho": lmed, "ci_2.5_97.5": lci,
-                                       "source": Q3},
-                             "per_doc_rho_diff_cpu_minus_llama": {
-                                 e["doc"]: round(e["spear_a"] - l, 6)
-                                 for e, l in zip(R["per_doc"], lrho)
-                                 if e["spear_a"] is not None and l is not None},
-                             "reading": "сравниваются корреляции, не позиции; смешения позиций между "
-                                        "движками нет по построению (у каждого свой поток)"}
-        R["summary"] = S
-        R["rc"] = 0
-        return R
-    except Exception as exc:  # noqa: BLE001
-        R["halt_reason"] = "exception: %r" % (exc,)
-        R["rc"] = 1
-        return R
-    finally:
-        R["t_total_s"] = round(time.time() - t0, 2)
+    n_fail = 0
+    for i, doc in enumerate(docs):
+        ids448 = list(prompts[doc]) + list(rep["gen_ids"][doc])
+        row = one_doc(doc, ids448, rep["gen_ids"][doc], rep["gen_p1"][doc], model)
+        R["per_doc"].append(row)
+        if i < REPRO_DOCS and not row["repro_pass"]:
+            n_fail += 1
+        R["rc"] = -1                                  # промежуточное: ещё не доделано
         os.makedirs(os.path.dirname(OUT), exist_ok=True)
-        with open(OUT, "w", encoding="utf-8") as f:
-            json.dump(san(R), f, ensure_ascii=False, indent=1)
-        print("E94 q3cpu rc=%s halt=%s" % (R["rc"], R["halt_reason"]), flush=True)
-        sys.exit(R["rc"])
+        with open(OUT, "w", encoding="utf-8") as fh:
+            json.dump(san(R), fh, indent=1, ensure_ascii=False, sort_keys=True)
+        print("[%.0fs] %s written" % (time.time() - t0, doc), flush=True)
+
+    if n_fail:
+        R["halt_reason"] = "reproduction gate failed on %d of first %d docs (tol %.0e)" % (
+            n_fail, REPRO_DOCS, TOL)
+        R["summary"] = None
+        R["rc"] = 2
+        print("HALT %s" % R["halt_reason"], flush=True)
+        return 2
+
+    summarize()
+    R["rc"] = 0
+    R["t_total_s"] = round(time.time() - t0, 2)
+    print("rho_median=%.4f ci=%s delta=%.4f ci=%s"
+          % (R["summary"]["d_per_doc_rho"]["median"],
+             R["summary"]["d_per_doc_rho"]["ci_2.5_97.5"],
+             R["summary"]["delta_median_margin"]["median_over_docs"],
+             R["summary"]["delta_median_margin"]["ci_2.5_97.5"]), flush=True)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    rc = 1
+    try:
+        rc = main()
+    except Exception:  # noqa: BLE001
+        traceback.print_exc()
+        R["halt_reason"] = "exception (see log)"
+        R["rc"] = 1
+        rc = 1
+    finally:
+        # MAJOR-1 ревью r1: sys.exit ВЫПОЛНЯЕТСЯ ПОСЛЕ finally. Внутри finally он был
+        # недостижим для ветки исключения, поэтому run_one всегда видел RUN_RC=0.
+        try:
+            R["rc_final"] = rc
+            os.makedirs(os.path.dirname(OUT), exist_ok=True)
+            with open(OUT, "w", encoding="utf-8") as fh:
+                json.dump(san(R), fh, indent=1, ensure_ascii=False, sort_keys=True)
+            print("ART %s rc=%s halt=%s wall=%s"
+                  % (OUT, R.get("rc"), R.get("halt_reason"), R.get("t_total_s")), flush=True)
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+    sys.exit(rc)
