@@ -10,7 +10,7 @@ halt_reason писавшийся до вычисления halt, мёртвая 
 Запуск: S4PP_MODES=M1 python3 experiments/e94_s4pp_rehearsal.py   (без S4PP_MODES — все миры)
 Артефакты миров: /tmp/s4pp_t/S4pp_<mode>.json, их проверяет experiments/e94_s4pp_audit.py.
 """
-import json, os, sys, tarfile
+import json, os, subprocess, sys, tarfile
 sys.path.insert(0, 'experiments')
 import exp94_s4pp as M
 
@@ -157,3 +157,35 @@ for mode, die in [x for x in _all if x[0] in _sel]:
     for r in A["requests"]:
         if r.get("status") == "ok":
             assert r.get("verdict"), ("пустой verdict", r["tag"])
+
+
+# --- мир TAMPER: несовпадение архива с предрегистром обязано остановить ДО запросов ---
+# Это исполняемая форма отказа на r4/MAJOR-2 («ref несамостоятелен, потому что сравнивается
+# с тем же B из того же архива»). Отказ стоит ровно столько, сколько работает гейт
+# совпадения, — поэтому проверяем сам гейт концом в конец, а не рассуждение о нём.
+# GPU не трогается: load_addr (строка 257) выполняется раньше pick_port/LlamaServer (265).
+print("\n============= MODE=tamper (end-to-end, без сервера) =============")
+src = open("experiments/exp94_s4pp.py", encoding="utf-8").read()
+lit = "exp_emit=310, exp_top1=318, exp_rank=2"
+assert src.count(lit) == 1, "литерал пробы не уникален — тест надо починить"
+os.makedirs("/tmp/s4pp_t/tamper", exist_ok=True)
+tp = "/tmp/s4pp_t/tampered_exp.py"
+open(tp, "w", encoding="utf-8").write(
+    src.replace(lit, "exp_emit=999999, exp_top1=318, exp_rank=2")
+       .replace('OUT = "results/e94"', 'OUT = "/tmp/s4pp_t/tamper"'))
+before = subprocess.run(["pgrep", "-x", "llama-server"], capture_output=True,
+                        text=True).stdout.split()
+p = subprocess.run([sys.executable, tp], env=dict(os.environ, PYTHONPATH="experiments"),
+                   capture_output=True, text=True, timeout=240)
+after = subprocess.run(["pgrep", "-x", "llama-server"], capture_output=True,
+                       text=True).stdout.split()
+assert p.returncode == 3, ("tamper: ждали rc=3 (крах-хэндлер __main__)", p.returncode,
+                          p.stderr[-400:])
+assert "не тот адрес" in p.stderr or "уплыл" in p.stderr, ("tamper: гейт не поднялся", p.stderr[-400:])
+assert before == after, ("tamper: поднялся сервер — гейт сработал поздно", before, after)
+A = json.load(open("/tmp/s4pp_t/tamper/S4pp.json"))
+assert A.get("halt_reason") == "crash", ("tamper: артефакт не помечен crash", A.get("halt_reason"))
+assert "AssertionError" in A.get("trace", ""), "tamper: в trace нет AssertionError"
+assert "requests" not in A, "tamper: в артефакте есть запросы — значит они всё-таки были"
+print("tamper: rc=3, halt_reason=crash, сервер не запускался, запросов 0 — гейт живой")
+print("   ", [l for l in p.stderr.strip().splitlines() if "уплыл" in l][:1])
