@@ -181,5 +181,11 @@
   "size": 264518,
   "date": "2026-11-12T03:41:40",
   "note": "E94 Q3: margin vs rep8, single engine, from raw_q1"
+ },
+ "results/e94/Q2.json": {
+  "sha256_16": "e3d9fb568fb12cf5",
+  "size": 532295,
+  "date": "2026-11-12T03:52:07",
+  "note": "E94 Q2: MINOR fixes re-derivation (from-raw, no server); metrics identical to pre-fix run; +g2_violations/g2_offline_check/device_gate_source/idempotence"
  }
 }

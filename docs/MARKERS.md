@@ -78,3 +78,12 @@
   C.per_position, D.flips_with_probs/D.flips_no_probs/D.first_diff, E.emitted/E.top1,
   Q2c.verdict_shift (результаты, не гейты); итог — флип детерминирован (A 5/5),
   кэш-/наблюдатель-инвариантен (B, D), top_k=1 эмитит тот же (E), сдвиг списка отвергнут (Q2c).
+- 12.11 (MINOR Q2, review 2_REVIEW_E94_Q2_exec_r1): D.flips_no_probs →
+  D.stream_identity_no_vs_with_probs (+D.note: без запроса вероятностей флипы не
+  вычислимываемы — метрика = тождественность потоков); переименование вступает в силу
+  на следующем прогоне Q2b (артефакт Q2b.json с прежним ключом не перегонялся, GPU).
+  Q2 (experiments/exp94_q2.py): g2_violations/g2_violations_n ({doc,k,prompt_n}, мягкий
+  G2 основной фазы — нарушения фиксируются, прогон не останавливается),
+  g2_offline_check (max prompt_n со 2-го запроса документа, медианы wall last32/first32),
+  device_gate_source ("live"/"reused_raw", рядом с fd_first_request), --from-raw с
+  idempotence (2 пересборки, canonical sha256).
