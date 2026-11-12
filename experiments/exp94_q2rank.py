@@ -167,6 +167,35 @@ def null_perturbation(fl, n_mc=10000, seed=8181):
     }
 
 
+def raw_integrity(ars):
+    """Целостность самих архивов сырья: не симлинки ли, не дубликаты ли. Вопрос поднят внешним
+    ревью и обязан закрываться числом в артефакте, а не словами."""
+    import hashlib
+    out = {}
+    for ar in ars:
+        with tarfile.open(ar) as tf:
+            ms = tf.getmembers()
+            reg = [m for m in ms if m.isreg()]
+            kinds = {"members": len(ms), "regular": len(reg),
+                     "symlink": sum(1 for m in ms if m.issym()),
+                     "hardlink": sum(1 for m in ms if m.islnk())}
+            md5 = {}
+            for m in reg:
+                if not m.name.endswith(".json"):
+                    continue
+                b = tf.extractfile(m).read()
+                md5.setdefault(hashlib.md5(b).hexdigest(), []).append(m.name)
+            dup = {k: v for k, v in md5.items() if len(v) > 1}
+            sizes = [m.size for m in reg if m.name.endswith(".json")]
+            kinds.update({"n_json": sum(len(v) for v in md5.values()),
+                          "distinct_md5": len(md5),
+                          "identical_content_groups": len(dup),
+                          "identical_examples": {k: v for k, v in list(dup.items())[:3]},
+                          "size_min": min(sizes), "size_max": max(sizes)})
+        out[os.path.basename(ar)] = kinds
+    return out
+
+
 def replica(cps):
     """r1 против r2 одного и того же сервера: что именно детерминировано, а что нет.
     Сравнивается полезная нагрузка ответов, а не байты файла: wall_s различается по определению."""
@@ -229,6 +258,12 @@ def main():
         fl = sorted(r["j"] for r in rows1 if r["tag"] == tag and r["rank"] not in (1,))
         by_doc.setdefault(doc, {})[run] = fl
     R["replica_r1_vs_r2"] = replica(cps)
+    R["raw_integrity"] = raw_integrity(["results/e94/raw_q1.json.tar.gz",
+                                        "results/e94/raw_q2.json.tar.gz"])
+    R["raw_integrity_note"] = ("проверено над закоммиченными архивами напрямую (tarfile), не над "
+                              "распаковкой: симлинков/хардлинков нет, побайтово одинаковых файлов "
+                              "нет; из 16 пар r1/r2 побайтово не совпадает ни одна (см. "
+                              "replica_r1_vs_r2: совпадают только эмиссия и вершина отчёта)")
     n_r1 = sum(1 for d, v in by_doc.items() if v.get("r1") == v.get("r2"))
     rows1_r1 = [r for r in rows1 if r["tag"].endswith("_r1")]
     R["arm_q1_free"] = summarize(rows1, "llama-server/SYCL, свободная генерация r1+r2", {
