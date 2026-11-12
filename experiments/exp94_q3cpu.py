@@ -61,7 +61,7 @@ BASE = "/data/Qwen/Qwen3.5-0.8B"
 PROMPTS = "results/e93/prompts.json"
 REPLAY = "results/e81/REPLAY.json"
 Q3 = "results/e94/Q3.json"
-OUT = "results/e94/Q3cpu.json"
+OUT = os.environ.get("E94_Q3CPU_OUT", "results/e94/Q3cpu.json")
 
 OFF = 64            # длина промпта в ids448
 N = 384             # длина замороженной генерации
@@ -173,8 +173,10 @@ def summarize():
         "tolerance": TOL,
         "n_argmax_ne_gen_total": int(sum(e["n_argmax_ne_gen"] for e in R["per_doc"])),
         "n_excluded_no_pair_total": int(sum(e["n_excluded_no_pair"] for e in R["per_doc"])),
-        "meaning": ("свежие HF fp32 p_max совпадают с замороженным REPLAY.gen_p1, аргмакс "
-                    "совпадает с gen_ids => трек построен на том же conditioning"),
+        "meaning": ("замороженный gen_p1 воспроизводится текущей моделью на тех же ids с "
+                    "точностью ≤1.7e-4 (16/16, argmax 0/16): трек согласован с теми же весами и "
+                    "тем же вводом; какой движок породил замороженный трек, гейт не устанавливает "
+                    "(f16/fp32-разброс ≪ допуска 1e-3)"),
     }
     allm, allf = [], []
     for e in R["per_doc"]:
@@ -247,7 +249,8 @@ def summarize():
         "корреляция, а не механизм: ни одна ветка не вмешивалась в генерацию",
         "CPU-рука считает флаги по замороженному референс-потоку, llama-рука — по своему "
         "жадному; это разные флаг-массивы (см. cross_engine.caveat)",
-        "проверен детерминизм лишь части прогонов: независимый пересчёт ревьюером — w0/w14",
+        "детерминизм: независимый пересчёт ревьюером — 16/16 документов с побайтовой "
+        "тождественностью (r2, docs/dynamic/3_REVIEW_E94_Q3_r2_remediation.md)",
         "провенанс замороженного REPLAY.gen_ids/gen_p1 (движок exp81b) не перепроверялся",
         "лага 1/4/8/16 — нескорректированные множественные сравнения",
     ]

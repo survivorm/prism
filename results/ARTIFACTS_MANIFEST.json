@@ -190,10 +190,10 @@
   "note": "E94 Q2: MINOR fixes re-derivation (from-raw, no server); metrics identical to pre-fix run; +g2_violations/g2_offline_check/device_gate_source/idempotence"
  },
  "results/e94/Q3cpu.json": {
-  "sha256_16": "f466f3bd626b68ce",
-  "size": 350811,
-  "date": "2026-11-12T04:17:25",
-  "note": "E94 Q3cpu: один HF fp32 forward на док, margin vs rep8, гейт gen_p1 16/16 (max|Δ|=1.67e-4), unit=document, ρ=0.3529 [0.2975,0.4370]; перезапуск кодом из git после ревью r1 — per-doc ρ/Δ сошлись с 8a463b3 побитово"
+  "sha256_16": "4275fe08a175fe89",
+  "size": 351116,
+  "date": "2026-11-12T04:50:30",
+  "note": "E94 Q3cpu v3: strings-only remediation after external review PASS r2 (repro_gate.meaning narrowed per review item E; limitations determinism line w0/w14 replaced by 16/16). Previous sha256_16 f466f3bd626b68ce. Regression proof: 18679 numeric leaves compared vs previous artifact and vs independent /tmp smoke run, only t_total_s differs. Run ./run_one.sh e94q3cpu3, RUN_RC=0, wall 142.45 s"
  },
  "results/e94/Q2rank.json": {
   "sha256_16": "945db19105b7a8d0",
