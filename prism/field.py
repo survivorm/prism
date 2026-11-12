@@ -101,7 +101,6 @@ def acf_moments(x, K):
 def f_dc(x):
     """(G3) f_DC = ‖mean(x)‖² / mean(‖x‖²); r = N·f_DC точно. Нулевой объект — ValueError."""
     x = np.asarray(x, dtype=np.float64)
-    N = x.shape[0]
     m2 = float(np.linalg.norm(x.mean(axis=0)) ** 2)
     mean_n2 = float(np.einsum("ij,ij->i", x, x).mean())
     if mean_n2 <= 0:
@@ -119,7 +118,6 @@ def ra_split(u, hn):
     """
     U = _unit(np.asarray(u, dtype=np.float64))
     h = U * np.asarray(hn, dtype=np.float64)[:, None]
-    T = U.shape[0]
     dh = h[1:] - h[:-1]
     du = U[1:] - U[:-1]
     rbar = 0.5 * (np.asarray(hn, dtype=np.float64)[1:] + np.asarray(hn, dtype=np.float64)[:-1])
