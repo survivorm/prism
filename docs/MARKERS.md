@@ -73,3 +73,8 @@
 - 12.11: +M10 (E94 Q1: prefix_len/rep8-Δ bootstrap/Spearman-perm/repro_rate, exp94_q1.py).
 - 12.11: M10 hygiene (ревью r1): n_docs_repro_identical/n_docs_prefix_full, p_definition/p_mc_se,
   interpretability, bifurcation_note, idempotence (exp94_q1.py --from-raw ×2).
+- 12.11: E94 Q2b/Q2c диагностика флипа (experiments/exp94_q2b.py, exp94_q2c.py;
+  results/e94/Q2b.json, Q2c.json): новые имена — счётчики A.emitted_ids/A.distinct,
+  C.per_position, D.flips_with_probs/D.flips_no_probs/D.first_diff, E.emitted/E.top1,
+  Q2c.verdict_shift (результаты, не гейты); итог — флип детерминирован (A 5/5),
+  кэш-/наблюдатель-инвариантен (B, D), top_k=1 эмитит тот же (E), сдвиг списка отвергнут (Q2c).
