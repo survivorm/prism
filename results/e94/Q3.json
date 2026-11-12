@@ -1,6 +1,6 @@
 {
  "phase": "q3",
- "started_unix": 1794443939,
+ "started_unix": 1794445037,
  "engine": "llama-server f16/SYCL (одна сторона; позиции — собственные id движка)",
  "data_source": "results/e94/raw_q1.json.tar.gz → /tmp/e94raw/q1_w<i>_r<1,2>.json",
  "convention": "margin_t=exp(lp1)-exp(lp2) по top_logprobs[0..1]; rep8 — дословный rep_flags(exp81b), окно 8, конкатенация prompt(64)+gen, off=64; лаги: margin_t vs flag_{t+L} (низкий отрыв → ПОСЛЕДУЮЩИЕ повторы)",
@@ -26315,7 +26315,20 @@
     0.3167246662017862,
     0.7002295571875343
    ]
-  }
+  },
+  "d_per_doc_rho": {
+   "resample_unit": "document (единица ресемплинга — док, НЕ позиция)",
+   "n_bootstrap": 10000,
+   "seed": 8181,
+   "median": 0.34530377167804194,
+   "ci_2.5_97.5": [
+    0.29818070513584216,
+    0.47153232696585035
+   ],
+   "n_docs": 16,
+   "n_positive": 15
+  },
+  "p_note": "p_perm на пуле позиций оптимистичен (автокорреляция внутри дока); первичная статистика — d_per_doc_rho"
  },
  "load_errors": {},
  "r2_control": {
@@ -26468,5 +26481,5 @@
  "n_docs_with_metrics": 16,
  "rc": 0,
  "halt_reason": null,
- "t_total_s": 113.25
+ "t_total_s": 196.22
 }

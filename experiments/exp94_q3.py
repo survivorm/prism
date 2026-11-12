@@ -15,7 +15,7 @@ RUN_RC: 0 ok · 1 данные/исключение · 11 <8 доков с не�
 import json, os, sys, time, traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from exp94_sycl_common import san, rep_flags, spear, perm_null, prefix_len
+from exp94_sycl_common import san, rep_flags, spear, perm_null, prefix_len, bootstrap_ci_median
 import numpy as np
 
 RAW = "/tmp/e94raw"
@@ -151,6 +151,19 @@ def overall(per):
     else:
         c["median_diff"], c["median_diff_ci_2.5_97.5"] = None, None
     O["c"] = c
+    # (d) per-doc rho — первичная статистика (MAJOR-1): единица ресемплинга = ДОК
+    rhos = [e["spear_a"] for e in per if e.get("spear_a") is not None]
+    d = {"resample_unit": "document (единица ресемплинга — док, НЕ позиция)",
+         "n_bootstrap": N_BOOT, "seed": SEED}
+    if rhos:
+        med, ci = bootstrap_ci_median(rhos, n=N_BOOT, seed=SEED)
+        d["median"], d["ci_2.5_97.5"] = med, ci
+        d["n_docs"], d["n_positive"] = len(rhos), int(sum(1 for r in rhos if r > 0))
+    else:
+        d["median"], d["ci_2.5_97.5"], d["n_docs"], d["n_positive"] = None, None, 0, 0
+    O["d_per_doc_rho"] = d
+    O["p_note"] = ("p_perm на пуле позиций оптимистичен (автокорреляция внутри дока); "
+                   "первичная статистика — d_per_doc_rho")
     return O
 
 
