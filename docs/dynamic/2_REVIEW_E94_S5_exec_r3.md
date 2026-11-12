@@ -1,0 +1,5 @@
+ВЕРДИКТ: PASS
+C1: Только отчёт. Изменён формат вывода summarize: dsum/buckets/per_doc — dict по 4 ключам через .get(k,0). Логика (classify, dry_apply, verdict, control_no_dry, negative_controls) не тронута. Артфакт: positions=6144, сумма buckets=6144 (обе репы; TIE=0 теперь виден в buckets), flips=16, g_need_max 0.994864 (r1)/0.9946 (r2), mism=16, H0_supported=true, H0_supported_and_valid=true, 3 negative controls caught=true (17/16/14 UNEXPL), nc scope docs=16. Совпадает с r2.
+C2: Не ломает. s["buckets"] != ref["buckets"] в negative_controls — оба dict с одинаковым набором ключей из одного summarize; extra_unexplained через .get корректен (17/16/14). verdict: b.get(...) — ключи гарантированно присутствуют. control_no_dry (множества non_explained) не затронут.
+C3: Совместим. per_doc — dict (строка 327); единственный потребитель — json.dump в payload (int, allow_nan=False, сериализуется). Сравнений/арифметики над per_doc нет; selftest — отдельный Counter b.
+Правки = ровно два MINOR из r2: явные нули в buckets/per_doc + scope в runs.*.vocab_text_check («из 248320», в r1 и r2). Прочих отличий нет.
