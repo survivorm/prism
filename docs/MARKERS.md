@@ -68,6 +68,21 @@
 - Конвенция: только числа+гейты, «механизм»-выводы запрещены (ТЗ §2.1, M4-аналог: CI накрывает 0 →
   эффект не формулируется).
 
+## M11. E94 Q3/Q3cpu: margin top1−top2 vs rep8, две руки (llama + CPU)
+- Q3.json `summary.d_per_doc_rho` {median, ci_2.5_97.5, n_docs, n_positive} + `summary.p_note` (MAJOR-1
+  ревью r1: первичная единица — ДОК; bootstrap 10000, seed 8181; пульный p_perm оптимистичен —
+  цитировать только как p<=1/(B+1)). Значения этого прогона: median 0.3453, CI [0.2982, 0.4715], 15/16.
+- Q3cpu.json (experiments/exp94_q3cpu.py): один HF fp32 forward на док (448 id: prompts.json docs[i].ids
+  + REPLAY.gen_ids), teacher-forcing на замороженном потоке. Новые имена: per_doc.repro_max_abs_d_p1/
+  repro_pass/n_argmax_ne_gen (гейт: max|Δp1| < 1e-3 на первых 3 доках, иначе rc=2), summary.repro_gate,
+  summary.pooled_positions (справочно, p_note о 1/(B+1)), summary.lags_per_doc (L 1/4/8/16, нескорректированные),
+  summary.delta_median_margin, summary.cross_engine {cpu, llama, paired_diff_cpu_minus_llama, reading, caveat};
+  rc 0/1/2/−1 (−1 = частичный прогон, артефакт после каждого дока, НЕ результат).
+- Запуск HF-рук: системный python3 тоже годится, если ДО импорта transformers сделать
+  `sys.modules["fla"]=None` + `USE_HUB_KERNELS=NO` (иначе fla тянет triton и на CPU «0 active drivers»);
+  подтверждено: финальный прогон exp94_q3cpu.py шёл на системном python3 и воспроизвёл замороженный
+  REPLAY.gen_p1 на 16/16 (max|Δp1|=1.67e-4). .venv/bin/python3 — альтернатива, не требование.
+
 ## CHANGELOG
 - 11.11: создан по r1/r2 ревью (D1,D4,C1,H1,H6,E3; B5,H4 — старые долги).
 - 12.11: +M10 (E94 Q1: prefix_len/rep8-Δ bootstrap/Spearman-perm/repro_rate, exp94_q1.py).
@@ -78,6 +93,8 @@
   C.per_position, D.flips_with_probs/D.flips_no_probs/D.first_diff, E.emitted/E.top1,
   Q2c.verdict_shift (результаты, не гейты); итог — флип детерминирован (A 5/5),
   кэш-/наблюдатель-инвариантен (B, D), top_k=1 эмитит тот же (E), сдвиг списка отвергнут (Q2c).
+- 12.11: +M11 (E94 Q3/Q3cpu: summary.d_per_doc_rho + p_note в Q3.json; CPU-рука Q3cpu.json —
+  один forward на док, repro-гейт gen_p1, cross_engine; .venv/bin/python3, fla→triton workaround).
 - 12.11 (MINOR Q2, review 2_REVIEW_E94_Q2_exec_r1): D.flips_no_probs →
   D.stream_identity_no_vs_with_probs (+D.note: без запроса вероятностей флипы не
   вычислимываемы — метрика = тождественность потоков); переименование вступает в силу
