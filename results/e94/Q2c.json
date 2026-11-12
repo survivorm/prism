@@ -1,0 +1,1364 @@
+{
+ "phase": "q2c",
+ "started_unix": 1794442767,
+ "doc": "w4",
+ "reqs": [
+  {
+   "label": "req2_is_np1",
+   "body": {
+    "prompt": [
+     760,
+     6511,
+     314,
+     9338,
+     369
+    ],
+    "n_predict": 1,
+    "temperature": 0,
+    "stream": false,
+    "return_tokens": true,
+    "logprobs": true,
+    "top_logprobs": 5,
+    "cache_prompt": true,
+    "seed": 8181,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "xtc_probability": 0.0,
+    "mirostat": 0,
+    "n_probs": 5,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0
+   },
+   "wall_s": 0.272,
+   "tokens_evaluated": 5,
+   "timings": {
+    "cache_n": 0,
+    "prompt_n": 5,
+    "prompt_ms": 219.174,
+    "prompt_per_token_ms": 43.8348,
+    "prompt_per_second": 22.812924890726087,
+    "predicted_n": 1,
+    "predicted_ms": 0.001,
+    "predicted_per_token_ms": 0.0,
+    "predicted_per_second": 0.0
+   },
+   "emitted_ids": [
+    11751
+   ],
+   "raw": {
+    "index": 0,
+    "content": " Paris",
+    "tokens": [
+     11751
+    ],
+    "id_slot": 0,
+    "stop": true,
+    "model": "/data/Qwen/qwen3.5-0.8B-f16.gguf",
+    "tokens_predicted": 1,
+    "tokens_evaluated": 5,
+    "generation_settings": {
+     "seed": 8181,
+     "temperature": 0.0,
+     "dynatemp_range": 0.0,
+     "dynatemp_exponent": 1.0,
+     "top_k": 400,
+     "top_p": 1.0,
+     "min_p": 0.0,
+     "top_n_sigma": -1.0,
+     "xtc_probability": 0.0,
+     "xtc_threshold": 0.10000000149011612,
+     "typical_p": 1.0,
+     "repeat_last_n": 0,
+     "repeat_penalty": 1.0,
+     "presence_penalty": 0.0,
+     "frequency_penalty": 0.0,
+     "dry_multiplier": 1.0,
+     "dry_base": 1.0,
+     "dry_allowed_length": 2,
+     "dry_penalty_last_n": 64,
+     "dry_sequence_breakers": [
+      "\n",
+      ":",
+      "\"",
+      "*"
+     ],
+     "mirostat": 0,
+     "mirostat_tau": 5.0,
+     "mirostat_eta": 0.10000000149011612,
+     "adaptive_target": -1.0,
+     "adaptive_decay": 0.8999999761581421,
+     "stop": [],
+     "max_tokens": 1,
+     "n_predict": 1,
+     "n_keep": 0,
+     "n_discard": 0,
+     "ignore_eos": false,
+     "stream": false,
+     "logit_bias": [],
+     "n_probs": 5,
+     "min_keep": 0,
+     "grammar": "",
+     "grammar_lazy": false,
+     "grammar_triggers": [],
+     "preserved_tokens": [],
+     "chat_format": "Content-only",
+     "reasoning_format": "deepseek",
+     "reasoning_in_content": false,
+     "generation_prompt": "",
+     "samplers": [
+      "penalties",
+      "dry",
+      "top_n_sigma",
+      "top_k",
+      "typ_p",
+      "top_p",
+      "min_p",
+      "xtc",
+      "temperature"
+     ],
+     "speculative.types": "none",
+     "timings_per_token": false,
+     "post_sampling_probs": false,
+     "backend_sampling": false,
+     "lora": []
+    },
+    "prompt": "The capital of France is",
+    "has_new_line": false,
+    "truncated": false,
+    "stop_type": "limit",
+    "stopping_word": "",
+    "tokens_cached": 5,
+    "timings": {
+     "cache_n": 0,
+     "prompt_n": 5,
+     "prompt_ms": 219.174,
+     "prompt_per_token_ms": 43.8348,
+     "prompt_per_second": 22.812924890726087,
+     "predicted_n": 1,
+     "predicted_ms": 0.001,
+     "predicted_per_token_ms": 0.0,
+     "predicted_per_second": 0.0
+    },
+    "completion_probabilities": [
+     {
+      "id": 11751,
+      "token": " Paris",
+      "bytes": [
+       32,
+       80,
+       97,
+       114,
+       105,
+       115
+      ],
+      "logprob": -2.0440726280212402,
+      "top_logprobs": [
+       {
+        "id": 11751,
+        "token": " Paris",
+        "bytes": [
+         32,
+         80,
+         97,
+         114,
+         105,
+         115
+        ],
+        "logprob": -2.0440726280212402
+       },
+       {
+        "id": 279,
+        "token": " the",
+        "bytes": [
+         32,
+         116,
+         104,
+         101
+        ],
+        "logprob": -2.327449321746826
+       },
+       {
+        "id": 7172,
+        "token": " located",
+        "bytes": [
+         32,
+         108,
+         111,
+         99,
+         97,
+         116,
+         101,
+         100
+        ],
+        "logprob": -2.630789279937744
+       },
+       {
+        "id": 25,
+        "token": ":",
+        "bytes": [
+         58
+        ],
+        "logprob": -2.8278794288635254
+       },
+       {
+        "id": 198,
+        "token": "\n",
+        "bytes": [
+         10
+        ],
+        "logprob": -2.8933310508728027
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "req3_france_np3",
+   "body": {
+    "prompt": [
+     760,
+     6511,
+     314,
+     9338
+    ],
+    "n_predict": 3,
+    "temperature": 0,
+    "stream": false,
+    "return_tokens": true,
+    "logprobs": true,
+    "top_logprobs": 5,
+    "cache_prompt": true,
+    "seed": 8181,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "xtc_probability": 0.0,
+    "mirostat": 0,
+    "n_probs": 5,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0
+   },
+   "wall_s": 0.399,
+   "tokens_evaluated": 4,
+   "timings": {
+    "cache_n": 1,
+    "prompt_n": 3,
+    "prompt_ms": 210.81300000000002,
+    "prompt_per_token_ms": 70.271,
+    "prompt_per_second": 14.230621451238774,
+    "predicted_n": 3,
+    "predicted_ms": 111.33200000000001,
+    "predicted_per_token_ms": 55.666000000000004,
+    "predicted_per_second": 17.96428699744907
+   },
+   "emitted_ids": [
+    369,
+    11751,
+    13
+   ],
+   "raw": {
+    "index": 0,
+    "content": " is Paris.",
+    "tokens": [
+     369,
+     11751,
+     13
+    ],
+    "id_slot": 0,
+    "stop": true,
+    "model": "/data/Qwen/qwen3.5-0.8B-f16.gguf",
+    "tokens_predicted": 3,
+    "tokens_evaluated": 4,
+    "generation_settings": {
+     "seed": 8181,
+     "temperature": 0.0,
+     "dynatemp_range": 0.0,
+     "dynatemp_exponent": 1.0,
+     "top_k": 400,
+     "top_p": 1.0,
+     "min_p": 0.0,
+     "top_n_sigma": -1.0,
+     "xtc_probability": 0.0,
+     "xtc_threshold": 0.10000000149011612,
+     "typical_p": 1.0,
+     "repeat_last_n": 0,
+     "repeat_penalty": 1.0,
+     "presence_penalty": 0.0,
+     "frequency_penalty": 0.0,
+     "dry_multiplier": 1.0,
+     "dry_base": 1.0,
+     "dry_allowed_length": 2,
+     "dry_penalty_last_n": 64,
+     "dry_sequence_breakers": [
+      "\n",
+      ":",
+      "\"",
+      "*"
+     ],
+     "mirostat": 0,
+     "mirostat_tau": 5.0,
+     "mirostat_eta": 0.10000000149011612,
+     "adaptive_target": -1.0,
+     "adaptive_decay": 0.8999999761581421,
+     "stop": [],
+     "max_tokens": 3,
+     "n_predict": 3,
+     "n_keep": 0,
+     "n_discard": 0,
+     "ignore_eos": false,
+     "stream": false,
+     "logit_bias": [],
+     "n_probs": 5,
+     "min_keep": 0,
+     "grammar": "",
+     "grammar_lazy": false,
+     "grammar_triggers": [],
+     "preserved_tokens": [],
+     "chat_format": "Content-only",
+     "reasoning_format": "deepseek",
+     "reasoning_in_content": false,
+     "generation_prompt": "",
+     "samplers": [
+      "penalties",
+      "dry",
+      "top_n_sigma",
+      "top_k",
+      "typ_p",
+      "top_p",
+      "min_p",
+      "xtc",
+      "temperature"
+     ],
+     "speculative.types": "none",
+     "timings_per_token": false,
+     "post_sampling_probs": false,
+     "backend_sampling": false,
+     "lora": []
+    },
+    "prompt": "The capital of France",
+    "has_new_line": false,
+    "truncated": false,
+    "stop_type": "limit",
+    "stopping_word": "",
+    "tokens_cached": 6,
+    "timings": {
+     "cache_n": 1,
+     "prompt_n": 3,
+     "prompt_ms": 210.81300000000002,
+     "prompt_per_token_ms": 70.271,
+     "prompt_per_second": 14.230621451238774,
+     "predicted_n": 3,
+     "predicted_ms": 111.33200000000001,
+     "predicted_per_token_ms": 55.666000000000004,
+     "predicted_per_second": 17.96428699744907
+    },
+    "completion_probabilities": [
+     {
+      "id": 369,
+      "token": " is",
+      "bytes": [
+       32,
+       105,
+       115
+      ],
+      "logprob": -0.7641872763633728,
+      "top_logprobs": [
+       {
+        "id": 369,
+        "token": " is",
+        "bytes": [
+         32,
+         105,
+         115
+        ],
+        "logprob": -0.7641872763633728
+       },
+       {
+        "id": 11,
+        "token": ",",
+        "bytes": [
+         44
+        ],
+        "logprob": -1.7177661657333374
+       },
+       {
+        "id": 557,
+        "token": " was",
+        "bytes": [
+         32,
+         119,
+         97,
+         115
+        ],
+        "logprob": -2.253523349761963
+       },
+       {
+        "id": 198,
+        "token": "\n",
+        "bytes": [
+         10
+        ],
+        "logprob": -3.237013101577759
+       },
+       {
+        "id": 682,
+        "token": " has",
+        "bytes": [
+         32,
+         104,
+         97,
+         115
+        ],
+        "logprob": -3.344851016998291
+       }
+      ]
+     },
+     {
+      "id": 11751,
+      "token": " Paris",
+      "bytes": [
+       32,
+       80,
+       97,
+       114,
+       105,
+       115
+      ],
+      "logprob": -2.043721914291382,
+      "top_logprobs": [
+       {
+        "id": 11751,
+        "token": " Paris",
+        "bytes": [
+         32,
+         80,
+         97,
+         114,
+         105,
+         115
+        ],
+        "logprob": -2.043721914291382
+       },
+       {
+        "id": 279,
+        "token": " the",
+        "bytes": [
+         32,
+         116,
+         104,
+         101
+        ],
+        "logprob": -2.3274712562561035
+       },
+       {
+        "id": 7172,
+        "token": " located",
+        "bytes": [
+         32,
+         108,
+         111,
+         99,
+         97,
+         116,
+         101,
+         100
+        ],
+        "logprob": -2.6308295726776123
+       },
+       {
+        "id": 25,
+        "token": ":",
+        "bytes": [
+         58
+        ],
+        "logprob": -2.828418493270874
+       },
+       {
+        "id": 198,
+        "token": "\n",
+        "bytes": [
+         10
+        ],
+        "logprob": -2.893831968307495
+       }
+      ]
+     },
+     {
+      "id": 13,
+      "token": ".",
+      "bytes": [
+       46
+      ],
+      "logprob": -0.632161557674408,
+      "top_logprobs": [
+       {
+        "id": 13,
+        "token": ".",
+        "bytes": [
+         46
+        ],
+        "logprob": -0.632161557674408
+       },
+       {
+        "id": 11,
+        "token": ",",
+        "bytes": [
+         44
+        ],
+        "logprob": -1.0063451528549194
+       },
+       {
+        "id": 318,
+        "token": " (",
+        "bytes": [
+         32,
+         40
+        ],
+        "logprob": -3.9057421684265137
+       },
+       {
+        "id": 198,
+        "token": "\n",
+        "bytes": [
+         10
+        ],
+        "logprob": -4.1144280433654785
+       },
+       {
+        "id": 321,
+        "token": " and",
+        "bytes": [
+         32,
+         97,
+         110,
+         100
+        ],
+        "logprob": -4.23730993270874
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "label": "req4_w4_69_np2",
+   "body": {
+    "prompt": [
+     33,
+     5052,
+     939,
+     5699,
+     28602,
+     604,
+     8810,
+     326,
+     4738,
+     310,
+     469,
+     36201,
+     5681,
+     604,
+     8810,
+     469,
+     5257,
+     81873,
+     11,
+     10964,
+     11,
+     17397,
+     11,
+     321,
+     4434,
+     3429,
+     13,
+     198,
+     2053,
+     314,
+     1381,
+     11,
+     220,
+     16,
+     26791,
+     1542,
+     1881,
+     494,
+     417,
+     5052,
+     939,
+     5699,
+     28602,
+     604,
+     8810,
+     318,
+     56,
+     6277,
+     8,
+     310,
+     469,
+     36201,
+     5681,
+     604,
+     8810,
+     318,
+     38,
+     553,
+     198,
+     760,
+     24830,
+     5257,
+     494,
+     417,
+     5052,
+     939,
+     5699,
+     28602,
+     604
+    ],
+    "n_predict": 2,
+    "temperature": 0,
+    "stream": false,
+    "return_tokens": true,
+    "logprobs": true,
+    "top_logprobs": 20,
+    "cache_prompt": true,
+    "seed": 8181,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "xtc_probability": 0.0,
+    "mirostat": 0,
+    "n_probs": 20,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0
+   },
+   "wall_s": 0.751,
+   "tokens_evaluated": 69,
+   "timings": {
+    "cache_n": 0,
+    "prompt_n": 69,
+    "prompt_ms": 558.764,
+    "prompt_per_token_ms": 8.098028985507247,
+    "prompt_per_second": 123.48683880851307,
+    "predicted_n": 2,
+    "predicted_ms": 60.827,
+    "predicted_per_token_ms": 60.827,
+    "predicted_per_second": 16.44006773307906
+   },
+   "emitted_ids": [
+    8810,
+    310
+   ],
+   "raw": {
+    "index": 0,
+    "content": "UNCTION to",
+    "tokens": [
+     8810,
+     310
+    ],
+    "id_slot": 0,
+    "stop": true,
+    "model": "/data/Qwen/qwen3.5-0.8B-f16.gguf",
+    "tokens_predicted": 2,
+    "tokens_evaluated": 69,
+    "generation_settings": {
+     "seed": 8181,
+     "temperature": 0.0,
+     "dynatemp_range": 0.0,
+     "dynatemp_exponent": 1.0,
+     "top_k": 400,
+     "top_p": 1.0,
+     "min_p": 0.0,
+     "top_n_sigma": -1.0,
+     "xtc_probability": 0.0,
+     "xtc_threshold": 0.10000000149011612,
+     "typical_p": 1.0,
+     "repeat_last_n": 0,
+     "repeat_penalty": 1.0,
+     "presence_penalty": 0.0,
+     "frequency_penalty": 0.0,
+     "dry_multiplier": 1.0,
+     "dry_base": 1.0,
+     "dry_allowed_length": 2,
+     "dry_penalty_last_n": 64,
+     "dry_sequence_breakers": [
+      "\n",
+      ":",
+      "\"",
+      "*"
+     ],
+     "mirostat": 0,
+     "mirostat_tau": 5.0,
+     "mirostat_eta": 0.10000000149011612,
+     "adaptive_target": -1.0,
+     "adaptive_decay": 0.8999999761581421,
+     "stop": [],
+     "max_tokens": 2,
+     "n_predict": 2,
+     "n_keep": 0,
+     "n_discard": 0,
+     "ignore_eos": false,
+     "stream": false,
+     "logit_bias": [],
+     "n_probs": 20,
+     "min_keep": 0,
+     "grammar": "",
+     "grammar_lazy": false,
+     "grammar_triggers": [],
+     "preserved_tokens": [],
+     "chat_format": "Content-only",
+     "reasoning_format": "deepseek",
+     "reasoning_in_content": false,
+     "generation_prompt": "",
+     "samplers": [
+      "penalties",
+      "dry",
+      "top_n_sigma",
+      "top_k",
+      "typ_p",
+      "top_p",
+      "min_p",
+      "xtc",
+      "temperature"
+     ],
+     "speculative.types": "none",
+     "timings_per_token": false,
+     "post_sampling_probs": false,
+     "backend_sampling": false,
+     "lora": []
+    },
+    "prompt": "BANGALORE CY JUNCTION SBC to GONDIA JUNCTION G train timings, routes, stops, and complete info.\nAs of now, 1 trains run between from BANGALORE CY JUNCTION (YPR) to GONDIA JUNCTION (G).\nThe fastest train from BANGALORE CY J",
+    "has_new_line": false,
+    "truncated": false,
+    "stop_type": "limit",
+    "stopping_word": "",
+    "tokens_cached": 70,
+    "timings": {
+     "cache_n": 0,
+     "prompt_n": 69,
+     "prompt_ms": 558.764,
+     "prompt_per_token_ms": 8.098028985507247,
+     "prompt_per_second": 123.48683880851307,
+     "predicted_n": 2,
+     "predicted_ms": 60.827,
+     "predicted_per_token_ms": 60.827,
+     "predicted_per_second": 16.44006773307906
+    },
+    "completion_probabilities": [
+     {
+      "id": 8810,
+      "token": "UNCTION",
+      "bytes": [
+       85,
+       78,
+       67,
+       84,
+       73,
+       79,
+       78
+      ],
+      "logprob": -0.0004711068468168378,
+      "top_logprobs": [
+       {
+        "id": 8810,
+        "token": "UNCTION",
+        "bytes": [
+         85,
+         78,
+         67,
+         84,
+         73,
+         79,
+         78
+        ],
+        "logprob": -0.0004711068468168378
+       },
+       {
+        "id": 1797,
+        "token": "UN",
+        "bytes": [
+         85,
+         78
+        ],
+        "logprob": -9.688034057617188
+       },
+       {
+        "id": 583,
+        "token": "unction",
+        "bytes": [
+         117,
+         110,
+         99,
+         116,
+         105,
+         111,
+         110
+        ],
+        "logprob": -10.301948547363281
+       },
+       {
+        "id": 10947,
+        "token": "URN",
+        "bytes": [
+         85,
+         82,
+         78
+        ],
+        "logprob": -10.387504577636719
+       },
+       {
+        "id": 8880,
+        "token": "UTH",
+        "bytes": [
+         85,
+         84,
+         72
+        ],
+        "logprob": -10.420246124267578
+       },
+       {
+        "id": 22988,
+        "token": "UMP",
+        "bytes": [
+         85,
+         77,
+         80
+        ],
+        "logprob": -10.435233116149902
+       },
+       {
+        "id": 12821,
+        "token": "UND",
+        "bytes": [
+         85,
+         78,
+         68
+        ],
+        "logprob": -10.957106590270996
+       },
+       {
+        "id": 6370,
+        "token": "PTION",
+        "bytes": [
+         80,
+         84,
+         73,
+         79,
+         78
+        ],
+        "logprob": -10.9737548828125
+       },
+       {
+        "id": 47728,
+        "token": "UNE",
+        "bytes": [
+         85,
+         78,
+         69
+        ],
+        "logprob": -11.059670448303223
+       },
+       {
+        "id": 202989,
+        "token": "APAN",
+        "bytes": [
+         65,
+         80,
+         65,
+         78
+        ],
+        "logprob": -11.142463684082031
+       },
+       {
+        "id": 318,
+        "token": " (",
+        "bytes": [
+         32,
+         40
+        ],
+        "logprob": -11.331846237182617
+       },
+       {
+        "id": 3024,
+        "token": "UP",
+        "bytes": [
+         85,
+         80
+        ],
+        "logprob": -11.462242126464844
+       },
+       {
+        "id": 12270,
+        "token": "UNC",
+        "bytes": [
+         85,
+         78,
+         67
+        ],
+        "logprob": -11.735264778137207
+       },
+       {
+        "id": 310,
+        "token": " to",
+        "bytes": [
+         32,
+         116,
+         111
+        ],
+        "logprob": -11.764337539672852
+       },
+       {
+        "id": 65662,
+        "token": " Junction",
+        "bytes": [
+         32,
+         74,
+         117,
+         110,
+         99,
+         116,
+         105,
+         111,
+         110
+        ],
+        "logprob": -11.774287223815918
+       },
+       {
+        "id": 22322,
+        "token": "UNIT",
+        "bytes": [
+         85,
+         78,
+         73,
+         84
+        ],
+        "logprob": -11.803146362304688
+       },
+       {
+        "id": 57976,
+        "token": "UNG",
+        "bytes": [
+         85,
+         78,
+         71
+        ],
+        "logprob": -11.947818756103516
+       },
+       {
+        "id": 27682,
+        "token": "UTION",
+        "bytes": [
+         85,
+         84,
+         73,
+         79,
+         78
+        ],
+        "logprob": -11.96232795715332
+       },
+       {
+        "id": 71133,
+        "token": "UNCT",
+        "bytes": [
+         85,
+         78,
+         67,
+         84
+        ],
+        "logprob": -12.079034805297852
+       },
+       {
+        "id": 83154,
+        "token": "ONDON",
+        "bytes": [
+         79,
+         78,
+         68,
+         79,
+         78
+        ],
+        "logprob": -12.084550857543945
+       }
+      ]
+     },
+     {
+      "id": 310,
+      "token": " to",
+      "bytes": [
+       32,
+       116,
+       111
+      ],
+      "logprob": -1.1148110628128052,
+      "top_logprobs": [
+       {
+        "id": 318,
+        "token": " (",
+        "bytes": [
+         32,
+         40
+        ],
+        "logprob": -0.4774743318557739
+       },
+       {
+        "id": 310,
+        "token": " to",
+        "bytes": [
+         32,
+         116,
+         111
+        ],
+        "logprob": -1.1148110628128052
+       },
+       {
+        "id": 326,
+        "token": " S",
+        "bytes": [
+         32,
+         83
+        ],
+        "logprob": -3.709125518798828
+       },
+       {
+        "id": 369,
+        "token": " is",
+        "bytes": [
+         32,
+         105,
+         115
+        ],
+        "logprob": -4.70400333404541
+       },
+       {
+        "id": 783,
+        "token": " Y",
+        "bytes": [
+         32,
+         89
+        ],
+        "logprob": -5.183568954467773
+       },
+       {
+        "id": 4981,
+        "token": " TO",
+        "bytes": [
+         32,
+         84,
+         79
+        ],
+        "logprob": -5.966428756713867
+       },
+       {
+        "id": 469,
+        "token": " G",
+        "bytes": [
+         32,
+         71
+        ],
+        "logprob": -6.783226013183594
+       },
+       {
+        "id": 220,
+        "token": " ",
+        "bytes": [
+         32
+        ],
+        "logprob": -7.562439918518066
+       },
+       {
+        "id": 7,
+        "token": "(",
+        "bytes": [
+         40
+        ],
+        "logprob": -7.79789924621582
+       },
+       {
+        "id": 11,
+        "token": ",",
+        "bytes": [
+         44
+        ],
+        "logprob": -8.083833694458008
+       },
+       {
+        "id": 668,
+        "token": " will",
+        "bytes": [
+         32,
+         119,
+         105,
+         108,
+         108
+        ],
+        "logprob": -8.2740478515625
+       },
+       {
+        "id": 15606,
+        "token": " SY",
+        "bytes": [
+         32,
+         83,
+         89
+        ],
+        "logprob": -8.454940795898438
+       },
+       {
+        "id": 321,
+        "token": " and",
+        "bytes": [
+         32,
+         97,
+         110,
+         100
+        ],
+        "logprob": -8.470466613769531
+       },
+       {
+        "id": 5601,
+        "token": " goes",
+        "bytes": [
+         32,
+         103,
+         111,
+         101,
+         115
+        ],
+        "logprob": -8.484871864318848
+       },
+       {
+        "id": 19593,
+        "token": "(Y",
+        "bytes": [
+         40,
+         89
+        ],
+        "logprob": -8.560755729675293
+       },
+       {
+        "id": 50,
+        "token": "S",
+        "bytes": [
+         83
+        ],
+        "logprob": -8.59172248840332
+       },
+       {
+        "id": 466,
+        "token": " or",
+        "bytes": [
+         32,
+         111,
+         114
+        ],
+        "logprob": -8.711920738220215
+       },
+       {
+        "id": 604,
+        "token": " J",
+        "bytes": [
+         32,
+         74
+        ],
+        "logprob": -8.817014694213867
+       },
+       {
+        "id": 4890,
+        "token": " SE",
+        "bytes": [
+         32,
+         83,
+         69
+        ],
+        "logprob": -8.894308090209961
+       },
+       {
+        "id": 471,
+        "token": " -",
+        "bytes": [
+         32,
+         45
+        ],
+        "logprob": -8.920381546020508
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "a_top1_from_q2b_k70": 318,
+ "port": 8113,
+ "server_cmd": [
+  "/home/survivor/work/llama.cpp/build/bin/llama-server",
+  "-m",
+  "/data/Qwen/qwen3.5-0.8B-f16.gguf",
+  "-sm",
+  "none",
+  "-mg",
+  "0",
+  "-ngl",
+  "99",
+  "-fa",
+  "on",
+  "-c",
+  "2048",
+  "-np",
+  "1",
+  "--slots",
+  "--host",
+  "127.0.0.1",
+  "--port",
+  "8113",
+  "--log-disable"
+ ],
+ "server_pid": 503249,
+ "t_load_s": 8.05,
+ "fd_after_health": [
+  "/dev/dri/renderD128",
+  "/dev/dri/renderD128"
+ ],
+ "tokenize": {
+  "A_text": "The capital of France is",
+  "A_ids": [
+   760,
+   6511,
+   314,
+   9338,
+   369
+  ],
+  "B_text": "The capital of France",
+  "B_ids": [
+   760,
+   6511,
+   314,
+   9338
+  ],
+  "raw": [
+   {
+    "tokens": [
+     760,
+     6511,
+     314,
+     9338,
+     369
+    ]
+   },
+   {
+    "tokens": [
+     760,
+     6511,
+     314,
+     9338
+    ]
+   }
+  ]
+ },
+ "req2": {
+  "prompt_len": 5,
+  "n_predict": 1,
+  "emitted": 11751,
+  "top1": 11751,
+  "list": [
+   {
+    "id": 11751,
+    "logprob": -2.0440726280212402,
+    "token": " Paris"
+   },
+   {
+    "id": 279,
+    "logprob": -2.327449321746826,
+    "token": " the"
+   },
+   {
+    "id": 7172,
+    "logprob": -2.630789279937744,
+    "token": " located"
+   },
+   {
+    "id": 25,
+    "logprob": -2.8278794288635254,
+    "token": ":"
+   },
+   {
+    "id": 198,
+    "logprob": -2.8933310508728027,
+    "token": "\n"
+   }
+  ],
+  "tokens_evaluated": 5
+ },
+ "req3": {
+  "prompt_len": 4,
+  "n_predict": 3,
+  "per_position": [
+   {
+    "pos": 0,
+    "stage": "prefill",
+    "emitted": 369,
+    "top1_of_list": 369,
+    "flip": false
+   },
+   {
+    "pos": 1,
+    "stage": "decode",
+    "emitted": 11751,
+    "top1_of_list": 11751,
+    "flip": false
+   },
+   {
+    "pos": 2,
+    "stage": "decode",
+    "emitted": 13,
+    "top1_of_list": 13,
+    "flip": false
+   }
+  ],
+  "tokens_evaluated": 4
+ },
+ "req4": {
+  "prompt_len": 69,
+  "n_predict": 2,
+  "per_position": [
+   {
+    "pos": 0,
+    "k": 69,
+    "emitted": 8810,
+    "top1_of_list": 8810,
+    "flip": false
+   },
+   {
+    "pos": 1,
+    "k": 70,
+    "emitted": 310,
+    "top1_of_list": 318,
+    "flip": true
+   }
+  ],
+  "tokens_evaluated": 69,
+  "pos0_top1_eq_A_top1": false,
+  "pos0_top1": 8810,
+  "pos1_top1_eq_A_top1": true,
+  "pos1_top1": 318
+ },
+ "verdict_shift": "сдвиг отвергнут (вершина == emitted везде, flip 0/4: {'req2_prefill': 0, 'req3_decode_pos1': 0, 'req3_decode_pos2': 0, 'req3_prefill_pos0': 0})",
+ "rc": 0,
+ "halt_reason": null,
+ "t_total_s": 9.47
+}
