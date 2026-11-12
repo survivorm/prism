@@ -50,6 +50,8 @@ ART = OUT + "/S4pp.json"
 JL = "/tmp/e94_s4pp_reqs.jsonl"
 PORTS = [8114]
 BAN = -100.0
+MODEL = "/data/Qwen/qwen3.5-0.8B-f16.gguf"
+assert MODEL in " ".join(SERVER_ARGS), "MODEL разъехался с SERVER_ARGS (константа стала мёртвой)"
 
 # --- предзарегистрированные адреса (ветка, документ, индекс) + ожидания ---------
 # читать ТОЛЬКО из архива той ветки, на которую идёт запрос (MAJOR-3): адреса
@@ -102,6 +104,17 @@ def load_addr(tf, key):
         raise AssertionError("addr %s: tokens_evaluated %r != k %r"
                              % (key, base["te"], a["k"]))
     return base
+
+
+def fetch_props(port, timeout=5):
+    """Идентичность сервера словами сервера, а не словами конфига в артефакте.
+
+    Без этого артефакт писал бы «model=/data/Qwen/...» как литерал, и чужой сервер на том же
+    порту дал бы прогон с неправильной моделью и правильными на вид числами.
+    """
+    import urllib.request
+    with urllib.request.urlopen("http://127.0.0.1:%d/props" % port, timeout=timeout) as r:
+        return json.loads(r.read().decode())
 
 
 def body(prompt, k, **ov):
@@ -254,6 +267,23 @@ def main():
         print("[srv] healthy pid=%s dri=%s" % (srv.pid, srv.device_fd()), flush=True)
     except Exception as e:
         halt = "server start failed: %r" % (e,)
+
+    props = None
+    if not halt:
+        try:
+            props = fetch_props(port)
+        except Exception as e:
+            halt = "props недоступен: %r" % (e,)
+    if not halt:
+        seen = str(props.get("model_path") or props.get("model_alias") or "")
+        if os.path.basename(MODEL) != os.path.basename(seen):
+            halt = ("сервер отдал другую модель: /props=%r, ожидалось %r — прогон запрещён"
+                    % (seen, MODEL))
+        elif not props.get("webui", True):
+            notes.append("в /props webui=false (не ожидаемо, но не блокирует)")
+        print("[srv] props model=%s n_ctx=%s" % (
+            seen, ((props or {}).get("default_generation_settings") or {}).get("n_ctx")),
+              flush=True)
 
     def do(tag, role, bkey, kind, ban_tok=None, extra=None):
         """Один запрос; пишет строку немедленно; ничего не молчит."""
@@ -513,7 +543,13 @@ def main():
         started_local=time.strftime("%Y-%m-%d %H:%M", time.localtime(t_start)),
         wall_s=round(time.time() - t_start, 1), halt_reason=halt,
         server=dict(port=port, pid=srv.pid, dri=srv.device_fd() if srv.pid else None,
-                    args=SERVER_ARGS, model="/data/Qwen/qwen3.5-0.8B-f16.gguf"),
+                    args=SERVER_ARGS, model=MODEL,
+                    model_reported=(props or {}).get("model_path") or
+                    (props or {}).get("model_alias"),
+                    model_matches=bool(props is not None and os.path.basename(MODEL) ==
+                                      os.path.basename(str((props or {}).get("model_path") or
+                                                          (props or {}).get("model_alias") or ""))),
+                    n_ctx=(props or {}).get("default_generation_settings", {}).get("n_ctx")),
         prereg=dict(
             fork="llama.cpp fork 0b8cfb8fe, SYCL/iGPU, /completion",
             question="M1 отчёт привязан к чужой копии логов против M2 жадная ступень не схлопывается",
