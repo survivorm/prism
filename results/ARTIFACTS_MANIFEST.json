@@ -224,5 +224,29 @@
   "note": "E94 S4pp: 23/23 ok, T=0 teacher-forcing probe (M1 branch at w13 k=117, undec at w4 k=70), gate2_met=false - arm B NOT launched; +S3_report_diag (width never observed to bite) +gate2_caveat; hygiene re-run after self-review: 4 flag values + 1 reading changed, 0 numeric moves",
   "sha256_16": "33a6e708a151ef4c",
   "size": 47892
+ },
+ "results/e94/S5.json": {
+  "date": "2026-11-12T10:21:13",
+  "note": "E94 S5: DRY-reconstruction на free-generation Q1 (16 док x 384 = 6144): UNEXPLAINED=0, TIE=0, INCONCLUSIVE=0 (0.0%), 16/16 флипов объяснены DRY (confusion 16/0/0/6128), контроль чист => H0-DRY подтверждена на линии free-generation. Коммит 222f34f (манифестная запись добавлена позже — гейт не был закрыт в коммите).",
+  "sha256_16": "6b4e22b44c715c60",
+  "size": 26314
+ },
+ "results/e94/S6.json": {
+  "date": "2026-11-12T11:44:17",
+  "note": "E94 S6: Q2-сетка (6 док x k 64..447 = 2304) с dry_multiplier=0.0 — 0 флипов, R1: все 14 Q2-флипов = DRY-артефакт; 14/14 RESOLVED согласуются с CPU (disagree 0); эффект-сайд: Q2-эмиссент на ранге 2 (13) / 3 (1, w13k117 g12=0.0096); офлайн-эхо 2304/0, rebuild x2 идемпотентен, G1/G2 зелёные. Контракт и правила — 0_PACKET_E94_S6_TZ.md (TZ-ревью r1/r2 PASS_WITH_MINORS, findings закрыты).",
+  "sha256_16": "8cf7b846c66d9a79",
+  "size": 1224590
+ },
+ "results/e94/raw_q2.json.tar.gz": {
+  "date": "2026-11-12",
+  "note": "E94 Q2 raw-корпус (DRY-on): 2304 raw; источник baseline_q2_flips (14 флипов) и кросс-чека raw_eq_artifact в S6.",
+  "sha256_16": "b3866e3c33bb29bb",
+  "size": 1259139
+ },
+ "results/e94/raw_s6.json.tar.gz": {
+  "date": "2026-11-12T11:41:11",
+  "note": "E94 S6 raw-корпус: 2304 raw (response + timings + wall_s) основного прогона dry=0.0; источник rebuild_from_raw и офлайн-эхо-чека.",
+  "sha256_16": "73eb575b2ac89cea",
+  "size": 1179991
  }
 }
