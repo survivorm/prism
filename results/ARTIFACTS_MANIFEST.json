@@ -1,204 +1,204 @@
 {
- "generated": "2026-11-11",
- "note": "манифест закоммиченных артефактов E-50+ (audit4 S2/S4): sha256-16 + размер + дата; тяжёлые типы (*.pt/*.npz) не в git, см. .gitignore; оценщик e64_gpu.py — experiments/kaggle_e64gpu/e64_gpu.py + results/e64/ESTIMATOR_PIN.json",
  "dirs": {
   "e50v3_out": [
    {
-    "file": "e50v3_out/prism-exp50v3-loop-curvature-qwen.log",
-    "sha256_16": "b00677df2613be3c",
     "bytes": 14868,
-    "mtime": "2026-11-05"
+    "file": "e50v3_out/prism-exp50v3-loop-curvature-qwen.log",
+    "mtime": "2026-11-05",
+    "sha256_16": "b00677df2613be3c"
    }
   ],
   "e64": [
    {
-    "file": "e64/ESTIMATOR_PIN.json",
-    "sha256_16": "b10a5f2024027a7c",
     "bytes": 784,
-    "mtime": "2026-11-11"
+    "file": "e64/ESTIMATOR_PIN.json",
+    "mtime": "2026-11-11",
+    "sha256_16": "b10a5f2024027a7c"
    },
    {
-    "file": "e64/kag_out/prism-b4-temperature-pool.log",
-    "sha256_16": "c0ba382dee1d467b",
     "bytes": 4571,
-    "mtime": "2026-11-08"
+    "file": "e64/kag_out/prism-b4-temperature-pool.log",
+    "mtime": "2026-11-08",
+    "sha256_16": "c0ba382dee1d467b"
    },
    {
-    "file": "e64/tpu_v8/prism-e64-gpu.log",
-    "sha256_16": "91d9e9b7bf428c7a",
     "bytes": 16712,
-    "mtime": "2026-11-08"
+    "file": "e64/tpu_v8/prism-e64-gpu.log",
+    "mtime": "2026-11-08",
+    "sha256_16": "91d9e9b7bf428c7a"
    }
   ],
   "e64gpu_out_old": [
    {
-    "file": "e64gpu_out_old/prism-e64-gpu.log",
-    "sha256_16": "3d8340bc96c7e9b0",
     "bytes": 5374,
-    "mtime": "2026-11-08"
+    "file": "e64gpu_out_old/prism-e64-gpu.log",
+    "mtime": "2026-11-08",
+    "sha256_16": "3d8340bc96c7e9b0"
    }
   ],
   "e81": [
    {
-    "file": "e81/HEAT.json",
-    "sha256_16": "f2e3d203cf6eb8e1",
     "bytes": 29856,
-    "mtime": "2026-11-11"
+    "file": "e81/HEAT.json",
+    "mtime": "2026-11-11",
+    "sha256_16": "f2e3d203cf6eb8e1"
    },
    {
-    "file": "e81/TAIL16.json",
-    "sha256_16": "a3f903ffbdba8f9d",
     "bytes": 498,
-    "mtime": "2026-11-10"
+    "file": "e81/TAIL16.json",
+    "mtime": "2026-11-10",
+    "sha256_16": "a3f903ffbdba8f9d"
    },
    {
-    "file": "e81/REPLAY.json",
-    "sha256_16": "5580d8f2c8341e9a",
     "bytes": 201076,
-    "mtime": "2026-11-11"
+    "file": "e81/REPLAY.json",
+    "mtime": "2026-11-11",
+    "sha256_16": "5580d8f2c8341e9a"
    }
   ],
   "e82": [
    {
-    "file": "e82/LUMI_FIX.json",
-    "sha256_16": "29cb6e47c553b14d",
     "bytes": 1645,
-    "mtime": "2026-11-10"
+    "file": "e82/LUMI_FIX.json",
+    "mtime": "2026-11-10",
+    "sha256_16": "29cb6e47c553b14d"
    }
   ],
   "e83": [
    {
-    "file": "e83/KERNEL_BASELINE.json",
-    "sha256_16": "c4085c7b7e5bc20f",
     "bytes": 25614,
-    "mtime": "2026-11-10"
+    "file": "e83/KERNEL_BASELINE.json",
+    "mtime": "2026-11-10",
+    "sha256_16": "c4085c7b7e5bc20f"
    }
   ],
   "e85": [
    {
-    "file": "e85/MDL_corpus.json",
-    "sha256_16": "99ec7b193ca85358",
     "bytes": 436,
-    "mtime": "2026-11-10"
+    "file": "e85/MDL_corpus.json",
+    "mtime": "2026-11-10",
+    "sha256_16": "99ec7b193ca85358"
    },
    {
-    "file": "e85/LANDMARKS.json",
-    "sha256_16": "bac928182a38bbcf",
     "bytes": 3505,
-    "mtime": "2026-11-10"
-   }
-  ],
-  "exp39m": [
-   {
-    "file": "exp39m/exp39m_flat_ptq_quant.json",
-    "sha256_16": "dc7d5b7f1ef0f75f",
-    "bytes": 10138,
-    "mtime": "2026-11-10"
-   },
-   {
-    "file": "exp39m/run.log",
-    "sha256_16": "a0cc8a9fed022133",
-    "bytes": 20596,
-    "mtime": "2026-11-10"
-   },
-   {
-    "file": "exp39m/exp39m_flat_ptq_train.json",
-    "sha256_16": "77e6696369af36ea",
-    "bytes": 5933,
-    "mtime": "2026-11-10"
+    "file": "e85/LANDMARKS.json",
+    "mtime": "2026-11-10",
+    "sha256_16": "bac928182a38bbcf"
    }
   ],
   "e94": [
    {
-    "file": "e94/Q1.json",
-    "sha256_16": "83652172ccb1c6b7",
     "bytes": 7884,
-    "mtime": "2026-11-12"
+    "file": "e94/Q1.json",
+    "mtime": "2026-11-12",
+    "sha256_16": "83652172ccb1c6b7"
    },
    {
-    "file": "e94/SPIKE.json",
-    "sha256_16": "a5c918c89f14972b",
     "bytes": 11048,
-    "mtime": "2026-11-12"
+    "file": "e94/SPIKE.json",
+    "mtime": "2026-11-12",
+    "sha256_16": "a5c918c89f14972b"
    },
    {
-    "file": "e94/FORMAT.md",
-    "sha256_16": "22336d9b6966c6e8",
     "bytes": 9842,
-    "mtime": "2026-11-12"
+    "file": "e94/FORMAT.md",
+    "mtime": "2026-11-12",
+    "sha256_16": "22336d9b6966c6e8"
    },
    {
-    "file": "e94/Q2b.json",
-    "sha256_16": "8b0efe6a814f58ee",
     "bytes": 146770,
-    "mtime": "2026-11-12"
+    "file": "e94/Q2b.json",
+    "mtime": "2026-11-12",
+    "sha256_16": "8b0efe6a814f58ee"
    },
    {
-    "file": "e94/Q2c.json",
-    "sha256_16": "42802233a7f239a3",
     "bytes": 25010,
-    "mtime": "2026-11-12"
+    "file": "e94/Q2c.json",
+    "mtime": "2026-11-12",
+    "sha256_16": "42802233a7f239a3"
+   }
+  ],
+  "exp39m": [
+   {
+    "bytes": 10138,
+    "file": "exp39m/exp39m_flat_ptq_quant.json",
+    "mtime": "2026-11-10",
+    "sha256_16": "dc7d5b7f1ef0f75f"
+   },
+   {
+    "bytes": 20596,
+    "file": "exp39m/run.log",
+    "mtime": "2026-11-10",
+    "sha256_16": "a0cc8a9fed022133"
+   },
+   {
+    "bytes": 5933,
+    "file": "exp39m/exp39m_flat_ptq_train.json",
+    "mtime": "2026-11-10",
+    "sha256_16": "77e6696369af36ea"
    }
   ]
  },
- "results/e90/LADDER_V2.json": {
-  "sha256_16": "60a8fa6dd770dd99",
-  "size": 2287,
-  "date": "2026-11-12T04:22:12",
-  "note": "E90 LADDER_V2: запись реестра была протухшей (sha 2f584a2513963b37/1973 B, файл изменён в правках ревью r1 в dcdb9b5, реестр не обновляли); пересчитано 12.11, git-дерево чистое"
+ "e93/R917_QWENBASE_OWN.json": {
+  "note": "R9-17 base-model rep-контроль",
+  "sha16": "7df3d96e82e4b0f6",
+  "ts": "2026-11-11T18:25"
  },
- "results/e85/MDL_corpus.json": {
-  "sha256_16": "2c22085bd7441e57",
-  "size": 1103,
-  "date": "2026-11-11T10:44:02"
+ "generated": "2026-11-11",
+ "note": "манифест закоммиченных артефактов E-50+ (audit4 S2/S4): sha256-16 + размер + дата; тяжёлые типы (*.pt/*.npz) не в git, см. .gitignore; оценщик e64_gpu.py — experiments/kaggle_e64gpu/e64_gpu.py + results/e64/ESTIMATOR_PIN.json",
+ "results/e64/ESTIMATOR_PIN.json": {
+  "date": "2026-11-11T10:14:38",
+  "sha256_16": "b10a5f2024027a7c",
+  "size": 784
  },
  "results/e81/REPLAY.json": {
+  "date": "2026-11-11T10:28:41",
   "sha256_16": "5580d8f2c8341e9a",
-  "size": 201076,
-  "date": "2026-11-11T10:28:41"
- },
- "results/e85/LANDMARKS.json": {
-  "sha256_16": "bac928182a38bbcf",
-  "size": 3505,
-  "date": "2026-11-10T22:51:03"
- },
- "results/e64/ESTIMATOR_PIN.json": {
-  "sha256_16": "b10a5f2024027a7c",
-  "size": 784,
-  "date": "2026-11-11T10:14:38"
+  "size": 201076
  },
  "results/e83/KERNEL_BASELINE.json": {
+  "date": "2026-11-10T22:50:14",
   "sha256_16": "c4085c7b7e5bc20f",
-  "size": 25614,
-  "date": "2026-11-10T22:50:14"
+  "size": 25614
  },
- "e93/R917_QWENBASE_OWN.json": {
-  "sha16": "7df3d96e82e4b0f6",
-  "ts": "2026-11-11T18:25",
-  "note": "R9-17 base-model rep-контроль"
+ "results/e85/LANDMARKS.json": {
+  "date": "2026-11-10T22:51:03",
+  "sha256_16": "bac928182a38bbcf",
+  "size": 3505
  },
- "results/e94/Q3.json": {
-  "sha256_16": "711ac08a79a02507",
-  "size": 265024,
-  "date": "2026-11-12T04:03:04",
-  "note": "E94 Q3: margin vs rep8, single engine, from raw_q1; rebuild +summary.d_per_doc_rho (unit=document, MAJOR-1) +p_note"
+ "results/e85/MDL_corpus.json": {
+  "date": "2026-11-11T10:44:02",
+  "sha256_16": "2c22085bd7441e57",
+  "size": 1103
+ },
+ "results/e90/LADDER_V2.json": {
+  "date": "2026-11-12T04:22:12",
+  "note": "E90 LADDER_V2: запись реестра была протухшей (sha 2f584a2513963b37/1973 B, файл изменён в правках ревью r1 в dcdb9b5, реестр не обновляли); пересчитано 12.11, git-дерево чистое",
+  "sha256_16": "60a8fa6dd770dd99",
+  "size": 2287
  },
  "results/e94/Q2.json": {
-  "sha256_16": "e3d9fb568fb12cf5",
-  "size": 532295,
   "date": "2026-11-12T03:52:07",
-  "note": "E94 Q2: MINOR fixes re-derivation (from-raw, no server); metrics identical to pre-fix run; +g2_violations/g2_offline_check/device_gate_source/idempotence"
- },
- "results/e94/Q3cpu.json": {
-  "sha256_16": "4275fe08a175fe89",
-  "size": 351116,
-  "date": "2026-11-12T04:50:30",
-  "note": "E94 Q3cpu v3: strings-only remediation after external review PASS r2 (repro_gate.meaning narrowed per review item E; limitations determinism line w0/w14 replaced by 16/16). Previous sha256_16 f466f3bd626b68ce. Regression proof: 18679 numeric leaves compared vs previous artifact and vs independent /tmp smoke run, only t_total_s differs. Run ./run_one.sh e94q3cpu3, RUN_RC=0, wall 142.45 s"
+  "note": "E94 Q2: MINOR fixes re-derivation (from-raw, no server); metrics identical to pre-fix run; +g2_violations/g2_offline_check/device_gate_source/idempotence",
+  "sha256_16": "e3d9fb568fb12cf5",
+  "size": 532295
  },
  "results/e94/Q2rank.json": {
-  "sha256_16": "945db19105b7a8d0",
-  "size": 17287,
   "date": "2026-11-12",
-  "note": "v4: + divergence_alignment.raw_recheck (perekrestnaya proverka glavnogo vyvoda iz raw+REPLAY: clean=True, 16/16 bez raskhozhdeniy); VSE chisla v3 bit-v-bit te zhe (211 poley, 0 diff); v prose ispravleny opechatki v slove 'dokumenty'. prev sha=de176fdb9cb6a105"
+  "note": "v5: remediation of r1 review (PASS, 0 BLOCKER / 0 MAJOR / 4 MINOR) - v4 numbers bit-for-bit identical (213 numeric leaves, 0 diff). MINOR-1/2: definitions now describe 'absent' and 'no_probs' and how aggregates exclude them; MINOR-3: divergence reading un-reversed (MC gave 0/20000 hits, so the Bernoulli model does NOT reproduce the alignment); MINOR-4: word 'determinied' dropped, now 'matched in two runs' + new seed_note (both replics used seed 8181, so Q1 has 6144 independent positions / 16 flips, not 12288/32). New key interpretation.correction_12_11 records the independence fix and that w4 k=70 is a Q2 address (free-gen twin is w4 j=6). prev sha=945db19105b7a8d0",
+  "sha256_16": "dfd5ec80ce663e8e",
+  "size": 20090
+ },
+ "results/e94/Q3.json": {
+  "date": "2026-11-12T04:03:04",
+  "note": "E94 Q3: margin vs rep8, single engine, from raw_q1; rebuild +summary.d_per_doc_rho (unit=document, MAJOR-1) +p_note",
+  "sha256_16": "711ac08a79a02507",
+  "size": 265024
+ },
+ "results/e94/Q3cpu.json": {
+  "date": "2026-11-12T04:50:30",
+  "note": "E94 Q3cpu v3: strings-only remediation after external review PASS r2 (repro_gate.meaning narrowed per review item E; limitations determinism line w0/w14 replaced by 16/16). Previous sha256_16 f466f3bd626b68ce. Regression proof: 18679 numeric leaves compared vs previous artifact and vs independent /tmp smoke run, only t_total_s differs. Run ./run_one.sh e94q3cpu3, RUN_RC=0, wall 142.45 s",
+  "sha256_16": "4275fe08a175fe89",
+  "size": 351116
  }
 }
