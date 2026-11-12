@@ -151,12 +151,23 @@ if g.get("gate2_met") is None:
 pb = [(k, v) for k, v in pk.items()]
 arch = ((A.get("addresses") or {}).get("probe") or {}).get("emit")
 if g.get("probe_stays_at_archive_emit") and g.get("probe_dependence") and pk_ok:
-    pass
-if g.get("probe_stays_at_archive_emit") and g.get("probe_dependence") and pk_ok:
     fails.append(("E5", "противоречие: эмиссент везде = архивному, но dependence истинна"))
 chk(not (g.get("probe_stays_at_archive_emit") and g.get("probe_dependence")), "E5",
     "нет противоречия stays_at_archive_emit vs dependence (k-карта: %r, архив %r)"
     % (sorted(pb, key=str), arch))
+
+# E6 (exec-r1/Self-1): если ширина не меняла отчёт, gate2_met=false нельзя читать как
+# «независимость показана». Делаем это инвариантом чекера, а не надеждой на читателя.
+rd = S.get("S3_report_diag") or {}
+flat = sorted(k for k, v in rd.items()
+              if isinstance(v, dict) and v.get("report_changed_by_topk") is False)
+if flat and g.get("gate2_met") is False:
+    chk(bool((g.get("gate2_caveat") or "").strip()), "E6",
+        "ширина не меняла отчёт на %r и gate2_met=false => оговорка к чтению обязательна"
+        % flat)
+else:
+    chk(True, "E6", "оговорка не требуется (отчёт менялся от ширины: %r, gate2_met=%r)"
+        % (flat, g.get("gate2_met")))
 
 print("\n=== ИТОГ: %s (%d fail)" % ("PASS" if not fails else "FAIL", len(fails)))
 for f in fails:
