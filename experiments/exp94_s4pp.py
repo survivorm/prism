@@ -182,10 +182,15 @@ def classify(kind, res, base, ban_tok):
                          "(следует за отчётом), и с M1 (собственный второй кандидат совпал). "
                          "Вывод о механизме запрещён." % A)
     if kind == "top1ban":
+        # r4/MINOR-2: на этом адресе A и так не была бы эмиссентом (здесь флип), поэтому
+        # строка НЕ доказывает применимость смещения (это делают ctrl-ветки) и не различает
+        # M1/M2 — она про то, на какой набор действует ban.
         if e == A:
-            return ("ctrl_fail", "смещение не применилось: вершина осталась эмиссентом")
-        return ("ctrl_ok", "смещение применимо: эмиссент ушёл с забаненной вершины (%s) "
-                           "на %s — не различающая, вопрос только о снимке отчёта" % (A, e))
+            return ("ctrl_fail", "вершина отчёта осталась эмиссентом despite ban — "
+                               "невалидно для всего бана: смещение не применилось")
+        return ("nondec_snip", "бан вершины отчёта сработал (эмиссент %s != A %s); НЕ РАЗЛИЧАЕТ "
+                               "и НЕ контроль применимости: на этом адресе A и так не "
+                               "эмитировалась, вывод о механизме запрещён" % (e, A))
     if kind == "ctrl":
         # случай e == ban_tok перехвачен выше веткой "ban проигнорирован": для контроля
         # это то же самое событие (собственная вершина осталась эмиссентом), семантика
@@ -196,9 +201,27 @@ def classify(kind, res, base, ban_tok):
     if kind == "sweep":
         if e == A:
             return ("sweep_same", "эмиссент = вершина, как в архиве (зависимости от top_k нет)")
-        return ("sweep_move", "эмиссент %s != вершина %s при top_k — ветка усечения "
-                              "(инцидентальный дефект, в механизм не идёт)" % (e, A))
-    return ("unknown", "чтение не пред registered для kind=%s" % kind)
+        return ("sweep_move", "эмиссент %s != вершина %s при top_k — ветка усечения; "
+                              "не-довод только если то же есть на контроле (тогда это "
+                              "безусловный дефект k=1); при чистом контроле это и есть "
+                              "сигнал гейта руки B" % (e, A))
+    if kind == "repro":
+        # r4/MINOR-1: адрес репро НЕ флипует (A == B == 8810), поэтому ветка "флип
+        # воспроизвёлся" здесь физически невозможна; это проверка стабильности сессии.
+        if e == A:
+            return ("repro_ok", "адрес-репро стабилен: эмиссент = вершина %s, как в архиве "
+                                "(это НЕ проверка флипа — здесь флипа нет)" % A)
+        return ("repro_drift", "адрес-репро дрейфнул: эмиссент %s != архивная вершина %s — "
+                               "предупреждение о нестабильности сессии, вывод по пробе "
+                               "сопровождать этой пометкой" % (e, A))
+    if kind == "s2":
+        # r4/MINOR-5: пара backend_sampling pre-registered как НЕ различающая M1/M2;
+        # сравнение парное, оно считается в summary.S2_pair.diff, здесь — только факт
+        if e is None:
+            return ("s2_invalid", "нет эмиссента: строка невалидна")
+        return ("s2_fact", "эмиссент %s, вершина %s, n_top_logprobs=%s — сверяется ТОЛЬКО с "
+                           "парной строкой, о механизме не говорит" % (e, A, res.get("n_tl")))
+    return ("unknown", "чтение не предрегистрировано для kind=%s" % kind)
 
 
 def main():
@@ -315,8 +338,8 @@ def main():
         # --- 3. не различающая: где снимается отчёт ------------------------------
         do("S4pp-0", "ban вершины A на адресе пробы (не различающая, объявлено заранее)",
            "probe", "top1ban", ban_tok=bases["probe"]["top1"])
-        do("S4pp-repro", "контроль воспроизводимости адреса, зона уверенности",
-           "repro", "ref")
+        do("S4pp-repro", "контроль стабильности сессии, зона уверенности (флипа нет)",
+           "repro", "repro")
         # --- 4. S2: пара backend_sampling (сравнивать только между собой) -------
         do("S2a", "backend_sampling true + post_sampling_probs true", "probe", "s2",
            extra={"backend_sampling": True, "post_sampling_probs": True})
@@ -357,8 +380,11 @@ def main():
     elif any(v == "invalid" for v in pv):
         verdict = "невалидна: ban или манипуляционный контроль не прошли"
     elif any(v == "M1" for v in pv):
-        verdict = ("M1 установлен" if pv.count("M1") == 2 else
-                   "M1 в одной точке из двух (n=2 не выдержан, читать как намёк)")
+        # r4/Q4: 2/2 и 1/2 — это НЕ «n=2» и «n=1»: обе точки в одной паре токенов, значит
+        # это одно различение, а шкала читается «воспроизведено / не воспроизведено»
+        verdict = ("M1 установлен и воспроизведён на двух адресах" if pv.count("M1") == 2 else
+                   "M1 в одной точке из двух: различение есть, воспроизведения нет "
+                   "(вторая точка противоречит — читать как намёк, не как результат)")
     elif all(v == "undec" for v in pv):
         verdict = ("не разрешено: обе точки дали вершину отчёта — совместимо с M1 и M2; "
                    "вывод о механизме запрещён; рука B — по пункту 2 гейта (0_DECISION_E94_ARM_B.md)")
@@ -384,7 +410,8 @@ def main():
                     verdict=(find("S4pp-0") or {}).get("verdict"),
                     reading=(find("S4pp-0") or {}).get("reading")),
         repro=dict(emit=(find("S4pp-repro") or {}).get("emit"),
-                   verdict=(find("S4pp-repro") or {}).get("verdict")),
+                   verdict=(find("S4pp-repro") or {}).get("verdict"),
+                   reading=(find("S4pp-repro") or {}).get("reading")),
         S2_pair=dict(S2a=dict(emit=(find("S2a") or {}).get("emit"),
                               top1=(find("S2a") or {}).get("top1"),
                               n_tl=(find("S2a") or {}).get("n_tl"),
@@ -393,11 +420,27 @@ def main():
                               top1=(find("S2b") or {}).get("top1"),
                               n_tl=(find("S2b") or {}).get("n_tl"),
                               echo_backend=(find("S2b") or {}).get("echo", {}).get("backend_sampling"))),
+        # r4/MINOR-5: парное сравнение S2 считается числом, а не оставляется читающему
+        S2_pair_diff=dict(
+            differs=bool((find("S2a") or {}).get("emit") != (find("S2b") or {}).get("emit")
+                         or (find("S2a") or {}).get("top1") != (find("S2b") or {}).get("top1")
+                         or (find("S2a") or {}).get("n_tl") != (find("S2b") or {}).get("n_tl")),
+            pairs_same=bool((find("S2a") or {}).get("status") == "ok"
+                            and (find("S2b") or {}).get("status") == "ok"),
+            reading=("пара различается: эмиссент/отчёт зависит от ветки backend_sampling — "
+                     "это различие ветки, НЕ доказательство M1/M2"
+                     if ((find("S2a") or {}).get("emit") != (find("S2b") or {}).get("emit")
+                         or (find("S2a") or {}).get("top1") != (find("S2b") or {}).get("top1")
+                         or (find("S2a") or {}).get("n_tl") != (find("S2b") or {}).get("n_tl"))
+                     else "пара идентична: backend_sampling не меняет ни эмиссента, ни отчёт")),
         S3_topk=[dict(tag=r["tag"], top_k=(r.get("echo") or {}).get("top_k"),
                       emit=r.get("emit"), top1=r.get("top1"), rank=r.get("rank"),
                       verdict=r.get("verdict")) for r in s3],
         S3_control_expectation=dict(
-            expected="все 6 значений top_k на контроле w13 k=101 дают эмиссента 488",
+            # r4/MINOR-4: ожидаемое значение берётся из загруженного адреса, а не литералом
+            expected=("все 6 значений top_k на контроле w13 k=101 дают эмиссента %s"
+                      % bases["ctrlA"]["top1"]),
+            expected_id=bases["ctrlA"]["top1"],
             n_moves=len(ctrl_moves), moved=[r["tag"] for r in ctrl_moves]),
         k1_note=dict(
             probe_addr=("k=1 на адресе пробы дал %r; адрес конфаунден (эмиссент-флип лежит "
@@ -407,14 +450,60 @@ def main():
                       if ctrl_moves else
                       "ветка k=1 на контроле даёт вершину отчёта — безусловного дефекта нет"),
         ),
+        # r4/MAJOR-1 + MINOR-3: вычисляемый предикат гейта руки B. Замечание ревьюера
+        # принято частично: «зависимость от ширины на пробе + её отсутствие на контроле» и
+        # есть довод, а не дефект; дефектом он становится только при движении на контроле.
+        # Формулировка ревьюера («k=1 остался B => M1-leaning, стал A => M2-leaning»)
+        # ОТВЕРГНУТА: при M2 эмиссия по построению не следует усечённому набору, поэтому
+        # «остался B» совместим с обеими моделями, а «стал A» значит «усечение ограничивает
+        # эмиссию», то есть M2 слабит, а не крепит. Единственный информативный исход k=1 на
+        # пробе — эмиссент = A, и он работает ПРОТИВ M2.
+        gate2=dict(
+            rule=("рука B запускается только если эмиссент на адресе пробы зависит от ширины "
+                  "набора И на контроле такой зависимости нет; зависимость вместе с движением "
+                  "на контроле = безусловный дефект ветки k=1, не довод"),
+            probe_dependence=None, control_dependence=None, gate2_met=None,
+            k1_probe_emit=k1.get("emit"),
+            k1_note_e=("k=1 на пробе дал вершину отчёта A: усечение ограничивает эмиссию — "
+                       "это подрывает M2 (эмиссия следует за набором), а не крепит его"
+                       if k1.get("emit") == bases["probe"]["top1"] else
+                       "k=1 на пробе дал %r: не различает (при M1 эмиссент = аргмакс своего "
+                       "набора = B; при M2 эмиссия не следует усечению и тоже даёт B)"
+                       % k1.get("emit")),
+        ),
     )
+    # «зависимость от ширины» = эмиссент МЕНЯЕТСЯ с k, а не «эмиссент != вершина отчёта»:
+    # второе истинно на адресе флипа при любом исходе (там эмиссент и так не вершина) и
+    # включало бы гейт на пустом месте — это тот самый «почти всегда истинный» предикат.
+    def emits_by_k(sfx, bkey):
+        m = {}
+        for r in s3:
+            if r["tag"].endswith(sfx):
+                m[(r.get("echo") or {}).get("top_k")] = r.get("emit")
+        vals = [v for v in m.values() if v is not None]
+        return m, (len(set(vals)) > 1 if len(m) == 6 else None), sorted(set(vals))
+    pm, pdep, pvals = emits_by_k("probe", "probe")
+    cm, cdep, cvals = emits_by_k("ctrlA", "ctrlA")
+    g2 = summary["gate2"]
+    g2["probe_emits_by_k"] = san(pm)
+    g2["probe_dependence"] = pdep
+    g2["probe_distinct_emits"] = pvals
+    g2["probe_stays_at_archive_emit"] = bool(pvals == [bases["probe"]["emit"]])
+    g2["control_emits_by_k"] = san(cm)
+    g2["control_dependence"] = cdep
+    g2["control_distinct_emits"] = cvals
+    g2["gate2_met"] = (bool(pdep and not cdep) if (pdep is not None and cdep is not None)
+                       else None)
+    g2["gate2_note"] = ("неполный свип: зависимость не определена (нужны все 6 значений на "
+                        "обеих сторонах), рука B не запускается" if g2["gate2_met"] is None
+                        else "условие 2 гейта выполнено" if g2["gate2_met"] else
+                        "условие 2 гейта НЕ выполнено")
 
     n_done = sum(1 for r in recs if r.get("status") == "ok")
     # план сверяется ВСЕГДА: иное число запросов = дефект скрипта, а не исход прогона.
     if len(recs) != N_PLAN:
         halt = halt or ("план исполнен не полностью: %d запросов вместо %d"
                         % (len(recs), N_PLAN))
-    rc = 0
     if n_done != N_PLAN and not halt:
         halt = "запросы %d/%d успешны без явной причины; первая ошибка: %s" % (
             n_done, N_PLAN, first_err)
@@ -466,7 +555,7 @@ def main():
     print("[done] %s halt=%s done=%d/%d wall=%.1fs"
           % (ART, halt, n_done, N_PLAN, time.time() - t_start), flush=True)
     print("S4PP_DONE", flush=True)
-    return rc if not halt else 2
+    return 0 if not halt else 2
 
 
 if __name__ == "__main__":
