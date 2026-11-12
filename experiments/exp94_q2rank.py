@@ -221,10 +221,65 @@ def divergence_alignment(q1, rows1):
         "mc_same_alignment_all_docs": {"n": n_mc, "hits": hit_mc,
                                        "p": hit_mc / float(n_mc),
                                        "note": "BERNOULLI-модель с тем же hazard: первый флип ровно "
-                                               "в точке расхождения во ВСЕХ расходящихся докуках"},
+                                               "в точке расхождения во ВСЕХ расходящихся документах"},
         "mc_mean_docs_without_flip": nodiv_mc / float(n_mc),
         "observed_docs_without_flip": len([d for d in docs if d not in first]),
         "reading": "",
+    }
+
+
+def raw_recheck(q1root, q1, rows1):
+    """Независимая перепроверка divergence_alignment прямо из raw + REPLAY, минуя сводки.
+
+    prefix_len берётся из Q1.json, а raw руки Q3 в git не архивирован — значит единственный
+    способ проверить главный вывод раунда заново: восстановить поток llama из response.tokens,
+    сравнить с cpu-эталоном (results/e81/REPLAY.json gen_ids) и пересчитать флипы заново.
+    Ловушка поля: у top_logprobs[i] есть 'token' (строка) и 'id' (число); сравнивать надо id,
+    иначе получается 384/384 «флипов» на каждом документе.
+    """
+    rp = json.load(open(os.path.join(REPO, "results/e81/REPLAY.json")))["gen_ids"]
+    pl_stored = {d["doc"]: d.get("prefix_len") for d in q1["per_doc"]}
+    first, cnt = {}, {}
+    for r in rows1:
+        if not r["tag"].endswith("_r1") or r["rank"] in (1, "no_probs"):
+            continue
+        doc = r["tag"].split("_")[1]
+        cnt[doc] = cnt.get(doc, 0) + 1
+        if doc not in first or r["j"] < first[doc]:
+            first[doc] = r["j"]
+    p_bad, f_bad, n_bad, nof = [], [], [], 0
+    for doc, cpu in sorted(rp.items()):
+        f = os.path.join(q1root, "q1_%s_r1.json" % doc)
+        if not os.path.exists(f):
+            nof += 1
+            continue
+        resp = json.load(open(f))["response"]
+        tk, cp = resp["tokens"], resp["completion_probabilities"]
+        fp = [j for j, c in enumerate(cp) if c["id"] != c["top_logprobs"][0]["id"]]
+        cpu = list(cpu)
+        L = min(len(tk), len(cpu))
+        pl = L
+        for j in range(L):
+            if tk[j] != cpu[j]:
+                pl = j
+                break
+        if pl != pl_stored.get(doc):
+            p_bad.append([doc, pl, pl_stored.get(doc)])
+        if len(fp) != cnt.get(doc, 0):
+            n_bad.append([doc, len(fp), cnt.get(doc, 0)])
+        if (min(fp) if fp else None) != first.get(doc):
+            f_bad.append([doc, min(fp) if fp else None, first.get(doc)])
+    return {
+        "note": ("пересчитано напрямую: поток = response.tokens, эталон = "
+                 "results/e81/REPLAY.json gen_ids, флип = (id != top_logprobs[0].id). Смысл: "
+                 "raw руки Q3 в архиве не лежит, поэтому это единственный способ проверить "
+                 "главный вывод заново, а не пересказать Q1.json"),
+        "n_docs": len(rp) - nof,
+        "missing_raw": nof,
+        "prefix_len_mismatch": p_bad,
+        "n_flips_mismatch": n_bad,
+        "first_flip_mismatch": f_bad,
+        "clean": not (p_bad or f_bad or n_bad) and nof == 0,
     }
 
 
@@ -319,11 +374,13 @@ def main():
         fl = sorted(r["j"] for r in rows1 if r["tag"] == tag and r["rank"] not in (1,))
         by_doc.setdefault(doc, {})[run] = fl
     R["replica_r1_vs_r2"] = replica(cps)
-    R["divergence_alignment"] = divergence_alignment(json.load(open("results/e94/Q1.json")), rows1)
+    da = divergence_alignment(json.load(open("results/e94/Q1.json")), rows1)
+    da["raw_recheck"] = raw_recheck(root, json.load(open("results/e94/Q1.json")), rows1)
+    R["divergence_alignment"] = da
     R["divergence_alignment"]["reading"] = (
-        "докуки с флипами и докуки, где поток llama расходится с эталоном, — ОДНИ И ТЕ ЖЕ "
+        "документы с флипами и документы, где поток llama расходится с эталоном, — ОДНИ И ТЕ ЖЕ "
         "(diverging_eq_flipdocs=%s), и первый флип стоит ровно на индексе расхождения в %s "
-        "докуков; бернуллиева модель с тем же hazard воспроизводит такое совпадение в p=%s"
+        "документов; бернуллиева модель с тем же hazard воспроизводит такое совпадение в p=%s"
         % (R["divergence_alignment"]["diverging_eq_flipdocs"],
            R["divergence_alignment"]["first_flip_eq_divergence"],
            R["divergence_alignment"]["mc_same_alignment_all_docs"]["p"]))

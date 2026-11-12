@@ -196,9 +196,9 @@
   "note": "E94 Q3cpu: один HF fp32 forward на док, margin vs rep8, гейт gen_p1 16/16 (max|Δ|=1.67e-4), unit=document, ρ=0.3529 [0.2975,0.4370]; перезапуск кодом из git после ревью r1 — per-doc ρ/Δ сошлись с 8a463b3 побитово"
  },
  "results/e94/Q2rank.json": {
-  "sha256_16": "de176fdb9cb6a105",
-  "size": 16706,
-  "date": "2026-11-12T04:32:27",
-  "note": "E94 Q2rank v4: + divergence_alignment — докуки с флипами И докуки, где поток llama расходится с эталоном, это одни и те же 11 из 16 (множества равны), и первый флип стоит ровно на индексе расхождения 11/11; бернуллиева модель с hazard 0.0026/позиция даёт такое выравнивание 0/20000 раз"
+  "sha256_16": "945db19105b7a8d0",
+  "size": 17287,
+  "date": "2026-11-12",
+  "note": "v4: + divergence_alignment.raw_recheck (perekrestnaya proverka glavnogo vyvoda iz raw+REPLAY: clean=True, 16/16 bez raskhozhdeniy); VSE chisla v3 bit-v-bit te zhe (211 poley, 0 diff); v prose ispravleny opechatki v slove 'dokumenty'. prev sha=de176fdb9cb6a105"
  }
 }
