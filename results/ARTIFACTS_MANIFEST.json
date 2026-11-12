@@ -200,5 +200,11 @@
   "note": "E94 Q3cpu v3: strings-only remediation after external review PASS r2 (repro_gate.meaning narrowed per review item E; limitations determinism line w0/w14 replaced by 16/16). Previous sha256_16 f466f3bd626b68ce. Regression proof: 18679 numeric leaves compared vs previous artifact and vs independent /tmp smoke run, only t_total_s differs. Run ./run_one.sh e94q3cpu3, RUN_RC=0, wall 142.45 s",
   "sha256_16": "4275fe08a175fe89",
   "size": 351116
+ },
+ "results/e94/S4pp.json": {
+  "date": "2026-11-12T05:10:00",
+  "note": "E94 S4pp: 23/23 ok, T=0 teacher-forcing probe (M1 branch at w13 k=117, undec at w4 k=70), gate2_met=false - arm B NOT launched; +S3_report_diag (width never observed to bite) +gate2_caveat; hygiene re-run after self-review: 4 flag values + 1 reading changed, 0 numeric moves",
+  "sha256_16": "33a6e708a151ef4c",
+  "size": 47892
  }
 }
