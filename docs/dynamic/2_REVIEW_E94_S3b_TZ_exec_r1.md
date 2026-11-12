@@ -1,6 +1,6 @@
 # 2_REVIEW_E94_S3b_TZ_exec_r1 — внешнее ревью ТЗ микро-руки S3b. **ВЕРДИКТ: BLOCK**
 
-Ревьюер: reviewer, модель obleth/qwen3.8-flash-next (run e4229b3b), 05:35 UTC. Материал: пакет
+Ревьюер: reviewer, модель obleth/qwen3.8-flash-next (run e4229b3b), 02:56 UTC. Материал: пакет
 `0_PACKET_E94_S3b_TZ_r2.md` (один разрешённый read). Первая попытка (r1, модель obleth/ngenix-llm)
 умерла на чтении C++. Ответ исполнителя — ниже после дословного текста.
 
