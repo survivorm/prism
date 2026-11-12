@@ -19,7 +19,8 @@ results/e94/raw_q2.json.tar.gz (teacher forcing, 6 доков × 384) + results/
   во всех наблюдаемых флипах rank ∈ {2,3}; при gap >= GAP_BOUND позиций много и флипов ноль.
 GAP_BOUND здесь НЕ порог, а строка таблицы; вывод о пороге — «между max_gap_flip и 0.6».
 
-Раздел replica_r1_vs_r2 (добавлен 12.11): детерминизм измерен, а не обещан, И заодно измерен
+Раздел replica_r1_vs_r2 (добавлен 12.11): совпадение r1/r2 измерено, а не обещано (детерминизм
+движка экспериментом не установлен), И заодно измерен
 масштаб межпрогонного шума самого отчёта. Это опровергает более раннюю фразу «вероятности между
 r1 и r2 различаются ~1e-4»: по факту |Δlogprob| доходит до ~1e-2 и переставляет порядок близких
 кандидатов, хотя эмиссия и вершина списка не меняются ни в одной позиции.
@@ -87,7 +88,7 @@ def bin_table(rows):
     t = {}
     for lo, hi in GAP_BINS:
         sel = [r for r in rows if r["gap"] is not None and lo <= r["gap"] < hi]
-        fl = [r for r in sel if r["rank"] not in (1,)]
+        fl = [r for r in sel if r["rank"] not in (1, "no_probs")]
         t["%.2f-%.2f" % (lo, hi)] = {"n": len(sel), "n_flip": len(fl),
                                      "rate": (len(fl) / len(sel)) if sel else None}
     return t
@@ -112,7 +113,7 @@ def summarize(rows, arm, extra=None):
         "flip_positions": sorted("%s/%d" % (r["tag"], r["j"]) for r in fl),
     }
     hi = [r for r in rows if r["gap"] is not None and r["gap"] >= 0.6]
-    s["gap_ge_0.6"] = {"n": len(hi), "n_flip": sum(1 for r in hi if r["rank"] != 1)}
+    s["gap_ge_0.6"] = {"n": len(hi), "n_flip": sum(1 for r in hi if r["rank"] not in (1, "no_probs"))}
     lg = sorted(r["logit_gap"] for r in fl if r.get("logit_gap") is not None)
     if lg:
         s["flip_logit_gap"] = {
@@ -255,7 +256,7 @@ def raw_recheck(q1root, q1, rows1):
             continue
         resp = json.load(open(f))["response"]
         tk, cp = resp["tokens"], resp["completion_probabilities"]
-        fp = [j for j, c in enumerate(cp) if c["id"] != c["top_logprobs"][0]["id"]]
+        fp = [j for j, c in enumerate(cp) if c.get("top_logprobs") and c["id"] != c["top_logprobs"][0]["id"]]
         cpu = list(cpu)
         L = min(len(tk), len(cpu))
         pl = L
@@ -346,13 +347,15 @@ def replica(cps):
         "candidate_set_differs_positions": set_diff,
         "abs_dlogprob_shared_ids": {"median": q[0], "p90": q[1], "p99": q[2], "max": mx,
                                     "n_compared_ids": len(dshare)},
-        "reading": ("эмиссия и вершина отчёта совпали во ДВУХ прогонах (%d/%d позиций); порядок "
-                    "близких кандидатов в отчёте — нет (%d позиций из %d), состав списка меняется "
-                    "в %d, макс |Δlogprob| = %.2e (медиана %.2e) — это измеренный масштаб шума "
-                    "самого сервера, а не 1e-4. Слово «детерминированы» ниже не используется: "
-                    "оба прогона шли с одним seed, так что это совпадение двух прогонов, а не "
-                    "доказательство детерминизма") % (top1_same, n_pos, ord_diff, n_pos, set_diff,
-                                             mx, q[0]),
+        "reading": ("эмиссия и вершина отчёта совпали во ДВУХ прогонах (%d/%d документов, "
+                    "%d/%d позиций); порядок близких кандидатов в отчёте — нет (%d позиций "
+                    "из %d), состав списка меняется в %d позициях, макс |Δlogprob| = %.2e (медиана %.2e) "
+                    "— это измеренный масштаб шума самого сервера, а не 1e-4; оба прогона шли "
+                    "с одним seed (источник в артефакте: ключ seed_note — seed = 8181, прочитан "
+                    "из request обеих реплик архива), так что это совпадение двух прогонов, а не "
+                    "доказательство детерминизма движка — детерминизм движка экспериментом "
+                    "не установлен") % (len(docs), len(docs), top1_same, n_pos, ord_diff, n_pos,
+                                         set_diff, mx, q[0]),
         "seed_note": ("seed обеих реплик = 8181 (прочитан из request каждого участника архива), "
                       "поэтому r2 — технический повтор, а не независимое наблюдение: "
                       "независимых позиций в Q1 не 12288, а 6144, флипов не 32, а 16"),
@@ -364,12 +367,14 @@ def main():
     q2 = json.load(open("results/e94/Q2.json"))
     R["definitions"] = ("rank = индекс id в top_logprobs той же позиции + 1; gap = p1-p2; "
                         "flip = rank != 1; exp(logprob) без перенормировки; "
-                        "rank = 'absent' — эмитированного id нет среди присланных кандидатов "
-                        "(в этот запуск n_absent = 0 во всех армах, т.к. n_probs = 20 и эмитент "
-                        "всегда приходил); rank = 'no_probs' — позиция без отчёта (пустой "
-                        "top_logprobs), она НЕ считается флипом и в знаменатель флипов не входит; "
-                        "значения 'absent' и 'no_probs' в сравнениях ранга с 1 дают True, поэтому "
-                        "все агрегаты отбрасывают их явно (rank not in (1, 'no_probs'))")
+                        "rank = 'absent' — эмитированного id нет среди присланных кандидатов; "
+                        "'absent' != 1, поэтому считается флипом (в этот запуск n_absent = 0 во "
+                        "всех армах, n_probs = 20); rank = 'no_probs' — позиция без отчёта "
+                        "(пустой top_logprobs): 'no_probs' != 1, но по определению НЕ флип — "
+                        "явно выключается фильтром rank not in (1, 'no_probs'); фильтр нужен, "
+                        "т.к. иначе строка 'no_probs' попала бы в числитель флипов; позиция "
+                        "остаётся в знаменателе (n_pos), т.е. пострашнее отбрасывания: без "
+                        "отчёта флипом быть не может, но наблюдением считается")
     R["sources"] = ["results/e94/raw_q1.json.tar.gz", "results/e94/raw_q2.json.tar.gz",
                     "results/e94/Q2.json"]
 
@@ -388,15 +393,16 @@ def main():
     da = divergence_alignment(json.load(open("results/e94/Q1.json")), rows1)
     da["raw_recheck"] = raw_recheck(root, json.load(open("results/e94/Q1.json")), rows1)
     R["divergence_alignment"] = da
+    mc = R["divergence_alignment"]["mc_same_alignment_all_docs"]
     R["divergence_alignment"]["reading"] = (
         "документы с флипами и документы, где поток llama расходится с эталоном, — ОДНИ И ТЕ ЖЕ "
         "(diverging_eq_flipdocs=%s), и первый флип стоит ровно на индексе расхождения в %s "
-        "документов; в BERNOULLI-модели с тем же hazard такое выравнивание получилось в "
-        "p=%s MC-прогонов (0 из них при p=0.0) — то есть при малом p модель его НЕ воспроизводит, "
-        "и совпадение требует механизма, а не считается случайной удачей"
+        "документов; в BERNOULLI-модели с тем же hazard — %d hits из n_mc=%d (seed MC = 8181, "
+        "тот же rng) ⇒ p ≤ 1/(n_mc+1) ≈ 5.0e-05 — т.е. эта бернуллиева нулевая модель такое "
+        "выравнивание не объясняет"
         % (R["divergence_alignment"]["diverging_eq_flipdocs"],
            R["divergence_alignment"]["first_flip_eq_divergence"],
-           R["divergence_alignment"]["mc_same_alignment_all_docs"]["p"]))
+           mc["hits"], mc["n"]))
     R["raw_integrity"] = raw_integrity(["results/e94/raw_q1.json.tar.gz",
                                         "results/e94/raw_q2.json.tar.gz"])
     R["raw_integrity_note"] = ("проверено над закоммиченными архивами напрямую (tarfile), не над "

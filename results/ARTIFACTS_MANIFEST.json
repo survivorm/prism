@@ -185,9 +185,9 @@
  },
  "results/e94/Q2rank.json": {
   "date": "2026-11-12",
-  "note": "v5: remediation of r1 review (PASS, 0 BLOCKER / 0 MAJOR / 4 MINOR) - v4 numbers bit-for-bit identical (213 numeric leaves, 0 diff). MINOR-1/2: definitions now describe 'absent' and 'no_probs' and how aggregates exclude them; MINOR-3: divergence reading un-reversed (MC gave 0/20000 hits, so the Bernoulli model does NOT reproduce the alignment); MINOR-4: word 'determinied' dropped, now 'matched in two runs' + new seed_note (both replics used seed 8181, so Q1 has 6144 independent positions / 16 flips, not 12288/32). New key interpretation.correction_12_11 records the independence fix and that w4 k=70 is a Q2 address (free-gen twin is w4 j=6). prev sha=945db19105b7a8d0",
-  "sha256_16": "dfd5ec80ce663e8e",
-  "size": 20090
+  "note": "v7: r3-ремедиация (PASS_WITH_MINORS, 0 MAJOR, 4 MINOR + 2 косметика): divergence reading — 'вероятность = p=0.0' заменено границей '0 hits из n_mc=20000 (seed MC = 8181) => p <= 1/(n_mc+1) ~ 5.0e-05'; replica reading — '34' дополнено единицей 'позиций'; definitions — уточнено числитель/знаменатель по no_probs (из числителя флипов, в знаменателе n_pos остаётся) и причина фильтра. Только 3 TEXT-поля; все числовые листья побайтово = v6 (walk-аудит: 0 NUM/0 ключей); idempotence: 2 пересборки из тех же raw -> один sha256 65ee16300b475ae4. prev sha=1f553d72022165ee",
+  "sha256_16": "65ee16300b475ae4",
+  "size": 20395
  },
  "results/e94/Q3.json": {
   "date": "2026-11-12T04:03:04",
