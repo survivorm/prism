@@ -1,0 +1,2063 @@
+{
+ "exp": "E94_S4pp",
+ "spec": "docs/dynamic/0_E94_PROBES_S3S2S4.md (раздел ИСПРАВЛЕНИЯ ПО r3-РЕВЬЮ)",
+ "started_local": "2026-11-12 05:47",
+ "wall_s": 43.1,
+ "halt_reason": null,
+ "server": {
+  "port": 8114,
+  "pid": 888073,
+  "dri": [
+   "/dev/dri/renderD128",
+   "/dev/dri/renderD128"
+  ],
+  "args": [
+   "-m",
+   "/data/Qwen/qwen3.5-0.8B-f16.gguf",
+   "-sm",
+   "none",
+   "-mg",
+   "0",
+   "-ngl",
+   "99",
+   "-fa",
+   "on",
+   "-c",
+   "2048",
+   "-np",
+   "1",
+   "--slots",
+   "--host",
+   "127.0.0.1"
+  ],
+  "model": "/data/Qwen/qwen3.5-0.8B-f16.gguf",
+  "model_reported": "/data/Qwen/qwen3.5-0.8B-f16.gguf",
+  "model_matches": true,
+  "n_ctx": 2048
+ },
+ "prereg": {
+  "fork": "llama.cpp fork 0b8cfb8fe, SYCL/iGPU, /completion",
+  "question": "M1 отчёт привязан к чужой копии логов против M2 жадная ступень не схлопывается",
+  "readout": "идентичность нового эмиссента, а не факт изменения ответа",
+  "readings": [
+   "эмиссент вне {B, A}            => M1 УСТАНОВЛЕН (единственная решающая ветка)",
+   "эмиссент == вершина отчёта A   => НЕ РАЗЛИЧАЕТ: при M1 вторым кандидатом собственной копии часто оказывается ровно A; вывод о механизме запрещён",
+   "эмиссент == B                  => НЕВАЛИДНА (ban проигнорирован)",
+   "манипуляционный контроль не пройден (эхо logit_bias != отправленный id) => НЕВАЛИДНА",
+   "S4pp-ref дал не B              => весь раунд НЕВАЛИДЕН (адрес не флипует)",
+   "HTTP != 200 или сервер лёг     => НЕВАЛИДНА, ветка зафиксирована"
+  ],
+  "power_note": "при T=0 probe монотонна и детерминирована; n = 2 адреса, обе точки в одной паре токенов, значит это НИЖНЯЯ граница независимости",
+  "n_unit": "число различных адресов (при T=0 seed инертен)",
+  "bias_form": "целочисленный id в logit_bias, обоснование server-schema.cpp:447",
+  "noninformative": [
+   "видимость бана в отчёте (отчёт снимается до сэмплирования)",
+   "tokens_cached (это slot.prompt.n_tokens, не кэш запроса)"
+  ]
+ },
+ "addresses": {
+  "probe": {
+   "addr": "Q2 w4 k=70",
+   "emit": 310,
+   "top1": 318,
+   "rank": 2,
+   "g12": 0.6383,
+   "rank2": 310,
+   "role": "адрес пробы (флип есть)"
+  },
+  "probe2": {
+   "addr": "Q2 w13 k=117",
+   "emit": 4383,
+   "top1": 3039,
+   "rank": 3,
+   "g12": 0.0085,
+   "rank2": 3240,
+   "role": "второй адрес флипа (единственная ничья Q2 с флипом)"
+  },
+  "ctrlA": {
+   "addr": "Q2 w13 k=101",
+   "emit": 488,
+   "top1": 488,
+   "rank": 1,
+   "g12": 0.6912,
+   "rank2": 369,
+   "role": "контроль той же зоны и класса разрыва, флипа нет"
+  },
+  "ctrlB": {
+   "addr": "Q2 w2 k=67",
+   "emit": 310,
+   "top1": 310,
+   "rank": 1,
+   "g12": 0.3401,
+   "rank2": 364,
+   "role": "второй контроль той же зоны, флипа нет"
+  },
+  "tieA": {
+   "addr": "Q2 w0 k=65",
+   "emit": 18,
+   "top1": 18,
+   "rank": 1,
+   "g12": 0.0246,
+   "rank2": 19,
+   "role": "ничья без флипа"
+  },
+  "tieB": {
+   "addr": "Q2 w13 k=95",
+   "emit": 3240,
+   "top1": 3240,
+   "rank": 1,
+   "g12": 0.0252,
+   "rank2": 11639,
+   "role": "ничья без флипа"
+  },
+  "repro": {
+   "addr": "Q2 w4 k=69",
+   "emit": 8810,
+   "top1": 8810,
+   "rank": 1,
+   "g12": 9.6856,
+   "rank2": 1797,
+   "role": "контроль воспроизводимости адреса (зона уверенности)"
+  }
+ },
+ "requests_n": 23,
+ "requests_ok": 23,
+ "notes": [],
+ "summary": {
+  "verdict": "M1 в одной точке из двух: различение есть, воспроизведения нет (вторая точка противоречит — читать как намёк, не как результат)",
+  "ref": {
+   "emit": 310,
+   "verdict": "ref_ok",
+   "reading": "опора есть: флип воспроизвёлся в этом запуске (эмиссент = B)"
+  },
+  "probes": [
+   {
+    "tag": "S4pp-1",
+    "addr": "Q2 w4 k=70",
+    "ban_sent": 310,
+    "emit": 318,
+    "top1": 318,
+    "rank": 1,
+    "echo_bias": [
+     310
+    ],
+    "manip_ok": true,
+    "verdict": "undec",
+    "reading": "НЕ РАЗЛИЧАЕТ: эмиссент = вершина отчёта 318; совместимо и с M2 (следует за отчётом), и с M1 (собственный второй кандидат совпал). Вывод о механизме запрещён."
+   },
+   {
+    "tag": "S4pp-2",
+    "addr": "Q2 w13 k=117",
+    "ban_sent": 4383,
+    "emit": 5522,
+    "top1": 3039,
+    "rank": 4,
+    "echo_bias": [
+     4383
+    ],
+    "manip_ok": true,
+    "verdict": "M1",
+    "reading": "M1 УСТАНОВЛЕН: выбор = 5522, а это не вершина отчёта (3039) и не забаненный"
+   }
+  ],
+  "controls": [
+   {
+    "tag": "S4pp-ctrlA",
+    "addr": "Q2 w13 k=101",
+    "ban_sent": 488,
+    "emit": 369,
+    "manip_ok": true,
+    "moved": true,
+    "verdict": "ctrl_ok",
+    "reading": "смещение применимо: эмиссент ушёл с вершины 488 на 369"
+   },
+   {
+    "tag": "S4pp-ctrlB",
+    "addr": "Q2 w2 k=67",
+    "ban_sent": 310,
+    "emit": 364,
+    "manip_ok": true,
+    "moved": true,
+    "verdict": "ctrl_ok",
+    "reading": "смещение применимо: эмиссент ушёл с вершины 310 на 364"
+   },
+   {
+    "tag": "S4pp-ctrlTieA",
+    "addr": "Q2 w0 k=65",
+    "ban_sent": 18,
+    "emit": 19,
+    "manip_ok": true,
+    "moved": true,
+    "verdict": "ctrl_ok",
+    "reading": "смещение применимо: эмиссент ушёл с вершины 18 на 19"
+   },
+   {
+    "tag": "S4pp-ctrlTieB",
+    "addr": "Q2 w13 k=95",
+    "ban_sent": 3240,
+    "emit": 11639,
+    "manip_ok": true,
+    "moved": true,
+    "verdict": "ctrl_ok",
+    "reading": "смещение применимо: эмиссент ушёл с вершины 3240 на 11639"
+   }
+  ],
+  "S4pp_0": {
+   "emit": 310,
+   "verdict": "nondec_snip",
+   "reading": "бан вершины отчёта сработал (эмиссент 310 != A 318); НЕ РАЗЛИЧАЕТ и НЕ контроль применимости: на этом адресе A и так не эмитировалась, вывод о механизме запрещён"
+  },
+  "repro": {
+   "emit": 8810,
+   "verdict": "repro_ok",
+   "reading": "адрес-репро стабилен: эмиссент = вершина 8810, как в архиве (это НЕ проверка флипа — здесь флипа нет)"
+  },
+  "S2_pair": {
+   "S2a": {
+    "emit": 310,
+    "top1": null,
+    "n_tl": 0,
+    "echo_backend": true
+   },
+   "S2b": {
+    "emit": 310,
+    "top1": null,
+    "n_tl": 0,
+    "echo_backend": false
+   }
+  },
+  "S2_pair_diff": {
+   "differs": false,
+   "pairs_same": true,
+   "reading": "эмиссент не изменился (310); ПРО ОТЧЁТ НИЧЕГО НЕ ИЗВЕСТНО: он пуст с обеих сторон (n_tl=0 и 0 при post_sampling_probs=true), сравнивать нечего"
+  },
+  "S3_topk": [
+   {
+    "tag": "S3-k1-probe",
+    "top_k": 1,
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "verdict": "sweep_move"
+   },
+   {
+    "tag": "S3-k1-ctrlA",
+    "top_k": 1,
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "verdict": "sweep_same"
+   },
+   {
+    "tag": "S3-k2-probe",
+    "top_k": 2,
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "verdict": "sweep_move"
+   },
+   {
+    "tag": "S3-k2-ctrlA",
+    "top_k": 2,
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "verdict": "sweep_same"
+   },
+   {
+    "tag": "S3-k3-probe",
+    "top_k": 3,
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "verdict": "sweep_move"
+   },
+   {
+    "tag": "S3-k3-ctrlA",
+    "top_k": 3,
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "verdict": "sweep_same"
+   },
+   {
+    "tag": "S3-k4-probe",
+    "top_k": 4,
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "verdict": "sweep_move"
+   },
+   {
+    "tag": "S3-k4-ctrlA",
+    "top_k": 4,
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "verdict": "sweep_same"
+   },
+   {
+    "tag": "S3-k8-probe",
+    "top_k": 8,
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "verdict": "sweep_move"
+   },
+   {
+    "tag": "S3-k8-ctrlA",
+    "top_k": 8,
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "verdict": "sweep_same"
+   },
+   {
+    "tag": "S3-k400-probe",
+    "top_k": 400,
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "verdict": "sweep_move"
+   },
+   {
+    "tag": "S3-k400-ctrlA",
+    "top_k": 400,
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "verdict": "sweep_same"
+   }
+  ],
+  "S3_report_diag": {
+   "probe": {
+    "n_rows": 6,
+    "distinct_n_tl": [
+     20
+    ],
+    "distinct_ids_head": 1,
+    "distinct_emits": [
+     310
+    ],
+    "report_changed_by_topk": false,
+    "reading": "ОТЧЁТ НЕ МЕНЯЕТСЯ от top_k (n_tl=[20] при всех k, порядок id один) — свип не показал, что ширина применяется; при таком диагнозе probe_dependence=false читается «зависимость НЕ ВЫЧИСЛЕНА», а не «независимость показана»"
+   },
+   "ctrlA": {
+    "n_rows": 6,
+    "distinct_n_tl": [
+     20
+    ],
+    "distinct_ids_head": 1,
+    "distinct_emits": [
+     488
+    ],
+    "report_changed_by_topk": false,
+    "reading": "ОТЧЁТ НЕ МЕНЯЕТСЯ от top_k (n_tl=[20] при всех k, порядок id один) — свип не показал, что ширина применяется; при таком диагнозе probe_dependence=false читается «зависимость НЕ ВЫЧИСЛЕНА», а не «независимость показана»"
+   }
+  },
+  "S3_control_expectation": {
+   "expected": "все 6 значений top_k на контроле w13 k=101 дают эмиссента 488",
+   "expected_id": 488,
+   "n_moves": 0,
+   "moved": []
+  },
+  "k1_note": {
+   "probe_addr": "k=1 на адресе пробы дал 310; адрес конфаунден (эмиссент-флип лежит на ранге 2), поэтому это НЕ диагностика ветки k=1",
+   "decisive": "ветка k=1 на контроле даёт вершину отчёта — безусловного дефекта нет"
+  },
+  "gate2": {
+   "rule": "рука B запускается только если эмиссент на адресе пробы зависит от ширины набора И на контроле такой зависимости нет; зависимость вместе с движением на контроле = безусловный дефект ветки k=1, не довод",
+   "probe_dependence": false,
+   "control_dependence": false,
+   "gate2_met": false,
+   "k1_probe_emit": 310,
+   "gate2_caveat": "нижняя правда этого поля ограничена S3_report_diag: если отчёт не меняется от ширины, предикат зависимости не вычислен",
+   "k1_note_e": "k=1 на пробе дал 310: не различает (при M1 эмиссент = аргмакс своего набора = B; при M2 эмиссия не следует усечению и тоже даёт B)",
+   "probe_emits_by_k": {
+    "1": 310,
+    "2": 310,
+    "3": 310,
+    "4": 310,
+    "8": 310,
+    "400": 310
+   },
+   "probe_distinct_emits": [
+    310
+   ],
+   "probe_stays_at_archive_emit": true,
+   "control_emits_by_k": {
+    "1": 488,
+    "2": 488,
+    "3": 488,
+    "4": 488,
+    "8": 488,
+    "400": 488
+   },
+   "control_distinct_emits": [
+    488
+   ],
+   "gate2_note": "условие 2 гейта НЕ выполнено"
+  }
+ },
+ "requests": [
+  {
+   "tag": "S4pp-ref",
+   "role": "базис того же адреса в том же запуске (MINOR-6)",
+   "kind": "ref",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.65,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 318,
+   "top1_lp": -0.4771536588668823,
+   "top2_lp": -1.1154135465621948,
+   "g12": 0.6382598876953125,
+   "rank": 2,
+   "emit_lp": -1.1154135465621948,
+   "n_tl": 20,
+   "ids_head": [
+    318,
+    310,
+    326,
+    369,
+    783,
+    4981
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "ref_ok",
+   "reading": "опора есть: флип воспроизвёлся в этом запуске (эмиссент = B)"
+  },
+  {
+   "tag": "S4pp-1",
+   "role": "главная: ban эмиссента B на адресе флипа",
+   "kind": "probe",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": 310,
+   "sent_logit_bias": [
+    [
+     310,
+     -100.0
+    ]
+   ],
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.53,
+   "emit": 318,
+   "content": " (",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [
+     {
+      "bias": -100.0,
+      "token": 310
+     }
+    ],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 318,
+   "top1_lp": -0.47751274704933167,
+   "top2_lp": -1.1145881414413452,
+   "g12": 0.6370753943920135,
+   "rank": 1,
+   "emit_lp": -0.47751274704933167,
+   "n_tl": 20,
+   "ids_head": [
+    318,
+    310,
+    326,
+    369,
+    783,
+    4981
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [
+    310
+   ],
+   "manip_ok": true,
+   "verdict": "undec",
+   "reading": "НЕ РАЗЛИЧАЕТ: эмиссент = вершина отчёта 318; совместимо и с M2 (следует за отчётом), и с M1 (собственный второй кандидат совпал). Вывод о механизме запрещён."
+  },
+  {
+   "tag": "S4pp-2",
+   "role": "то же различение на втором адресе флипа",
+   "kind": "probe",
+   "addr": "Q2 w13 k=117",
+   "ban_tok": 4383,
+   "sent_logit_bias": [
+    [
+     4383,
+     -100.0
+    ]
+   ],
+   "base": {
+    "emit": 4383,
+    "top1": 3039,
+    "rank": 3,
+    "g12": 0.0085,
+    "rank2": 3240
+   },
+   "status": "ok",
+   "wall_s": 0.54,
+   "emit": 5522,
+   "content": " movie",
+   "te": 117,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [
+     {
+      "bias": -100.0,
+      "token": 4383
+     }
+    ],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 3039,
+   "top1_lp": -3.055631160736084,
+   "top2_lp": -3.0645976066589355,
+   "g12": 0.008966445922851562,
+   "rank": 4,
+   "emit_lp": -3.8077759742736816,
+   "n_tl": 20,
+   "ids_head": [
+    3039,
+    3240,
+    4383,
+    5522,
+    11390,
+    16078
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [
+    4383
+   ],
+   "manip_ok": true,
+   "verdict": "M1",
+   "reading": "M1 УСТАНОВЛЕН: выбор = 5522, а это не вершина отчёта (3039) и не забаненный"
+  },
+  {
+   "tag": "S4pp-ctrlA",
+   "role": "контроль: ban СОБСТВЕННОЙ вершины нефлипающей позиции (эмиссент обязан уйти)",
+   "kind": "ctrl",
+   "addr": "Q2 w13 k=101",
+   "ban_tok": 488,
+   "sent_logit_bias": [
+    [
+     488,
+     -100.0
+    ]
+   ],
+   "base": {
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "g12": 0.6912,
+    "rank2": 369
+   },
+   "status": "ok",
+   "wall_s": 0.5,
+   "emit": 369,
+   "content": " is",
+   "te": 101,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [
+     {
+      "bias": -100.0,
+      "token": 488
+     }
+    ],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 488,
+   "top1_lp": -0.4521630108356476,
+   "top2_lp": -1.1429932117462158,
+   "g12": 0.6908302009105682,
+   "rank": 2,
+   "emit_lp": -1.1429932117462158,
+   "n_tl": 20,
+   "ids_head": [
+    488,
+    369,
+    668,
+    421,
+    310,
+    11
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [
+    488
+   ],
+   "manip_ok": true,
+   "verdict": "ctrl_ok",
+   "reading": "смещение применимо: эмиссент ушёл с вершины 488 на 369"
+  },
+  {
+   "tag": "S4pp-ctrlB",
+   "role": "контроль: ban СОБСТВЕННОЙ вершины нефлипающей позиции (эмиссент обязан уйти)",
+   "kind": "ctrl",
+   "addr": "Q2 w2 k=67",
+   "ban_tok": 310,
+   "sent_logit_bias": [
+    [
+     310,
+     -100.0
+    ]
+   ],
+   "base": {
+    "emit": 310,
+    "top1": 310,
+    "rank": 1,
+    "g12": 0.3401,
+    "rank2": 364
+   },
+   "status": "ok",
+   "wall_s": 0.49,
+   "emit": 364,
+   "content": " for",
+   "te": 67,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [
+     {
+      "bias": -100.0,
+      "token": 310
+     }
+    ],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 310,
+   "top1_lp": -0.660184383392334,
+   "top2_lp": -1.0000948905944824,
+   "g12": 0.33991050720214844,
+   "rank": 2,
+   "emit_lp": -1.0000948905944824,
+   "n_tl": 20,
+   "ids_head": [
+    310,
+    364,
+    728,
+    264,
+    30,
+    1518
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [
+    310
+   ],
+   "manip_ok": true,
+   "verdict": "ctrl_ok",
+   "reading": "смещение применимо: эмиссент ушёл с вершины 310 на 364"
+  },
+  {
+   "tag": "S4pp-ctrlTieA",
+   "role": "контроль: ban СОБСТВЕННОЙ вершины нефлипающей позиции (эмиссент обязан уйти)",
+   "kind": "ctrl",
+   "addr": "Q2 w0 k=65",
+   "ban_tok": 18,
+   "sent_logit_bias": [
+    [
+     18,
+     -100.0
+    ]
+   ],
+   "base": {
+    "emit": 18,
+    "top1": 18,
+    "rank": 1,
+    "g12": 0.0246,
+    "rank2": 19
+   },
+   "status": "ok",
+   "wall_s": 0.47,
+   "emit": 19,
+   "content": "4",
+   "te": 65,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [
+     {
+      "bias": -100.0,
+      "token": 18
+     }
+    ],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 18,
+   "top1_lp": -1.6585384607315063,
+   "top2_lp": -1.6831623315811157,
+   "g12": 0.024623870849609375,
+   "rank": 2,
+   "emit_lp": -1.6831623315811157,
+   "n_tl": 20,
+   "ids_head": [
+    18,
+    19,
+    17,
+    16,
+    21,
+    20
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [
+    18
+   ],
+   "manip_ok": true,
+   "verdict": "ctrl_ok",
+   "reading": "смещение применимо: эмиссент ушёл с вершины 18 на 19"
+  },
+  {
+   "tag": "S4pp-ctrlTieB",
+   "role": "контроль: ban СОБСТВЕННОЙ вершины нефлипающей позиции (эмиссент обязан уйти)",
+   "kind": "ctrl",
+   "addr": "Q2 w13 k=95",
+   "ban_tok": 3240,
+   "sent_logit_bias": [
+    [
+     3240,
+     -100.0
+    ]
+   ],
+   "base": {
+    "emit": 3240,
+    "top1": 3240,
+    "rank": 1,
+    "g12": 0.0252,
+    "rank2": 11639
+   },
+   "status": "ok",
+   "wall_s": 0.54,
+   "emit": 11639,
+   "content": " noise",
+   "te": 95,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [
+     {
+      "bias": -100.0,
+      "token": 3240
+     }
+    ],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 3240,
+   "top1_lp": -3.4985620975494385,
+   "top2_lp": -3.523376703262329,
+   "g12": 0.024814605712890625,
+   "rank": 2,
+   "emit_lp": -3.523376703262329,
+   "n_tl": 20,
+   "ids_head": [
+    3240,
+    11639,
+    11390,
+    3655,
+    2763,
+    1118
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [
+    3240
+   ],
+   "manip_ok": true,
+   "verdict": "ctrl_ok",
+   "reading": "смещение применимо: эмиссент ушёл с вершины 3240 на 11639"
+  },
+  {
+   "tag": "S4pp-0",
+   "role": "ban вершины A на адресе пробы (не различающая, объявлено заранее)",
+   "kind": "top1ban",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": 318,
+   "sent_logit_bias": [
+    [
+     318,
+     -100.0
+    ]
+   ],
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.5,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [
+     {
+      "bias": -100.0,
+      "token": 318
+     }
+    ],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 318,
+   "top1_lp": -0.4771452844142914,
+   "top2_lp": -1.1155368089675903,
+   "g12": 0.638391524553299,
+   "rank": 2,
+   "emit_lp": -1.1155368089675903,
+   "n_tl": 20,
+   "ids_head": [
+    318,
+    310,
+    326,
+    369,
+    783,
+    4981
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [
+    318
+   ],
+   "manip_ok": true,
+   "verdict": "nondec_snip",
+   "reading": "бан вершины отчёта сработал (эмиссент 310 != A 318); НЕ РАЗЛИЧАЕТ и НЕ контроль применимости: на этом адресе A и так не эмитировалась, вывод о механизме запрещён"
+  },
+  {
+   "tag": "S4pp-repro",
+   "role": "контроль стабильности сессии, зона уверенности (флипа нет)",
+   "kind": "repro",
+   "addr": "Q2 w4 k=69",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 8810,
+    "top1": 8810,
+    "rank": 1,
+    "g12": 9.6856,
+    "rank2": 1797
+   },
+   "status": "ok",
+   "wall_s": 0.47,
+   "emit": 8810,
+   "content": "UNCTION",
+   "te": 69,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 8810,
+   "top1_lp": -0.0004713453818112612,
+   "top2_lp": -9.687110900878906,
+   "g12": 9.686639555497095,
+   "rank": 1,
+   "emit_lp": -0.0004713453818112612,
+   "n_tl": 20,
+   "ids_head": [
+    8810,
+    1797,
+    583,
+    10947,
+    8880,
+    22988
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "repro_ok",
+   "reading": "адрес-репро стабилен: эмиссент = вершина 8810, как в архиве (это НЕ проверка флипа — здесь флипа нет)"
+  },
+  {
+   "tag": "S2a",
+   "role": "backend_sampling true + post_sampling_probs true",
+   "kind": "s2",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.49,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": true,
+    "post_sampling_probs": true,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": null,
+   "top1_lp": null,
+   "top2_lp": null,
+   "g12": null,
+   "rank": null,
+   "emit_lp": null,
+   "n_tl": 0,
+   "ids_head": [],
+   "sorted_desc": null,
+   "max_is_first": null,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "note_report": "вершина отчёта не максимум массива (см. §23)",
+   "verdict": "s2_fact",
+   "reading": "эмиссент 310, вершина 318, n_top_logprobs=0 — сверяется ТОЛЬКО с парной строкой, о механизме не говорит"
+  },
+  {
+   "tag": "S2b",
+   "role": "то же, backend_sampling false (единственный изменённый фактор)",
+   "kind": "s2",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.48,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": true,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": null,
+   "top1_lp": null,
+   "top2_lp": null,
+   "g12": null,
+   "rank": null,
+   "emit_lp": null,
+   "n_tl": 0,
+   "ids_head": [],
+   "sorted_desc": null,
+   "max_is_first": null,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "note_report": "вершина отчёта не максимум массива (см. §23)",
+   "verdict": "s2_fact",
+   "reading": "эмиссент 310, вершина 318, n_top_logprobs=0 — сверяется ТОЛЬКО с парной строкой, о механизме не говорит"
+  },
+  {
+   "tag": "S3-k1-probe",
+   "role": "свип top_k, адрес пробы",
+   "kind": "sweep",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.46,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 318,
+   "top1_lp": -0.4769783616065979,
+   "top2_lp": -1.1156541109085083,
+   "g12": 0.6386757493019104,
+   "rank": 2,
+   "emit_lp": -1.1156541109085083,
+   "n_tl": 20,
+   "ids_head": [
+    318,
+    310,
+    326,
+    369,
+    783,
+    4981
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_move",
+   "reading": "эмиссент 310 != вершина 318 при top_k — ветка усечения; не-довод только если то же есть на контроле (тогда это безусловный дефект k=1); при чистом контроле это и есть сигнал гейта руки B"
+  },
+  {
+   "tag": "S3-k1-ctrlA",
+   "role": "свип top_k, контроль w13 k=101",
+   "kind": "sweep",
+   "addr": "Q2 w13 k=101",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "g12": 0.6912,
+    "rank2": 369
+   },
+   "status": "ok",
+   "wall_s": 0.54,
+   "emit": 488,
+   "content": " you",
+   "te": 101,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 488,
+   "top1_lp": -0.45225417613983154,
+   "top2_lp": -1.1428859233856201,
+   "g12": 0.6906317472457886,
+   "rank": 1,
+   "emit_lp": -0.45225417613983154,
+   "n_tl": 20,
+   "ids_head": [
+    488,
+    369,
+    668,
+    421,
+    310,
+    11
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_same",
+   "reading": "эмиссент = вершина, как в архиве (зависимости от top_k нет)"
+  },
+  {
+   "tag": "S3-k2-probe",
+   "role": "свип top_k, адрес пробы",
+   "kind": "sweep",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.5,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 2,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 318,
+   "top1_lp": -0.4771551787853241,
+   "top2_lp": -1.1154664754867554,
+   "g12": 0.6383112967014313,
+   "rank": 2,
+   "emit_lp": -1.1154664754867554,
+   "n_tl": 20,
+   "ids_head": [
+    318,
+    310,
+    326,
+    369,
+    783,
+    4981
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_move",
+   "reading": "эмиссент 310 != вершина 318 при top_k — ветка усечения; не-довод только если то же есть на контроле (тогда это безусловный дефект k=1); при чистом контроле это и есть сигнал гейта руки B"
+  },
+  {
+   "tag": "S3-k2-ctrlA",
+   "role": "свип top_k, контроль w13 k=101",
+   "kind": "sweep",
+   "addr": "Q2 w13 k=101",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "g12": 0.6912,
+    "rank2": 369
+   },
+   "status": "ok",
+   "wall_s": 0.51,
+   "emit": 488,
+   "content": " you",
+   "te": 101,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 2,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 488,
+   "top1_lp": -0.45204219222068787,
+   "top2_lp": -1.1432461738586426,
+   "g12": 0.6912039816379547,
+   "rank": 1,
+   "emit_lp": -0.45204219222068787,
+   "n_tl": 20,
+   "ids_head": [
+    488,
+    369,
+    668,
+    421,
+    310,
+    11
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_same",
+   "reading": "эмиссент = вершина, как в архиве (зависимости от top_k нет)"
+  },
+  {
+   "tag": "S3-k3-probe",
+   "role": "свип top_k, адрес пробы",
+   "kind": "sweep",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.5,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 3,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 318,
+   "top1_lp": -0.4773860275745392,
+   "top2_lp": -1.1148678064346313,
+   "g12": 0.6374817788600922,
+   "rank": 2,
+   "emit_lp": -1.1148678064346313,
+   "n_tl": 20,
+   "ids_head": [
+    318,
+    310,
+    326,
+    369,
+    783,
+    4981
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_move",
+   "reading": "эмиссент 310 != вершина 318 при top_k — ветка усечения; не-довод только если то же есть на контроле (тогда это безусловный дефект k=1); при чистом контроле это и есть сигнал гейта руки B"
+  },
+  {
+   "tag": "S3-k3-ctrlA",
+   "role": "свип top_k, контроль w13 k=101",
+   "kind": "sweep",
+   "addr": "Q2 w13 k=101",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "g12": 0.6912,
+    "rank2": 369
+   },
+   "status": "ok",
+   "wall_s": 0.53,
+   "emit": 488,
+   "content": " you",
+   "te": 101,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 3,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 488,
+   "top1_lp": -0.4523056149482727,
+   "top2_lp": -1.142771601676941,
+   "g12": 0.6904659867286682,
+   "rank": 1,
+   "emit_lp": -0.4523056149482727,
+   "n_tl": 20,
+   "ids_head": [
+    488,
+    369,
+    668,
+    421,
+    310,
+    11
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_same",
+   "reading": "эмиссент = вершина, как в архиве (зависимости от top_k нет)"
+  },
+  {
+   "tag": "S3-k4-probe",
+   "role": "свип top_k, адрес пробы",
+   "kind": "sweep",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.5,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 4,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 318,
+   "top1_lp": -0.47717592120170593,
+   "top2_lp": -1.1152679920196533,
+   "g12": 0.6380920708179474,
+   "rank": 2,
+   "emit_lp": -1.1152679920196533,
+   "n_tl": 20,
+   "ids_head": [
+    318,
+    310,
+    326,
+    369,
+    783,
+    4981
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_move",
+   "reading": "эмиссент 310 != вершина 318 при top_k — ветка усечения; не-довод только если то же есть на контроле (тогда это безусловный дефект k=1); при чистом контроле это и есть сигнал гейта руки B"
+  },
+  {
+   "tag": "S3-k4-ctrlA",
+   "role": "свип top_k, контроль w13 k=101",
+   "kind": "sweep",
+   "addr": "Q2 w13 k=101",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "g12": 0.6912,
+    "rank2": 369
+   },
+   "status": "ok",
+   "wall_s": 0.53,
+   "emit": 488,
+   "content": " you",
+   "te": 101,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 4,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 488,
+   "top1_lp": -0.4522330164909363,
+   "top2_lp": -1.1428477764129639,
+   "g12": 0.6906147599220276,
+   "rank": 1,
+   "emit_lp": -0.4522330164909363,
+   "n_tl": 20,
+   "ids_head": [
+    488,
+    369,
+    668,
+    421,
+    310,
+    11
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_same",
+   "reading": "эмиссент = вершина, как в архиве (зависимости от top_k нет)"
+  },
+  {
+   "tag": "S3-k8-probe",
+   "role": "свип top_k, адрес пробы",
+   "kind": "sweep",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.51,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 8,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 318,
+   "top1_lp": -0.47684258222579956,
+   "top2_lp": -1.1159284114837646,
+   "g12": 0.6390858292579651,
+   "rank": 2,
+   "emit_lp": -1.1159284114837646,
+   "n_tl": 20,
+   "ids_head": [
+    318,
+    310,
+    326,
+    369,
+    783,
+    4981
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_move",
+   "reading": "эмиссент 310 != вершина 318 при top_k — ветка усечения; не-довод только если то же есть на контроле (тогда это безусловный дефект k=1); при чистом контроле это и есть сигнал гейта руки B"
+  },
+  {
+   "tag": "S3-k8-ctrlA",
+   "role": "свип top_k, контроль w13 k=101",
+   "kind": "sweep",
+   "addr": "Q2 w13 k=101",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "g12": 0.6912,
+    "rank2": 369
+   },
+   "status": "ok",
+   "wall_s": 0.53,
+   "emit": 488,
+   "content": " you",
+   "te": 101,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 8,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 488,
+   "top1_lp": -0.45234376192092896,
+   "top2_lp": -1.1426589488983154,
+   "g12": 0.6903151869773865,
+   "rank": 1,
+   "emit_lp": -0.45234376192092896,
+   "n_tl": 20,
+   "ids_head": [
+    488,
+    369,
+    668,
+    421,
+    310,
+    11
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_same",
+   "reading": "эмиссент = вершина, как в архиве (зависимости от top_k нет)"
+  },
+  {
+   "tag": "S3-k400-probe",
+   "role": "свип top_k, адрес пробы",
+   "kind": "sweep",
+   "addr": "Q2 w4 k=70",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 310,
+    "top1": 318,
+    "rank": 2,
+    "g12": 0.6383,
+    "rank2": 310
+   },
+   "status": "ok",
+   "wall_s": 0.51,
+   "emit": 310,
+   "content": " to",
+   "te": 70,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 318,
+   "top1_lp": -0.4771615266799927,
+   "top2_lp": -1.1155073642730713,
+   "g12": 0.6383458375930786,
+   "rank": 2,
+   "emit_lp": -1.1155073642730713,
+   "n_tl": 20,
+   "ids_head": [
+    318,
+    310,
+    326,
+    369,
+    783,
+    4981
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_move",
+   "reading": "эмиссент 310 != вершина 318 при top_k — ветка усечения; не-довод только если то же есть на контроле (тогда это безусловный дефект k=1); при чистом контроле это и есть сигнал гейта руки B"
+  },
+  {
+   "tag": "S3-k400-ctrlA",
+   "role": "свип top_k, контроль w13 k=101",
+   "kind": "sweep",
+   "addr": "Q2 w13 k=101",
+   "ban_tok": null,
+   "sent_logit_bias": null,
+   "base": {
+    "emit": 488,
+    "top1": 488,
+    "rank": 1,
+    "g12": 0.6912,
+    "rank2": 369
+   },
+   "status": "ok",
+   "wall_s": 0.53,
+   "emit": 488,
+   "content": " you",
+   "te": 101,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 400,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none"
+   },
+   "top1": 488,
+   "top1_lp": -0.4523473083972931,
+   "top2_lp": -1.1427122354507446,
+   "g12": 0.6903649270534515,
+   "rank": 1,
+   "emit_lp": -0.4523473083972931,
+   "n_tl": 20,
+   "ids_head": [
+    488,
+    369,
+    668,
+    421,
+    310,
+    11
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [],
+   "manip_ok": true,
+   "verdict": "sweep_same",
+   "reading": "эмиссент = вершина, как в архиве (зависимости от top_k нет)"
+  }
+ ]
+}

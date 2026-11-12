@@ -156,10 +156,14 @@ def readout(resp):
         out["emit_lp"] = next((x["logprob"] for x in tl if x["id"] == emit), None)
         out["n_tl"] = len(tl)
         out["ids_head"] = ids[:6]
-        out["sorted_desc"] = all(tl[i]["logprob"] >= tl[i + 1]["logprob"]
-                                 - 1e-12 for i in range(len(tl) - 1))
-        out["max_is_first"] = bool(tl) and abs(tl[0]["logprob"] -
-                                               max(x["logprob"] for x in tl)) < 1e-12
+        # exec-r1/Self-2: при пустом top_logprobs оба флага вакуумны (all([]) -> True,
+        # max_is_first -> False) и читаются как находка; при n_tl==0 кладём None.
+        out["sorted_desc"] = (all(tl[i]["logprob"] >= tl[i + 1]["logprob"] - 1e-12
+                                  for i in range(len(tl) - 1)) if tl else None)
+        out["max_is_first"] = ((tl and abs(tl[0]["logprob"] -
+                                           max(x["logprob"] for x in tl)) < 1e-12) or None)
+        if not tl:
+            out["max_is_first"] = None
     else:
         out.update(top1=None, top1_lp=None, g12=None, rank=None, emit_lp=None,
                    n_tl=0, ids_head=[], sorted_desc=None, max_is_first=None)
@@ -426,6 +430,24 @@ def main():
     ctrl_moves = [r for r in s3 if r["tag"].endswith("ctrlA")
                   and r.get("verdict") not in (None, "sweep_same")]
 
+    # exec-r1/Self-1: «кусается» ли top_k вообще. Это ДИАГНОСТИКА, предикат гейта не
+    # меняет: если отчёт не меняется от ширины, свип не показывал применения ширины и
+    # «нет зависимости эмиссии от ширины» надо читать «не вычислено», а не «показано».
+    def s3diag(rows, sfx):
+        rs = [r for r in rows if r["tag"].endswith(sfx)]
+        ntl = sorted({r.get("n_tl") for r in rs}, key=lambda x: (x is None, x))
+        heads = sorted({str(r.get("ids_head") or []) for r in rs})
+        return dict(
+            n_rows=len(rs), distinct_n_tl=ntl, distinct_ids_head=len(heads),
+            distinct_emits=sorted({r.get("emit") for r in rs}, key=lambda x: (x is None, x)),
+            report_changed_by_topk=bool(len(ntl) > 1 or len(heads) > 1),
+            reading=("отчёт меняется от top_k — свип валиден как проверка ширины"
+                     if (len(ntl) > 1 or len(heads) > 1) else
+                     "ОТЧЁТ НЕ МЕНЯЕТСЯ от top_k (n_tl=%s при всех k, порядок id один) — "
+                     "свип не показал, что ширина применяется; при таком диагнозе "
+                     "probe_dependence=false читается «зависимость НЕ ВЫЧИСЛЕНА», а не "
+                     "«независимость показана»" % ntl))
+
     summary = dict(
         verdict=verdict,
         ref=dict(emit=ref.get("emit"), verdict=ref.get("verdict"),
@@ -462,10 +484,19 @@ def main():
                      if ((find("S2a") or {}).get("emit") != (find("S2b") or {}).get("emit")
                          or (find("S2a") or {}).get("top1") != (find("S2b") or {}).get("top1")
                          or (find("S2a") or {}).get("n_tl") != (find("S2b") or {}).get("n_tl"))
-                     else "пара идентична: backend_sampling не меняет ни эмиссента, ни отчёт")),
+                     else ("эмиссент не изменился (%r); ПРО ОТЧЁТ НИЧЕГО НЕ ИЗВЕСТНО: он пуст "
+                           "с обеих сторон (n_tl=%r и %r при post_sampling_probs=true), "
+                           "сравнивать нечего" % ((find("S2a") or {}).get("emit"),
+                                                  (find("S2a") or {}).get("n_tl"),
+                                                  (find("S2b") or {}).get("n_tl"))
+                           if not ((find("S2a") or {}).get("n_tl")
+                                   and (find("S2b") or {}).get("n_tl"))
+                           else "пара идентична: backend_sampling не меняет ни эмиссента, "
+                                "ни отчёт"))),
         S3_topk=[dict(tag=r["tag"], top_k=(r.get("echo") or {}).get("top_k"),
                       emit=r.get("emit"), top1=r.get("top1"), rank=r.get("rank"),
                       verdict=r.get("verdict")) for r in s3],
+        S3_report_diag=dict(probe=s3diag(s3, "probe"), ctrlA=s3diag(s3, "ctrlA")),
         S3_control_expectation=dict(
             # r4/MINOR-4: ожидаемое значение берётся из загруженного адреса, а не литералом
             expected=("все 6 значений top_k на контроле w13 k=101 дают эмиссента %s"
@@ -494,6 +525,8 @@ def main():
                   "на контроле = безусловный дефект ветки k=1, не довод"),
             probe_dependence=None, control_dependence=None, gate2_met=None,
             k1_probe_emit=k1.get("emit"),
+            gate2_caveat=("нижняя правда этого поля ограничена S3_report_diag: если отчёт "
+                          "не меняется от ширины, предикат зависимости не вычислен"),
             k1_note_e=("k=1 на пробе дал вершину отчёта A: усечение ограничивает эмиссию — "
                        "это подрывает M2 (эмиссия следует за набором), а не крепит его"
                        if k1.get("emit") == bases["probe"]["top1"] else
