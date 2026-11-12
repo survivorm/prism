@@ -201,6 +201,24 @@
   "sha256_16": "4275fe08a175fe89",
   "size": 351116
  },
+ "results/e94/S4c.json": {
+  "date": "2026-11-12T06:03:43",
+  "note": "E94 S4c: bare chain [top_k,temperature] at Q2 w13 k=117 - stock chain emits 4383 (report vertex 3039), bare chain emits 3039 (x2 identical) => flip is produced by the sampler chain; pre-registered rule 1 => M1 claim WITHDRAWN; noise floor from byte-identical repeat at T=0: 5.4e-4 top1_lp",
+  "sha256_16": "5d4437e2122b1fb3",
+  "size": 13860
+ },
+ "results/e94/S4d.json": {
+  "date": "2026-11-12T06:03:43",
+  "note": "E94 S4d: localization - adding one sampler back to the bare chain: penalties->3039, top_n_sigma->3039, dry->4383 => responsible sampler is DRY",
+  "sha256_16": "a48f72094f7255c2",
+  "size": 12814
+ },
+ "results/e94/S4e.json": {
+  "date": "2026-11-12T06:03:43",
+  "note": "E94 S4e: single-field payload change dry_multiplier 1.0->0.0 - flip vanishes at BOTH archived flip addresses (310->318, 4383->3039), controls unchanged (488, 8810) => anomaly = DRY penalty 1.0 enabled by our own request canon (llama-sampler.cpp:3645 dry_enabled = multiplier!=0 && base>=1 && last_n!=0)",
+  "sha256_16": "4d254230004d477e",
+  "size": 11494
+ },
  "results/e94/S4pp.json": {
   "date": "2026-11-12T05:10:00",
   "note": "E94 S4pp: 23/23 ok, T=0 teacher-forcing probe (M1 branch at w13 k=117, undec at w4 k=70), gate2_met=false - arm B NOT launched; +S3_report_diag (width never observed to bite) +gate2_caveat; hygiene re-run after self-review: 4 flag values + 1 reading changed, 0 numeric moves",
