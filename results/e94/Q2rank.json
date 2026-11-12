@@ -272,6 +272,122 @@
   }
  },
  "definitions": "rank = индекс id в top_logprobs той же позиции + 1; gap = p1-p2; flip = rank != 1; exp(logprob) без перенормировки",
+ "divergence_alignment": {
+  "definitions": "prefix_len = число совпавших первых токенов llama/эталон (Q1.json); первое расхождение = индекс prefix_len; первый флип = минимальный j с rank != 1 по r1",
+  "diverging_eq_flipdocs": true,
+  "first_flip_eq_divergence": "11/11",
+  "hazard_per_position": 0.0026041666666666665,
+  "mc_mean_docs_without_flip": 0.368153125,
+  "mc_same_alignment_all_docs": {
+   "hits": 0,
+   "n": 20000,
+   "note": "BERNOULLI-модель с тем же hazard: первый флип ровно в точке расхождения во ВСЕХ расходящихся докуках",
+   "p": 0.0
+  },
+  "n_docs": 16,
+  "n_docs_diverging": 11,
+  "n_docs_with_flips": 11,
+  "observed_docs_without_flip": 5,
+  "per_doc": {
+   "w0": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 23,
+    "n_flips_r1": 1,
+    "prefix_len": 23
+   },
+   "w1": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 40,
+    "n_flips_r1": 1,
+    "prefix_len": 40
+   },
+   "w10": {
+    "first_flip_eq_divergence": false,
+    "first_flip_j": null,
+    "n_flips_r1": 0,
+    "prefix_len": 384
+   },
+   "w11": {
+    "first_flip_eq_divergence": false,
+    "first_flip_j": null,
+    "n_flips_r1": 0,
+    "prefix_len": 384
+   },
+   "w12": {
+    "first_flip_eq_divergence": false,
+    "first_flip_j": null,
+    "n_flips_r1": 0,
+    "prefix_len": 384
+   },
+   "w13": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 53,
+    "n_flips_r1": 2,
+    "prefix_len": 53
+   },
+   "w14": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 22,
+    "n_flips_r1": 3,
+    "prefix_len": 22
+   },
+   "w15": {
+    "first_flip_eq_divergence": false,
+    "first_flip_j": null,
+    "n_flips_r1": 0,
+    "prefix_len": 384
+   },
+   "w2": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 14,
+    "n_flips_r1": 1,
+    "prefix_len": 14
+   },
+   "w3": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 1,
+    "n_flips_r1": 1,
+    "prefix_len": 1
+   },
+   "w4": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 6,
+    "n_flips_r1": 2,
+    "prefix_len": 6
+   },
+   "w5": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 1,
+    "n_flips_r1": 1,
+    "prefix_len": 1
+   },
+   "w6": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 41,
+    "n_flips_r1": 1,
+    "prefix_len": 41
+   },
+   "w7": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 30,
+    "n_flips_r1": 1,
+    "prefix_len": 30
+   },
+   "w8": {
+    "first_flip_eq_divergence": true,
+    "first_flip_j": 8,
+    "n_flips_r1": 2,
+    "prefix_len": 8
+   },
+   "w9": {
+    "first_flip_eq_divergence": false,
+    "first_flip_j": null,
+    "n_flips_r1": 0,
+    "prefix_len": 384
+   }
+  },
+  "reading": "докуки с флипами и докуки, где поток llama расходится с эталоном, — ОДНИ И ТЕ ЖЕ (diverging_eq_flipdocs=True), и первый флип стоит ровно на индексе расхождения в 11/11 докуков; бернуллиева модель с тем же hazard воспроизводит такое совпадение в p=0.0"
+ },
  "halt_reason": null,
  "interpretation": {
   "claim": "во всех наблюдаемых флипах эмитированный токен стоит на 2-м или 3-м месте того же отчёта сервера; ниже 4-го — ни разу; при gap >= 0.6 флипов нет",

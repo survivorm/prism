@@ -167,6 +167,67 @@ def null_perturbation(fl, n_mc=10000, seed=8181):
     }
 
 
+def divergence_alignment(q1, rows1):
+    """Совпадает ли ПЕРВЫЙ флип с точкой расхождения потока llama с etalon-потоком.
+
+    prefix_len (из results/e94/Q1.json) = число совпавших первых токенов; значит первое
+    расхождение — на индексе prefix_len. Флип = выбор сервера не совпал с вершиной его же
+    отчёта. Если первое имеет место ровно там же, где второе, то расхождение движков —
+    это и есть флип, а не «f16 против fp32 потихоньку разошлись».
+    """
+    import numpy as np
+    pl = {d["doc"]: d.get("prefix_len") for d in q1["per_doc"]}
+    first, cnt = {}, {}
+    for r in rows1:
+        if not r["tag"].endswith("_r1") or r["rank"] in (1, "no_probs"):
+            continue
+        doc = r["tag"].split("_")[1]
+        cnt[doc] = cnt.get(doc, 0) + 1
+        if doc not in first or r["j"] < first[doc]:
+            first[doc] = r["j"]
+    docs = sorted(pl)
+    eq = [d for d in first if pl.get(d) == first[d]]
+    div = [d for d in docs if pl.get(d) is not None and pl[d] < 384]
+    flip_docs = sorted(first)
+    # Бернуллиева модель: единый hazard по всем позициям; сколько раз первый флип упрётся
+    # ровно в prefix_len, если флипы «просто случаются» с этой частотой.
+    n_pos = sum(1 for r in rows1 if r["tag"].endswith("_r1"))
+    n_flips_r1 = sum(1 for r in rows1 if r["tag"].endswith("_r1")
+                     and r["rank"] not in (1, "no_probs"))
+    haz = n_flips_r1 / float(max(n_pos, 1))
+    rng = np.random.default_rng(8181)
+    n_mc, hit_mc, nodiv_mc = 20000, 0, 0
+    for _ in range(n_mc):
+        ok = 0
+        for d in div:
+            j = int(rng.geometric(haz)) - 1 if haz > 0 else 10**9   # 0-based первый флип
+            ok += (j == pl[d])
+        hit_mc += (ok == len(div))
+        # сколько документов вообще без флипов (сравнить с числом неразшедшихся)
+        nodiv_mc += sum(1 for d in docs if rng.geometric(haz) - 1 >= 384) / float(len(docs))
+    return {
+        "definitions": ("prefix_len = число совпавших первых токенов llama/эталон (Q1.json); "
+                        "первое расхождение = индекс prefix_len; первый флип = минимальный j с "
+                        "rank != 1 по r1"),
+        "per_doc": {d: {"prefix_len": pl.get(d), "first_flip_j": first.get(d),
+                        "n_flips_r1": cnt.get(d, 0),
+                        "first_flip_eq_divergence": pl.get(d) == first.get(d)} for d in docs},
+        "n_docs": len(docs),
+        "n_docs_diverging": len(div),
+        "n_docs_with_flips": len(flip_docs),
+        "diverging_eq_flipdocs": sorted(div) == flip_docs,
+        "first_flip_eq_divergence": "%d/%d" % (len(eq), len(first)),
+        "hazard_per_position": haz,
+        "mc_same_alignment_all_docs": {"n": n_mc, "hits": hit_mc,
+                                       "p": hit_mc / float(n_mc),
+                                       "note": "BERNOULLI-модель с тем же hazard: первый флип ровно "
+                                               "в точке расхождения во ВСЕХ расходящихся докуках"},
+        "mc_mean_docs_without_flip": nodiv_mc / float(n_mc),
+        "observed_docs_without_flip": len([d for d in docs if d not in first]),
+        "reading": "",
+    }
+
+
 def raw_integrity(ars):
     """Целостность самих архивов сырья: не симлинки ли, не дубликаты ли. Вопрос поднят внешним
     ревью и обязан закрываться числом в артефакте, а не словами."""
@@ -258,6 +319,14 @@ def main():
         fl = sorted(r["j"] for r in rows1 if r["tag"] == tag and r["rank"] not in (1,))
         by_doc.setdefault(doc, {})[run] = fl
     R["replica_r1_vs_r2"] = replica(cps)
+    R["divergence_alignment"] = divergence_alignment(json.load(open("results/e94/Q1.json")), rows1)
+    R["divergence_alignment"]["reading"] = (
+        "докуки с флипами и докуки, где поток llama расходится с эталоном, — ОДНИ И ТЕ ЖЕ "
+        "(diverging_eq_flipdocs=%s), и первый флип стоит ровно на индексе расхождения в %s "
+        "докуков; бернуллиева модель с тем же hazard воспроизводит такое совпадение в p=%s"
+        % (R["divergence_alignment"]["diverging_eq_flipdocs"],
+           R["divergence_alignment"]["first_flip_eq_divergence"],
+           R["divergence_alignment"]["mc_same_alignment_all_docs"]["p"]))
     R["raw_integrity"] = raw_integrity(["results/e94/raw_q1.json.tar.gz",
                                         "results/e94/raw_q2.json.tar.gz"])
     R["raw_integrity_note"] = ("проверено над закоммиченными архивами напрямую (tarfile), не над "
