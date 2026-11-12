@@ -25650,5 +25650,35 @@
  "n_docs_failed": 0,
  "rc": 0,
  "halt_reason": null,
- "t_total_s": 422.55
+ "t_total_s": 422.55,
+ "g2_violations": [],
+ "g2_violations_n": 0,
+ "g2_wall_last32_first32": {
+  "w0": 1.0625,
+  "w2": 0.8527777777777777,
+  "w4": 0.8509485094850948,
+  "w9": 0.9410029498525073,
+  "w13": 1.1890243902439024,
+  "w14": 1.1242424242424243
+ },
+ "g2_offline_check": {
+  "max_prompt_n_from_second": 1,
+  "n_checked_prompt_n_from_second": 2298,
+  "wall_last32_first32": {
+   "w0": 1.0625,
+   "w2": 0.8527777777777777,
+   "w4": 0.8509485094850948,
+   "w9": 0.9410029498525073,
+   "w13": 1.1890243902439024,
+   "w14": 1.1242424242424243
+  },
+  "max_wall_ratio": 1.1890243902439024
+ },
+ "idempotence": {
+  "runs": 2,
+  "artifact_identical": true,
+  "sha256": "cbc9d4b88602b36a834fba9576a61232544627147c0a2ba2ce2a606f75225696"
+ },
+ "t_rebuild_s": 5.34,
+ "device_gate_source": "live"
 }

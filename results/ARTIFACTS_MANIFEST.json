@@ -175,5 +175,11 @@
   "sha16": "7df3d96e82e4b0f6",
   "ts": "2026-11-11T18:25",
   "note": "R9-17 base-model rep-контроль"
+ },
+ "results/e94/Q3.json": {
+  "sha256_16": "cc90ca03a94511df",
+  "size": 264518,
+  "date": "2026-11-12T03:41:40",
+  "note": "E94 Q3: margin vs rep8, single engine, from raw_q1"
  }
 }
