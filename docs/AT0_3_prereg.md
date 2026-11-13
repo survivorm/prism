@@ -243,3 +243,40 @@ kill/refuted/confirmed правила НЕ меняются; меняется т
   «граница лупа» — гипотеза, не результат)».
 - **A10.** `strata[v_tangent][clean].forced_outcome` — явный флаг (odd_frac≡1 по построению).
 - **A11.** `per_doc_conc_p_format`: `(p_detection, p_value_concentration_test)`.
+
+---
+
+## Аддендум 5 (r3.2) — фиксы по fixreview-раунду 2 (реестр, НЕ смена гипотез)
+
+После r3.1-прогона, по внешнему ревью (docs/AT0_3_fixreview_REVIEW.md, второй
+текст файла). Гипотезы H1/H2, правила kill/refuted/confirmed и пулы НЕ меняются;
+меняются только текстовая диспетчеризация, per-doc независимость нулей и edge-case
+метки. Числовые изменения: только per-doc permutation p-values (инdependence фикс).
+
+- **A1 (критично).** `h1_short = h1_v.split(":")[0].strip()` — регрессия r3.1:
+  kill-вердикт «kill по пре-регу: …» давал «kill по пре-регу» → `h1_clauses.get`
+  → «n/a» в summary, status нестандартный. Фикс: startswith-диспетчер
+  (confirmed/refuted/kill/other) + явный «other»-клауз. Exec-тест kill-ветки зелёный.
+- **A2.** `summary`: `f"{None:.3f}"` — latent TypeError (k1l96/k1c96/tail_l96/tail_c96
+  могут быть None). Фикс: `_fx()` None-guard.
+- **A3 (методологический).** `concentration_test` — фиксированный seed=117 у ВСЕХ
+  доков: первый перестановочный выбор идентичен для доков с одинаковым K →
+  cross-doc корреляция нуля. Фикс: per-doc seed `SEED_PERM + doc_idx*SEED_STRIDE`
+  (конвенция серии AT0_2). doc_idx=0 сохраняет r3-поток (первый выбор doc1 не
+  меняется); p-values per-doc пересчитываются (повторный прогон обязателен).
+- **A4.** H2-status: отсутствие теста detection (`0<d<n` не выполнено: d=0 или d=n)
+  ≠ отрицательный результат — теперь отдельный `not_testable`, не `not_confirmed`;
+  лид-фраза «Положительный результат» — только при confirmed.
+- **A5.** `finding`: `pagg.get('median_concentration', float('nan'))` → «nan×» в
+  тексте при пустом aggregate. Фикс: `_fx` guard.
+- **A6.** `gate`: явно — min — secondary/описательный, НЕ часть гейта.
+- **A7.** `binom_pmf`: документирован underflow-кейс (очень большие n → p_two может
+  уйти в 0); для n≤96 не критично.
+- **A8 (мелкое).** `stratum_summary.K_composition` — только доки с отриц. площадью;
+  добавлен `K_composition_all` (все non-absent доки) + note (absent-доки не имеют
+  K по конструкции cells).
+- **A9 (r3.2.1, по r32-review MINOR).** `doc_idx` в `concentration_test` был позицией
+  В стратуме → L[0]/C[0]/R[0] получали один seed (cross-стратумная корреляция нуля).
+  Фикс: глобальный индекс по всем докам (L+C+R) — `gidx[nm]`. На числа не влияет
+  (loopy сохраняет idx 0..40; clean/remainder без conc_perm); перепуск d0f17e41,
+  вердикты/агрегаты бит-в-бит как r3.2.

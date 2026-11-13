@@ -37,6 +37,6 @@ copy-rate квантили (резы q25/q75; n_low=20 n_mid=41 n_high=19, q25=0
   source-strata domain_chat: L n=5 C n=11 claim=нет (n<12, no claim)
   source-strata domain_code: L n=8 C n=8 claim=нет (n<12, no claim)
 layer-type (gen, full vs linear): n=64 d_obs=-0.01579541664497321 p=0.000999000999000999
-store: /home/survivor/work/prism/results/AT0/store/16c9a58f26d13e6c.json (sha 16c9a58f26d13e6c)
+store: /home/survivor/work/prism/results/AT0/store/bba6fde3a7e807d4.json (sha bba6fde3a7e807d4)
 written: /home/survivor/work/prism/results/AT0/AT0_3_AREA.json, /home/survivor/work/prism/results/AT0/AT0_3_manifest.json, /home/survivor/work/prism/results/AT0/AT0_3_run.log
 AT0_3 gates: ALL PASS

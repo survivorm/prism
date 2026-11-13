@@ -1,251 +1,149 @@
-## Ревью обновлённого `AT0_3_area.py` (r3)
+## Ревью `AT0_3_area.py` (r3.1)
 
 ### Что правильно улучшено (без оговорок)
 
-- **`LAYER_TYPE` сверен с config** (`G15_layer_types`) — hardcoded `(11, 23)` валидируется по `config.text_config.layer_types`. Не тавтология: если конфиг изменится, gate упадёт fail-loud.
-- **`copy_rate` off-by-one** исправлен (`[3:383]` вместо `[4:383]`).
-- **`neg_fractions` floor** `-1e-9` вместо `0.0` — правильная защита от fp-шума.
-- **KS-тест как primary** (r3 §3.2) — корректная реакция на «одинаковое распределение» из пре-рега (mean был слеп к бимодальности).
-- **`period_structure` (H2)** — новый тест на периодическую структуру, ортогональный H1. Включает per-doc перестановочный `concentration_test`, агрегаты `mean/median/min_concentration`, `dom_residues`, `anti_frac`. Это правильное дополнение к KS.
-- **`forced_outcome` для v_tangent** — `b1>0.8 ⇒ odd_frac≡1` пойман и заблокирован от цитирования.
-- **`verdict` разложен на H1/H2 + confounds + location_contrast + summary** — структура честная.
-- **`G10_forced_outcomes`** — задокументировано, что `odd_frac` слеп к p≥3 (периоды лупов 5/7/8/24).
+**1. Тавтологичный `G0a_tpu_hn_field` → реальный `G0a_tpu_curves`.** Главная правка. Проверка `dip_L23(recomputed from U, hn) == meta_curves[23].dip` — реальный тест согласованности `load_source` с продюсером; `U*hn == h` устранён. Провенанс покрывается SHA-сверкой `match_AT0_1`. Документация честная: `r3_note` фиксирует, что прошлая проверка была тавтологией.
+
+**2. `location_contrast` на K=96 pool.** `_fracs96(L96m, key)` фильтрует к тем же докам, что в primary KS. Full-pool + K-composition — secondary, явно. `ratio` guarded (`if k1l96 and k1l96 > 1e-6`).
+
+**3. `H2` gate: `median_concentration > 1 ∧ frac_conc_above_1 ≥ 0.8`** вместо `min_concentration > 1`. Robust к одному выбросу; gate задокументирован в `verdict.H2_period_structure.gate`. `min` остался описательно.
+
+**4. `prereg.sign_correction` / `prediction` помечены как исторические.** Явно `[ИСТОРИЧЕСКАЯ справка о правке v1.0→v1.1, НЕ актуальная гипотеза]` / `[Исходное предсказание v1.1; … это предсказание опровергнуто …]`. Актуальные тесты — в `test`/`decision`.
+
+**5. `perm_two_sample_stat` docstring.** Теперь: «two-sided для signed (median_diff, mean); right-tail для unsigned (KS)». Явно указывает, что KS — не two-sided.
+
+**6. `binom_pmf` convention.** «as-or-less-likely», не scipy binomtest (там doubled-min). Задокументировано в `pdet["test"]["note"]`.
+
+**7. `stratum_summary` — `K_composition`.** Теперь видно K=32/96 состав стратумов, что делает comparison secondary-vs-primary прозрачным.
 
 ---
 
-### Критичное: `G0a_tpu_hn_field` в AT0_3 — **тавтология**
+### Критический баг: `h1_short` ломает `kill` case
 
 ```python
-for L in LAYERS:
-    h = np.asarray(z[f"{nm}_L{L}"], dtype=np.float64)
-    u, hn = d["layers"][L]
-    U = u / np.maximum(np.linalg.norm(u, axis=1, keepdims=True), 1e-12)
-    dev = float(np.max(np.abs(U * hn[:, None] - h) / np.maximum(np.abs(h), 1e-12)))
+h1_v = pof.get("verdict", "n/a")
+h1_short = h1_v.split(":")[0].strip()
 ```
 
-`u` и `hn` возвращены `load_source` из `h` этого же `z`. В `load_source` (`AT0_1_accounting.py`):
-```python
-hn = np.linalg.norm(h, axis=1)   # = ‖h_row‖
-u = h / hn[:, None]              # = h/‖h‖
-```
-
-Тогда `‖u‖ = 1`, `U = u`, `U * hn = h` — **точно**, до float64 (~1e-15). Проверка проходит на **любых** h_npz, включая сломанные. `max_rel_dev ≈ 1e-16`, `ok=True` всегда.
-
-**Это fake check.** Настоящая валидация — `match_AT0_1: {k: g0_sha[k] == at01_shas[k]}` — сверка SHA с AT0_1 (где уже была валидация row-reconstruction). Если SHA совпал, source идентичен AT0_1, и `U*hn == h` **не даёт новой информации**.
-
-**Фикс** (один из):
-- (a) Удалить `tpu_dev`-цикл, заменить `"live_check"` на `"по match_AT0_1: {match: true} — источник верифицирован через SHA сверку"`. Провенанс полностью покрыт SHA-сверкой.
-- (b) Оставить, но сделать **нетривиальным**: проверить `dip_recomputed_from_h == dip_from_meta_curves` (как в AT0_1 `gate_g0a_tpu`). Это проверяет, что h — действительно то, из чего строились curves.
-
-Сейчас `G0a_tpu_hn_field` **декларирует** проверку hn-поля, но **проверяет тавтологию**. Это ровно та проблема, которую AT0_2 ранее отозвал в другом месте (`unit`-пин, не hn-чек).
-
----
-
-### Существенное: `location_contrast` смешивает пулы
+Для `kill`-verdict строка начинается с `"kill по пре-регу: распределения неразличимы..."`. `split(":")[0].strip()` даёт `"kill по пре-регу"`, **не** `"kill"`. Затем:
 
 ```python
-k1l = _med(strata[PRIMARY_OBJ]["loopy"], "k1_frac")
+h1_clauses.get(h1_short, 'n/a')
 ```
 
-`strata[PRIMARY_OBJ]["loopy"]` = `stratum_summary(cells, (obj, PRIMARY_L), L)` на **полном пуле L = 41 док**, не на K=96.
+`"kill по пре-регу"` не в словаре (`keys = {"refuted", "kill", "confirmed"}`) → **`'n/a'`**. Так что `summary` содержит `… — n/a. G10: …` вместо осмысленного клауза. И `H1_period2.status = "kill по пре-регу"` — нестандартный словарь (сравните с `H2_period_structure.status = "confirmed"|"not_confirmed"`).
 
-`k1_frac = neg[0] / A_neg`, где `A_neg = Σ_{k=1..K} min(rho(k), 0)`. Для K=32 доков A_neg использует **только 32 лага**, для K=96 — 96. Знаменатель разный ⇒ `k1_frac` разный **для одного и того же дока при разных K**.
-
-При этом primary-test (KS) использует **только K=96 доков** (`k96(L)` фильтр). Значит:
-
-- KS p-value → K=96 pool (≈39 loopy, 12 clean?)
-- `location_contrast` → полный pool (41 loopy, 53 clean)
-
-**Если K-состав loopy и clean разный**, цифры `k1l = 0.076` vs `k1c = 0.336` могут быть частично артефактом K-гетерогенности, а не свойством loopy/clean.
-
-Из AT0_1 P4: `pool4_n = 51` из 53 nondeg — только 2 дока K=32. Значит **почти все в K=96 пуле**. Влияние невелико, но не показано.
+Для `confirmed`/`refuted` split работает (нет пробелов в префиксе). Только `kill` ломается — тот самый, который актуален в текущих данных (KS p ~0.965).
 
 **Фикс**:
-1. `location_contrast` на **K=96 pool** (те же доки, что в `obj_test`), или
-2. Явно отчитаться K-составом каждого стратума, чтобы читатель видел, что разница минимальна.
+```python
+if h1_v.startswith("confirmed"):   h1_short = "confirmed"
+elif h1_v.startswith("refuted"):   h1_short = "refuted"
+elif h1_v.startswith("kill"):      h1_short = "kill"
+else:                              h1_short = "other"
+```
 
-Сейчас в `location_contrast` есть `"pool": "strata (полный пул 41/53, не K=96)"` — это honest disclosure, но **без последствия** (что k1_frac разный при разном K).
+Или `h1_short = h1_v.split(":")[0].split()[0].lower()`.
 
 ---
 
-### Существенное: `period_structure` detection-rate на смешанном пуле
+### Существенное: `summary` — TypeError при `None` значениях
 
 ```python
-def per_doc(nm):
+f"... clean — на лаге 1 (k1 {k1c96:.3f} vs loopy {k1l96:.3f}{ratio_txt}) ..."
+```
+
+Если `k1l96 = None` (нет loopy с K=96 и отриц. площадью), `f"{None:.3f}"` — **TypeError**. Сейчас в данных есть 39 K=96 loopy с `k1_frac > 0`, так что не падает. Но `_fracs96` возвращает `None` для пустого списка — latent crash.
+
+**Фикс**:
+```python
+def _fmt(x): return f"{x:.3f}" if x is not None else "n/a"
+f"... k1 {_fmt(k1c96)} vs loopy {_fmt(k1l96)}{ratio_txt}"
+```
+
+---
+
+### Существенное: `concentration_test` — один и тот же seed для всех доков
+
+```python
+def concentration_test(rho, p, K, b=B_PERM, seed=SEED_PERM):
     ...
-    K = c["K"]
-    p = detect_period(rho, K)
+    rng = np.random.default_rng(seed)
 ```
 
-`detect_period` ищет `p ∈ [2, K//2]`:
-- K=32 → detects p ∈ 2..16
-- K=96 → detects p ∈ 2..48
+Все per-doc permutation-тесты используют `seed=117`. PRNG state идентичен на входе, дивергенция после первого `rng.choice(K, n_neg, ...)` — но для документов с одинаковыми K и `n_neg` первый choice может дать **коррелированные** результаты. 39 loopy docs с одинаковым seed → потенциальная cross-doc корреляция нулевых распределений. Это нарушает «per-doc независимость» null'а. В других местах серия использует `SEED_BASE + doc_idx * SEED_STRIDE`; здесь конвенция нарушена.
 
-**Больше лагов = больше шанс детекции** (и false positives, и true positives). Detection rate на смешанном пуле confounded by K-distribution. Если loopy имеет больше K=32 доков, чем clean, detection rate ниже у loopy — **противоположно ожиданию**.
+**Фикс**: добавить `doc_seed` параметр:
+```python
+def concentration_test(rho, p, K, b=B_PERM, seed=SEED_PERM, doc_seed=0):
+    rng = np.random.default_rng(seed + doc_seed)
+```
+И в `per_doc`: `concentration_test(..., doc_seed=hash(nm) % 99991)` или через `doc_idx` (строкой идёт первая шкала). Согласуется с `null_ar_batch`/`run_cell` (там `SEED_BASE + doc_idx*SEED_STRIDE + s`).
 
-Затем `binom_pmf`-тест на `dL` vs `dC` предполагает независимость детекций — но если K разный, вероятности детекции per-doc разные, что нарушает `H0: p_detect одинаковый`.
-
-**Фикс**:
-- Фильтровать `period_structure` к K=96 pool (`k96(L)` и `k96(C)`), или
-- Отчитываться detection rate per K (K=96: x/39 loopy; K=32: y/2 loopy), и тест — только на K=96.
-
-Также **документировать K-состав стратумов в `results["strata"]`** — сейчас `stratum_summary` не возвращает K-распределение.
+Влияние: p-values per-doc могут быть слегка correlated. При `B=1000` и `n_neg ~ 20` первый choice даёт `C(K, n_neg)` вариантов — после первого шага PRNG diverges. Скорее всего minor, но это **методологическая ошибка** — null должен быть независим.
 
 ---
 
-### Существенное: `H2_period_structure` gate через `min_concentration > 1` — fragile
+### Среднее: `pagg.get('median_concentration', float('nan'))` — «nan» в тексте
 
 ```python
+"finding": (f"... (dom_residues; медиана концентрации "
+            f"{pagg.get('median_concentration', float('nan')):.2f}× базы) — ...")
+```
+
+Если `pagg` пуст (нет detected loopy K=96), `.get()` возвращает `nan`, форматирование даёт `"nan×"` в finding. Cosmetic, но сбивает. **Фикс**: `f"{pagg['median_concentration']:.2f}" if pagg.get('median_concentration') is not None else "n/a"`.
+
+---
+
+### Среднее: `H2_period_structure.status = "not_confirmed"` для случая «нет теста»
+
+```python
+h2_ok = bool(pdet.get("test", {}).get("p_two_sided_exact", 1) <= ALPHA)
 if h2_ok and pagg:
-    h2_ok = pagg.get("min_concentration", 0) > 1
+    h2_ok = (pagg.get("median_concentration", 0) > 1
+             and pagg.get("frac_conc_above_1", 0) >= 0.8)
 ```
 
-`min_concentration = min(concentration across detected loopy)`, где `concentration = max_share * p` — выше 1 означает «выше uniform».
+Если `pdet["test"]` отсутствует (не сработал `if 0 < d < n`, например при `d = n` — все detected), `.get("p_two_sided_exact", 1)` = 1 > ALPHA → `h2_ok = False` → status `"not_confirmed"`. То есть **отсутствие теста** интерпретируется как **отрицательный результат**. Для current data `d < n` (часть clean не detected), так что не срабатывает. Но edge case.
 
-Если **один** loopy-док имеет `concentration = 0.99` (чуть ниже uniform) при median 5, весь H2 становится "not_confirmed".
-
-**Фикс**: `median_concentration > 1` или `frac_above_baseline ≥ 0.8` (робстнее к выбросам). Или явно в пре-реге прописать, что gate — "min" (строгий критерий).
-
-Сейчас `median` считается и отчитывается (`median_concentration`), но **не используется в gate**. Nonsensical: зачем считать, если не проверяется.
-
----
-
-### Существенное: prereg `sign_correction` — stale
-
-```
-"sign_correction": "период-2 ρ(k)=(−1)^k ⇒ отриц. площадь на нечётных k (осн. k=1)..."
-```
-
-Это описание **исходного** H1 предсказания (loopy → odd k). Но r3 **переопределил** primary test как KS на распределения, а H1 предсказание "loopy odd" проверяется через `location_contrast` (где loopy НЕ на k=1). Плюс H2 (периоды) показывает, что loopy не на k=1, а на фазе dom_residues.
-
-Поле `sign_correction` в артефакте **читается как актуальный пре-рег**, но на самом деле это **историческая справка** о правке v1.0→v1.1. Читатель, не знающий контекста, может подумать, что `sign_correction` = текущая гипотеза.
-
-**Фикс**: переименовать в `historical_note` или добавить в начало: `"[историческое; актуальный тест — см. test/decision]"`.
-
-Аналогично `prediction: "loopy: отриц. площадь на нечётных k; clean: в хвосте k≥9"` — это **исходное** предсказание. По нему verdict = `refuted` (loopy на хвосте, не на нечётных). Что корректно отражено в `verdict.H1_period2.status`. Но в `prereg.prediction` нет пометки, что эта prediction **провалена** — можно подумать, что она актуальна.
-
----
-
-### Среднее: `perm_two_sample_stat` docstring путает
-
+**Фикс**: различить:
 ```python
-"""... p = (1 + #{|stat_perm| >= |stat_obs|})/(b+1), two-sided."""
+if "test" not in pdet:
+    h2_status = "not_testable (test не определено: 0<d<n не выполнено)"
+elif not h2_ok_gate:
+    h2_status = "not_confirmed"
+else:
+    h2_status = "confirmed"
 ```
-
-Для **signed** statistic (median_diff) формула `|s_perm| ≥ |s_obs|` — двусторонняя, верно.
-Для **unsigned** statistic (KS) — `|s_perm| = s_perm`, `|s_obs| = s_obs`, формула = right-tail `s_perm ≥ s_obs`, что и есть KS-тест. **Не two-sided**.
-
-Код правильный, но docstring говорит "two-sided" для обоих. Для KS это **не two-sided** — это один-хвостовой right-tail. Путает читателя.
-
-**Фикс**: `"two-sided for signed stat (median_diff), right-tail for unsigned stat (KS)"`.
-
----
-
-### Среднее: `binom_pmf` two-sided convention
-
-```python
-pmf_obs = binom_pmf(dL, nL, p0)
-p_two = sum(binom_pmf(i, nL, p0) for i in range(nL + 1)
-            if binom_pmf(i, nL, p0) <= pmf_obs + 1e-15)
-```
-
-Это **"sum of outcomes as or less likely than observed"**. Валидная, но **нестандартная** convention. Другие стандарты:
-- (a) `2 * min(P(X ≤ dL), P(X ≥ dL))`, capped at 1
-- (b) `Σ_{i: |i - E| ≥ |dL - E|} pmf(i)`
-
-Все три дают разные числа, особенно при малых n и extreme proportions. Без явной пометки читатель может сравнить с scipy `binomtest` — там convention (a), и числа будут разные.
-
-**Фикс**: явно в note: `"двусторонний через вероятность (as-or-less-likely), не scipy binomtest (там doubled-min convention)"`.
 
 ---
 
 ### Мелкие
 
-**1. `k1c / k1l` ratio без guard.** Если k1l → 0, ratio → ∞. Отчёт `{k1c / k1l:.1f}×` может выдать огромные числа. Сейчас k1l = 0.076 (безопасно), но общий guard: `if k1l > 1e-6 else None`.
+**1. `binom_pmf` при underflow** (`pmf_obs = 0`): sum of 0s → `p_two = 0`, что неверно. Для n=39 не критично (не underflow), но при больших n — будет. Задокументировать.
 
-**2. `results["strata"]["v_tangent"]["clean"]["odd_frac"]["median"] = 1.0`** — чисто потому что `b1 ≈ 1`, и `odd_frac = neg[0]/A_neg`. Это **forced**, не находка. В `verdict` и `forced_outcome` помечено, но в `results["strata"]` — просто median = 1.0 без пометки. Стоит добавить `"forced_outcome": true` в `stratum_summary` для v_tangent clean.
+**2. `stratum_summary` — `K_composition` только для доков с negative area.** Не показывает K=32/96 для absent/no-area docs. Для текущих данных `n_noarea = 0` в обеих стратумах, но edge case невиден.
 
-**3. `verdict.summary` — интерпретационное расширение**
+**3. `binomial test` — `p_two` при `dL=0`** требует `pmf_obs = binom_pmf(0, nL, p0)` — OK, но если `nL` мало, граница точная.
 
-> "лупы размазывают плату периодически по хвосту (на фазе границы лупа)"
-
-"на фазе границы лупа" — интерпретация `dom_residues`. Данные показывают, что mass concentrate на `dom_residues mod p`, но не идентифицируют это как "loop boundary". Честнее: "концентрация A_neg на фазе dom_residues mod p (интерпретация как loop boundary — гипотеза, не результат)".
-
-**4. `G0a_provenance.corpus` — известный confound, документирован, но не исправлен**
-
-Корпус (16 доков) включён в clean (C), т.к. `degen()` для corpus срабатывает только по `mcos` (`mshare` недоступен без токенов). Конфаунд L/C × источник объявлен в `confounds`. **Мера влияния не оценена** (source-strata описательно, n<12). Не баг, но результат слабее, чем звучит.
-
-**5. `period_structure` использует `L`, `C` (полный пул)** — уже отмечено выше. `stratum_summary` и `_k96` не согласованы.
-
-**6. `per_doc_conc_p` — tuple `(p, p_perm)`** — читатель должен знать, что второй элемент — p-value concentration test. Имя `p_perm` двусмысленно. OK, но нужно в артефакте явно написать (`"per_doc_conc_p_format": "(p_detected, p_value_concentration)"`).
+**4. `verdict.H2_period_structure.gate` — задокументирован, но без `note`** о том, что `min_concentration` — secondary, не gate. `pagg["min_concentration"]` в aggregate, не в gate. Читатель артефакта увидит `min=0.85` при `status=confirmed` — если не знает, что gate на `median`, будет сбит.
 
 ---
 
 ### Сводка
 
-| # | Замечание | Влияние |
+| # | Замечание | Критичность |
 |---|---|---|
-| 1 | **`G0a_tpu_hn_field` тавтологичен** (`U*hn == h` тождественно) | **fake check**, не валидирует |
-| 2 | `location_contrast` смешивает пулы (K=96 KS vs full-pool medians) | умеренная — confounded K |
-| 3 | `period_structure` detection rate на смешанном K-пуле | confounded K |
-| 4 | `H2` gate = `min_concentration > 1` (fragile to outliers) | не переоценивать |
-| 5 | `prereg.sign_correction` / `prediction` — stale (v1.0) | misleading |
-| 6 | `perm_two_sample_stat` docstring "two-sided" для KS | misleading |
-| 7 | `binom_pmf` convention не помечена | сравнения с scipy сломаются |
-| 8 | `k1c/k1l` без guard при k1l→0 | latent |
-| 9 | `verdict.summary` — "фаза границы лупа" интерпретативна | overreach |
+| **1** | `h1_short = h1_v.split(":")[0].strip()` — `"kill по пре-регу"` вместо `"kill"`; `h1_clauses.get` возвращает `'n/a'`; `H1_period2.status` нестандартный | **критично** — ломает `kill`-case в summary и вердикте |
+| **2** | `summary` `{k1l96:.3f}` — TypeError при `None` | средняя — latent crash |
+| **3** | `concentration_test` — same seed для всех docs | средняя — методологическая |
+| **4** | `H2_period_structure.status = "not_confirmed"` при `test` absent | средняя — edge case |
+| **5** | `pagg.get(..., nan)` → `"nan×"` в finding | косметика |
+| **6** | `H2_period_structure.gate` — без note о min-secondary | косметика |
+| **7** | `binom_pmf` underflow при больших n | задокументировать |
 
-**Первоочередное**:
+**Главное**: #1 — реальная **регрессия** r3.1: `kill`-case (главный в текущих данных) сломан. `summary` содержит `— n/a` вместо осмысленного клауза. Починка — 4 строки.
 
-1. **`G0a_tpu_hn_field`** — либо удалить, либо заменить на реальную проверку (`dip_recomputed == dip_meta`). Сейчас это **самый серьёзный дефект**: gate выглядит как проверка hn, но валидирует тождество.
-2. **Пул в `location_contrast`/`period_structure`** — привести к K=96 (или явно отчитаться K-составом).
-3. **`prereg`** — пометить `sign_correction`/`prediction` как "историческое/опровергнутое", не актуальное.
+**После фикса #1**: скрипт **готов** — все критические замечания прошлых ревью адресованы, тавтология удалена, пулы согласованы, gate задокументирован. #2–#4 — желательные, но не блокеры для текущих данных (не срабатывают).
 
-**Всё вместе**: `results["verdict"]` в целом правильный (H1 refuted, H2 confirmed, location различена в хвост/на лаг-1), но:
-
-- H1 refuted подкреплён **KS p=0.965** (нулевой), не p<0.05. То есть **распределения неразличимы**, не «направление противоположно». Это **`kill`**, не `refuted`. `refuted` = «различимо, направление против» — но в текущем коде `refuted` вызывается при `KS p≤0.05 AND median L<C`. При KS p=0.965 → **`kill`**.
-
-Проверяю логику:
-```python
-elif ks["p"] <= ALPHA:
-    if of["median_L"] > of["median_C"]:
-        of["verdict"] = "confirmed..."
-    else:
-        of["verdict"] = "refuted..."
-else:
-    of["verdict"] = "kill по пре-регу..."
-```
-
-По run.log: `KS d=0.1416 p=0.9650` — значит **`kill`**, не `refuted`. Соответствует коду.
-
-**Но** в моём чтении `verdict.summary` я мог неверно прочитать. Проверю: `"H1_period2": {"status": pof.get("verdict", pt.get("verdict")), ...}` — берёт из `pof["verdict"]`, что при KS p=0.965 → `kill по пре-регу`. Значит summary = "kill". OK. Моё предыдущее замечание про "refuted" неверно — надо перепроверить.
-
-Перечитываю. Ага, `h1_short = h1_v.split(":")[0]` → `"kill по пре-регу"`. И summary начинается:
-```python
-h1_lead = (f"Период-2 как носитель отриц. площади: подтверждён" if h1_short == "confirmed"
-           else f"Период-2 как носитель отриц. площади: не подтверждён")
-```
-
-При `h1_short = "kill"` → `h1_lead = "не подтверждён"`. Тогда **`not confirmed`**, не "refuted". Верно.
-
-Но `H1_period2.status` в `verdict`:
-```python
-"H1_period2": {
-    "status": pof.get("verdict", pt.get("verdict")),
-    ...
-}
-```
-
-`pof["verdict"]` = полный текст `"kill по пре-регу: распределения неразличимы (KS p>0.05); период-2 не подтверждён; G10: estimand слеп к периодам p≥3..."`. Значит `status` = длинная строка, не короткое `kill`. Читатель, желающий видеть `kill | refuted | confirmed`, увидит полный текст. Не bug, но inconsistent с другими вердиктами в `verdict`.
-
-**Действительно**: раздел `verdict` в артефакте разный по структуре для H1 (`status` = полный текст) и H2 (`status` = короткое `"confirmed"|"not_confirmed"`). Стоит унифицировать.
-
----
-
-### Окончательный вердикт по скрипту
-
-**Скрипт лучше предыдущей версии**, но содержит **один критичный fake check** (`G0a_tpu_hn_field`) и **несколько путаниц в пулах** (K=96 vs full), которые могут усилить/ослабить выводы при малых различиях. Основной вывод (H1: period-2 не подтверждён; H2: периодическая структура у loopy подтверждена) — **корректен по данным**, но `location_contrast` (k1/tail) требует K-фильтрации для точной сопоставимости с KS.
-
-**Наиболее серьёзный фикс**: убрать тавтологичный `G0a_tpu_hn_field` (или заменить на реальную сверку `dip_recomputed == dip_meta` из meta-файла). Затем — привести `location_contrast` и `period_structure` к K=96 пулу (или отчитаться K-составом стратумов). `prereg` — пометить stale-поля.
-
-**Все фиксы — текстовые/логические правки в артефакте**, перезапуск не обязателен, если пулы уже фильтруются в `obj_test` и можно просто пересчитать medians на K=96 подмножестве. Но честнее — перезапуск с правильными пулами.
+**Итоговая рекомендация**: исправить #1 (`startswith`-based dispatch), #2 (`_fmt` для None), #3 (`doc_seed` в `concentration_test`). Перезапуск не требуется — можно поправить `verdict.summary` и `H1_period2.status` в claim-артефакте постфактум (числа верные, сломана только текстовая диспетчеризация).

@@ -1,7 +1,7 @@
 {
  "claim": {
   "meta": {
-   "script_sha256": "7398bace7ea1a81656b57244d4f59f75edbaf9ce1b2040e960da0d12934cbbee",
+   "script_sha256": "cae67c607c83fdf748a93df49a53f516aad9e2a2a33412b5b390edfdd771fe50",
    "field_sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
    "gen_sha256": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
    "own_sha256": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198",
@@ -862,7 +862,7 @@
        "conc_perm": {
         "max_obs": 0.2748404480148685,
         "n_neg": 63,
-        "p_perm": 0.001998001998001998,
+        "p_perm": 0.000999000999000999,
         "B": 1000
        }
       },
@@ -1606,7 +1606,7 @@
       "dC": 0,
       "p0_pool": 0.32608695652173914,
       "p_two_sided_exact": 2.18081796329386e-07,
-      "note": "H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); двусторонний тест по as-or-less-likely convention (не scipy binomtest — там doubled-min, числа будут отличаться, r3.1 #7)"
+      "note": "H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); двусторонний тест по as-or-less-likely convention (не scipy binomtest — там doubled-min, числа будут отличаться, r3.1 #7); r3.2 #7: при глубоком underflow pmf (очень большие n) p_two может уйти в 0 — задокументировано; для n≤96 не критично"
      }
     },
     "aggregate": {
@@ -1655,7 +1655,7 @@
       ],
       "code_6": [
        32,
-       0.001998001998001998
+       0.000999000999000999
       ],
       "code_8": [
        15,
@@ -1743,7 +1743,8 @@
       ]
      },
      "per_doc_conc_p_format": "(p_detection, p_value_concentration_test)",
-     "n_per_doc_p_le_alpha": 30
+     "n_per_doc_p_le_alpha": 30,
+     "per_doc_p_floor_note": "per-doc conc p насыщен на полу 1/(B+1)≈0.001 (n_per_doc_p_le_alpha=30/30 значимых)"
     }
    },
    "source_strata": {
@@ -1758,6 +1759,10 @@
       "K_composition": {
        "96": 28
       },
+      "K_composition_all": {
+       "96": 28
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -5.532970011438415
       },
@@ -1804,6 +1809,10 @@
       "K_composition": {
        "96": 36
       },
+      "K_composition_all": {
+       "96": 36
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.210696528530351
       },
@@ -1855,6 +1864,10 @@
       "K_composition": {
        "96": 13
       },
+      "K_composition_all": {
+       "96": 13
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -5.783232716487059
       },
@@ -1901,6 +1914,10 @@
       "K_composition": {
        "96": 1
       },
+      "K_composition_all": {
+       "96": 1
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -2.65464894240217
       },
@@ -1957,6 +1974,10 @@
       "K_composition": {
        "96": 14
       },
+      "K_composition_all": {
+       "96": 14
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.065409145287852
       },
@@ -2008,6 +2029,10 @@
       "K_composition": {
        "96": 5
       },
+      "K_composition_all": {
+       "96": 5
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -5.6122530591133515
       },
@@ -2054,6 +2079,10 @@
       "K_composition": {
        "96": 11
       },
+      "K_composition_all": {
+       "96": 11
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.2799498870681902
       },
@@ -2105,6 +2134,10 @@
       "K_composition": {
        "96": 8
       },
+      "K_composition_all": {
+       "96": 8
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -6.30652905982628
       },
@@ -2151,6 +2184,10 @@
       "K_composition": {
        "96": 8
       },
+      "K_composition_all": {
+       "96": 8
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.0282854383588325
       },
@@ -2202,6 +2239,10 @@
       "K_composition": {
        "96": 41
       },
+      "K_composition_all": {
+       "96": 41
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -5.53497767857403
       },
@@ -2249,6 +2290,11 @@
        "32": 2,
        "96": 51
       },
+      "K_composition_all": {
+       "32": 2,
+       "96": 51
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.154378382785605
       },
@@ -2295,6 +2341,10 @@
       "K_composition": {
        "96": 2
       },
+      "K_composition_all": {
+       "96": 2
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.0313823683842909
       },
@@ -2343,6 +2393,10 @@
       "K_composition": {
        "96": 41
       },
+      "K_composition_all": {
+       "96": 41
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -5.6122530591133515
       },
@@ -2390,6 +2444,11 @@
        "32": 2,
        "96": 51
       },
+      "K_composition_all": {
+       "32": 2,
+       "96": 51
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.148413563337563
       },
@@ -2436,6 +2495,10 @@
       "K_composition": {
        "96": 2
       },
+      "K_composition_all": {
+       "96": 2
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.042819944625691
       },
@@ -2484,6 +2547,10 @@
       "K_composition": {
        "96": 41
       },
+      "K_composition_all": {
+       "96": 41
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.000406433844872
       },
@@ -2531,6 +2598,11 @@
        "32": 2,
        "96": 51
       },
+      "K_composition_all": {
+       "32": 2,
+       "96": 51
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -0.10999144961034163
       },
@@ -2578,6 +2650,10 @@
       "K_composition": {
        "96": 2
       },
+      "K_composition_all": {
+       "96": 2
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -9.000958077156277
       },
@@ -2631,6 +2707,10 @@
       "K_composition": {
        "96": 20
       },
+      "K_composition_all": {
+       "96": 20
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.0308893455020391
       },
@@ -2677,6 +2757,10 @@
       "K_composition": {
        "96": 41
       },
+      "K_composition_all": {
+       "96": 41
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -2.779387076121293
       },
@@ -2723,6 +2807,10 @@
       "K_composition": {
        "96": 19
       },
+      "K_composition_all": {
+       "96": 19
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -6.871426983227621
       },
@@ -2776,6 +2864,10 @@
       "K_composition": {
        "96": 11
       },
+      "K_composition_all": {
+       "96": 11
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.2799498870681902
       },
@@ -2827,6 +2919,10 @@
       "K_composition": {
        "96": 8
       },
+      "K_composition_all": {
+       "96": 8
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.0282854383588325
       },
@@ -2879,6 +2975,11 @@
        "32": 2,
        "96": 14
       },
+      "K_composition_all": {
+       "32": 2,
+       "96": 14
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.028096643538134
       },
@@ -2930,6 +3031,10 @@
       "K_composition": {
        "96": 16
       },
+      "K_composition_all": {
+       "96": 16
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.2069906574314948
       },
@@ -2981,6 +3086,10 @@
       "K_composition": {
        "96": 1
       },
+      "K_composition_all": {
+       "96": 1
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -2.65464894240217
       },
@@ -3032,6 +3141,10 @@
       "K_composition": {
        "96": 1
       },
+      "K_composition_all": {
+       "96": 1
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -2.6618769865918477
       },
@@ -3082,6 +3195,10 @@
       "K_composition": {
        "96": 21
       },
+      "K_composition_all": {
+       "96": 21
+      },
+      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
       "A_neg": {
        "median": -1.2799498870681902
       },
@@ -3154,7 +3271,7 @@
    },
    "H2_period_structure": {
     "status": "confirmed",
-    "gate": "detection p≤α (K=96) ∧ median_concentration>1 ∧ frac(conc>1)≥0.8 (r3.1: min-гейт заменён — fragile к одному выбросу; min отчитан описательно)",
+    "gate": "detection p≤α (K=96) ∧ median_concentration>1 ∧ frac(conc>1)≥0.8 (r3.1: min-гейт заменён — fragile к одному выбросу; r3.2: min — secondary/описательный, НЕ часть гейта — min отчитан в aggregate, читатель не должен путать)",
     "detection": {
      "loopy": {
       "n_total": 41,
@@ -3238,7 +3355,7 @@
       "dC": 0,
       "p0_pool": 0.32608695652173914,
       "p_two_sided_exact": 2.18081796329386e-07,
-      "note": "H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); двусторонний тест по as-or-less-likely convention (не scipy binomtest — там doubled-min, числа будут отличаться, r3.1 #7)"
+      "note": "H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); двусторонний тест по as-or-less-likely convention (не scipy binomtest — там doubled-min, числа будут отличаться, r3.1 #7); r3.2 #7: при глубоком underflow pmf (очень большие n) p_two может уйти в 0 — задокументировано; для n≤96 не критично"
      }
     },
     "aggregate": {
@@ -3287,7 +3404,7 @@
       ],
       "code_6": [
        32,
-       0.001998001998001998
+       0.000999000999000999
       ],
       "code_8": [
        15,
@@ -3375,7 +3492,8 @@
       ]
      },
      "per_doc_conc_p_format": "(p_detection, p_value_concentration_test)",
-     "n_per_doc_p_le_alpha": 30
+     "n_per_doc_p_le_alpha": 30,
+     "per_doc_p_floor_note": "per-doc conc p насыщен на полу 1/(B+1)≈0.001 (n_per_doc_p_le_alpha=30/30 значимых)"
     },
     "finding": "loopy-доки несут периодическую лаговую структуру (p из пиков ρ); отрицательная площадь организована по классам остатков mod p (dom_residues; медиана концентрации 6.06× базы) — НЕ на анти-фазе p/2 (anti_frac≈0) и не на нечётных k; чистые — без периода, площадь на лаге 1"
    },
@@ -3457,13 +3575,13 @@
    }
   },
   "store": {
-   "path": "store/16c9a58f26d13e6c.json",
-   "sha256": "16c9a58f26d13e6cb2c1092a40c769b34a6dc3ce7af7751dd5755d52c244e9c3"
+   "path": "store/bba6fde3a7e807d4.json",
+   "sha256": "bba6fde3a7e807d41e75a56a3d243e77ba191da58d7c6be029237fcdcd7da058"
   }
  },
  "manifest": {
-  "store_sha256": "16c9a58f26d13e6cb2c1092a40c769b34a6dc3ce7af7751dd5755d52c244e9c3",
-  "claim_sha256": "e68a094c822575d693b21bdeeb7a26bf4de597962f10171b8c7ba5908a3eb17f",
-  "written": "2026-11-13T20:15:47.269766"
+  "store_sha256": "bba6fde3a7e807d41e75a56a3d243e77ba191da58d7c6be029237fcdcd7da058",
+  "claim_sha256": "b410b484d4b21a624ef9b789a8000a3df39575b8cd8868ea791c4747d5bca806",
+  "written": "2026-11-14T00:37:25.701400"
  }
 }

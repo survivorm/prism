@@ -86,6 +86,8 @@ DESC_OBJ = "v_tangent"
 PRIMARY_L = 23
 SEED_PERM = 117
 B_PERM = 1000
+SEED_STRIDE = 1009  # r3.2 (fixreview #3): per-doc-шаг перестановочных сдвигов
+                    # (конвенция серии AT0_2: SEED_BASE + doc_idx*SEED_STRIDE)
 ALPHA = 0.05
 SEED_BOOT = 117
 B_BOOT = 1000
@@ -270,10 +272,17 @@ def stratum_summary(cells, cellkey, names):
     aneg = np.array([r[2] for r in rows])
     band_keys = list(BANDS.keys())
     bands = {bk: np.array([r[1][bk] for r in rows]) for bk in band_keys}
+    kcomp_all = dict(Counter(cells[(nm, L, obj)]["K"] for nm in names
+                             if (nm, L, obj) in cells
+                             and not cells[(nm, L, obj)].get("absent")))
     kcomp = dict(Counter(cells[(nm, L, obj)]["K"] for nm, f, a in rows))
     return {
         "n_docs": len(rows), "n_no_negative_area": n_noarea, "n_absent": n_absent,
         "K_composition": {str(k): v for k, v in sorted(kcomp.items())},
+        "K_composition_all": {str(k): v for k, v in sorted(kcomp_all.items())},
+        "K_note": ("K_composition — только доки с отриц. площадью; K_composition_all — все "
+                   "non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по "
+                   "конструкции cells)"),
         "A_neg": {"median": float(np.median(aneg))},
         "odd_frac": {"median": float(np.median(fracs)), "ci": boot_ci(fracs)},
         "even_frac": {"median": float(np.median(even)), "ci": boot_ci(even)},
@@ -393,11 +402,14 @@ def residue_profile(rho, p, K):
     return res / aneg, aneg, k[m]
 
 
-def concentration_test(rho, p, K, b=B_PERM, seed=SEED_PERM):
+def concentration_test(rho, p, K, b=B_PERM, seed=SEED_PERM, doc_idx=0):
     """Per-doc перестановочный тест периодической концентрации (r3 §3.3).
     H0: отриц. масса НЕ организована по периоду — позиции значений перемешаны.
     Статистика: max_res_share (доля A_neg в самом массовом остатке mod p).
-    p-value = (1 + #{max_perm >= max_obs})/(b+1)."""
+    p-value = (1 + #{max_perm >= max_obs})/(b+1).
+    r3.2 (fixreview #3): per-doc seed (seed + doc_idx*SEED_STRIDE) — нуль независим
+    между доками (в r3 фиксированный seed=117 был у всех доков: первый перестановочный
+    выбор идентичен для доков с одинаковым K → cross-doc корреляция нуля)."""
     rho = np.asarray(rho, dtype=float)
     k = np.arange(1, int(K) + 1)
     m = rho < 0
@@ -413,7 +425,7 @@ def concentration_test(rho, p, K, b=B_PERM, seed=SEED_PERM):
 
     pos0 = k[m]
     max_obs = max_share(pos0)
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(seed + doc_idx * SEED_STRIDE)
     n_ge = 0
     for _ in range(b):
         perm_pos = rng.choice(int(K), size=n_neg, replace=False) + 1  # 1-based лаги
@@ -579,7 +591,12 @@ def period_structure(cells, L, C, R):
     def binom_pmf(i, nn, pp):
         return float(comb(nn, i)) * (pp ** i) * ((1 - pp) ** (nn - i))
 
-    def per_doc(nm):
+    # r3.2.1 (r32-review MINOR): doc_idx — глобальный индекс по ВСЕМ докам (L+C+R),
+    # не позиция в стратуме: иначе L[0]/C[0]/R[0] получают один seed и при равном K —
+    # идентичный первый перестановочный выбор (cross-стратумная корреляция нуля).
+    gidx = {nm: i for i, nm in enumerate(L + C + R)}
+
+    def _per_doc_impl(nm, doc_idx):
         c = cells[(nm, PRIMARY_L, PRIMARY_OBJ)]
         if c.get("absent"):
             return None
@@ -603,8 +620,11 @@ def period_structure(cells, L, C, R):
         else:
             out["anti_frac"] = float(prof[p // 2] + prof[p // 2 + 1])
         out["baseline_max"] = 1.0 / p
-        out["conc_perm"] = concentration_test(rho, p, K)
+        out["conc_perm"] = concentration_test(rho, p, K, doc_idx=doc_idx)
         return out
+
+    def per_doc(nm):
+        return _per_doc_impl(nm, gidx[nm])
 
     out = {"object": PRIMARY_OBJ, "layer": PRIMARY_L,
            "detection_rule": "p = мин. k≥2: ρ(k)≥0.9 ∧ ρ(2k)≥0.81 (гармоника)",
@@ -647,7 +667,9 @@ def period_structure(cells, L, C, R):
             "p_two_sided_exact": float(p_two),
             "note": ("H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); "
                      "двусторонний тест по as-or-less-likely convention (не scipy binomtest — "
-                     "там doubled-min, числа будут отличаться, r3.1 #7)"),
+                     "там doubled-min, числа будут отличаться, r3.1 #7); r3.2 #7: при глубоком "
+                     "underflow pmf (очень большие n) p_two может уйти в 0 — задокументировано; "
+                     "для n≤96 не критично"),
         }
     det = [d for d in out["per_doc"]["loopy"].values() if d.get("p") is not None
            and "concentration" in d and d.get("K") == 96]
@@ -677,6 +699,11 @@ def period_structure(cells, L, C, R):
             "per_doc_conc_p_format": "(p_detection, p_value_concentration_test)",
             "n_per_doc_p_le_alpha": sum(1 for _, pp in per_p.values()
                                         if pp is not None and pp <= ALPHA),
+            "per_doc_p_floor_note": (
+                # r32.1-COSMETIC: per-doc conc p насыщен на полу 1/(B+1) — max_obs≈6× базы
+                # ⇒ все перестановки ниже наблюдения ⇒ n_ge=0. Пер-doc тест НЕ дискриминирует
+                # за порогом значимости; сила результата — в значимости (≠шум), не в величине p.
+                f"per-doc conc p насыщен на полу 1/(B+1)≈0.001 (n_per_doc_p_le_alpha={sum(1 for _, pp in per_p.values() if pp is not None and pp <= ALPHA)}/{len(per_p)} значимых)"),
         }
     return out
 
@@ -1141,10 +1168,17 @@ def main():
     tail_l96, tail_c96 = _fracs96(L96m, "tail_frac"), _fracs96(C96m, "tail_frac")
     # r3.1 (fixreview #4): H2-гейт — median + доля >1 (robust к выбросам), не min
     # (пре-рег §3.3 фиксирует «detection-rate + концентрации»; min-гейт был ad-hoc fragile)
+    h2_test_present = "test" in pdet
     h2_ok = bool(pdet.get("test", {}).get("p_two_sided_exact", 1) <= ALPHA)
     if h2_ok and pagg:
         h2_ok = (pagg.get("median_concentration", 0) > 1
                  and pagg.get("frac_conc_above_1", 0) >= 0.8)
+    # r3.2 (fixreview #4): отсутствие теста (0<d<n не выполнено: d=0 или d=n) ≠
+    # отрицательный результат — отдельно not_testable, не not_confirmed.
+    if not h2_test_present:
+        h2_status = "not_testable (тест detection не определён: 0<d<n не выполнено на K=96 пуле)"
+    else:
+        h2_status = "confirmed" if h2_ok else "not_confirmed"
     if pof.get("median_L") is not None and pof.get("median_C") is not None:
         med_dir = ("L<C" if pof["median_L"] < pof["median_C"]
                    else ("L>C" if pof["median_L"] > pof["median_C"] else "равны"))
@@ -1152,7 +1186,17 @@ def main():
         med_dir = "n/a"
     h2p = pdet.get("test", {}).get("p_two_sided_exact")
     h1_v = pof.get("verdict", "n/a")
-    h1_short = h1_v.split(":")[0].strip()
+    # r3.2 (fixreview #1, критично): в r3.1 было h1_v.split(":")[0].strip() — для kill-вердикта
+    # "kill по пре-регу: ..." давало "kill по пре-регу" (не "kill") → h1_clauses.get → 'n/a',
+    # status нестандартный. startswith-диспетчер покрывает все три вердикта.
+    if h1_v.startswith("confirmed"):
+        h1_short = "confirmed"
+    elif h1_v.startswith("refuted"):
+        h1_short = "refuted"
+    elif h1_v.startswith("kill"):
+        h1_short = "kill"
+    else:
+        h1_short = "other"
     ksp = pof.get("ks", {}).get("p")
     ksp_txt = f"KS p={ksp:.1e}" if ksp is not None else "KS n/a"
     h1_clauses = {
@@ -1161,7 +1205,17 @@ def main():
         "kill": ("распределения неразличимы (KS p>0.05); период-2 не подтверждён "
                  "(G10: estimand слеп к p≥3)"),
         "confirmed": "loopy доки концентрируют отрицательную площадь на нечётных k (пре-рег подтверждён)",
+        "other": f"нестандартный вердикт (строка: {h1_v})",
     }
+    # r3.2 (fixreview #2): None-безопасное форматирование — _fracs96 возвращает None для
+    # пустого подмножества; f"{None:.3f}" — TypeError (latent crash).
+    def _fx(x, fmt=".3f"):
+        return format(x, fmt) if x is not None else "n/a"
+    h2_word = ("подтверждён" if h2_ok
+               else ("тест не определён (not_testable)" if not h2_test_present else "НЕ подтверждён"))
+    # r3.2 (fixreview #4): лид-фраза H2 — не «Положительный результат», если H2 не подтверждён
+    h2_lead = ("Положительный результат (H2, пре-рег аддендум 3)" if h2_ok
+               else "H2 (пре-рег аддендум 3)")
     h1_lead = (f"Период-2 как носитель отриц. площади: подтверждён" if h1_short == "confirmed"
                else f"Период-2 как носитель отриц. площади: не подтверждён")
     # r3.1 #2: локация — на K=96 пуле (как KS), guarded ratio
@@ -1171,16 +1225,16 @@ def main():
         f"{h1_lead} (H1: {h1_short}; {ksp_txt}, медианы {med_dir}) — {h1_clauses.get(h1_short, 'n/a')}. "
         f"G10: estimand odd_frac структурно слеп к периодам p≥3 (odd_frac(p=5,7)=0.500, p=8=0.586, "
         f"p=24=0.509) — предсказание «loopy→нечётные» было структурно near-null на этом пуле. "
-        f"Положительный результат (H2, пре-рег аддендум 3): "
-        f"period-structure {'подтверждён' if h2_ok else 'НЕ подтверждён'} — периодическая лаговая структура "
+        f"{h2_lead}: "
+        f"period-structure {h2_word} — периодическая лаговая структура "
         f"детектируется у loopy {pdet['loopy']['k96']['n_detected']}/{pdet['loopy']['k96']['n_total']} vs clean "
         f"{pdet['clean']['k96']['n_detected']}/{pdet['clean']['k96']['n_total']} (тест на K=96 пуле; "
         f"K=32-доки исключены)"
         f"{(' (exact p=' + format(h2p, '.2e') + ')') if h2p is not None else ''}"
         f"{('; концентрация A_neg по классам остатков mod p: median ' + format(pagg['median_concentration'], '.2f') + '× базы, top2_share ' + format(pagg['mean_top2_res_share'], '.3f')) if pagg else ''}; "
         f"анти-фаза p/2 НЕ носитель (anti_frac≈0). Локация отриц. площади резко различена и инвертирована "
-        f"относительно пре-рега (K=96 пул): loopy — в хвосте k≥9 (медиана {tail_l96:.3f} vs clean {tail_c96:.3f}), "
-        f"clean — на лаге 1 (k1 {k1c96:.3f} vs loopy {k1l96:.3f}{ratio_txt}). "
+        f"относительно пре-рега (K=96 пул): loopy — в хвосте k≥9 (медиана {_fx(tail_l96)} vs clean {_fx(tail_c96)}), "
+        f"clean — на лаге 1 (k1 {_fx(k1c96)} vs loopy {_fx(k1l96)}{ratio_txt}). "
         f"Распределение odd_frac у loopy бимодально, у clean унимодально; равенство средних — артефакт "
         f"смеси. Согласуется с T0.1: чистый путь платит на лаге 1, лупы размазывают плату периодически "
         f"по хвосту на фазе dom_residues mod p (интерпретация «граница лупа» — гипотеза, не результат) "
@@ -1199,14 +1253,15 @@ def main():
                          "интерпретируется как «не подтверждено», не как «опровергнуто механизмом»"),
         },
         "H2_period_structure": {
-            "status": "confirmed" if h2_ok else "not_confirmed",
+            "status": h2_status,
             "gate": "detection p≤α (K=96) ∧ median_concentration>1 ∧ frac(conc>1)≥0.8 (r3.1: min-гейт "
-                    "заменён — fragile к одному выбросу; min отчитан описательно)",
+                    "заменён — fragile к одному выбросу; r3.2: min — secondary/описательный, "
+                    "НЕ часть гейта — min отчитан в aggregate, читатель не должен путать)",
             "detection": pdet,
             "aggregate": pagg,
             "finding": ("loopy-доки несут периодическую лаговую структуру (p из пиков ρ); "
                         "отрицательная площадь организована по классам остатков mod p "
-                        f"(dom_residues; медиана концентрации {pagg.get('median_concentration', float('nan')):.2f}× базы) — "
+                        f"(dom_residues; медиана концентрации {_fx(pagg.get('median_concentration'), '.2f')}× базы) — "
                         "НЕ на анти-фазе p/2 (anti_frac≈0) и не на нечётных k; чистые — без периода, "
                         "площадь на лаге 1"),
         },
