@@ -312,6 +312,8 @@ def jacobian_gap(
     отчитывающийся по «bridge», инвертирует: bridge = 1 - jacobian_gap(...).
     Legacy-алиас `jacobian_bridge` удалён (имя bridge + направление GAP —
     ловушка инверсии метрики); инверсия живёт в экспериментальных ядрах.
+    Ключи артефактов: E-1…E-15 пишут `gap`, E-16a/b — `bridge`
+    (одна величина, противоположные направления — имя зафиксировано).
     """
     G_inv = _inverse_gramian(E_S)       # pinv(E_S^T E_S), диск-кэш (§paper §3)
     J_L_proj = _project_to_vocab(J_L, E_L)      # [K, D_L] @ [D_L, V] → [K, V]
@@ -324,7 +326,12 @@ def jacobian_gap(
 
 def _inverse_gramian(E: torch.Tensor) -> torch.Tensor:
     """(E^T E)^{-1} через torch.linalg.pinv (SVD); кэш: память + диск
-    (results/.gramians/), ключ = SHA-256(shape|device|E[0]|E[-1]|10 mid-rows) — см. §paper §3."""
+    (results/.gramians/), ключ = SHA-256(shape|device|E[0]|E[-1]|10 mid-rows) — см. §paper §3.
+    Полная матрица эмбеддингов V×D (248k×1024) для хеша слишком дорога ⇒ хеш —
+    по форме/device + представительным строкам (первая, последняя, 10 mid-строк
+    равномерно по глубине). Это репрезентативный, а не полный хеш: две разные
+    матрицы с совпадающими образцовыми строками (и формой) столкнутся в кэше;
+    ключ не включает версию torch/rcond — при смене модели/torch кэш чистить."""
     key = _gramian_key(E)
     if key not in _gramian_cache:
         path = os.path.join(_GRAMIAN_DIR, f"{key}.pt")
