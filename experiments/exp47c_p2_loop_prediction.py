@@ -189,7 +189,8 @@ def main():
                 raise SystemExit(
                     "lfm3: в npz нет ent_full/top1_full и нет TRIV_FIX — тривиальные "
                     "конкуренты считались бы по U-срезу (128 колонок) вместо вокабуляра. "
-                    "Перегенерируй exp48b (docs/regen_queue.md).")
+                    "Перегенерируй exp48b (npz без ent_full/top1_full; перегенерация трекалась в queue,"
+                    "файл — в git-истории).")
             kinds.add(kind)
             leaf, triv = build_feats(f, triv_kind=kind)
             T = leaf.shape[0]

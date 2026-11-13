@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""R11 (очередь `docs/regen_queue.md`): почему `basis_overlap_fresh` = 43.75 %.
+"""R11 (перегенерация, очередь — в git-истории): почему `basis_overlap_fresh` = 43.75 %.
 
 Мина ревью (`docs/E46+_review.md`, разбор был в `docs/E46+_answers.md`, удалён в `07c27df` —
 читать из git history; `docs/audit_40plus.md` жив):
