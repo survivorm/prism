@@ -47,11 +47,12 @@ def doc(name: str) -> str:
         return f.read()
 
 
-# Живые документы серии (05.11). Закрытые раунды свёрнуты в git history (коммит `07c27df`),
+# Живые документы серии (05.11; 13.11: leaf_dynamics.md свёрнут в git-историю, числа
+# E-47/E-48 — в paper.md §4.11). Закрытые раунды свёрнуты в git history (коммит `07c27df`),
 # поэтому «doc обязан цитировать артефакт» переносится на любой живой документ, куда материал
-# свёрнут: paper.md — утверждения, ref-exp.md — карточки и таблицы, leaf_dynamics.md — рабочая
-# серия. Смысл проверки тот же: число из артефакта обязано быть прочитано где-то в working set.
-LIVING = ("paper.md", "ref-exp.md", "leaf_dynamics.md")
+# свёрнут: paper.md — утверждения, ref-exp.md — карточки и таблицы. Смысл проверки тот же:
+# число из артефакта обязано быть прочитано где-то в working set.
+LIVING = ("paper.md", "ref-exp.md")
 
 
 def living_docs() -> str:
@@ -226,13 +227,19 @@ def check_e46() -> None:
 
 # ------------------------------------------------------- E-47 / E-48 против json
 def check_e47_e48() -> None:
-    d = doc("leaf_dynamics.md")
-    w = "E-47/E-48 ↔ leaf_dynamics.md"
+    d = doc("paper.md")
+    w = "E-47/E-48 ↔ paper.md §4.11"
+    # leaf_dynamics.md (рабочая серия) свёрнут в git-историю; числа E-47/E-48 — в
+    # paper §4.11. Знак-проверка и таблица E-48b ограничены секцией: в целом по paper
+    # встречаются посторонние совпадения (например +0.008 из E-52).
+    m411 = re.search(r"^### 4\.11\..*?(?=^### |\Z)", d, re.M | re.S)
+    chk(m411 is not None, f"{w}: в paper.md нет секции 4.11")
+    sec411 = m411.group(0) if m411 else d
 
     c = art_json("exp47c_p2_loop_prediction.json")
     for model, name in (("qwen", "Qwen"), ("lfm3", "LFM3")):
         v = c[model]["verdict"]
-        m = re.search(rf"^\|\s*{name}\s*\|(.*)$", d, re.M)
+        m = re.search(rf"^\s*\|\s*{name}\s*\|(.*)$", sec411, re.M)
         chk(m is not None, f"{w}: нет строки {name} в таблице P2")
         if not m:
             continue
@@ -245,13 +252,13 @@ def check_e47_e48() -> None:
             except ValueError:
                 ok = False
             chk(ok, f"{w}: {name}/{lbl} — docs {got!r}, артефакт {want[i]:+.3f}")
-        # обратного знака нигде в docs быть не должно (именно так и появился прежний «−0.017»:
+        # обратного знака нигде в секции быть не должно (именно так и появился прежний «−0.017»:
         # знак у LFM3 переписали «по аналогии» с Qwen, где он и правда отрицательный)
         d_auc = v["delta_auc_all_vs_triv"]
         if abs(d_auc) > 1e-9:
             opp = f"−{abs(d_auc):.3f}" if d_auc > 0 else f"+{abs(d_auc):.3f}"
-            chk(re.search(r"(?<![\d.])" + re.escape(opp) + r"(?![\d])", d) is None,
-                f"{w}: {name}: в docs встречается противоположный знак ΔAUC ({opp})")
+            chk(re.search(r"(?<![\d.])" + re.escape(opp) + r"(?![\d])", sec411) is None,
+                f"{w}: {name}: в секции встречается противоположный знак ΔAUC ({opp})")
 
     b = art_json("exp47b_gen_kinematics.json")
     brows = b["docs"]
@@ -288,14 +295,12 @@ def check_e47_e48() -> None:
 
     g = art_json("exp48b_lfm3_gen_kinematics.json")
     gd = g["docs"]
-    # §9.5: таблица доменов есть и в §8.1 (prompt-режим, CI), поэтому ищем только после заголовка 9.5
-    m95 = re.search(r"^### 9\.5\..*?(?=^### |^## )", d, re.M | re.S)
-    chk(m95 is not None, "E-48b: в leaf_dynamics.md нет секции 9.5")
-    sec95 = m95.group(0) if m95 else d
+    # таблица доменов E-48b — в §4.11 (раньше leaf_dynamics §9.5; prompt-режимная таблица
+    # E-47 P0 там же, строки доменов различаются ячейкой «X/док»)
     for dom in ("wiki", "math", "code", "chat"):
         sel = [r for r in gd if r["dom"] == dom]
-        m = re.search(rf"^\|\s*{dom}\s*\|(.*)$", sec95, re.M)
-        chk(m is not None, f"E-48b: нет строки {dom} в §9.5")
+        m = re.search(rf"^\s*\|\s*{dom}\s*\|(.*)$", sec411, re.M)
+        chk(m is not None, f"E-48b: нет строки {dom} в §4.11")
         if not m:
             continue
         cells = [x.strip() for x in m.group(1).split("|") if x.strip()]
