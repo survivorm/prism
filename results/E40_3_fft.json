@@ -2,7 +2,7 @@
   "experiment": "E-40.3",
   "tz": "docs/e40_todo.md §5",
   "core_version": "v1.0.0",
-  "timestamp": "2026-11-03T23:29:01+0300",
+  "timestamp": "2026-11-13T19:38:43+0300",
   "observational": true,
   "new_forwards": 0,
   "inputs": {
@@ -397,5 +397,5 @@
       "description": "E-40.2 не публикует linear_sig ⇒ «локальный фильтр» проверен локально, но нулём по МАКСИМУМУ по ω (точечный σ при выбранном argmax ω завышен: 4…6 на всех 10 ячейках)"
     }
   ],
-  "wall_sec": 56.4
+  "wall_sec": 159.4
 }
