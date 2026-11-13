@@ -1,0 +1,42 @@
+AT0_3 T0.3 «Кто несёт отрицательную площадь» (disk-only)
+py3.12.9 np2.5.3 threads=6/6/6
+G1′: field.py sha bcc607c561f95e3e + _selfcheck
+G15: layer_types сверены с config config.json sha b90b86f35c8e6925 (full 0-based=npz [3, 7, 11, 15, 19, 23]; в LAYERS full=[11, 23])
+docs=96 (gen=64 own=16 cor=16)
+loopy n=41 clean n=53 remainder n=2 ['own_w0', 'own_w4']
+G2: клеток (doc,L,obj)=1440 present=1440
+G1_gram max_resid=1.035e-14 ok=True  G3 r=N·f_dc bad=0  Telescope max=1.666e-15 ok=True
+G0a_tpu_curves: dip_L23 meta-vs-recomputed n=32 skipped=0 max_abs_dev=2.083e-04 ok
+PRIMARY (odd_frac, du_unit L23, L vs C, K=96): KS d=0.4825 p=0.0010 | median d=-0.0903 p=0.0010 | mean d=+0.0044 p=0.8761 (mean 0.6274/0.6230, med 0.5214/0.6117)
+  PRIMARY odd_frac_k24 (full pool, k=1..24): d=-0.0885 p=0.0060 n=41/53
+ROBUST (odd_frac, h_raw L23, L vs C, K=96): KS d=0.4825 p=0.0010 | median d=-0.0869 p=0.0020 | mean d=+0.0042 p=0.8821 (mean 0.6269/0.6227, med 0.5214/0.6083)
+  ROBUST odd_frac_k24 (full pool, k=1..24): d=-0.0876 p=0.0060 n=41/53
+DESCRIPT (odd_frac, v_tangent L23, L vs C, K=96): KS d=0.5901 p=0.0010 | median d=-0.4705 p=0.0010 | mean d=-0.3008 p=0.0010 (mean 0.6829/0.9837, med 0.5295/1.0000)
+  DESCRIPT odd_frac_k24 (full pool, k=1..24): d=-0.2354 p=0.0010 n=41/53
+  DESCRIPT v_tangent: FORCED outcome — clean mean(b1)=0.951 > 0.8: отрицателен только лаг 1 ⇒ odd_frac≡1 тождественно, L<C гарантирован; p НЕ цитировать (r3 §3.5, C4)
+  tail_frac вторично (primary, K=96): L=0.8583752093184516 C=0.565693402950349
+  TAIL-ПРЕДСКАЗАНИЕ (пре-рег: C.tail > L.tail): du_unit=refuted h_raw=refuted v_tangent=refuted
+  стратум loopy (du_unit): n=41 odd_frac=0.521420595657899 tail_frac=0.8924561910436641 A_neg=-5.6122530591133515
+  стратум clean (du_unit): n=53 odd_frac=0.6124756819281585 tail_frac=0.5396370531359403 A_neg=-1.148413563337563
+  стратум remainder (du_unit): n=2 odd_frac=0.617406749689225 tail_frac=0.4677736705880616 A_neg=-1.042819944625691
+period-structure (du_unit L23, тест на K=96): loopy 30/41 (K-full 30/41, K={'96': 41}) | clean 0/51 (K-full 0/53, K={'32': 2, '96': 51})
+  detected loopy p=[7, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 24, 27, 31, 32]
+  detection-rate test (exact two-sided, K=96): p=2.181e-07
+  aggregate (detected loopy, K=96): mean_conc=5.91 median=6.06 min=2.43 frac>1=1.000 top2_share=0.632 anti_frac=0.029 per-doc p≤0.05: 30/30
+copy-rate квантили (резы q25/q75; n_low=20 n_mid=41 n_high=19, q25=0.215 q75=0.937)
+  домен chat: n=16 nondeg=11 claim=нет (n<12)
+  домен code: n=16 nondeg=8 claim=нет (n<12)
+  домен corpus: n=16 nondeg=16 claim=да
+  домен math: n=16 nondeg=16 claim=да
+  домен own: n=16 nondeg=1 claim=нет (n<12)
+  домен wiki: n=16 nondeg=1 claim=нет (n<12)
+  пул (не-claim домены): n=21
+  source-strata gen: L n=28 C n=36 claim=да
+  source-strata own: L n=13 C n=1 claim=нет (n<12, no claim)
+  source-strata corpus: L n=0 C n=14 claim=нет (n<12, no claim)
+  source-strata domain_chat: L n=5 C n=11 claim=нет (n<12, no claim)
+  source-strata domain_code: L n=8 C n=8 claim=нет (n<12, no claim)
+layer-type (gen, full vs linear): n=64 d_obs=-0.01579541664497321 p=0.000999000999000999
+store: /home/survivor/work/prism/results/AT0/store/16c9a58f26d13e6c.json (sha 16c9a58f26d13e6c)
+written: /home/survivor/work/prism/results/AT0/AT0_3_AREA.json, /home/survivor/work/prism/results/AT0/AT0_3_manifest.json, /home/survivor/work/prism/results/AT0/AT0_3_run.log
+AT0_3 gates: ALL PASS

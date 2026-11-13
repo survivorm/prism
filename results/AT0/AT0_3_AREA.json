@@ -1,0 +1,3462 @@
+{
+ "meta": {
+  "script_sha256": "7398bace7ea1a81656b57244d4f59f75edbaf9ce1b2040e960da0d12934cbbee",
+  "field_sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
+  "gen_sha256": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
+  "own_sha256": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198",
+  "cor_sha256": "5f42a08442a5d3bcb8d7c4de5c9658340c0378a917a5e633b9b2aa589ceac125",
+  "layers": [
+   1,
+   5,
+   11,
+   17,
+   23
+  ],
+  "layer_types": {
+   "1": "linear_attention",
+   "5": "linear_attention",
+   "11": "full_attention",
+   "17": "linear_attention",
+   "23": "full_attention"
+  },
+  "layer_indexing": "0-based (hidden_states[L+1]; L23=hidden_states[n_layers], exp62_gen.py:42)",
+  "layer_types_source": {
+   "config": "config.json",
+   "config_sha256": "b90b86f35c8e6925ef74ee04d0e758f0a845c83a42089ad82bbaa948de9b4204",
+   "full_labels_npz": [
+    3,
+    7,
+    11,
+    15,
+    19,
+    23
+   ],
+   "note": "r3: LAYER_TYPE выведен из config.text_config.layer_types (гейт G15); npz-метка L = 0-based слой L (hidden_states[L+1])"
+  },
+  "objects": [
+   "h_raw",
+   "du_unit",
+   "v_tangent"
+  ],
+  "primary": {
+   "object": "du_unit",
+   "layer": 23
+  },
+  "secondary": {
+   "object": "h_raw",
+   "layer": 23
+  },
+  "descriptive": {
+   "object": "v_tangent",
+   "layer": 23
+  },
+  "K_alphabet": [
+   24,
+   32,
+   96
+  ],
+  "env": {
+   "python": "3.12.9",
+   "numpy": "2.5.3",
+   "OMP": "6",
+   "OPENBLAS": "6",
+   "MKL": "6"
+  }
+ },
+ "prereg": {
+  "source": "docs/AT0_3_prereg.md + ТЗ v1.1 §1.5 T0.3",
+  "sign_correction": "[ИСТОРИЧЕСКАЯ справка о правке v1.0→v1.1, НЕ актуальная гипотеза; актуальные тесты — см. test/decision, r3.1 #5] период-2 ρ(k)=(−1)^k ⇒ отриц. площадь на нечётных k (осн. k=1), полож. на чётных (ТЗ v1.0 «k=1 и чётных» — ошибка); Σρ̂→−1/2 только при K→N−1 (при K≤96 |Σρ̂|≪1/2 — величина несущественна, несёт знак)",
+  "prediction": "[Исходное предсказание v1.1; r3: H1 оценивается KS/медианами, H2 — period-structure; это предсказание опровергнуто (loopy — в хвосте, не на нечётных k; clean — на лаге 1, не «в хвосте k≥9») — см. verdict.H1_period2 и tail_prediction, r3.1 #5] loopy: отриц. площадь на нечётных k; clean: в хвосте k≥9",
+  "kill": "одинаковое распределение у loopy и clean (du_unit) ⇒ период-2 не носитель",
+  "objects_roles": {
+   "du_unit": "первичный (зубы период-2: r≈0.0048, r_max<1, телескоп)",
+   "h_raw": "вторичный robustness (тот же тест, то же пре-рег направление L>C; не co-primary — radial/norm-канал может имитировать период-2)",
+   "v_tangent": "описательный (двухсторонний, no claim; источник loopy-стратификатора)"
+  },
+  "primary_estimand": "odd_frac (du_unit, L23), frac=Σ_{k∈odd} neg(k)/Σ_k neg(k), neg(k)=min(rho(k),0), rho=c(k)/c(0) (T-norm, Σρ̂ частичная сумма); docs с A_neg==0 исключены (no_negative_area, guard)",
+  "secondary_estimand": "odd_frac (h_raw, L23), тот же тест, пре-рег направление L>C (robustness; mismatch с первичным — отчёт)",
+  "descriptive_estimand": "odd_frac (v_tangent, L23), двухсторонний, направление не заявлено, no claim (горб-объект по T0.1)",
+  "odd_frac_vs_excess": "odd_frac (локация отриц. площади) ≠ знак excess(3,4) (T0.1: v_tangent горб +0.0121, h_raw/du_unit анти-горб −0.0134/−0.0137) — объектный знак обосновывает выбор объекта, не направление L>C (оно — из ТЗ)",
+  "cross_object_stratifier": "L/C стратифицированы по v_tangent (dip_V,med L23 > 0.95 или wiki_0/4), первичный эстиманд — du_unit: cross-object стратификация (объявлено)",
+  "strata": {
+   "loopy": "loopy_ladder (max_{k≥2} dip>0.95 или wiki_0/4)",
+   "clean": "non-degenerate (degen_tz=False)",
+   "remainder": "degen ∧ ¬loopy (отчёт, n<12)"
+  },
+  "test": "r3 §3.2: PRIMARY=two-sided permutation KS (распределения; пре-рег kill-условие «одинаковое РАСПРЕДЕЛЕНИЕ»), SECONDARY=permutation на разности медиан и mean (mean_L − mean_C), B=1000, seed=117, p=(1+n_ge)/(B+1); первичный пул: K=96 (T0.1 P4); robustness: odd_frac_k24 (полоса k=1..24, полный пул, K-гомогенен)",
+  "alpha": 0.05,
+  "decision": {
+   "confirmed": "KS p≤α ∧ медианы L>C (du_unit)",
+   "kill": "KS p>α (du_unit) — «не подтверждено»; G10: estimand слеп к p≥3",
+   "refuted": "KS p≤α ∧ медианы L<C (du_unit) — различимо, направление против пре-рега",
+   "descriptive": "v_tangent — двухсторонний, no claim; forced_outcome при clean b1>0.8",
+   "H2_period_structure": "detection-rate (loopy vs clean, exact binomial) + concentration > 1 (r3 §3.3)"
+  },
+  "n12_rule": "доменное утверждение при n_nondeg≥12",
+  "copy_rate_def": "lk4 (канон exp64_b4_battery.py:25-32): доля позиций, где 4-грам (t-3..t) встречался раньше и предсказал t+1; окно hit[3:383] = 380 позиций (r2-фикс: было hit[4:383] — off-by-one против пре-рега «позиции [3,382]»); только доки с токенами (80/96: gen 64 + own 16; corpus 0/16); квантили — резы q25/q75 (low≤q25, mid(q25,q75], high>q75; 25/50/25, не равные трети)",
+  "bans": "pooled-фит; Σ на Δ_med; min/max-бутстрап как CI; домены n<12; dip без индексов"
+ },
+ "gates": {
+  "G0a_provenance": {
+   "sha256": {
+    "gen_layers": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
+    "P1_own": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198",
+    "P2_corpus": "5f42a08442a5d3bcb8d7c4de5c9658340c0378a917a5e633b9b2aa589ceac125"
+   },
+   "match_AT0_1": {
+    "gen_layers": true,
+    "P1_own": true,
+    "P2_corpus": true
+   },
+   "gen_sha_ok": "64/64 (AT0_1 G0b_gen_sha; источники не менялись — sha-совпадение)",
+   "corpus": "not_testable_no_tokens (G16): 0/16 доков с токенами — source не токен-верифицирован; ВКЛЮЧЁН в стратумы по пре-рег-дизайну (прецедент AT0_1, clean n=53); кривые верифицированы row-пересчётом ниже"
+  },
+  "G0a_tpu_curves": {
+   "finding": "P1_own _hn-поле — баг продюсера (колонные нормы; AT0_1 G0a_tpu_hn_field); a1.load_source пересчитывает row-нормы из raw-строк (_hn-поле не читает)",
+   "check": "L23: dip, пересчитанный из (U, hn), vs продюсерские meta-кривые (AT0_1 gate_g0a_tpu) — проверяет, что h — тот, из которого строились кривые",
+   "r3_note": "r3-проверка U*hn==h была тавтологией (u, hn считаются из того же h для state-доков; dev~1e-16 на любом npz) — удалена (r3.1 fixreview #1); provenance дополнительно покрывается SHA-сверкой match_AT0_1",
+   "n_docs": 32,
+   "n_skipped": 0,
+   "vacuous": false,
+   "max_abs_dev": 0.00020829041663661396,
+   "ok": true,
+   "threshold": 0.001,
+   "threshold_note": "fp16-точность TPU-рядов ~1e-3 (AT0_1: dev ≤ 1e-3 ⇒ ряд годен)"
+  },
+  "G1_gram": {
+   "max_resid": 1.0351962342891596e-14,
+   "ok": true,
+   "threshold": 1e-10
+  },
+  "G3_rNfDC": {
+   "bad": 0,
+   "ok": true,
+   "rel": 1e-09
+  },
+  "Telescope": {
+   "max": 1.6655420329658838e-15,
+   "ok": true,
+   "threshold": 1e-06
+  },
+  "G2_cells": {
+   "n_cells": 1440,
+   "n_present": 1440
+  },
+  "G15_layer_types": {
+   "config_sha256": "b90b86f35c8e6925ef74ee04d0e758f0a845c83a42089ad82bbaa948de9b4204",
+   "config": "config.json",
+   "full_labels_npz": [
+    3,
+    7,
+    11,
+    15,
+    19,
+    23
+   ],
+   "mapping": {
+    "1": "linear_attention",
+    "5": "linear_attention",
+    "11": "full_attention",
+    "17": "linear_attention",
+    "23": "full_attention"
+   },
+   "ok": true,
+   "note": "r3: LAYER_TYPE сверен с config.text_config.layer_types"
+  },
+  "G1p_field": {
+   "sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
+   "selfcheck": "ok"
+  }
+ },
+ "results": {
+  "primary_test": {
+   "object": "du_unit",
+   "mode": "primary",
+   "pool": {
+    "K": 96,
+    "n_L": 41,
+    "n_C": 51,
+    "n_L_with_area": 41,
+    "n_C_with_area": 51,
+    "docs_L": [
+     "chat_0",
+     "chat_10",
+     "chat_15",
+     "chat_3",
+     "chat_9",
+     "code_0",
+     "code_1",
+     "code_10",
+     "code_13",
+     "code_14",
+     "code_3",
+     "code_6",
+     "code_8",
+     "own_w1",
+     "own_w10",
+     "own_w11",
+     "own_w12",
+     "own_w14",
+     "own_w15",
+     "own_w2",
+     "own_w3",
+     "own_w5",
+     "own_w6",
+     "own_w7",
+     "own_w8",
+     "own_w9",
+     "wiki_0",
+     "wiki_1",
+     "wiki_10",
+     "wiki_11",
+     "wiki_12",
+     "wiki_14",
+     "wiki_15",
+     "wiki_2",
+     "wiki_3",
+     "wiki_4",
+     "wiki_5",
+     "wiki_6",
+     "wiki_7",
+     "wiki_8",
+     "wiki_9"
+    ],
+    "docs_C": [
+     "chat_1",
+     "chat_11",
+     "chat_12",
+     "chat_13",
+     "chat_14",
+     "chat_2",
+     "chat_4",
+     "chat_5",
+     "chat_6",
+     "chat_7",
+     "chat_8",
+     "code_11",
+     "code_12",
+     "code_15",
+     "code_2",
+     "code_4",
+     "code_5",
+     "code_7",
+     "code_9",
+     "cor_w0",
+     "cor_w1",
+     "cor_w10",
+     "cor_w12",
+     "cor_w13",
+     "cor_w14",
+     "cor_w15",
+     "cor_w2",
+     "cor_w3",
+     "cor_w4",
+     "cor_w5",
+     "cor_w6",
+     "cor_w7",
+     "cor_w9",
+     "math_0",
+     "math_1",
+     "math_10",
+     "math_11",
+     "math_12",
+     "math_13",
+     "math_14",
+     "math_15",
+     "math_2",
+     "math_3",
+     "math_4",
+     "math_5",
+     "math_6",
+     "math_7",
+     "math_8",
+     "math_9",
+     "own_w13",
+     "wiki_13"
+    ]
+   },
+   "n_no_negative_area": {
+    "L": 0,
+    "C": 0
+   },
+   "B": 1000,
+   "seed": 117,
+   "odd_frac": {
+    "ks": {
+     "stat_obs": 0.482544237207078,
+     "p": 0.000999000999000999,
+     "n_L": 41,
+     "n_C": 51,
+     "B": 1000
+    },
+    "median": {
+     "stat_obs": -0.09031712287071525,
+     "p": 0.000999000999000999,
+     "n_L": 41,
+     "n_C": 51,
+     "B": 1000
+    },
+    "mean": {
+     "d_obs": 0.0044181087586929735,
+     "p": 0.8761238761238761,
+     "mean_L": 0.6273837003813592,
+     "mean_C": 0.6229655916226662,
+     "n_L": 41,
+     "n_C": 51,
+     "B": 1000
+    },
+    "mean_L": 0.6273837003813592,
+    "mean_C": 0.6229655916226662,
+    "median_L": 0.521420595657899,
+    "median_C": 0.6117377185286142,
+    "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
+   },
+   "odd_frac_k24": {
+    "test": {
+     "d_obs": -0.08851734112942189,
+     "p": 0.005994005994005994,
+     "mean_L": 0.6427528022586656,
+     "mean_C": 0.7312701433880875,
+     "n_L": 41,
+     "n_C": 53,
+     "B": 1000
+    },
+    "pool": {
+     "n_L": 41,
+     "n_C": 53,
+     "band": "k=1..24",
+     "K": "full"
+    },
+    "note": "K-гомогенный эстиманд (r3 §3.1): одна полоса для всех доков"
+   },
+   "tail_frac_secondary": {
+    "mean_L": 0.8583752093184516,
+    "mean_C": 0.565693402950349,
+    "status": "refuted (L.tail > C.tail — пре-рег-предсказание «чистые в хвосте» не подтвердилось)",
+    "note": "пре-рег-предсказание #2: чистые — в хвосте k≥9 (C.tail > L.tail); отчитано явно (fail-loud, r2)"
+   },
+   "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
+  },
+  "robustness_test": {
+   "object": "h_raw",
+   "mode": "robustness",
+   "pool": {
+    "K": 96,
+    "n_L": 41,
+    "n_C": 51,
+    "n_L_with_area": 41,
+    "n_C_with_area": 51,
+    "docs_L": [
+     "chat_0",
+     "chat_10",
+     "chat_15",
+     "chat_3",
+     "chat_9",
+     "code_0",
+     "code_1",
+     "code_10",
+     "code_13",
+     "code_14",
+     "code_3",
+     "code_6",
+     "code_8",
+     "own_w1",
+     "own_w10",
+     "own_w11",
+     "own_w12",
+     "own_w14",
+     "own_w15",
+     "own_w2",
+     "own_w3",
+     "own_w5",
+     "own_w6",
+     "own_w7",
+     "own_w8",
+     "own_w9",
+     "wiki_0",
+     "wiki_1",
+     "wiki_10",
+     "wiki_11",
+     "wiki_12",
+     "wiki_14",
+     "wiki_15",
+     "wiki_2",
+     "wiki_3",
+     "wiki_4",
+     "wiki_5",
+     "wiki_6",
+     "wiki_7",
+     "wiki_8",
+     "wiki_9"
+    ],
+    "docs_C": [
+     "chat_1",
+     "chat_11",
+     "chat_12",
+     "chat_13",
+     "chat_14",
+     "chat_2",
+     "chat_4",
+     "chat_5",
+     "chat_6",
+     "chat_7",
+     "chat_8",
+     "code_11",
+     "code_12",
+     "code_15",
+     "code_2",
+     "code_4",
+     "code_5",
+     "code_7",
+     "code_9",
+     "cor_w0",
+     "cor_w1",
+     "cor_w10",
+     "cor_w12",
+     "cor_w13",
+     "cor_w14",
+     "cor_w15",
+     "cor_w2",
+     "cor_w3",
+     "cor_w4",
+     "cor_w5",
+     "cor_w6",
+     "cor_w7",
+     "cor_w9",
+     "math_0",
+     "math_1",
+     "math_10",
+     "math_11",
+     "math_12",
+     "math_13",
+     "math_14",
+     "math_15",
+     "math_2",
+     "math_3",
+     "math_4",
+     "math_5",
+     "math_6",
+     "math_7",
+     "math_8",
+     "math_9",
+     "own_w13",
+     "wiki_13"
+    ]
+   },
+   "n_no_negative_area": {
+    "L": 0,
+    "C": 0
+   },
+   "B": 1000,
+   "seed": 117,
+   "odd_frac": {
+    "ks": {
+     "stat_obs": 0.482544237207078,
+     "p": 0.000999000999000999,
+     "n_L": 41,
+     "n_C": 51,
+     "B": 1000
+    },
+    "median": {
+     "stat_obs": -0.08694403101391224,
+     "p": 0.001998001998001998,
+     "n_L": 41,
+     "n_C": 51,
+     "B": 1000
+    },
+    "mean": {
+     "d_obs": 0.004234116860692305,
+     "p": 0.8821178821178821,
+     "mean_L": 0.6269059754109089,
+     "mean_C": 0.6226718585502166,
+     "n_L": 41,
+     "n_C": 51,
+     "B": 1000
+    },
+    "mean_L": 0.6269059754109089,
+    "mean_C": 0.6226718585502166,
+    "median_L": 0.5213680087527982,
+    "median_C": 0.6083120397667104,
+    "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
+   },
+   "odd_frac_k24": {
+    "test": {
+     "d_obs": -0.0875956318024409,
+     "p": 0.005994005994005994,
+     "mean_L": 0.6427733419945676,
+     "mean_C": 0.7303689737970085,
+     "n_L": 41,
+     "n_C": 53,
+     "B": 1000
+    },
+    "pool": {
+     "n_L": 41,
+     "n_C": 53,
+     "band": "k=1..24",
+     "K": "full"
+    },
+    "note": "K-гомогенный эстиманд (r3 §3.1): одна полоса для всех доков"
+   },
+   "tail_frac_secondary": {
+    "mean_L": 0.8560722286954505,
+    "mean_C": 0.5681340697922739,
+    "status": "refuted (L.tail > C.tail — пре-рег-предсказание «чистые в хвосте» не подтвердилось)",
+    "note": "пре-рег-предсказание #2: чистые — в хвосте k≥9 (C.tail > L.tail); отчитано явно (fail-loud, r2)"
+   },
+   "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
+  },
+  "descriptive_test": {
+   "object": "v_tangent",
+   "mode": "descriptive",
+   "pool": {
+    "K": 96,
+    "n_L": 41,
+    "n_C": 51,
+    "n_L_with_area": 41,
+    "n_C_with_area": 51,
+    "docs_L": [
+     "chat_0",
+     "chat_10",
+     "chat_15",
+     "chat_3",
+     "chat_9",
+     "code_0",
+     "code_1",
+     "code_10",
+     "code_13",
+     "code_14",
+     "code_3",
+     "code_6",
+     "code_8",
+     "own_w1",
+     "own_w10",
+     "own_w11",
+     "own_w12",
+     "own_w14",
+     "own_w15",
+     "own_w2",
+     "own_w3",
+     "own_w5",
+     "own_w6",
+     "own_w7",
+     "own_w8",
+     "own_w9",
+     "wiki_0",
+     "wiki_1",
+     "wiki_10",
+     "wiki_11",
+     "wiki_12",
+     "wiki_14",
+     "wiki_15",
+     "wiki_2",
+     "wiki_3",
+     "wiki_4",
+     "wiki_5",
+     "wiki_6",
+     "wiki_7",
+     "wiki_8",
+     "wiki_9"
+    ],
+    "docs_C": [
+     "chat_1",
+     "chat_11",
+     "chat_12",
+     "chat_13",
+     "chat_14",
+     "chat_2",
+     "chat_4",
+     "chat_5",
+     "chat_6",
+     "chat_7",
+     "chat_8",
+     "code_11",
+     "code_12",
+     "code_15",
+     "code_2",
+     "code_4",
+     "code_5",
+     "code_7",
+     "code_9",
+     "cor_w0",
+     "cor_w1",
+     "cor_w10",
+     "cor_w12",
+     "cor_w13",
+     "cor_w14",
+     "cor_w15",
+     "cor_w2",
+     "cor_w3",
+     "cor_w4",
+     "cor_w5",
+     "cor_w6",
+     "cor_w7",
+     "cor_w9",
+     "math_0",
+     "math_1",
+     "math_10",
+     "math_11",
+     "math_12",
+     "math_13",
+     "math_14",
+     "math_15",
+     "math_2",
+     "math_3",
+     "math_4",
+     "math_5",
+     "math_6",
+     "math_7",
+     "math_8",
+     "math_9",
+     "own_w13",
+     "wiki_13"
+    ]
+   },
+   "n_no_negative_area": {
+    "L": 0,
+    "C": 0
+   },
+   "B": 1000,
+   "seed": 117,
+   "odd_frac": {
+    "ks": {
+     "stat_obs": 0.5901482544237207,
+     "p": 0.000999000999000999,
+     "n_L": 41,
+     "n_C": 51,
+     "B": 1000
+    },
+    "median": {
+     "stat_obs": -0.4705259869305485,
+     "p": 0.000999000999000999,
+     "n_L": 41,
+     "n_C": 51,
+     "B": 1000
+    },
+    "mean": {
+     "d_obs": -0.3008048367783792,
+     "p": 0.000999000999000999,
+     "mean_L": 0.6829019290882898,
+     "mean_C": 0.983706765866669,
+     "n_L": 41,
+     "n_C": 51,
+     "B": 1000
+    },
+    "mean_L": 0.6829019290882898,
+    "mean_C": 0.983706765866669,
+    "median_L": 0.5294740130694515,
+    "median_C": 1.0,
+    "verdict": "descriptive: FORCED outcome (clean odd_frac≡1 по построению: b1≈1); p не цитировать; no claim; также циркулярно (стратификатор = тестируемый объект)"
+   },
+   "odd_frac_k24": {
+    "test": {
+     "d_obs": -0.23543506576076634,
+     "p": 0.000999000999000999,
+     "mean_L": 0.7555849692528265,
+     "mean_C": 0.9910200350135928,
+     "n_L": 41,
+     "n_C": 53,
+     "B": 1000
+    },
+    "pool": {
+     "n_L": 41,
+     "n_C": 53,
+     "band": "k=1..24",
+     "K": "full"
+    },
+    "note": "K-гомогенный эстиманд (r3 §3.1): одна полоса для всех доков"
+   },
+   "tail_frac_secondary": {
+    "mean_L": 0.8494627322188183,
+    "mean_C": 0.04678380156610664,
+    "status": "refuted (L.tail > C.tail — пре-рег-предсказание «чистые в хвосте» не подтвердилось)",
+    "note": "пре-рег-предсказание #2: чистые — в хвосте k≥9 (C.tail > L.tail); отчитано явно (fail-loud, r2)"
+   },
+   "forced_outcome": true,
+   "forced_outcome_detail": "clean mean(b1)=0.951 > 0.8: отрицателен только лаг 1 ⇒ odd_frac≡1 тождественно, L<C гарантирован; p НЕ цитировать (r3 §3.5, C4)",
+   "verdict": "descriptive: FORCED outcome (clean odd_frac≡1 по построению: b1≈1); p не цитировать; no claim; также циркулярно (стратификатор = тестируемый объект)"
+  },
+  "period_structure": {
+   "object": "du_unit",
+   "layer": 23,
+   "detection_rule": "p = мин. k≥2: ρ(k)≥0.9 ∧ ρ(2k)≥0.81 (гармоника)",
+   "K_note": "r3.1 #3: K=32 → p∈2..16, K=96 → p∈2..48 — detection-rate на смешанном пуле confounded by K; первичный тест — на K=96 подмножестве, per-K разбивка отчитана",
+   "per_doc": {
+    "loopy": {
+     "chat_0": {
+      "p": 15,
+      "K": 96,
+      "max_res_share": 0.328706782240904,
+      "top2_res_share": 0.6066542880949586,
+      "concentration": 4.93060173361356,
+      "dom_residues": [
+       1,
+       14
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.06666666666666667,
+      "conc_perm": {
+       "max_obs": 0.328706782240904,
+       "n_neg": 52,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "chat_10": {
+      "p": 27,
+      "K": 96,
+      "max_res_share": 0.35556445315540985,
+      "top2_res_share": 0.612590237911383,
+      "concentration": 9.600240235196067,
+      "dom_residues": [
+       1,
+       26
+      ],
+      "anti_frac": 0.030954118071774846,
+      "baseline_max": 0.037037037037037035,
+      "conc_perm": {
+       "max_obs": 0.35556445315540985,
+       "n_neg": 45,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "chat_15": {
+      "p": 8,
+      "K": 96,
+      "max_res_share": 0.33053799599712547,
+      "top2_res_share": 0.6385565648182105,
+      "concentration": 2.6443039679770037,
+      "dom_residues": [
+       1,
+       7
+      ],
+      "anti_frac": 0.0322419919619362,
+      "baseline_max": 0.125,
+      "conc_perm": {
+       "max_obs": 0.33053799599712547,
+       "n_neg": 84,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "chat_3": {
+      "p": 20,
+      "K": 96,
+      "max_res_share": 0.389487388866844,
+      "top2_res_share": 0.6904273443613347,
+      "concentration": 7.7897477773368795,
+      "dom_residues": [
+       1,
+       19
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.05,
+      "conc_perm": {
+       "max_obs": 0.389487388866844,
+       "n_neg": 58,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "chat_9": {
+      "p": null,
+      "K": 96
+     },
+     "code_0": {
+      "p": 11,
+      "K": 96,
+      "max_res_share": 0.4652344127962537,
+      "top2_res_share": 0.8691778608557883,
+      "concentration": 5.117578540758791,
+      "dom_residues": [
+       1,
+       10
+      ],
+      "anti_frac": 0.07507868385179906,
+      "baseline_max": 0.09090909090909091,
+      "conc_perm": {
+       "max_obs": 0.4652344127962537,
+       "n_neg": 70,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "code_1": {
+      "p": 24,
+      "K": 96,
+      "max_res_share": 0.2688864349187071,
+      "top2_res_share": 0.5187952205904627,
+      "concentration": 6.453274438048971,
+      "dom_residues": [
+       1,
+       23
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.041666666666666664,
+      "conc_perm": {
+       "max_obs": 0.2688864349187071,
+       "n_neg": 72,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "code_10": {
+      "p": null,
+      "K": 96
+     },
+     "code_13": {
+      "p": 7,
+      "K": 96,
+      "max_res_share": 0.34706499423689186,
+      "top2_res_share": 0.6737481482911992,
+      "concentration": 2.429454959658243,
+      "dom_residues": [
+       1,
+       6
+      ],
+      "anti_frac": 0.18253876669936175,
+      "baseline_max": 0.14285714285714285,
+      "conc_perm": {
+       "max_obs": 0.34706499423689186,
+       "n_neg": 83,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "code_14": {
+      "p": 9,
+      "K": 96,
+      "max_res_share": 0.42580719369312126,
+      "top2_res_share": 0.8042790834321019,
+      "concentration": 3.8322647432380914,
+      "dom_residues": [
+       1,
+       8
+      ],
+      "anti_frac": 0.08826757136546595,
+      "baseline_max": 0.1111111111111111,
+      "conc_perm": {
+       "max_obs": 0.42580719369312126,
+       "n_neg": 86,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "code_3": {
+      "p": null,
+      "K": 96
+     },
+     "code_6": {
+      "p": 32,
+      "K": 96,
+      "max_res_share": 0.2748404480148685,
+      "top2_res_share": 0.5270432982491546,
+      "concentration": 8.794894336475792,
+      "dom_residues": [
+       1,
+       31
+      ],
+      "anti_frac": 0.0016079992810931576,
+      "baseline_max": 0.03125,
+      "conc_perm": {
+       "max_obs": 0.2748404480148685,
+       "n_neg": 63,
+       "p_perm": 0.001998001998001998,
+       "B": 1000
+      }
+     },
+     "code_8": {
+      "p": 15,
+      "K": 96,
+      "max_res_share": 0.31671116045442466,
+      "top2_res_share": 0.584006888651039,
+      "concentration": 4.75066740681637,
+      "dom_residues": [
+       1,
+       14
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.06666666666666667,
+      "conc_perm": {
+       "max_obs": 0.31671116045442466,
+       "n_neg": 65,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w1": {
+      "p": 19,
+      "K": 96,
+      "max_res_share": 0.37594118304905944,
+      "top2_res_share": 0.658444711278928,
+      "concentration": 7.14288247793213,
+      "dom_residues": [
+       1,
+       18
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.05263157894736842,
+      "conc_perm": {
+       "max_obs": 0.37594118304905944,
+       "n_neg": 56,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w10": {
+      "p": 15,
+      "K": 96,
+      "max_res_share": 0.2602069160148238,
+      "top2_res_share": 0.4806012525586364,
+      "concentration": 3.9031037402223574,
+      "dom_residues": [
+       1,
+       14
+      ],
+      "anti_frac": 0.0720924600778706,
+      "baseline_max": 0.06666666666666667,
+      "conc_perm": {
+       "max_obs": 0.2602069160148238,
+       "n_neg": 64,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w11": {
+      "p": 17,
+      "K": 96,
+      "max_res_share": 0.4433719598476432,
+      "top2_res_share": 0.8043277595314757,
+      "concentration": 7.5373233174099346,
+      "dom_residues": [
+       1,
+       16
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.058823529411764705,
+      "conc_perm": {
+       "max_obs": 0.4433719598476432,
+       "n_neg": 45,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w12": {
+      "p": null,
+      "K": 96
+     },
+     "own_w14": {
+      "p": 18,
+      "K": 96,
+      "max_res_share": 0.33170501683185344,
+      "top2_res_share": 0.603598751248594,
+      "concentration": 5.970690302973362,
+      "dom_residues": [
+       1,
+       17
+      ],
+      "anti_frac": 0.015335914169425912,
+      "baseline_max": 0.05555555555555555,
+      "conc_perm": {
+       "max_obs": 0.33170501683185344,
+       "n_neg": 53,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w15": {
+      "p": 17,
+      "K": 96,
+      "max_res_share": 0.3648558625657778,
+      "top2_res_share": 0.6644495457195599,
+      "concentration": 6.202549663618222,
+      "dom_residues": [
+       1,
+       16
+      ],
+      "anti_frac": 0.0706123748087139,
+      "baseline_max": 0.058823529411764705,
+      "conc_perm": {
+       "max_obs": 0.3648558625657778,
+       "n_neg": 57,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w2": {
+      "p": null,
+      "K": 96
+     },
+     "own_w3": {
+      "p": null,
+      "K": 96
+     },
+     "own_w5": {
+      "p": 13,
+      "K": 96,
+      "max_res_share": 0.29358674446292654,
+      "top2_res_share": 0.5449349620744282,
+      "concentration": 3.816627678018045,
+      "dom_residues": [
+       1,
+       12
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.07692307692307693,
+      "conc_perm": {
+       "max_obs": 0.29358674446292654,
+       "n_neg": 45,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w6": {
+      "p": 31,
+      "K": 96,
+      "max_res_share": 0.28537469080408084,
+      "top2_res_share": 0.491869388633375,
+      "concentration": 8.846615414926505,
+      "dom_residues": [
+       1,
+       30
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.03225806451612903,
+      "conc_perm": {
+       "max_obs": 0.28537469080408084,
+       "n_neg": 63,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w7": {
+      "p": 16,
+      "K": 96,
+      "max_res_share": 0.33407480256065153,
+      "top2_res_share": 0.6539631507152993,
+      "concentration": 5.3451968409704245,
+      "dom_residues": [
+       1,
+       15
+      ],
+      "anti_frac": 0.000830832775512215,
+      "baseline_max": 0.0625,
+      "conc_perm": {
+       "max_obs": 0.33407480256065153,
+       "n_neg": 66,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w8": {
+      "p": 14,
+      "K": 96,
+      "max_res_share": 0.3111415295284632,
+      "top2_res_share": 0.5815304914064721,
+      "concentration": 4.355981413398485,
+      "dom_residues": [
+       1,
+       13
+      ],
+      "anti_frac": 0.07483889895368663,
+      "baseline_max": 0.07142857142857142,
+      "conc_perm": {
+       "max_obs": 0.3111415295284632,
+       "n_neg": 62,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "own_w9": {
+      "p": 18,
+      "K": 96,
+      "max_res_share": 0.3845807745071314,
+      "top2_res_share": 0.7024707237483991,
+      "concentration": 6.922453941128365,
+      "dom_residues": [
+       1,
+       17
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.05555555555555555,
+      "conc_perm": {
+       "max_obs": 0.3845807745071314,
+       "n_neg": 54,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_0": {
+      "p": null,
+      "K": 96
+     },
+     "wiki_1": {
+      "p": 19,
+      "K": 96,
+      "max_res_share": 0.37276556920975973,
+      "top2_res_share": 0.6515653552701246,
+      "concentration": 7.082545814985435,
+      "dom_residues": [
+       1,
+       18
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.05263157894736842,
+      "conc_perm": {
+       "max_obs": 0.37276556920975973,
+       "n_neg": 51,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_10": {
+      "p": 15,
+      "K": 96,
+      "max_res_share": 0.2672026667331582,
+      "top2_res_share": 0.4949599609738311,
+      "concentration": 4.008040000997372,
+      "dom_residues": [
+       1,
+       14
+      ],
+      "anti_frac": 0.05880972700198307,
+      "baseline_max": 0.06666666666666667,
+      "conc_perm": {
+       "max_obs": 0.2672026667331582,
+       "n_neg": 64,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_11": {
+      "p": 17,
+      "K": 96,
+      "max_res_share": 0.43227835695766764,
+      "top2_res_share": 0.7835748495618418,
+      "concentration": 7.34873206828035,
+      "dom_residues": [
+       1,
+       16
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.058823529411764705,
+      "conc_perm": {
+       "max_obs": 0.43227835695766764,
+       "n_neg": 63,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_12": {
+      "p": null,
+      "K": 96
+     },
+     "wiki_14": {
+      "p": 18,
+      "K": 96,
+      "max_res_share": 0.3418729402197034,
+      "top2_res_share": 0.6214825570324928,
+      "concentration": 6.153712923954661,
+      "dom_residues": [
+       1,
+       17
+      ],
+      "anti_frac": 0.015540300609702733,
+      "baseline_max": 0.05555555555555555,
+      "conc_perm": {
+       "max_obs": 0.3418729402197034,
+       "n_neg": 48,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_15": {
+      "p": 17,
+      "K": 96,
+      "max_res_share": 0.3733795341858218,
+      "top2_res_share": 0.6805076081470562,
+      "concentration": 6.347452081158971,
+      "dom_residues": [
+       1,
+       16
+      ],
+      "anti_frac": 0.05411891239295699,
+      "baseline_max": 0.058823529411764705,
+      "conc_perm": {
+       "max_obs": 0.3733795341858218,
+       "n_neg": 57,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_2": {
+      "p": null,
+      "K": 96
+     },
+     "wiki_3": {
+      "p": null,
+      "K": 96
+     },
+     "wiki_4": {
+      "p": null,
+      "K": 96
+     },
+     "wiki_5": {
+      "p": 13,
+      "K": 96,
+      "max_res_share": 0.31254890199471913,
+      "top2_res_share": 0.5818648899689095,
+      "concentration": 4.063135725931349,
+      "dom_residues": [
+       1,
+       12
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.07692307692307693,
+      "conc_perm": {
+       "max_obs": 0.31254890199471913,
+       "n_neg": 45,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_6": {
+      "p": 31,
+      "K": 96,
+      "max_res_share": 0.29771994162951054,
+      "top2_res_share": 0.5113230729888484,
+      "concentration": 9.229318190514826,
+      "dom_residues": [
+       1,
+       30
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.03225806451612903,
+      "conc_perm": {
+       "max_obs": 0.29771994162951054,
+       "n_neg": 63,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_7": {
+      "p": 16,
+      "K": 96,
+      "max_res_share": 0.3306045560066155,
+      "top2_res_share": 0.6489763815129203,
+      "concentration": 5.289672896105848,
+      "dom_residues": [
+       1,
+       15
+      ],
+      "anti_frac": 0.016852303607634966,
+      "baseline_max": 0.0625,
+      "conc_perm": {
+       "max_obs": 0.3306045560066155,
+       "n_neg": 66,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_8": {
+      "p": 14,
+      "K": 96,
+      "max_res_share": 0.3013814947220161,
+      "top2_res_share": 0.562315912831002,
+      "concentration": 4.2193409261082255,
+      "dom_residues": [
+       1,
+       13
+      ],
+      "anti_frac": 0.0836767885503177,
+      "baseline_max": 0.07142857142857142,
+      "conc_perm": {
+       "max_obs": 0.3013814947220161,
+       "n_neg": 62,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     },
+     "wiki_9": {
+      "p": 18,
+      "K": 96,
+      "max_res_share": 0.3957065645802163,
+      "top2_res_share": 0.7214110422605816,
+      "concentration": 7.122718162443894,
+      "dom_residues": [
+       1,
+       17
+      ],
+      "anti_frac": 0.0,
+      "baseline_max": 0.05555555555555555,
+      "conc_perm": {
+       "max_obs": 0.3957065645802163,
+       "n_neg": 65,
+       "p_perm": 0.000999000999000999,
+       "B": 1000
+      }
+     }
+    },
+    "clean": {
+     "chat_1": {
+      "p": null,
+      "K": 96
+     },
+     "chat_11": {
+      "p": null,
+      "K": 96
+     },
+     "chat_12": {
+      "p": null,
+      "K": 96
+     },
+     "chat_13": {
+      "p": null,
+      "K": 96
+     },
+     "chat_14": {
+      "p": null,
+      "K": 96
+     },
+     "chat_2": {
+      "p": null,
+      "K": 96
+     },
+     "chat_4": {
+      "p": null,
+      "K": 96
+     },
+     "chat_5": {
+      "p": null,
+      "K": 96
+     },
+     "chat_6": {
+      "p": null,
+      "K": 96
+     },
+     "chat_7": {
+      "p": null,
+      "K": 96
+     },
+     "chat_8": {
+      "p": null,
+      "K": 96
+     },
+     "code_11": {
+      "p": null,
+      "K": 96
+     },
+     "code_12": {
+      "p": null,
+      "K": 96
+     },
+     "code_15": {
+      "p": null,
+      "K": 96
+     },
+     "code_2": {
+      "p": null,
+      "K": 96
+     },
+     "code_4": {
+      "p": null,
+      "K": 96
+     },
+     "code_5": {
+      "p": null,
+      "K": 96
+     },
+     "code_7": {
+      "p": null,
+      "K": 96
+     },
+     "code_9": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w0": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w1": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w10": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w11": {
+      "p": null,
+      "K": 32
+     },
+     "cor_w12": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w13": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w14": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w15": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w2": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w3": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w4": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w5": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w6": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w7": {
+      "p": null,
+      "K": 96
+     },
+     "cor_w8": {
+      "p": null,
+      "K": 32
+     },
+     "cor_w9": {
+      "p": null,
+      "K": 96
+     },
+     "math_0": {
+      "p": null,
+      "K": 96
+     },
+     "math_1": {
+      "p": null,
+      "K": 96
+     },
+     "math_10": {
+      "p": null,
+      "K": 96
+     },
+     "math_11": {
+      "p": null,
+      "K": 96
+     },
+     "math_12": {
+      "p": null,
+      "K": 96
+     },
+     "math_13": {
+      "p": null,
+      "K": 96
+     },
+     "math_14": {
+      "p": null,
+      "K": 96
+     },
+     "math_15": {
+      "p": null,
+      "K": 96
+     },
+     "math_2": {
+      "p": null,
+      "K": 96
+     },
+     "math_3": {
+      "p": null,
+      "K": 96
+     },
+     "math_4": {
+      "p": null,
+      "K": 96
+     },
+     "math_5": {
+      "p": null,
+      "K": 96
+     },
+     "math_6": {
+      "p": null,
+      "K": 96
+     },
+     "math_7": {
+      "p": null,
+      "K": 96
+     },
+     "math_8": {
+      "p": null,
+      "K": 96
+     },
+     "math_9": {
+      "p": null,
+      "K": 96
+     },
+     "own_w13": {
+      "p": null,
+      "K": 96
+     },
+     "wiki_13": {
+      "p": null,
+      "K": 96
+     }
+    },
+    "remainder": {
+     "own_w0": {
+      "p": null,
+      "K": 96
+     },
+     "own_w4": {
+      "p": null,
+      "K": 96
+     }
+    }
+   },
+   "detection": {
+    "loopy": {
+     "n_total": 41,
+     "K_composition": {
+      "96": 41
+     },
+     "n_detected_full": 30,
+     "p_values_full": [
+      7,
+      8,
+      9,
+      11,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      24,
+      27,
+      31,
+      32
+     ],
+     "k96": {
+      "n_total": 41,
+      "n_detected": 30,
+      "p_values": [
+       7,
+       8,
+       9,
+       11,
+       13,
+       14,
+       15,
+       16,
+       17,
+       18,
+       19,
+       20,
+       24,
+       27,
+       31,
+       32
+      ]
+     }
+    },
+    "clean": {
+     "n_total": 53,
+     "K_composition": {
+      "32": 2,
+      "96": 51
+     },
+     "n_detected_full": 0,
+     "p_values_full": [],
+     "k96": {
+      "n_total": 51,
+      "n_detected": 0,
+      "p_values": []
+     }
+    },
+    "remainder": {
+     "n_total": 2,
+     "K_composition": {
+      "96": 2
+     },
+     "n_detected_full": 0,
+     "p_values_full": [],
+     "k96": {
+      "n_total": 2,
+      "n_detected": 0,
+      "p_values": []
+     }
+    },
+    "test": {
+     "pool": "K=96 (r3.1 #3: K=32-доки исключены — p-диапазон зависит от K)",
+     "nL": 41,
+     "nC": 51,
+     "dL": 30,
+     "dC": 0,
+     "p0_pool": 0.32608695652173914,
+     "p_two_sided_exact": 2.18081796329386e-07,
+     "note": "H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); двусторонний тест по as-or-less-likely convention (не scipy binomtest — там doubled-min, числа будут отличаться, r3.1 #7)"
+    }
+   },
+   "aggregate": {
+    "pool": "K=96 (r3.1 #3)",
+    "n_detected_loopy": 30,
+    "mean_concentration": 5.908370724006618,
+    "median_concentration": 6.062201613464012,
+    "min_concentration": 2.429454959658243,
+    "frac_conc_above_1": 1.0,
+    "mean_top2_res_share": 0.632315043423947,
+    "top2_baseline_note": "равномерная база = 2/p (varies per doc)",
+    "mean_anti_frac": 0.02911325480597452,
+    "anti_phase_finding": "анти-фаза (k≡p/2 mod p) НЕ носитель: mean anti_frac = 0.029 — ниже равномерной базы (r3 C3: букв. p/2-эстиманд ≈ 0); реальный носитель — классы остатков dom_residues mod p (интерпретация «фаза границы лупа» — гипотеза, не результат)",
+    "per_doc_conc_p": {
+     "chat_0": [
+      15,
+      0.000999000999000999
+     ],
+     "chat_10": [
+      27,
+      0.000999000999000999
+     ],
+     "chat_15": [
+      8,
+      0.000999000999000999
+     ],
+     "chat_3": [
+      20,
+      0.000999000999000999
+     ],
+     "code_0": [
+      11,
+      0.000999000999000999
+     ],
+     "code_1": [
+      24,
+      0.000999000999000999
+     ],
+     "code_13": [
+      7,
+      0.000999000999000999
+     ],
+     "code_14": [
+      9,
+      0.000999000999000999
+     ],
+     "code_6": [
+      32,
+      0.001998001998001998
+     ],
+     "code_8": [
+      15,
+      0.000999000999000999
+     ],
+     "own_w1": [
+      19,
+      0.000999000999000999
+     ],
+     "own_w10": [
+      15,
+      0.000999000999000999
+     ],
+     "own_w11": [
+      17,
+      0.000999000999000999
+     ],
+     "own_w14": [
+      18,
+      0.000999000999000999
+     ],
+     "own_w15": [
+      17,
+      0.000999000999000999
+     ],
+     "own_w5": [
+      13,
+      0.000999000999000999
+     ],
+     "own_w6": [
+      31,
+      0.000999000999000999
+     ],
+     "own_w7": [
+      16,
+      0.000999000999000999
+     ],
+     "own_w8": [
+      14,
+      0.000999000999000999
+     ],
+     "own_w9": [
+      18,
+      0.000999000999000999
+     ],
+     "wiki_1": [
+      19,
+      0.000999000999000999
+     ],
+     "wiki_10": [
+      15,
+      0.000999000999000999
+     ],
+     "wiki_11": [
+      17,
+      0.000999000999000999
+     ],
+     "wiki_14": [
+      18,
+      0.000999000999000999
+     ],
+     "wiki_15": [
+      17,
+      0.000999000999000999
+     ],
+     "wiki_5": [
+      13,
+      0.000999000999000999
+     ],
+     "wiki_6": [
+      31,
+      0.000999000999000999
+     ],
+     "wiki_7": [
+      16,
+      0.000999000999000999
+     ],
+     "wiki_8": [
+      14,
+      0.000999000999000999
+     ],
+     "wiki_9": [
+      18,
+      0.000999000999000999
+     ]
+    },
+    "per_doc_conc_p_format": "(p_detection, p_value_concentration_test)",
+    "n_per_doc_p_le_alpha": 30
+   }
+  },
+  "source_strata": {
+   "gen": {
+    "n_L": 28,
+    "n_C": 36,
+    "claim_eligible": true,
+    "loopy": {
+     "n_docs": 28,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 28
+     },
+     "A_neg": {
+      "median": -5.532970011438415
+     },
+     "odd_frac": {
+      "median": 0.5237905780656109,
+      "ci": [
+       0.49959124272310296,
+       0.7058387554985657
+      ]
+     },
+     "even_frac": {
+      "median": 0.476209421934389,
+      "ci": [
+       0.29416124450143444,
+       0.500408757276897
+      ]
+     },
+     "k1_frac": {
+      "median": 0.07445439690807444,
+      "ci": [
+       0.06295811229338359,
+       0.08889608674497401
+      ]
+     },
+     "tail_frac": {
+      "median": 0.8866719538414514,
+      "ci": [
+       0.8608894999290182,
+       0.8962522510893725
+      ]
+     },
+     "band_frac": {
+      "b1": 0.07445439690807444,
+      "b2": 0.010123309134036904,
+      "b3_8": 0.03183496409766115,
+      "b9_32": 0.2606713353733017,
+      "b33_96": 0.6255206020121282
+     }
+    },
+    "clean": {
+     "n_docs": 36,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 36
+     },
+     "A_neg": {
+      "median": -1.210696528530351
+     },
+     "odd_frac": {
+      "median": 0.602445679245287,
+      "ci": [
+       0.5840148457912013,
+       0.65014570996286
+      ]
+     },
+     "even_frac": {
+      "median": 0.397554320754713,
+      "ci": [
+       0.34985429003713997,
+       0.4159851542087986
+      ]
+     },
+     "k1_frac": {
+      "median": 0.31065677943682846,
+      "ci": [
+       0.24891735561464587,
+       0.34583298134216933
+      ]
+     },
+     "tail_frac": {
+      "median": 0.5516273167483938,
+      "ci": [
+       0.5026309977213097,
+       0.5992275936070114
+      ]
+     },
+     "band_frac": {
+      "b1": 0.31065677943682846,
+      "b2": 0.06547266505075444,
+      "b3_8": 0.07488430789996073,
+      "b9_32": 0.16228436798950485,
+      "b33_96": 0.38202486540477065
+     }
+    }
+   },
+   "own": {
+    "n_L": 13,
+    "n_C": 1,
+    "claim_eligible": false,
+    "loopy": {
+     "n_docs": 13,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 13
+     },
+     "A_neg": {
+      "median": -5.783232716487059
+     },
+     "odd_frac": {
+      "median": 0.5093900418829305,
+      "ci": [
+       0.4735793085866248,
+       0.8186355282009452
+      ]
+     },
+     "even_frac": {
+      "median": 0.4906099581170695,
+      "ci": [
+       0.18136447179905468,
+       0.5264206914133753
+      ]
+     },
+     "k1_frac": {
+      "median": 0.07342368209147876,
+      "ci": [
+       0.06335374987042937,
+       0.08349893968600815
+      ]
+     },
+     "tail_frac": {
+      "median": 0.8947313609768148,
+      "ci": [
+       0.871057004502749,
+       0.898116505646
+      ]
+     },
+     "band_frac": {
+      "b1": 0.07342368209147876,
+      "b2": 0.0114356622801264,
+      "b3_8": 0.031844956931706386,
+      "b9_32": 0.2605485504314285,
+      "b33_96": 0.6300826030134856
+     }
+    },
+    "clean": {
+     "n_docs": 1,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 1
+     },
+     "A_neg": {
+      "median": -2.65464894240217
+     },
+     "odd_frac": {
+      "median": 0.6032875042498727,
+      "ci": [
+       0.6032875042498727,
+       0.6032875042498727
+      ]
+     },
+     "even_frac": {
+      "median": 0.3967124957501273,
+      "ci": [
+       0.3967124957501273,
+       0.3967124957501273
+      ]
+     },
+     "k1_frac": {
+      "median": 0.14264335942353581,
+      "ci": [
+       0.14264335942353581,
+       0.14264335942353581
+      ]
+     },
+     "tail_frac": {
+      "median": 0.7894129104549564,
+      "ci": [
+       0.7894129104549564,
+       0.7894129104549564
+      ]
+     },
+     "band_frac": {
+      "b1": 0.14264335942353581,
+      "b2": 0.03845392105712141,
+      "b3_8": 0.029489809064386266,
+      "b9_32": 0.3064547958782579,
+      "b33_96": 0.4829581145766986
+     }
+    }
+   },
+   "corpus": {
+    "n_L": 0,
+    "n_C": 14,
+    "claim_eligible": false,
+    "loopy": {
+     "n_docs": 0,
+     "n_no_negative_area": 0,
+     "n_absent": 0
+    },
+    "clean": {
+     "n_docs": 14,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 14
+     },
+     "A_neg": {
+      "median": -1.065409145287852
+     },
+     "odd_frac": {
+      "median": 0.634021237126881,
+      "ci": [
+       0.5855650790402676,
+       0.668133686342272
+      ]
+     },
+     "even_frac": {
+      "median": 0.36597876287311915,
+      "ci": [
+       0.33186631365772795,
+       0.4144349209597324
+      ]
+     },
+     "k1_frac": {
+      "median": 0.3645271470623267,
+      "ci": [
+       0.33048816971530526,
+       0.40669560321543907
+      ]
+     },
+     "tail_frac": {
+      "median": 0.514598721061795,
+      "ci": [
+       0.46728520296554693,
+       0.55477661114077
+      ]
+     },
+     "band_frac": {
+      "b1": 0.3645271470623267,
+      "b2": 0.07097655988151925,
+      "b3_8": 0.057690998802068766,
+      "b9_32": 0.16883202911212347,
+      "b33_96": 0.34048114327848666
+     }
+    }
+   },
+   "domain_chat": {
+    "n_L": 5,
+    "n_C": 11,
+    "claim_eligible": false,
+    "loopy": {
+     "n_docs": 5,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 5
+     },
+     "A_neg": {
+      "median": -5.6122530591133515
+     },
+     "odd_frac": {
+      "median": 0.5261605604733229,
+      "ci": [
+       0.47733150867354623,
+       0.8787014237595895
+      ]
+     },
+     "even_frac": {
+      "median": 0.4738394395266771,
+      "ci": [
+       0.12129857624041043,
+       0.5226684913264537
+      ]
+     },
+     "k1_frac": {
+      "median": 0.07020694198378542,
+      "ci": [
+       0.03168909764421831,
+       0.10060193264821572
+      ]
+     },
+     "tail_frac": {
+      "median": 0.8816821462500533,
+      "ci": [
+       0.8532033397329367,
+       0.9113175706165215
+      ]
+     },
+     "band_frac": {
+      "b1": 0.07020694198378542,
+      "b2": 0.019462697659064426,
+      "b3_8": 0.02441426730018697,
+      "b9_32": 0.2752739366764643,
+      "b33_96": 0.6263109148211257
+     }
+    },
+    "clean": {
+     "n_docs": 11,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 11
+     },
+     "A_neg": {
+      "median": -1.2799498870681902
+     },
+     "odd_frac": {
+      "median": 0.6438088531780032,
+      "ci": [
+       0.5751458149591242,
+       0.6643777724550207
+      ]
+     },
+     "even_frac": {
+      "median": 0.3561911468219969,
+      "ci": [
+       0.3356222275449792,
+       0.42485418504087585
+      ]
+     },
+     "k1_frac": {
+      "median": 0.29790278660638103,
+      "ci": [
+       0.21151752176401356,
+       0.377108955787856
+      ]
+     },
+     "tail_frac": {
+      "median": 0.6072094878837354,
+      "ci": [
+       0.49643995752128883,
+       0.7425888134511746
+      ]
+     },
+     "band_frac": {
+      "b1": 0.29790278660638103,
+      "b2": 0.04799928003003131,
+      "b3_8": 0.05665530753078521,
+      "b9_32": 0.16264132223230784,
+      "b33_96": 0.4137210176693053
+     }
+    }
+   },
+   "domain_code": {
+    "n_L": 8,
+    "n_C": 8,
+    "claim_eligible": false,
+    "loopy": {
+     "n_docs": 8,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 8
+     },
+     "A_neg": {
+      "median": -6.30652905982628
+     },
+     "odd_frac": {
+      "median": 0.5172930780442857,
+      "ci": [
+       0.48953003473795714,
+       0.6839962750026544
+      ]
+     },
+     "even_frac": {
+      "median": 0.4827069219557142,
+      "ci": [
+       0.3160037249973457,
+       0.5104699652620428
+      ]
+     },
+     "k1_frac": {
+      "median": 0.06753433963655497,
+      "ci": [
+       0.04511595316390396,
+       0.10115705153003964
+      ]
+     },
+     "tail_frac": {
+      "median": 0.8809149158276444,
+      "ci": [
+       0.8351348178855343,
+       0.9021549595852885
+      ]
+     },
+     "band_frac": {
+      "b1": 0.06753433963655497,
+      "b2": 0.007884915421490573,
+      "b3_8": 0.039900544952532487,
+      "b9_32": 0.2633454506466757,
+      "b33_96": 0.6208263225096279
+     }
+    },
+    "clean": {
+     "n_docs": 8,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 8
+     },
+     "A_neg": {
+      "median": -1.0282854383588325
+     },
+     "odd_frac": {
+      "median": 0.5904160931282602,
+      "ci": [
+       0.559691482128272,
+       0.6799398665780652
+      ]
+     },
+     "even_frac": {
+      "median": 0.40958390687173984,
+      "ci": [
+       0.32006013342193473,
+       0.4403085178717279
+      ]
+     },
+     "k1_frac": {
+      "median": 0.34583298134216933,
+      "ci": [
+       0.2618910376499888,
+       0.39973053865990005
+      ]
+     },
+     "tail_frac": {
+      "median": 0.5038286164372217,
+      "ci": [
+       0.46628943578592563,
+       0.6274396581387321
+      ]
+     },
+     "band_frac": {
+      "b1": 0.34583298134216933,
+      "b2": 0.06332951838231901,
+      "b3_8": 0.06523679507723598,
+      "b9_32": 0.1299564550381469,
+      "b33_96": 0.354903035145348
+     }
+    }
+   },
+   "note": "r3 §3.4: описательно (n<12 → no claim). Объявлен конфаунд L/C × источник: L=68% own+wiki, C=60% corpus+math; corpus (16, все в C) без токенов — degen только по mcos (mshare выброшен) → смещение к «чистым», т.е. в пользу нулевой гипотезы H1"
+  },
+  "strata": {
+   "h_raw": {
+    "loopy": {
+     "n_docs": 41,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 41
+     },
+     "A_neg": {
+      "median": -5.53497767857403
+     },
+     "odd_frac": {
+      "median": 0.5213680087527982,
+      "ci": [
+       0.48922526004987243,
+       0.7176822810236478
+      ]
+     },
+     "even_frac": {
+      "median": 0.47863199124720174,
+      "ci": [
+       0.2823177189763521,
+       0.5107747399501277
+      ]
+     },
+     "k1_frac": {
+      "median": 0.0750334252732724,
+      "ci": [
+       0.06554867228234695,
+       0.08509858585658826
+      ]
+     },
+     "tail_frac": {
+      "median": 0.8899690994052794,
+      "ci": [
+       0.8706648141085422,
+       0.8953285849891047
+      ]
+     },
+     "band_frac": {
+      "b1": 0.0750334252732724,
+      "b2": 0.010199457322264583,
+      "b3_8": 0.03138629541213524,
+      "b9_32": 0.2599610951891545,
+      "b33_96": 0.6259214689412497
+     }
+    },
+    "clean": {
+     "n_docs": 53,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "32": 2,
+      "96": 51
+     },
+     "A_neg": {
+      "median": -1.154378382785605
+     },
+     "odd_frac": {
+      "median": 0.6121763744526006,
+      "ci": [
+       0.5973523197888352,
+       0.6513958428247183
+      ]
+     },
+     "even_frac": {
+      "median": 0.3878236255473992,
+      "ci": [
+       0.3486041571752818,
+       0.4026476802111649
+      ]
+     },
+     "k1_frac": {
+      "median": 0.3308058718758352,
+      "ci": [
+       0.29831208538585857,
+       0.35332549271800223
+      ]
+     },
+     "tail_frac": {
+      "median": 0.5430267315681615,
+      "ci": [
+       0.5028177784118496,
+       0.5751458889501526
+      ]
+     },
+     "band_frac": {
+      "b1": 0.3308058718758352,
+      "b2": 0.0621594656558563,
+      "b3_8": 0.06638609028392019,
+      "b9_32": 0.16575836056917484,
+      "b33_96": 0.3683455051789485
+     }
+    },
+    "remainder": {
+     "n_docs": 2,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 2
+     },
+     "A_neg": {
+      "median": -1.0313823683842909
+     },
+     "odd_frac": {
+      "median": 0.6058138529069976,
+      "ci": [
+       0.5886462510515239,
+       0.6229814547624715
+      ]
+     },
+     "even_frac": {
+      "median": 0.3941861470930024,
+      "ci": [
+       0.3770185452375286,
+       0.41135374894847626
+      ]
+     },
+     "k1_frac": {
+      "median": 0.30794960775467267,
+      "ci": [
+       0.24693550257137137,
+       0.368963712937974
+      ]
+     },
+     "tail_frac": {
+      "median": 0.47389939104406964,
+      "ci": [
+       0.4321587362067569,
+       0.5156400458813823
+      ]
+     },
+     "band_frac": {
+      "b1": 0.30794960775467267,
+      "b2": 0.10689473690841483,
+      "b3_8": 0.11125626429284294,
+      "b9_32": 0.25833703547551756,
+      "b33_96": 0.21556235556855197
+     }
+    }
+   },
+   "du_unit": {
+    "loopy": {
+     "n_docs": 41,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 41
+     },
+     "A_neg": {
+      "median": -5.6122530591133515
+     },
+     "odd_frac": {
+      "median": 0.521420595657899,
+      "ci": [
+       0.48953003473795714,
+       0.7246723430882935
+      ]
+     },
+     "even_frac": {
+      "median": 0.4785794043421008,
+      "ci": [
+       0.2753276569117065,
+       0.5104699652620428
+      ]
+     },
+     "k1_frac": {
+      "median": 0.07375552221125886,
+      "ci": [
+       0.0646557756235482,
+       0.08349893968600815
+      ]
+     },
+     "tail_frac": {
+      "median": 0.8924561910436641,
+      "ci": [
+       0.8710134984545079,
+       0.8965341213960031
+      ]
+     },
+     "band_frac": {
+      "b1": 0.07375552221125886,
+      "b2": 0.010226190143363302,
+      "b3_8": 0.031844956931706386,
+      "b9_32": 0.2605485504314285,
+      "b33_96": 0.6263109148211257
+     }
+    },
+    "clean": {
+     "n_docs": 53,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "32": 2,
+      "96": 51
+     },
+     "A_neg": {
+      "median": -1.148413563337563
+     },
+     "odd_frac": {
+      "median": 0.6124756819281585,
+      "ci": [
+       0.5992478661570138,
+       0.6496687118687472
+      ]
+     },
+     "even_frac": {
+      "median": 0.38752431807184134,
+      "ci": [
+       0.35033128813125275,
+       0.4007521338429862
+      ]
+     },
+     "k1_frac": {
+      "median": 0.3354175059730137,
+      "ci": [
+       0.29790278660638103,
+       0.3597483660604024
+      ]
+     },
+     "tail_frac": {
+      "median": 0.5396370531359403,
+      "ci": [
+       0.49923082213867176,
+       0.5646260076785815
+      ]
+     },
+     "band_frac": {
+      "b1": 0.3354175059730137,
+      "b2": 0.06333462471362682,
+      "b3_8": 0.06612742235353015,
+      "b9_32": 0.16264132223230784,
+      "b33_96": 0.3652265504344461
+     }
+    },
+    "remainder": {
+     "n_docs": 2,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 2
+     },
+     "A_neg": {
+      "median": -1.042819944625691
+     },
+     "odd_frac": {
+      "median": 0.617406749689225,
+      "ci": [
+       0.6042720504140888,
+       0.6305414489643613
+      ]
+     },
+     "even_frac": {
+      "median": 0.382593250310775,
+      "ci": [
+       0.36945855103563874,
+       0.3957279495859113
+      ]
+     },
+     "k1_frac": {
+      "median": 0.3116781825123046,
+      "ci": [
+       0.24495748790051147,
+       0.3783988771240977
+      ]
+     },
+     "tail_frac": {
+      "median": 0.4677736705880616,
+      "ci": [
+       0.4177575440485046,
+       0.5177897971276185
+      ]
+     },
+     "band_frac": {
+      "b1": 0.3116781825123046,
+      "b2": 0.09830480887069284,
+      "b3_8": 0.12224333802894102,
+      "b9_32": 0.24668030494392026,
+      "b33_96": 0.2210933656441413
+     }
+    }
+   },
+   "v_tangent": {
+    "loopy": {
+     "n_docs": 41,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 41
+     },
+     "A_neg": {
+      "median": -1.000406433844872
+     },
+     "odd_frac": {
+      "median": 0.5294740130694515,
+      "ci": [
+       0.48363699706439023,
+       0.9999999999999999
+      ]
+     },
+     "even_frac": {
+      "median": 0.4705259869305484,
+      "ci": [
+       0.0,
+       0.5163630029356098
+      ]
+     },
+     "k1_frac": {
+      "median": 0.1088068128846755,
+      "ci": [
+       0.10303655538926922,
+       0.14416679344209996
+      ]
+     },
+     "tail_frac": {
+      "median": 0.884821550596376,
+      "ci": [
+       0.8558332065579,
+       0.8911931871153245
+      ]
+     },
+     "band_frac": {
+      "b1": 0.1088068128846755,
+      "b2": 0.0,
+      "b3_8": 0.0,
+      "b9_32": 0.2660885888564767,
+      "b33_96": 0.6165079785563069
+     }
+    },
+    "clean": {
+     "n_docs": 53,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "32": 2,
+      "96": 51
+     },
+     "A_neg": {
+      "median": -0.10999144961034163
+     },
+     "odd_frac": {
+      "median": 1.0,
+      "ci": [
+       1.0,
+       1.0
+      ]
+     },
+     "even_frac": {
+      "median": 0.0,
+      "ci": [
+       0.0,
+       0.0
+      ]
+     },
+     "k1_frac": {
+      "median": 1.0,
+      "ci": [
+       1.0,
+       1.0
+      ]
+     },
+     "tail_frac": {
+      "median": 0.0,
+      "ci": [
+       0.0,
+       0.0
+      ]
+     },
+     "band_frac": {
+      "b1": 1.0,
+      "b2": 0.0,
+      "b3_8": 0.0,
+      "b9_32": 0.0,
+      "b33_96": 0.0
+     },
+     "forced_outcome": "b1≈1 ⇒ отрицателен только лаг 1 ⇒ odd_frac≡1 тождественно — forced outcome, не эмпирическая находка (r3 §3.5, fixreview #2)"
+    },
+    "remainder": {
+     "n_docs": 2,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 2
+     },
+     "A_neg": {
+      "median": -9.000958077156277
+     },
+     "odd_frac": {
+      "median": 0.49075290065920196,
+      "ci": [
+       0.48906217095972704,
+       0.49244363035867683
+      ]
+     },
+     "even_frac": {
+      "median": 0.509247099340798,
+      "ci": [
+       0.507556369641323,
+       0.510937829040273
+      ]
+     },
+     "k1_frac": {
+      "median": 0.0,
+      "ci": [
+       0.0,
+       0.0
+      ]
+     },
+     "tail_frac": {
+      "median": 0.8865329424790582,
+      "ci": [
+       0.8840285384675362,
+       0.8890373464905802
+      ]
+     },
+     "band_frac": {
+      "b1": 0.0,
+      "b2": 0.011996776547976727,
+      "b3_8": 0.10147028097296512,
+      "b9_32": 0.27945742709988536,
+      "b33_96": 0.6070755153791727
+     }
+    }
+   }
+  },
+  "copy_rate_quartiles": {
+   "q25": 0.21513157894736842,
+   "q75": 0.9368421052631579,
+   "n_with_tokens": 80,
+   "summary": {
+    "low": {
+     "n_docs": 20,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 20
+     },
+     "A_neg": {
+      "median": -1.0308893455020391
+     },
+     "odd_frac": {
+      "median": 0.6467387825233752,
+      "ci": [
+       0.6067996172191636,
+       0.6671971106083865
+      ]
+     },
+     "even_frac": {
+      "median": 0.3532612174766248,
+      "ci": [
+       0.3328028893916135,
+       0.3932003827808364
+      ]
+     },
+     "k1_frac": {
+      "median": 0.3504230806489169,
+      "ci": [
+       0.32038274846292186,
+       0.39267007089273237
+      ]
+     },
+     "tail_frac": {
+      "median": 0.5009309099299908,
+      "ci": [
+       0.4528117873786832,
+       0.5307476950962038
+      ]
+     },
+     "band_frac": {
+      "b1": 0.3504230806489169,
+      "b2": 0.07647669121311011,
+      "b3_8": 0.0747649525197359,
+      "b9_32": 0.14688174951731475,
+      "b33_96": 0.3440754127694319
+     }
+    },
+    "mid": {
+     "n_docs": 41,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 41
+     },
+     "A_neg": {
+      "median": -2.779387076121293
+     },
+     "odd_frac": {
+      "median": 0.5886842238321207,
+      "ci": [
+       0.530483354472581,
+       0.6042720504140888
+      ]
+     },
+     "even_frac": {
+      "median": 0.41131577616787923,
+      "ci": [
+       0.3957279495859113,
+       0.46951664552741906
+      ]
+     },
+     "k1_frac": {
+      "median": 0.1308271366491683,
+      "ci": [
+       0.09337127253859398,
+       0.21159694232828696
+      ]
+     },
+     "tail_frac": {
+      "median": 0.8051091441590642,
+      "ci": [
+       0.732017843468273,
+       0.8502265037457359
+      ]
+     },
+     "band_frac": {
+      "b1": 0.1308271366491683,
+      "b2": 0.0200361883116639,
+      "b3_8": 0.046519180474002705,
+      "b9_32": 0.24546664265504814,
+      "b33_96": 0.5720281979832433
+     }
+    },
+    "high": {
+     "n_docs": 19,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 19
+     },
+     "A_neg": {
+      "median": -6.871426983227621
+     },
+     "odd_frac": {
+      "median": 0.5131655604306724,
+      "ci": [
+       0.4784341851983417,
+       0.727681235994477
+      ]
+     },
+     "even_frac": {
+      "median": 0.48683443956932754,
+      "ci": [
+       0.27231876400552313,
+       0.5215658148016584
+      ]
+     },
+     "k1_frac": {
+      "median": 0.054170590473562756,
+      "ci": [
+       0.044670027106346544,
+       0.06905909272136648
+      ]
+     },
+     "tail_frac": {
+      "median": 0.898116505646,
+      "ci": [
+       0.8962430538650449,
+       0.9046521887086852
+      ]
+     },
+     "band_frac": {
+      "b1": 0.054170590473562756,
+      "b2": 0.006697098155217211,
+      "b3_8": 0.031353564271665135,
+      "b9_32": 0.2651206033815676,
+      "b33_96": 0.6325557488521052
+     }
+    }
+   }
+  },
+  "domain": {
+   "chat": {
+    "n_docs": 16,
+    "n_nondeg": 11,
+    "domain_claim_eligible": false,
+    "nondeg": {
+     "n_docs": 11,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 11
+     },
+     "A_neg": {
+      "median": -1.2799498870681902
+     },
+     "odd_frac": {
+      "median": 0.6438088531780032,
+      "ci": [
+       0.5751458149591242,
+       0.6643777724550207
+      ]
+     },
+     "even_frac": {
+      "median": 0.3561911468219969,
+      "ci": [
+       0.3356222275449792,
+       0.42485418504087585
+      ]
+     },
+     "k1_frac": {
+      "median": 0.29790278660638103,
+      "ci": [
+       0.21151752176401356,
+       0.377108955787856
+      ]
+     },
+     "tail_frac": {
+      "median": 0.6072094878837354,
+      "ci": [
+       0.49643995752128883,
+       0.7425888134511746
+      ]
+     },
+     "band_frac": {
+      "b1": 0.29790278660638103,
+      "b2": 0.04799928003003131,
+      "b3_8": 0.05665530753078521,
+      "b9_32": 0.16264132223230784,
+      "b33_96": 0.4137210176693053
+     }
+    }
+   },
+   "code": {
+    "n_docs": 16,
+    "n_nondeg": 8,
+    "domain_claim_eligible": false,
+    "nondeg": {
+     "n_docs": 8,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 8
+     },
+     "A_neg": {
+      "median": -1.0282854383588325
+     },
+     "odd_frac": {
+      "median": 0.5904160931282602,
+      "ci": [
+       0.559691482128272,
+       0.6799398665780652
+      ]
+     },
+     "even_frac": {
+      "median": 0.40958390687173984,
+      "ci": [
+       0.32006013342193473,
+       0.4403085178717279
+      ]
+     },
+     "k1_frac": {
+      "median": 0.34583298134216933,
+      "ci": [
+       0.2618910376499888,
+       0.39973053865990005
+      ]
+     },
+     "tail_frac": {
+      "median": 0.5038286164372217,
+      "ci": [
+       0.46628943578592563,
+       0.6274396581387321
+      ]
+     },
+     "band_frac": {
+      "b1": 0.34583298134216933,
+      "b2": 0.06332951838231901,
+      "b3_8": 0.06523679507723598,
+      "b9_32": 0.1299564550381469,
+      "b33_96": 0.354903035145348
+     }
+    }
+   },
+   "corpus": {
+    "n_docs": 16,
+    "n_nondeg": 16,
+    "domain_claim_eligible": true,
+    "nondeg": {
+     "n_docs": 16,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "32": 2,
+      "96": 14
+     },
+     "A_neg": {
+      "median": -1.028096643538134
+     },
+     "odd_frac": {
+      "median": 0.6412159938788398,
+      "ci": [
+       0.6014448535733535,
+       0.6689104416321999
+      ]
+     },
+     "even_frac": {
+      "median": 0.35878400612116035,
+      "ci": [
+       0.33108955836779996,
+       0.39855514642664663
+      ]
+     },
+     "k1_frac": {
+      "median": 0.3826869248703154,
+      "ci": [
+       0.3358785939369635,
+       0.40799022675838426
+      ]
+     },
+     "tail_frac": {
+      "median": 0.49825384182845384,
+      "ci": [
+       0.43989160874237276,
+       0.5490197251002535
+      ]
+     },
+     "band_frac": {
+      "b1": 0.3826869248703154,
+      "b2": 0.06473519712704384,
+      "b3_8": 0.06121894060762462,
+      "b9_32": 0.1771045471277123,
+      "b33_96": 0.3219349976331669
+     }
+    }
+   },
+   "math": {
+    "n_docs": 16,
+    "n_nondeg": 16,
+    "domain_claim_eligible": true,
+    "nondeg": {
+     "n_docs": 16,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 16
+     },
+     "A_neg": {
+      "median": -1.2069906574314948
+     },
+     "odd_frac": {
+      "median": 0.6001857093335912,
+      "ci": [
+       0.577410444861669,
+       0.6565962223592553
+      ]
+     },
+     "even_frac": {
+      "median": 0.39981429066640883,
+      "ci": [
+       0.34340377764074465,
+       0.422589555138331
+      ]
+     },
+     "k1_frac": {
+      "median": 0.31065677943682846,
+      "ci": [
+       0.24165869632849907,
+       0.3535205534423367
+      ]
+     },
+     "tail_frac": {
+      "median": 0.5516273167483938,
+      "ci": [
+       0.4725232402958268,
+       0.5803947774604622
+      ]
+     },
+     "band_frac": {
+      "b1": 0.31065677943682846,
+      "b2": 0.07236118134793432,
+      "b3_8": 0.08402808809826193,
+      "b9_32": 0.1578285629248815,
+      "b33_96": 0.3907706018085571
+     }
+    }
+   },
+   "own": {
+    "n_docs": 16,
+    "n_nondeg": 1,
+    "domain_claim_eligible": false,
+    "nondeg": {
+     "n_docs": 1,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 1
+     },
+     "A_neg": {
+      "median": -2.65464894240217
+     },
+     "odd_frac": {
+      "median": 0.6032875042498727,
+      "ci": [
+       0.6032875042498727,
+       0.6032875042498727
+      ]
+     },
+     "even_frac": {
+      "median": 0.3967124957501273,
+      "ci": [
+       0.3967124957501273,
+       0.3967124957501273
+      ]
+     },
+     "k1_frac": {
+      "median": 0.14264335942353581,
+      "ci": [
+       0.14264335942353581,
+       0.14264335942353581
+      ]
+     },
+     "tail_frac": {
+      "median": 0.7894129104549564,
+      "ci": [
+       0.7894129104549564,
+       0.7894129104549564
+      ]
+     },
+     "band_frac": {
+      "b1": 0.14264335942353581,
+      "b2": 0.03845392105712141,
+      "b3_8": 0.029489809064386266,
+      "b9_32": 0.3064547958782579,
+      "b33_96": 0.4829581145766986
+     }
+    }
+   },
+   "wiki": {
+    "n_docs": 16,
+    "n_nondeg": 1,
+    "domain_claim_eligible": false,
+    "nondeg": {
+     "n_docs": 1,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 1
+     },
+     "A_neg": {
+      "median": -2.6618769865918477
+     },
+     "odd_frac": {
+      "median": 0.6034542559558386,
+      "ci": [
+       0.6034542559558386,
+       0.6034542559558386
+      ]
+     },
+     "even_frac": {
+      "median": 0.39654574404416143,
+      "ci": [
+       0.39654574404416143,
+       0.39654574404416143
+      ]
+     },
+     "k1_frac": {
+      "median": 0.14359668446168442,
+      "ci": [
+       0.14359668446168442,
+       0.14359668446168442
+      ]
+     },
+     "tail_frac": {
+      "median": 0.791715888543721,
+      "ci": [
+       0.791715888543721,
+       0.791715888543721
+      ]
+     },
+     "band_frac": {
+      "b1": 0.14359668446168442,
+      "b2": 0.0359574484105448,
+      "b3_8": 0.02872997858404999,
+      "b9_32": 0.3078298715362061,
+      "b33_96": 0.4838860170075148
+     }
+    }
+   },
+   "pooled_nondeg": {
+    "n_docs": 21,
+    "note": "пре-рег «остальные — пул»: nondeg-доки доменов с n_nondeg<12",
+    "summary": {
+     "n_docs": 21,
+     "n_no_negative_area": 0,
+     "n_absent": 0,
+     "K_composition": {
+      "96": 21
+     },
+     "A_neg": {
+      "median": -1.2799498870681902
+     },
+     "odd_frac": {
+      "median": 0.6034542559558386,
+      "ci": [
+       0.5793950837217848,
+       0.6506227080569729
+      ]
+     },
+     "even_frac": {
+      "median": 0.39654574404416143,
+      "ci": [
+       0.3493772919430272,
+       0.4206049162782151
+      ]
+     },
+     "k1_frac": {
+      "median": 0.29790278660638103,
+      "ci": [
+       0.21446470836722664,
+       0.3597483660604024
+      ]
+     },
+     "tail_frac": {
+      "median": 0.5981482177735439,
+      "ci": [
+       0.5026309977213097,
+       0.7289170051466172
+      ]
+     },
+     "band_frac": {
+      "b1": 0.29790278660638103,
+      "b2": 0.05641954388765239,
+      "b3_8": 0.05665530753078521,
+      "b9_32": 0.16244961347131465,
+      "b33_96": 0.37751793062824535
+     }
+    }
+   }
+  },
+  "layer_type": {
+   "d_obs": -0.01579541664497321,
+   "p": 0.000999000999000999,
+   "n_pairs": 64,
+   "B": 1000,
+   "seed": 117,
+   "paired": true,
+   "n_docs": 64,
+   "n_full_layers": 2,
+   "n_linear_layers": 3,
+   "note": "gen-доки только (TPU L1-деградация исключена); per-doc среднее odd_frac по слоям типа; ПАРНЫЙ перестановочный (знак-флип внутри пары) — тот же док даёт обе величины (р. 2, review r2)"
+  },
+  "notes": [
+   "mean vs median (odd_frac, du_unit, L23, K=96): mean L=0.6274 vs C=0.6230 (mean-тест — secondary, r3); медианы L=0.5214 vs C=0.6117 — противоположное направление; PRIMARY-тест KS (p=0.0010): совпадение средних — артефакт бимодальности loopy, не «одинаковые распределения» (r3 C2)",
+   "loopy odd_frac — широкий CI [0.48953003473795714, 0.7246723430882935] (бимодальность: два режима ≈0.5 и ≈0.72); kill по средним маскирует расщепление loopy-популяции",
+   "A_neg magnitude (описательно; пре-рег тестирует локацию, не величину): loopy -5.61 vs clean -1.15 (~4.9×) — согласуется с dip_V,med T0.1",
+   "Сноска (r3 мелочи): медианы полос (b9_32, b33_96) НЕ суммируются в медиану хвоста (tail_frac) — агрегат ≠ сумма агрегатов (per-doc доли суммируются в 1; агрегированные медианы — нет)"
+  ]
+ },
+ "verdict": {
+  "prereg_id": "T0.3 (r3, аддендум 3)",
+  "object": "du_unit",
+  "H1_period2": {
+   "status": "refuted",
+   "detail": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)",
+   "primary_ks_p": 0.000999000999000999,
+   "median_direction": "L<C",
+   "G10_note": "estimand odd_frac различает ТОЛЬКО period-2; периоды лупов пула 5/7/8/24/… ⇒ «loopy→нечётные» было структурно неотличимо от нуля (r3 C3, §3.6): kill интерпретируется как «не подтверждено», не как «опровергнуто механизмом»"
+  },
+  "H2_period_structure": {
+   "status": "confirmed",
+   "gate": "detection p≤α (K=96) ∧ median_concentration>1 ∧ frac(conc>1)≥0.8 (r3.1: min-гейт заменён — fragile к одному выбросу; min отчитан описательно)",
+   "detection": {
+    "loopy": {
+     "n_total": 41,
+     "K_composition": {
+      "96": 41
+     },
+     "n_detected_full": 30,
+     "p_values_full": [
+      7,
+      8,
+      9,
+      11,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      24,
+      27,
+      31,
+      32
+     ],
+     "k96": {
+      "n_total": 41,
+      "n_detected": 30,
+      "p_values": [
+       7,
+       8,
+       9,
+       11,
+       13,
+       14,
+       15,
+       16,
+       17,
+       18,
+       19,
+       20,
+       24,
+       27,
+       31,
+       32
+      ]
+     }
+    },
+    "clean": {
+     "n_total": 53,
+     "K_composition": {
+      "32": 2,
+      "96": 51
+     },
+     "n_detected_full": 0,
+     "p_values_full": [],
+     "k96": {
+      "n_total": 51,
+      "n_detected": 0,
+      "p_values": []
+     }
+    },
+    "remainder": {
+     "n_total": 2,
+     "K_composition": {
+      "96": 2
+     },
+     "n_detected_full": 0,
+     "p_values_full": [],
+     "k96": {
+      "n_total": 2,
+      "n_detected": 0,
+      "p_values": []
+     }
+    },
+    "test": {
+     "pool": "K=96 (r3.1 #3: K=32-доки исключены — p-диапазон зависит от K)",
+     "nL": 41,
+     "nC": 51,
+     "dL": 30,
+     "dC": 0,
+     "p0_pool": 0.32608695652173914,
+     "p_two_sided_exact": 2.18081796329386e-07,
+     "note": "H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); двусторонний тест по as-or-less-likely convention (не scipy binomtest — там doubled-min, числа будут отличаться, r3.1 #7)"
+    }
+   },
+   "aggregate": {
+    "pool": "K=96 (r3.1 #3)",
+    "n_detected_loopy": 30,
+    "mean_concentration": 5.908370724006618,
+    "median_concentration": 6.062201613464012,
+    "min_concentration": 2.429454959658243,
+    "frac_conc_above_1": 1.0,
+    "mean_top2_res_share": 0.632315043423947,
+    "top2_baseline_note": "равномерная база = 2/p (varies per doc)",
+    "mean_anti_frac": 0.02911325480597452,
+    "anti_phase_finding": "анти-фаза (k≡p/2 mod p) НЕ носитель: mean anti_frac = 0.029 — ниже равномерной базы (r3 C3: букв. p/2-эстиманд ≈ 0); реальный носитель — классы остатков dom_residues mod p (интерпретация «фаза границы лупа» — гипотеза, не результат)",
+    "per_doc_conc_p": {
+     "chat_0": [
+      15,
+      0.000999000999000999
+     ],
+     "chat_10": [
+      27,
+      0.000999000999000999
+     ],
+     "chat_15": [
+      8,
+      0.000999000999000999
+     ],
+     "chat_3": [
+      20,
+      0.000999000999000999
+     ],
+     "code_0": [
+      11,
+      0.000999000999000999
+     ],
+     "code_1": [
+      24,
+      0.000999000999000999
+     ],
+     "code_13": [
+      7,
+      0.000999000999000999
+     ],
+     "code_14": [
+      9,
+      0.000999000999000999
+     ],
+     "code_6": [
+      32,
+      0.001998001998001998
+     ],
+     "code_8": [
+      15,
+      0.000999000999000999
+     ],
+     "own_w1": [
+      19,
+      0.000999000999000999
+     ],
+     "own_w10": [
+      15,
+      0.000999000999000999
+     ],
+     "own_w11": [
+      17,
+      0.000999000999000999
+     ],
+     "own_w14": [
+      18,
+      0.000999000999000999
+     ],
+     "own_w15": [
+      17,
+      0.000999000999000999
+     ],
+     "own_w5": [
+      13,
+      0.000999000999000999
+     ],
+     "own_w6": [
+      31,
+      0.000999000999000999
+     ],
+     "own_w7": [
+      16,
+      0.000999000999000999
+     ],
+     "own_w8": [
+      14,
+      0.000999000999000999
+     ],
+     "own_w9": [
+      18,
+      0.000999000999000999
+     ],
+     "wiki_1": [
+      19,
+      0.000999000999000999
+     ],
+     "wiki_10": [
+      15,
+      0.000999000999000999
+     ],
+     "wiki_11": [
+      17,
+      0.000999000999000999
+     ],
+     "wiki_14": [
+      18,
+      0.000999000999000999
+     ],
+     "wiki_15": [
+      17,
+      0.000999000999000999
+     ],
+     "wiki_5": [
+      13,
+      0.000999000999000999
+     ],
+     "wiki_6": [
+      31,
+      0.000999000999000999
+     ],
+     "wiki_7": [
+      16,
+      0.000999000999000999
+     ],
+     "wiki_8": [
+      14,
+      0.000999000999000999
+     ],
+     "wiki_9": [
+      18,
+      0.000999000999000999
+     ]
+    },
+    "per_doc_conc_p_format": "(p_detection, p_value_concentration_test)",
+    "n_per_doc_p_le_alpha": 30
+   },
+   "finding": "loopy-доки несут периодическую лаговую структуру (p из пиков ρ); отрицательная площадь организована по классам остатков mod p (dom_residues; медиана концентрации 6.06× базы) — НЕ на анти-фазе p/2 (anti_frac≈0) и не на нечётных k; чистые — без периода, площадь на лаге 1"
+  },
+  "robustness": {
+   "object": "h_raw",
+   "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)",
+   "ks_p": 0.000999000999000999
+  },
+  "descriptive": {
+   "object": "v_tangent",
+   "verdict": "descriptive: FORCED outcome (clean odd_frac≡1 по построению: b1≈1); p не цитировать; no claim; также циркулярно (стратификатор = тестируемый объект)",
+   "forced_outcome": true
+  },
+  "tail_prediction": {
+   "prereg": "пре-рег-предсказание #2: «clean: в хвосте k≥9» (C.tail > L.tail)",
+   "primary_status": "refuted (L.tail > C.tail — пре-рег-предсказание «чистые в хвосте» не подтвердилось)",
+   "by_object": {
+    "du_unit": "refuted (L.tail > C.tail — пре-рег-предсказание «чистые в хвосте» не подтвердилось)",
+    "h_raw": "refuted (L.tail > C.tail — пре-рег-предсказание «чистые в хвосте» не подтвердилось)",
+    "v_tangent": "refuted (L.tail > C.tail — пре-рег-предсказание «чистые в хвосте» не подтвердилось)"
+   },
+   "note": "fail-loud: провал предсказания отчитан явно (r2); r3 C8: обе половины пре-рега не сбылись → по словарю §0.4 это refuted, не kill"
+  },
+  "location_contrast": {
+   "pool": "K=96 (r3.1 #2: те же доки, что в primary KS-тесте 41/51; полный пул — secondary)",
+   "k1_frac": {
+    "loopy": 0.07375552221125886,
+    "clean": 0.33048816971530526,
+    "ratio": 4.48086000623362,
+    "full_pool": {
+     "loopy": 0.07375552221125886,
+     "clean": 0.3354175059730137,
+     "ratio": 4.5476934596473075,
+     "K_composition": {
+      "loopy": {
+       "96": 41
+      },
+      "clean": {
+       "32": 2,
+       "96": 51
+      }
+     },
+     "note": "K=32-доки (cor_w8, cor_w11, оба в clean) дают A_neg по 32 лагам, K=96 — по 96; влияние на медианы < 0.005 (r3.1 #2)"
+    }
+   },
+   "tail_frac": {
+    "loopy": 0.8924561910436641,
+    "clean": 0.5434191770247754,
+    "full_pool": {
+     "loopy": 0.8924561910436641,
+     "clean": 0.5396370531359403
+    }
+   },
+   "note": "r3 C1: локация различена и инвертирована (старый verdict-текст «локация не различима» опровергнут собственным артефактом)"
+  },
+  "confounds": [
+   "L/C × источник: L=68% own+wiki, C=60% corpus+math (r3 C6) — первичный контраст не идентифицирован отдельно от источника; source-стратификация — описательная (n<12)",
+   "corpus (16, все в C) без токенов: degen только по mcos (mshare выброшен) → смещение к «чистым», т.е. в пользу нулевой гипотезы H1 (r3 C6)",
+   "K-гетерогенность: коруся K=32 исключены из первичного пула (K=96, r3 C5); fixed-band k=1..24 — K-гомогенный robustness"
+  ],
+  "summary": "Период-2 как носитель отриц. площади: не подтверждён (H1: refuted; KS p=1.0e-03, медианы L<C) — распределения различимы (KS), направление против пре-рега (медианы L<C); kill НЕ установлен (равенство средних — артефакт бимодальности, r3 C2). G10: estimand odd_frac структурно слеп к периодам p≥3 (odd_frac(p=5,7)=0.500, p=8=0.586, p=24=0.509) — предсказание «loopy→нечётные» было структурно near-null на этом пуле. Положительный результат (H2, пре-рег аддендум 3): period-structure подтверждён — периодическая лаговая структура детектируется у loopy 30/41 vs clean 0/51 (тест на K=96 пуле; K=32-доки исключены) (exact p=2.18e-07); концентрация A_neg по классам остатков mod p: median 6.06× базы, top2_share 0.632; анти-фаза p/2 НЕ носитель (anti_frac≈0). Локация отриц. площади резко различена и инвертирована относительно пре-рега (K=96 пул): loopy — в хвосте k≥9 (медиана 0.892 vs clean 0.543), clean — на лаге 1 (k1 0.330 vs loopy 0.074, 4.5×). Распределение odd_frac у loopy бимодально, у clean унимодально; равенство средних — артефакт смеси. Согласуется с T0.1: чистый путь платит на лаге 1, лупы размазывают плату периодически по хвосту на фазе dom_residues mod p (интерпретация «граница лупа» — гипотеза, не результат) — это положительный результат, не kill."
+ },
+ "provenance": {
+  "artifact": true,
+  "G16_token_verification": {
+   "gen": "64/64 (AT0_1 G0b_gen_sha; источники не менялись — sha-совпадение, gates.G0a_provenance)",
+   "own": "dip_L23 meta-vs-recomputed (gates.G0a_tpu_curves; AT0_1 G0a_tpu_hn_field — обнаружение column-norms бага)",
+   "corpus": "not_testable_no_tokens (G16): 0/16 доков с токенами"
+  },
+  "G15_filters_applied": {
+   "degen_tz": "flag из degen(vc, toks) (T0.1)",
+   "loopy_ladder": "mcos>0.95 ∨ {wiki_0, wiki_4} (T0.1)",
+   "K_pool": "первичный пул K=96 (T0.1 P4, r3 §3.1); fixed-band k=1..24 — полный пул",
+   "layer_types": "из config.text_config.layer_types (гейт G15)"
+  },
+  "G10_forced_outcomes": {
+   "v_tangent_descriptive": "forced_outcome (clean b1>0.8 ⇒ odd_frac≡1, r3 §3.5)",
+   "odd_frac_period2": "estimand слеп к p≥3 (odd_frac(p=5,7)=0.500, p=8=0.586, p=24=0.509) — H1 было структурно near-null на этом пуле (r3 C3, §3.6)"
+  }
+ },
+ "store": {
+  "path": "store/16c9a58f26d13e6c.json",
+  "sha256": "16c9a58f26d13e6cb2c1092a40c769b34a6dc3ce7af7751dd5755d52c244e9c3"
+ }
+}
