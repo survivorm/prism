@@ -3,7 +3,7 @@
   "cell": "T0.1",
   "tz": "docs/TZ_add_0-3.md",
   "tz_sha256": "647c03ab05a25642c6f7e647fbd8dbc333c53d6de2ea8555ed3bee80baa8013d",
-  "script_sha256": "dc5bc3b2700059d2b153c50cb05e6cc3ed8cf52e27826f5a65f183e4c1c2bf7c",
+  "script_sha256": "de3058693022320876da8028c4e63dd1ef57ca8fe9dc565f08f49d396a763f20",
   "layers": [
    1,
    5,
@@ -34,8 +34,8 @@
   "t25_ekurve_sha256": "4a43873a7571ca71b3bc4d06b213aea01b6f033ea643f77644c8e21d485b7680",
   "t25_provenance": "artifact; скрипт утрачен (P14) — в вердикты AT0_1 не входит",
   "env": {
-   "python": "3.13.14",
-   "numpy": "2.5.2",
+   "python": "3.12.9",
+   "numpy": "2.5.3",
    "threads": {
     "OMP_NUM_THREADS": "4",
     "OPENBLAS_NUM_THREADS": "4",
@@ -49,7 +49,20 @@
    "P14 (t25): скрипт утрачен — t25_ekurve.json только как artifact, в вердикты AT0_1 не входит.",
    "P10: T0.4 (T1.0-режим) не вычисляется (нет данных в TPU-npz).",
    "G0-a: P2_corpus.npz без tok (0/16) — декод-проба и «те ли токены» для него невыполнимы (зафиксировано)."
-  ]
+  ],
+  "r6_annotation": {
+   "date": "2026-11-13",
+   "review": "docs/AT0_1_review.md",
+   "base_run": "file sha256 d4a4b10135e8b63f361f6fe75475cff7d44b6810e9248d03a8bdf96b5b73d94a (пин TZ_add_0-3.md v1.2, D4); числа прогона и store 23281c64cc418ff1 не менялись",
+   "changes": [
+    "prereg.4_plateau_vs_fDC.{h_raw,du_unit,v_tangent}: + direction, direction_note (ревью #2)",
+    "prereg.4_plateau_vs_fDC.v_tangent.null_analytic_ma1: + applicability (ревью #4)",
+    "aggregates.t0_headline_note: + T_none_full — разность, не excess (ревью #3)",
+    "gates.G0a_tpu_hn_field: + max_rel_dev_reconstruction(+detail) — post-hoc пересчёт (ревью #5)",
+    "gates.G8_gram: + n_l1_absent_docs = 2, n_l1_absent_cells = 6 (ревью #6)"
+   ],
+   "invariant": "числа прогона не менялись; manifest = claim + manifest-блок; добавленные величины — детерминированные пересчёты из записанных входов (sha256) либо явные счёты из артефакта"
+  }
  },
  "gates": {
   "G1prime_field_sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
@@ -171,7 +184,32 @@
     "worst_doc": "own_w4",
     "note": "TPU-ряды vs продюсерский meta L23 (fp16-точность ~1e-3; dev ≤ 1e-3 ⇒ ряды годны)"
    },
-   "conclusion": "строки TPU-npz — сырые fp16-состояния; ‖row‖ — истинная норма (fp16-точность ~1e-3); моментные величины h_raw и R/A-split для TPU вычисляемы и вычислены"
+   "conclusion": "строки TPU-npz — сырые fp16-состояния; ‖row‖ — истинная норма (fp16-точность ~1e-3); моментные величины h_raw и R/A-split для TPU вычисляемы и вычислены",
+   "max_rel_dev_reconstruction": 3.7939126356469717e-16,
+   "max_rel_dev_reconstruction_detail": {
+    "definition": "max по TPU-докам (own_w0..15, cor_w0..15) × L ∈ {1,5,11,17,23} × row t ‖U·hn − h_raw‖₂/‖h_raw‖₂ (r6, docs/AT0_1_review.md, #5); U = u/max(‖u‖,1e-12), u = h_raw/max(‖h_raw‖,1e-12), hn = ‖h_raw‖ — зеркало load_source + cell-loop (experiments/AT0_1_accounting.py:185-189, 275-276)",
+    "worst": {
+     "doc": "own_w6",
+     "L": 5
+    },
+    "max_by_source": {
+     "P1_own": 3.7939126356469717e-16,
+     "P2_corpus": 2.651087330108574e-16
+    },
+    "max_by_layer": {
+     "L1": 2.6175831752051945e-16,
+     "L5": 3.7939126356469717e-16,
+     "L11": 2.6682856128897777e-16,
+     "L17": 2.6607990136516047e-16,
+     "L23": 2.5493718517941864e-16
+    },
+    "self_audit": "bit-eq воспроизведение отчётных G0a evidence_own_w0 (row_norm_median, hn_median, hn_vs_column_norms_max_rel, row_norm_vs_hn_corr)",
+    "inputs_sha256": {
+     "results/e64/tpu_v8/P1_own.npz": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198",
+     "results/e64/tpu_v8/P2_corpus.npz": "5f42a08442a5d3bcb8d7c4de5c9658340c0378a917a5e633b9b2aa589ceac125"
+    },
+    "provenance": "post-hoc детерминированный пересчёт r6 (2026-11-13) — не перепуск эксперимента; числа прогона не менялись (experiments/at0_1_tpu_dev_recompute.py)"
+   }
   },
   "G0b_gen_sha": {
    "gen_layers_sha_ok": 64,
@@ -204,7 +242,10 @@
     "own_w0",
     "own_w4"
    ],
-   "path_note": "gram_resid — метрика пути суммирования (порядок лагов/BLAS): интерпретировать только по абсолютной величине (все ≪ 1e-15); rel-сравнение между путями бессмысленно; закрытая форма Σ_{k≥1}c(k) = (‖Σx‖² − Σ‖x‖²)/2 точна (r2-code M3 / r2-numbers MINOR-7)"
+   "path_note": "gram_resid — метрика пути суммирования (порядок лагов/BLAS): интерпретировать только по абсолютной величине (все ≪ 1e-15); rel-сравнение между путями бессмысленно; закрытая форма Σ_{k≥1}c(k) = (‖Σx‖² − Σ‖x‖²)/2 точна (r2-code M3 / r2-numbers MINOR-7)",
+   "n_l1_absent_docs": 2,
+   "n_l1_absent_cells": 6,
+   "n_l1_note": "r6 (docs/AT0_1_review.md, #6): L1-моментные величины absent (K=0) у 2 TPU-доков (excluded_L1_tpu_docs) × 3 объекта = 6 L1-клеток; число в log (run.log: excluded_L1) — список доков"
   },
   "G4_filter_symmetry": "n/a (нет контрольной стороны в T0.1; null'ы — в AT0_2); П4/П5: одна общая выборка доков на всех объектах (поля pool в prereg)",
   "G5_amplitude": "n/a (нет возмущений)",
@@ -221,8 +262,8 @@
    "outcomes": [
     "A: большинство доков r_max >= 1 (frac_rmax_below_1 ≤ 0.5) ⇒ T0 = учётный гейт, не арбитр (T1-T3 — с оговоркой)",
     "B: большинство доков r_max < 1 (frac_rmax_below_1 > 0.5) ⇒ T0 = арбитр, T1-T3 идут с оговоркой",
-    "C: П4 CI ∋ 0 и |est| ≥ DELTA_MIN ⇒ DC+MA(1) достаточна",
-    "D: П4 CI ∌ 0 ⇒ есть структура сверх DC+MA(1), локализуется по k (AT0_2)"
+    "C: |est − E_null| ≥ DELTA_MIN и p_perm > α ⇒ структуры сверх pair-block null не обнаружено (confirmed)",
+    "D: p_perm ≤ α ⇒ структура сверх pair-block null, локализуется по k (AT0_3, T0.3)"
    ],
    "reachability": "A: НЕДОСТИЖИМ на текущих данных — r_max = 4/Σ‖Δu‖² ≤ 4/19.3 ≈ 0.208 < 1 (замер Σ‖Δu‖² = 19.3…518.3 по 478 du_unit-клеткам) ⇒ реализован исход B (frac = 1.0); B/C/D — достижимы данными (r4, r2-numbers MAJOR-4: round-2 «все исходы достижимы» ложно для A; assert ≥2 исходов проходит через B/C/D)",
    "note": "round 2: 'ok: True' + self-assert и post-hoc DELTA_MIN := |оценка| (исход C недостижим) — удалены; DELTA_MIN зафиксирован ДО прогона (§0.4)"
@@ -294,17 +335,28 @@
     ],
     "ci_width": 0.00023152932008285525,
     "null_block2": {
-     "E": -0.001853999849436461,
-     "sd": 9.347403616269627e-05,
+     "E": -0.001849836019310453,
+     "sd": 9.833038206195263e-05,
      "min": -0.002137349500076999,
-     "max": -0.0016451542097395597,
-     "p_perm": 0.01639344262295082
+     "max": -0.0015763175082455178,
+     "p_perm": 0.005
     },
     "null_analytic_pool_median": -0.002617775460832796,
-    "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026); блок-2 перестановка сохраняет лаг-1 (DC+MA(1)), уничтожает лаги ≥ 2",
+    "null_analytic_ma1": {
+     "median_z": -0.21574175798491185,
+     "mean_z": -0.10828588005834365,
+     "n_matched": 51,
+     "n_no_match": 0,
+     "n_abs_z_ge_3": 6,
+     "theta_median_abs": 0.457322210431949,
+     "E_doc": "−f_dc (matched MA(1): ρ_true(k≥2) = 0 ⇒ E[mean_band] = 0)",
+     "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 98 — первый порядок, per-dim гауссов MA(1), D = скрытое измерение; Bartlett-поправка нулевая для k > p+1",
+     "note": "r5 (arch-review D1b): второй столбец — MA(1)-null, реально сохраняющий лаг-1 (θ matched к ρ(1), invertible-корень); описательно, вердикт — по первичному каналу (σ/эффект, D2)"
+    },
+    "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026). r5 (D1): block-2 — pair-block null: сохраняет ЧЁТНЫЙ лаг-1 (x_{2i}, x_{2i+1}), рандомизирует НЕЧЁТНЫЙ лаг-1 и лаги ≥ 2; «DC+MA(1) null» было ложным label (ревью: MA(1)-лаг-1 вдвое). MA(1)-null, matched по лаг-0/лаг-1 — null_analytic_ma1 (второй столбец)",
     "delta_min": 0.0002,
     "alpha": 0.05,
-    "prereg": "полоса k=9..96 (буква ТЗ §1.5-4 «плато ρ̄(k≥9)»), агрегатор = per-doc mean по лагам, DELTA_MIN = 2e-4 (≈ sd null / пол-ширина CI, замер 1e-4…6e-4), вердикт против matched null — всё зафиксировано ДО прогона (r4, MAJOR-2)",
+    "prereg": "полоса k=9..96 (буква ТЗ §1.5-4 «плато ρ̄(k≥9)»), агрегатор = per-doc mean по лагам, DELTA_MIN = 2e-4 (≈ sd null / пол-ширина CI, замер 1e-4…6e-4), вердикт против matched null — всё зафиксировано ДО прогона (r4, MAJOR-2); r5 (D2): σ/эффект — первичный канал, p_perm — вторичный (family-wise, NNULL=199 ⇒ min p = 0.005 ≤ α/6 = 0.00833)",
     "truncation": "полоса ограничена k_alphabet (K=96), не N (N = 82…383): «полного» плато при k>96 в артефакте нет — обрезка объявлена явно (r4, MAJOR-2)",
     "sensitivity_median_over_lags": {
      "est": -0.002312579353959838,
@@ -312,7 +364,9 @@
     },
     "pool": "nondegen ∩ {K=96, все объекты} (одинаковая полоса k=9..96)",
     "estimator": "per-doc: mean_{k=9..96} rho_Tk(k) − f_dc; точка = медиана по доку; CI — парный бутстрап медиан (seed 117, B=1000)",
-    "verdict": "refuted: DC+MA(1) недостаточна — структура сверх DC+MA(1) (p_perm против blk=2-null; локализовать по k, AT0_2)"
+    "verdict": "refuted: структура сверх pair-block null (чётный лаг-1 + DC) (p_perm против pair-block null; MA(1)-null — второй столбец; локализовать по k — AT0_3, T0.3)",
+    "direction": "real_at_fdc",
+    "direction_note": "r6 (docs/AT0_1_review.md, #2): «refuted» = pair-block null не объясняет real (p_perm = 0.005), не «плато отвергнуто»; real (est = −9.7e-5, CI содержит 0) на ~19× ближе к f_dc, чем сдвиг null (E = −1.85e-3) — плато на уровне f_dc"
    },
    "du_unit": {
     "n_docs": 51,
@@ -323,17 +377,28 @@
     ],
     "ci_width": 0.00019326265985521388,
     "null_block2": {
-     "E": -0.0018714926086283057,
-     "sd": 9.792278489524862e-05,
+     "E": -0.001862584491140902,
+     "sd": 9.903273090491921e-05,
      "min": -0.00213816093489948,
-     "max": -0.0016449738185562047,
-     "p_perm": 0.01639344262295082
+     "max": -0.00159417704152779,
+     "p_perm": 0.005
     },
     "null_analytic_pool_median": -0.0026177743025318414,
-    "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026); блок-2 перестановка сохраняет лаг-1 (DC+MA(1)), уничтожает лаги ≥ 2",
+    "null_analytic_ma1": {
+     "median_z": -0.21562117252716537,
+     "mean_z": -0.08411930124124715,
+     "n_matched": 51,
+     "n_no_match": 0,
+     "n_abs_z_ge_3": 8,
+     "theta_median_abs": 0.45587621085060537,
+     "E_doc": "−f_dc (matched MA(1): ρ_true(k≥2) = 0 ⇒ E[mean_band] = 0)",
+     "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 98 — первый порядок, per-dim гауссов MA(1), D = скрытое измерение; Bartlett-поправка нулевая для k > p+1",
+     "note": "r5 (arch-review D1b): второй столбец — MA(1)-null, реально сохраняющий лаг-1 (θ matched к ρ(1), invertible-корень); описательно, вердикт — по первичному каналу (σ/эффект, D2)"
+    },
+    "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026). r5 (D1): block-2 — pair-block null: сохраняет ЧЁТНЫЙ лаг-1 (x_{2i}, x_{2i+1}), рандомизирует НЕЧЁТНЫЙ лаг-1 и лаги ≥ 2; «DC+MA(1) null» было ложным label (ревью: MA(1)-лаг-1 вдвое). MA(1)-null, matched по лаг-0/лаг-1 — null_analytic_ma1 (второй столбец)",
     "delta_min": 0.0002,
     "alpha": 0.05,
-    "prereg": "полоса k=9..96 (буква ТЗ §1.5-4 «плато ρ̄(k≥9)»), агрегатор = per-doc mean по лагам, DELTA_MIN = 2e-4 (≈ sd null / пол-ширина CI, замер 1e-4…6e-4), вердикт против matched null — всё зафиксировано ДО прогона (r4, MAJOR-2)",
+    "prereg": "полоса k=9..96 (буква ТЗ §1.5-4 «плато ρ̄(k≥9)»), агрегатор = per-doc mean по лагам, DELTA_MIN = 2e-4 (≈ sd null / пол-ширина CI, замер 1e-4…6e-4), вердикт против matched null — всё зафиксировано ДО прогона (r4, MAJOR-2); r5 (D2): σ/эффект — первичный канал, p_perm — вторичный (family-wise, NNULL=199 ⇒ min p = 0.005 ≤ α/6 = 0.00833)",
     "truncation": "полоса ограничена k_alphabet (K=96), не N (N = 82…383): «полного» плато при k>96 в артефакте нет — обрезка объявлена явно (r4, MAJOR-2)",
     "sensitivity_median_over_lags": {
      "est": -0.0020112748467625958,
@@ -341,7 +406,9 @@
     },
     "pool": "nondegen ∩ {K=96, все объекты} (одинаковая полоса k=9..96)",
     "estimator": "per-doc: mean_{k=9..96} rho_Tk(k) − f_dc; точка = медиана по доку; CI — парный бутстрап медиан (seed 117, B=1000)",
-    "verdict": "refuted: DC+MA(1) недостаточна — структура сверх DC+MA(1) (p_perm против blk=2-null; локализовать по k, AT0_2)"
+    "verdict": "refuted: структура сверх pair-block null (чётный лаг-1 + DC) (p_perm против pair-block null; MA(1)-null — второй столбец; локализовать по k — AT0_3, T0.3)",
+    "direction": "real_at_fdc",
+    "direction_note": "r6 (docs/AT0_1_review.md, #2): «refuted» = null не объясняет real; est = −9.1e-5 (CI [−2.1e-4, −1.2e-5], ниже 0 с точностью CI) на ~20× меньше по величине сдвига null (E = −1.86e-3) — real практически на уровне f_dc"
    },
    "v_tangent": {
     "n_docs": 51,
@@ -352,17 +419,29 @@
     ],
     "ci_width": 0.002697765922998929,
     "null_block2": {
-     "E": -0.0022211325679422143,
-     "sd": 0.00016530485429683126,
+     "E": -0.002227762750210529,
+     "sd": 0.00015918631872633682,
      "min": -0.0026457011111179485,
-     "max": -0.0018129740402403755,
-     "p_perm": 0.01639344262295082
+     "max": -0.0016716053999053238,
+     "p_perm": 0.005
     },
     "null_analytic_pool_median": -0.002447830085809772,
-    "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026); блок-2 перестановка сохраняет лаг-1 (DC+MA(1)), уничтожает лаги ≥ 2",
+    "null_analytic_ma1": {
+     "median_z": 381.3249665142485,
+     "mean_z": 406.7255557540537,
+     "n_matched": 51,
+     "n_no_match": 0,
+     "n_abs_z_ge_3": 51,
+     "theta_median_abs": 0.10988812201755967,
+     "E_doc": "−f_dc (matched MA(1): ρ_true(k≥2) = 0 ⇒ E[mean_band] = 0)",
+     "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 98 — первый порядок, per-dim гауссов MA(1), D = скрытое измерение; Bartlett-поправка нулевая для k > p+1",
+     "note": "r5 (arch-review D1b): второй столбец — MA(1)-null, реально сохраняющий лаг-1 (θ matched к ρ(1), invertible-корень); описательно, вердикт — по первичному каналу (σ/эффект, D2)",
+     "applicability": "MA(1) неприменима к v_tangent (r6, docs/AT0_1_review.md, #4): f_dc ≈ 0.08 (DC-dominant, f_dc_median = 0.0797); z = (s_doc + f_dc)/SE = mean_band/SE — blow-up (median_z = 381, n_abs_z_ge_3 = 51/51) — by-product DC-доминирования в числителе, не «огромная структура»; описательно только (вердикт — по первичному каналу, r5 D2)"
+    },
+    "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026). r5 (D1): block-2 — pair-block null: сохраняет ЧЁТНЫЙ лаг-1 (x_{2i}, x_{2i+1}), рандомизирует НЕЧЁТНЫЙ лаг-1 и лаги ≥ 2; «DC+MA(1) null» было ложным label (ревью: MA(1)-лаг-1 вдвое). MA(1)-null, matched по лаг-0/лаг-1 — null_analytic_ma1 (второй столбец)",
     "delta_min": 0.0002,
     "alpha": 0.05,
-    "prereg": "полоса k=9..96 (буква ТЗ §1.5-4 «плато ρ̄(k≥9)»), агрегатор = per-doc mean по лагам, DELTA_MIN = 2e-4 (≈ sd null / пол-ширина CI, замер 1e-4…6e-4), вердикт против matched null — всё зафиксировано ДО прогона (r4, MAJOR-2)",
+    "prereg": "полоса k=9..96 (буква ТЗ §1.5-4 «плато ρ̄(k≥9)»), агрегатор = per-doc mean по лагам, DELTA_MIN = 2e-4 (≈ sd null / пол-ширина CI, замер 1e-4…6e-4), вердикт против matched null — всё зафиксировано ДО прогона (r4, MAJOR-2); r5 (D2): σ/эффект — первичный канал, p_perm — вторичный (family-wise, NNULL=199 ⇒ min p = 0.005 ≤ α/6 = 0.00833)",
     "truncation": "полоса ограничена k_alphabet (K=96), не N (N = 82…383): «полного» плато при k>96 в артефакте нет — обрезка объявлена явно (r4, MAJOR-2)",
     "sensitivity_median_over_lags": {
      "est": -0.001870518141182942,
@@ -370,7 +449,9 @@
     },
     "pool": "nondegen ∩ {K=96, все объекты} (одинаковая полоса k=9..96)",
     "estimator": "per-doc: mean_{k=9..96} rho_Tk(k) − f_dc; точка = медиана по доку; CI — парный бутстрап медиан (seed 117, B=1000)",
-    "verdict": "refuted: DC+MA(1) недостаточна — структура сверх DC+MA(1) (p_perm против blk=2-null; локализовать по k, AT0_2)"
+    "verdict": "refuted: структура сверх pair-block null (чётный лаг-1 + DC) (p_perm против pair-block null; MA(1)-null — второй столбец; локализовать по k — AT0_3, T0.3)",
+    "direction": "real_above_fdc",
+    "direction_note": "r6 (docs/AT0_1_review.md, #2): est = +1.94e-3, CI [+6.9e-4, +3.4e-3] — плато ВЫШЕ f_dc (null E = −2.23e-3); здесь «refuted» = null не объясняет real, и real не на f_dc"
    },
    "pool4_n": 51,
    "pool5_note": "П4-пул (K=96) n=51 из 53 nondegen; исключены: ['cor_w11', 'cor_w8']"
@@ -387,36 +468,40 @@
     "p_two_sided_binom05_note": "Binomial(n, 0.5) — неверный null (null e3 ≈ −1/N, P(+)≈0.2); оставлено для сравнения, вердикт — по matched null (r4)",
     "null_block2": {
      "pos_frac_e3": [
-      0.39716981132075474,
-      0.06214253417122436
+      0.38864131980658007,
+      0.05987272515640563
      ],
      "pos_frac_ee": [
-      0.3833333333333333,
-      0.06099250962836492
+      0.3847539584716033,
+      0.06608752319634166
      ],
-     "p_perm_sign_ee": 0.08196721311475409,
-     "p_perm_sign_e3": 0.06557377049180328,
+     "p_perm_sign_ee": 0.05,
+     "p_perm_sign_e3": 0.105,
      "sigma": {
-      "e3": -11.434414257701771,
-      "e4": -1.354303149714807,
-      "ee": -10.225524812927235
+      "ee": -9.767810551336826
+     },
+     "sigma_descriptive": {
+      "e3": -10.440607217857753,
+      "e4": -1.6606764071961526
      },
      "med_null_e3": [
-      -0.0027118132500929242,
-      0.001664415994281397
+      -0.003070004348694827,
+      0.0017885387782060119
      ],
      "med_null_e4": [
-      -0.001554798708065917,
-      0.002206788172922542
+      -0.0011287812273798586,
+      0.002056196884132113
      ],
      "med_null_ee": [
-      -0.0019095134522365104,
-      0.0011212614115472777
-     ]
+      -0.0019626491535733393,
+      0.0011683632298392372
+     ],
+     "level_channel_note": "r5 (arch-review D3): level-канал — ТОЛЬКО по ē (было max(|σ(e3)|,|σ(e4)|,|σ(ē)|) — та же инфляция, что sign-OR); e3/e4 — описательно (sigma_descriptive)",
+     "pair_block_note": "r5 (arch-review D1): block-2 — pair-block null (чётный лаг-1 + DC), НЕ DC+MA(1) (нечётный лаг-1 тоже рандомизируется; ревью измерило: MA(1)-лаг-1 вдвое)"
     },
     "alpha": 0.05,
-    "statistic": "per-doc ē = mean(ρ̄(3)−f_dc, ρ̄(4)−f_dc); r4: sign-счёт и уровень — против matched null (blk=2 перестановка, 60 сидов)",
-    "verdict": "confirmed: excess(3,4) ≠ 0, знак negative (excess < 0 — анти-горб) (каналы: sign=нет, level=да)"
+    "statistic": "per-doc ē = mean(ρ̄(3)−f_dc, ρ̄(4)−f_dc); r4: sign-счёт и уровень — против matched null (pair-block перестановка; r5: 199 сидов)",
+    "verdict": "confirmed: excess(3,4) ≠ 0, знак negative (excess < 0 — анти-горб) (каналы: sign=да, level(ē)=да)"
    },
    "du_unit": {
     "n": 53,
@@ -429,36 +514,40 @@
     "p_two_sided_binom05_note": "Binomial(n, 0.5) — неверный null (null e3 ≈ −1/N, P(+)≈0.2); оставлено для сравнения, вердикт — по matched null (r4)",
     "null_block2": {
      "pos_frac_e3": [
-      0.399685534591195,
-      0.06585704540272104
+      0.38740874182231916,
+      0.061635025331685064
      ],
      "pos_frac_ee": [
-      0.3811320754716981,
-      0.05874361976772637
+      0.3808665971366265,
+      0.06414648982883203
      ],
-     "p_perm_sign_ee": 0.04918032786885246,
-     "p_perm_sign_e3": 0.06557377049180328,
+     "p_perm_sign_ee": 0.045,
+     "p_perm_sign_e3": 0.04,
      "sigma": {
-      "e3": -12.304689615071382,
-      "e4": -2.0593529186802644,
-      "ee": -10.899546305261138
+      "ee": -10.097515019348664
+     },
+     "sigma_descriptive": {
+      "e3": -11.580904735843802,
+      "e4": -2.349821602614309
      },
      "med_null_e3": [
-      -0.0027967758373481236,
-      0.0016679393122148156
+      -0.003150838974978314,
+      0.0017416093868316568
      ],
      "med_null_e4": [
-      -0.0014687289458375958,
-      0.002160372514895825
+      -0.0010858872297253993,
+      0.002056245952766744
      ],
      "med_null_ee": [
-      -0.001943360032363691,
-      0.0010761579723873932
-     ]
+      -0.0019879216808813688,
+      0.0011572225424675221
+     ],
+     "level_channel_note": "r5 (arch-review D3): level-канал — ТОЛЬКО по ē (было max(|σ(e3)|,|σ(e4)|,|σ(ē)|) — та же инфляция, что sign-OR); e3/e4 — описательно (sigma_descriptive)",
+     "pair_block_note": "r5 (arch-review D1): block-2 — pair-block null (чётный лаг-1 + DC), НЕ DC+MA(1) (нечётный лаг-1 тоже рандомизируется; ревью измерило: MA(1)-лаг-1 вдвое)"
     },
     "alpha": 0.05,
-    "statistic": "per-doc ē = mean(ρ̄(3)−f_dc, ρ̄(4)−f_dc); r4: sign-счёт и уровень — против matched null (blk=2 перестановка, 60 сидов)",
-    "verdict": "confirmed: excess(3,4) ≠ 0, знак negative (excess < 0 — анти-горб) (каналы: sign=да, level=да)"
+    "statistic": "per-doc ē = mean(ρ̄(3)−f_dc, ρ̄(4)−f_dc); r4: sign-счёт и уровень — против matched null (pair-block перестановка; r5: 199 сидов)",
+    "verdict": "confirmed: excess(3,4) ≠ 0, знак negative (excess < 0 — анти-горб) (каналы: sign=да, level(ē)=да)"
    },
    "v_tangent": {
     "n": 53,
@@ -471,38 +560,43 @@
     "p_two_sided_binom05_note": "Binomial(n, 0.5) — неверный null (null e3 ≈ −1/N, P(+)≈0.2); оставлено для сравнения, вердикт — по matched null (r4)",
     "null_block2": {
      "pos_frac_e3": [
-      0.3632075471698113,
-      0.07280060988951122
+      0.3576372428178629,
+      0.06517667192461192
      ],
      "pos_frac_ee": [
-      0.3433962264150943,
-      0.0719129518754636
+      0.34550109035744764,
+      0.06691146676993359
      ],
-     "p_perm_sign_ee": 0.01639344262295082,
-     "p_perm_sign_e3": 0.01639344262295082,
+     "p_perm_sign_ee": 0.005,
+     "p_perm_sign_e3": 0.005,
      "sigma": {
-      "e3": 14.391958593274884,
-      "e4": 7.92482279348702,
-      "ee": 14.10149280769481
+      "ee": 13.984253432395523
+     },
+     "sigma_descriptive": {
+      "e3": 14.915475191679974,
+      "e4": 8.15611346951411
      },
      "med_null_e3": [
-      -0.0031217099662392517,
-      0.0015595791078034198
+      -0.0031823433232868433,
+      0.0015089047455923578
      ],
      "med_null_e4": [
-      -0.0019960122558203624,
-      0.001898542188734469
+      -0.001781346567508125,
+      0.0018183838146443728
      ],
      "med_null_ee": [
-      -0.0023418131343236697,
-      0.0010275194242589495
-     ]
+      -0.0022881998287337625,
+      0.001032299974764651
+     ],
+     "level_channel_note": "r5 (arch-review D3): level-канал — ТОЛЬКО по ē (было max(|σ(e3)|,|σ(e4)|,|σ(ē)|) — та же инфляция, что sign-OR); e3/e4 — описательно (sigma_descriptive)",
+     "pair_block_note": "r5 (arch-review D1): block-2 — pair-block null (чётный лаг-1 + DC), НЕ DC+MA(1) (нечётный лаг-1 тоже рандомизируется; ревью измерило: MA(1)-лаг-1 вдвое)"
     },
     "alpha": 0.05,
-    "statistic": "per-doc ē = mean(ρ̄(3)−f_dc, ρ̄(4)−f_dc); r4: sign-счёт и уровень — против matched null (blk=2 перестановка, 60 сидов)",
-    "verdict": "confirmed: excess(3,4) ≠ 0, знак positive (excess > 0 — горб) (каналы: sign=да, level=да)"
+    "statistic": "per-doc ē = mean(ρ̄(3)−f_dc, ρ̄(4)−f_dc); r4: sign-счёт и уровень — против matched null (pair-block перестановка; r5: 199 сидов)",
+    "verdict": "confirmed: excess(3,4) ≠ 0, знак positive (excess > 0 — горб) (каналы: sign=да, level(ē)=да)"
    }
   },
+  "normalization_consequence": "r5 (arch-review D6): тождество S(0) = 1 + 2Σρ̄ выполняется ТОЛЬКО для unit-variance нормировки ρ̂; для энерго-взвешенной (norm=T: c(k)/c(0)) замыкается Gram-тождество 1 + 2Σ_{k<N}ρ̂(k) = r (G8), не unit-ACF; для T-k нормировки (знаменатель Σ_{t<N−k}‖x_t‖² переменный) unit-variance-тождество не выполняется вовсе. Заголовочный T0 (Σρ̄) — в aggregates.t0_headline с явными нормировками",
   "6_median_sum_absent": {
    "verdict": "ok (S(0)/Σ для Δ_med не вычисляются, П3)",
    "note": "compliance-проверка (поля Δ_med/S0 отсутствуют); словарь §0.4 неприменим"
@@ -573,6 +667,22 @@
    "f_dc_du": null,
    "rmax_du": null
   },
+  "source_gen_layers": {
+   "L": 23,
+   "n_docs": 36,
+   "sources": {
+    "gen_layers": 36
+   },
+   "row_allowed": true,
+   "window": "none",
+   "K_note": "K = max {24,32,96} ≤ N−1 per doc (реестр §0.2)",
+   "dip_V_med": -0.07342653676862854,
+   "dip_V_mean": -0.09305610108953077,
+   "r_v": 26.239625973930316,
+   "r_du": 0.004367399980068497,
+   "f_dc_du": 1.1403133107228453e-05,
+   "rmax_du": 0.011413568936902959
+  },
   "source_P1_own": {
    "L": 23,
    "n_docs": 1,
@@ -603,7 +713,10 @@
    "r_v": 21.846452385691304,
    "r_du": 0.010946136607186466,
    "f_dc_du": 4.3667779412094395e-05,
-   "rmax_du": 0.02695411660842816
+   "rmax_du": 0.02695411660842816,
+   "provenance_limited": true,
+   "domain_like": false,
+   "note": "r5 (arch-review D4): 16/16 доков без токенов (G0a corpus_toks absent) — «те ли токены» невыполнимо в принципе; строка НЕ домен-подобная; корпус-зависимые числа — provenance_limited до восстановления токенов"
   },
   "pooled_nondeg": {
    "L": 23,
@@ -623,19 +736,151 @@
    "f_dc_du": 1.2561380313781734e-05,
    "rmax_du": 0.011688057437434297,
    "filter_note": "degen-фильтр (§0.3) — НЕ loopy-фильтр якоря G1′ (тот: nonwiki nonloopy); различие фильтров — в имени/полях",
+   "anchor_comparability": "r5 (arch-review D4): pooled dip_V_med НЕ сопоставим с LADDER-якорем −0.0722 (фильтр degen_tz n=53 vs nonwiki-nonloopy n=35; 16 из 53 — корпус без токенов — число частично corpus-обусловлено)",
    "dip_dh_mean": -0.370792093352445,
    "dip_dh_mean_tz_name": "dip_raw,mean (ТЗ §0.2)"
-  }
+  },
+  "source_companion": {
+   "gen_only": {
+    "L": 23,
+    "n_docs": 36,
+    "sources": {
+     "gen_layers": 36
+    },
+    "row_allowed": true,
+    "window": "none",
+    "K_note": "K = max {24,32,96} ≤ N−1 per doc (реестр §0.2)",
+    "dip_V_med": -0.07342653676862854,
+    "dip_V_mean": -0.09305610108953077,
+    "r_v": 26.239625973930316,
+    "r_du": 0.004367399980068497,
+    "f_dc_du": 1.1403133107228453e-05,
+    "rmax_du": 0.011413568936902959
+   },
+   "gen_plus_corpus": {
+    "L": 23,
+    "n_docs": 52,
+    "sources": {
+     "gen_layers": 36,
+     "P2_corpus": 16
+    },
+    "row_allowed": true,
+    "window": "none",
+    "K_note": "K = max {24,32,96} ≤ N−1 per doc (реестр §0.2)",
+    "dip_V_med": -0.08685362842854476,
+    "dip_V_mean": -0.10957031480071722,
+    "r_v": 24.88506755342691,
+    "r_du": 0.004826715147917656,
+    "f_dc_du": 1.2602389420150536e-05,
+    "rmax_du": 0.011687745309065889
+   },
+   "gen_plus_own": {
+    "L": 23,
+    "n_docs": 37,
+    "sources": {
+     "gen_layers": 36,
+     "P1_own": 1
+    },
+    "row_allowed": true,
+    "window": "none",
+    "K_note": "K = max {24,32,96} ≤ N−1 per doc (реестр §0.2)",
+    "dip_V_med": -0.07465510366080677,
+    "dip_V_mean": -0.09312865532430949,
+    "r_v": 26.276931539519452,
+    "r_du": 0.004358871063174416,
+    "f_dc_du": 1.138086439471127e-05,
+    "rmax_du": 0.011427068363396138
+   },
+   "all_nondeg": {
+    "L": 23,
+    "n_docs": 53,
+    "sources": {
+     "gen_layers": 36,
+     "P2_corpus": 16,
+     "P1_own": 1
+    },
+    "row_allowed": true,
+    "window": "none",
+    "K_note": "K = max {24,32,96} ≤ N−1 per doc (реестр §0.2)",
+    "dip_V_med": -0.08909695548884644,
+    "dip_V_mean": -0.1102793853423059,
+    "r_v": 24.90236364133829,
+    "r_du": 0.004811008660178404,
+    "f_dc_du": 1.2561380313781734e-05,
+    "rmax_du": 0.011688057437434297
+   }
+  },
+  "source_companion_note": "r5 (arch-review D4): компаньон-таблица по источникам (gen-only / +corpus / +own / все nondegen) — для отсечения corpus-условленности",
+  "t0_headline": {
+   "h_raw": {
+    "n_docs": 53,
+    "excess_median": {
+     "T_none_full": -0.5023582212969491,
+     "T_none_K96": -0.49742793299978033,
+     "Tk_none_K96": -0.49755840752819774,
+     "T_bart_K96": -0.4899298553771797,
+     "Tk_bart_K96": -0.49199065461797886
+    },
+    "excess_mean": {
+     "T_none_full": -0.5033896820053053,
+     "T_none_K96": -0.493134747771351,
+     "Tk_none_K96": -0.4937481768949659,
+     "T_bart_K96": -0.4895058257236633,
+     "Tk_bart_K96": -0.4918203679019137
+    },
+    "r_median": 0.004741200822737649,
+    "f_dc_median": 1.237911441968055e-05
+   },
+   "du_unit": {
+    "n_docs": 53,
+    "excess_median": {
+     "T_none_full": -0.5023929429497754,
+     "T_none_K96": -0.4967481370837159,
+     "Tk_none_K96": -0.49898170954327076,
+     "T_bart_K96": -0.48983097208927884,
+     "Tk_bart_K96": -0.4919068205633103
+    },
+    "excess_mean": {
+     "T_none_full": -0.5037891391373551,
+     "T_none_K96": -0.49290763158399453,
+     "Tk_none_K96": -0.4934304742386096,
+     "T_bart_K96": -0.4893112294475383,
+     "Tk_bart_K96": -0.49156813113949993
+    },
+    "r_median": 0.004811008660178404,
+    "f_dc_median": 1.2561380313781734e-05
+   },
+   "v_tangent": {
+    "n_docs": 53,
+    "excess_median": {
+     "T_none_full": -12.868956825537097,
+     "T_none_K96": -0.8498010249775021,
+     "Tk_none_K96": 0.021396143539154977,
+     "T_bart_K96": -0.2974252784902771,
+     "Tk_bart_K96": 0.01399125605634799
+    },
+    "excess_mean": {
+     "T_none_full": -13.20265274318846,
+     "T_none_K96": -1.1318054838210057,
+     "Tk_none_K96": 0.12090794498969726,
+     "T_bart_K96": -0.3913750104824837,
+     "Tk_bart_K96": 0.03642531460814357
+    },
+    "r_median": 24.90236364133829,
+    "f_dc_median": 0.0796657274386357
+   }
+  },
+  "t0_headline_note": "r5 (arch-review D5/D6): excess = Σ(ρ̂(k) − f_dc) per object × norm × window; T_none_full — полная сумма по всем лагам (точно, тождество G1/Gram: sum_rho_full = (r−1)/2); T_none_K96 / Tk_none_K96 / T_bart_K96 / Tk_bart_K96 — частичные по k=1..96 (объявлено). Тождество S(0) = 1 + 2Σρ̄ — только для unit-variance нормировки; для norm=T замыкается Gram-тождество 1 + 2Σρ̂ = r (G8), не unit-ACF; для T-k unit-variance-тождество не выполняется вовсе (D6). Per-doc — из store (cells) r6 (docs/AT0_1_review.md, #3): T_none_full = (r−1)/2 − (N−1)·f_dc — РАЗНОСТЬ двух больших слагаемых (Gram-тождество, G8: max |sum_rho_full − (r−1)/2| = 1.07e-14; пересчёт r6 — bit-eq медианы −12.868956825537097 по 53 докам nondegen), НЕ «excess по всем лагам»; для v_tangent (r_median ≈ 24.9, f_dc_median ≈ 0.08) ≈ −12.87 — знак ПРОТИВОПоложен band mean P4 (+0.00194), не «плато провалено»"
  },
  "store": {
-  "path": "store/1af1e9f3c1f14ba8.json",
-  "sha256": "1af1e9f3c1f14ba815c178988ddc273486dfcd8f5296a4242c5122fa0d946983",
+  "path": "store/23281c64cc418ff1.json",
+  "sha256": "23281c64cc418ff1fedad2a5013c4bf7c8b7dd7680ac8d4fa7cf746c62fd1732",
   "n_docs": 96,
   "n_cells": 2880
  },
  "manifest": {
-  "store_sha256": "1af1e9f3c1f14ba815c178988ddc273486dfcd8f5296a4242c5122fa0d946983",
-  "claim_sha256": "1c6b0b40131798257d16196fc211a7e2270619f7e4a9af172c2c5f4c5bcb7c98",
+  "store_sha256": "23281c64cc418ff1fedad2a5013c4bf7c8b7dd7680ac8d4fa7cf746c62fd1732",
+  "claim_sha256": "b0f74312416285207ba99ae93ee75ecc446938b8b61ba82a19a04ac36b913994",
   "written": true
  }
 }

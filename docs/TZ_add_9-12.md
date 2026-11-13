@@ -875,7 +875,7 @@ T12.3 (T-кривые, различение попадания/дрейфа), T9
   "provenance": {"inherited_absent": [], "script_lost": ["t25_ekurve.json"]},
   "artifact_sha256": {"T0_ACCOUNTING_file": "d4a4b10135e8b63f361f6fe75475cff7d44b6810e9248d03a8bdf96b5b73d94a",
                       "T0_ACCOUNTING_store": "23281c64cc418ff1fedad2a5013c4bf7c8b7dd7680ac8d4fa7cf746c62fd1732",
-                      "note": "текущая сборка (NNULL=199, min p=0.005); build cbd86b9/1af1e9f3, читавшийся ревью, superseded — синхрон с ч.1 v1.2 (v1.2, D13)"}
+                      "note": "текущая сборка (NNULL=199, min p=0.005); build cbd86b9/1af1e9f3, читавшийся ревью, superseded — синхрон с ч.1 v1.2 (v1.2, D13); r6-cosmetic (2026-11-13): file на диске — аннотированный b0f74312… (run d4a4b101 + текстовые пометки, числа прогона и store не изменены — docs/AT0_1_review_answer.md)"}
 }
 ```
 

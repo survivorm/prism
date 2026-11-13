@@ -1,11 +1,19 @@
 {
  "experiment": "AT0_1 T0.1",
- "round": "round 4 (matched-null)",
+ "round": "round 5 (pair-block null, NNULL=199; script de305869) + r6-cosmetic annotation",
  "date": "2026-11-13 (UTC+3)",
- "claim_sha256": "1c6b0b40131798257d16196fc211a7e2270619f7e4a9af172c2c5f4c5bcb7c98",
- "store_sha256": "1af1e9f3c1f14ba815c178988ddc273486dfcd8f5296a4242c5122fa0d946983",
- "manifest_sha256": "44de85ee1cd3dbd26083be9e8a4bc4edac41c886978a639bafc6f60e73bdacd4",
- "script_sha256": "dc5bc3b2700059d2b153c50cb05e6cc3ed8cf52e27826f5a65f183e4c1c2bf7c",
- "note": "round 4: matched null (block-2, 60 seeds) + analytic; P5 sign/level channels; G10 reword; G3 norm/window. Claim T0_ACCOUNTING.json; store = full cell data; manifest = gates+prereg (без store-dup); run_log = stdout-лог (tracked).",
- "manifest_pin_note": "FIX 2026-11-13 08:05 (исполнительская сессия): исходный pin 16f90dbd (записан оркестраторской сессией 01:58) устарел/ошибочен — этот sha не соответствует ни одному манифесту на диске и ни одному session-transcript; сессия-автор (135MB) утрачена с диска. Манифест на диске (44de85ee, mtime 01:46:52 = конец r4-прогона) верифицирован как легитимный: run.log «written:», manifest == claim + manifest-блок (bit-eq), внутренние пины store 1af1e9f3 / claim 1c6b0b40 совпадают с файлами, numbers-ревью r4 — независимый пересчёт bit-eq (dev <=1.5e-18)."
+ "claim_sha256": "b0f74312416285207ba99ae93ee75ecc446938b8b61ba82a19a04ac36b913994",
+ "store_sha256": "23281c64cc418ff1fedad2a5013c4bf7c8b7dd7680ac8d4fa7cf746c62fd1732",
+ "manifest_sha256": "ffcdca23a3abdfba283cd91af619bf4b079505207f8fe59daef7d7ee794a71de",
+ "script_sha256": "de3058693022320876da8028c4e63dd1ef57ca8fe9dc565f08f49d396a763f20",
+ "note": "Текущий пин (r6-cosmetic, 2026-11-13): claim/manifest — post-hoc аннотация по docs/AT0_1_review.md (P4 direction, MA(1)-applicability, t0_headline_note, tpu_dev, n_l1_absent_docs/cells); чисел прогона не изменено (store и script — те же, что внутренние пины manifest). Ответка — docs/AT0_1_review_answer.md.",
+ "superseded_by_current": {
+  "round": "round 4 (matched-null)",
+  "claim_sha256": "1c6b0b40131798257d16196fc211a7e2270619f7e4a9af172c2c5f4c5bcb7c98",
+  "store_sha256": "1af1e9f3c1f14ba815c178988ddc273486dfcd8f5296a4242c5122fa0d946983",
+  "manifest_sha256": "44de85ee1cd3dbd26083be9e8a4bc4edac41c886978a639bafc6f60e73bdacd4",
+  "script_sha256": "dc5bc3b2700059d2b153c50cb05e6cc3ed8cf52e27826f5a65f183e4c1c2bf7c",
+  "note": "round 4: matched null (block-2, 60 seeds) + analytic; P5 sign/level channels; G10 reword; G3 norm/window. Claim T0_ACCOUNTING.json; store = full cell data; manifest = gates+prereg (без store-dup); run_log = stdout-лог (tracked).",
+  "manifest_pin_note": "FIX 2026-11-13 08:05 (исполнительская сессия): исходный pin 16f90dbd (записан оркестраторской сессией 01:58) устарел/ошибочен — этот sha не соответствует ни одному манифесту на диске и ни одному session-transcript; сессия-автор (135MB) утрачена с диска. Манифест на диске (44de85ee, mtime 01:46:52 = конец r4-прогона) верифицирован как легитимный: run.log «written:», manifest == claim + manifest-блок (bit-eq), внутренние пины store 1af1e9f3 / claim 1c6b0b40 совпадают с файлами, numbers-ревью r4 — независимый пересчёт bit-eq (dev <=1.5e-18)."
+ }
 }

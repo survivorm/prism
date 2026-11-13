@@ -1,12 +1,35 @@
 #!/usr/bin/env python3
 """AT0_1 — T0.1 «Пересчёт учёта на трёх объектах» (ТЗ v1.1 §1.5, disk-only).
 
+Rev. 5 (архитектурное ревью — docs/AT0_arch_review.md, sha f2decaf1, формального VERDICT нет;
+обработано по явной команде оператора):
+- D1: переименование block-2 null: «DC+MA(1) null» → «pair-block null (чётный лаг-1 + DC)».
+  Старый label ЛОЖЕН: block-2 сохраняет чётный лаг-1 (x_{2i}, x_{2i+1}) и рандомизирует
+  нечётный лаг-1 (x_{2i+1}, x_{t+2}) — измерено в ревью (MA(1), N=20000): лаг-1 −0.396 → −0.199.
+  Второй столбец: аналитический MA(1)-null, matched по лаг-0/лаг-1 (гауссов, первый порядок;
+  описательно — вердикт по первичному каналу). Вердикты не меняются (ревьюер: «не отзыв»).
+- D2: NNULL = 60 → 199 (min p = 1/200 = 0.005 ≤ Бонферрони α = 0.05/6 = 0.00833 на 6 пре-регов);
+  σ/эффект — первичный канал, p_perm — вторичный (объявлено явно).
+- D3: P5 level-канал только по ē (|σ(ē)| ≥ 3); e3/e4 — описательно (было max по 3 статистикам —
+  та же инфляция, что sign-OR). Вердикты не меняются (σ_ee = −10.2/−10.9/+14.1).
+- D4: source-компаньон-таблица (gen-only / +corpus / +own); строка source_P2_corpus —
+  provenance_limited (16/16 доков без токенов, G0a), не домен-подобная; pooled_nondeg —
+  примечание о несопоставимости с якорем (16 из 53 — корпус; фильтр ≠ LADDER-якоря).
+- D5: aggregates.t0_headline — заголовочный вопрос T0: Σ(ρ̂(k) − f_dc) per object × {T, T−k} ×
+  {none, bartlett} (T-none — полный сум по всем лагам, точно; T-k/bartlett — частичный k≤96, объявлено).
+- D6: следствие двух нормировок заявлено явно: S(0) = 1 + 2Σρ̄ — только для unit-variance
+  нормировки; для энерго-взвешенной (norm=T) замыкается Gram-тождество 1 + 2Σρ̂ = r (G8), не
+  unit-ACF; для T-k unit-variance-тождество не выполняется вовсе (знаменатель переменный).
+- G10 C/D: wording синхронизирован с p_perm-процедурой (r4-code review) + DC+MA(1) → pair-block;
+  «локализовать по k, AT0_2» → AT0_3 (T0.3).
+- Продюсер-баг (TPU _hn, e64_gpu.py:125) — вынесен в реестр docs/PRODUCER_BUGS.md.
+
 Rev. 4 (после числового ре-ревью round 2 — docs/AT0_1_review_r2_numbers.md):
 - CRIT-1/MAJOR-1: вердикты П4/П5 — против СОБСТВЕННОЙ null статистики, не против нуля.
-  Matched null = block-2-перестановка ряда приращений (сохраняет ровно лаг-1 = структуру
-  DC+MA(1), уничтожает лаги ≥ 2; ТЗ §1.5: null для формы = перестановка), 60 сидов
-  (ТЗ §0.4: ≥5; у ревьюера 60), отдельный сид на (док, s). Аналитическая закрытая форма
-  (full permutation точна; у blk=2 при k≥2 пары тоже случайные различные элементы):
+  Matched null = block-2-перестановка ряда приращений (pair-block: сохраняет чётный лаг-1,
+  уничтожает нечётный лаг-1 и лаги ≥ 2 — r5, D1; ТЗ §1.5: null для формы = перестановка),
+  199 сидов (r5, D2: family-wise; ТЗ §0.4: ≥5), отдельный сид на (док, s). Аналитическая
+  закрытая форма (full permutation точна; у blk=2 при k≥2 пары тоже случайные различные элементы):
   E[ρ̄(k) − f] = −(1−f)/(N−1). В артефакт: null-распределение, p_perm, σ-канал (П5 по
   уровню медиан — sign-счёт не информативен при одностороннем сдвиге, общем для доков).
 - MAJOR-2: пре-рег в артефакте: полоса k=9..96 (буква ТЗ §1.5-4), агрегатор per-doc mean,
@@ -99,12 +122,15 @@ B = 1000
 DELTA_MIN = 2e-4
 ALPHA_P4 = 0.05
 ALPHA_P5 = 0.05
-# r4 (r2-numbers CRIT-1): matched null П4/П5 — block-blk перестановка ряда приращений.
-# blk=2 сохраняет ровно лаг-1 (DC+MA(1)-структура) и уничтожает лаги ≥ 2 (ТЗ §1.5: null для
-# формы — перестановка; у ревьюера blk=2 = «сохраняет ровно лаг-1, уничтожает всё дальнее»).
-# NNULL = 60 сидов (ТЗ §0.4: ≥5), отдельный сид на (док, s).
+# r4 (r2-numbers CRIT-1): matched null П4/П5 — block-2-перестановка ряда приращений.
+# r5 (arch-review D1): blk=2 сохраняет ЧЁТНЫЙ лаг-1 (x_{2i}, x_{2i+1}) и рандомизирует
+# НЕЧЁТНЫЙ лаг-1 (x_{2i+1}, x_{2i+2}) — «сохраняет ровно лаг-1 (DC+MA(1))» было ложно
+# (ревью измерило: MA(1)-лаг-1 вдвое). Label: pair-block null (чётный лаг-1 + DC);
+# аналитический MA(1)-null (matched по лаг-0/лаг-1) — второй столбец (P4.null_analytic_ma1).
+# NNULL = 199 (r5, D2: family-wise на 6 пре-регов: min p = 1/(NNULL+1) ≤ α/6 = 0.00833;
+# ТЗ §0.4: ≥5), отдельный сид на (док, s).
 BLK_NULL = 2
-NNULL = 60
+NNULL = 199
 ANCHOR_LADDER = -0.0722      # LADDER_V2 real_pooled (nonwiki nonloopy, L23, dip_V,med)
 ANCHOR_TOL = 0.0006
 L1_DEGRADE_TOL = 1e-3        # per-doc гейт: |recomputed dip_V,med L1 − meta| ≤ 1e-3 → валидны
@@ -303,6 +329,7 @@ def compute_cells(docs):
                 common = {
                     "space": obj, "agg": "per_doc",
                     "norm": "T", "K": int(K), "window": "none", "N": int(n),
+                    "D": int(x.shape[1]),
                     "rho": ac["rho"].tolist(), "rho_Tk": ac["rho_Tk"].tolist(),
                     "rho_Tk_norm": "T-k",
                     "r": ac["r"], "sum_rho_full": ac["sum_rho_full"],
@@ -458,14 +485,18 @@ def _p_perm_two_sided(null_vals, obs):
 
 
 def p4_plateau(cells, pool, objects, nulls):
-    """П4: плато ρ̄(k≥9) == f_DC (DC+MA(1), ТЗ §1.5-4). Rev.4 (CRIT-1): вердикт — против
-    СОБСТВЕННОЙ null статистики (block-2 перестановка, 60 сидов) + закрытая форма
-    −(1−f)/(N−1), не против нуля (null ρ̄(k)−f ≈ −1/N по модулю больше «значимых» оценок).
+    """П4: плато ρ̄(k≥9) == f_DC (TZ §1.5-4). Rev.4 (CRIT-1): вердикт — против СОБСТВЕННОЙ
+    null статистики (block-2 перестановка, r5: 199 сидов) + закрытая форма −(1−f)/(N−1),
+    не против нуля (null ρ̄(k)−f ≈ −1/N по модулю больше «значимых» оценок).
+    r5 (D1): null — pair-block (чётный лаг-1 + DC), НЕ DC+MA(1); второй столбец —
+    аналитический MA(1)-null, matched по лаг-0/лаг-1 (D1b). r5 (D2): σ/эффект —
+    первичный канал, p_perm — вторичный (family-wise: NNULL=199 ⇒ min p = 0.005 ≤ α/6).
     Статистика: per-doc mean по полосе k=9..96 (медиана по лагам — чувствительность),
     точка = медиана по доку, CI — парный бутстрап медиан (§0.4). DELTA_MIN = 2e-4 до прогона:
     |est − null| < DELTA_MIN ⇒ not_testable (ниже разрешения); p_perm ≤ 0.05 ⇒ refuted;
     иначе confirmed (плато на уровне matched null)."""
     out = {}
+    z_ma1 = {}
     for obj in objects:
         diffs, lags_med = [], []
         for nm in pool:
@@ -486,14 +517,52 @@ def p4_plateau(cells, pool, objects, nulls):
                               / (cells[(nm, 23, obj, "median")]["N"] - 1) for nm in pool]))
         gap = est - e_null
         if abs(gap) < DELTA_MIN:
-            verdict = ("not_testable: |est − null| < DELTA_MIN — неотличимо от DC+MA(1) при "
-                       "разрешении теста (против собственной null, r4)")
+            verdict = ("not_testable: |est − null| < DELTA_MIN — неотличимо от pair-block null "
+                       "(чётный лаг-1 + DC) при разрешении теста (против собственной null, r4; r5, D1)")
         elif p_perm <= ALPHA_P4:
-            verdict = ("refuted: DC+MA(1) недостаточна — структура сверх DC+MA(1) "
-                       "(p_perm против blk=2-null; локализовать по k, AT0_2)")
+            verdict = ("refuted: структура сверх pair-block null (чётный лаг-1 + DC) "
+                       "(p_perm против pair-block null; MA(1)-null — второй столбец; "
+                       "локализовать по k — AT0_3, T0.3)")
         else:
-            verdict = ("confirmed: DC+MA(1) достаточна — плато на уровне matched null "
-                       f"(p_perm={p_perm:.3f}, выше разрешения)")
+            verdict = ("confirmed: структура сверх pair-block null не обнаружена — плато на "
+                       "уровне matched null (p_perm=" + f"{p_perm:.3f}" + ", выше разрешения)")
+        # r5 (arch-review D1b): аналитический MA(1)-null, matched по лаг-0/лаг-1 — второй
+        # столбец. Модель: per-dim гауссов MA(1), θ matched к наблюдаемому ρ(1) (invertible-
+        # корень; |ρ1| > 0.5 → no_match). k ≥ 2: ρ_true = 0 ⇒ E[mean_band] = 0 (per-doc
+        # статистика S = mean_band − f_dc ⇒ E = −f_dc). Первый порядок (dim-независимые,
+        # Bartlett-поправка нулевая для k > p+1 = 2): SE = sqrt(Σ_{k=9..96} 1/((N−k)·D))/98.
+        # Описательно: вердикт — по первичному каналу (σ/эффект, D2).
+        z_docs = {}
+        thetas = []
+        for nm in pool:
+            c = cells[(nm, 23, obj, "median")]
+            rho1 = float(np.asarray(c["rho"])[0])
+            if abs(rho1) > 0.5:
+                z_docs[nm] = None
+                continue
+            n, D = c["N"], c["D"]
+            rt = np.asarray(c["rho_Tk"])
+            s_doc = float(np.mean(rt[8:K_MAX])) - c["f_dc"]
+            th = 0.0 if rho1 == 0.0 else (1.0 - float(np.sqrt(1.0 - 4.0 * rho1 ** 2))) / (2.0 * rho1)
+            se = float(np.sqrt(np.sum(1.0 / ((n - np.arange(9, K_MAX + 1)) * D))) / (K_MAX - 8))
+            z_docs[nm] = {"z": float((s_doc + c["f_dc"]) / se), "theta": float(th)}
+            thetas.append(float(th))
+        matched = [v for v in z_docs.values() if v is not None]
+        z_vals = np.array([v["z"] for v in matched])
+        out_ma1 = {
+            "median_z": float(np.median(z_vals)) if z_vals.size else None,
+            "mean_z": float(np.mean(z_vals)) if z_vals.size else None,
+            "n_matched": int(len(z_vals)), "n_no_match": int(len(pool) - len(z_vals)),
+            "n_abs_z_ge_3": int(np.sum(np.abs(z_vals) >= 3.0)) if z_vals.size else 0,
+            "theta_median_abs": float(np.median(np.abs(np.array(thetas)))) if thetas else None,
+            "E_doc": "−f_dc (matched MA(1): ρ_true(k≥2) = 0 ⇒ E[mean_band] = 0)",
+            "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 98 — первый порядок, per-dim гауссов "
+                          "MA(1), D = скрытое измерение; Bartlett-поправка нулевая для k > p+1",
+            "note": "r5 (arch-review D1b): второй столбец — MA(1)-null, реально сохраняющий "
+                    "лаг-1 (θ matched к ρ(1), invertible-корень); описательно, вердикт — по "
+                    "первичному каналу (σ/эффект, D2)",
+        }
+        z_ma1[obj] = z_docs
         out[obj] = {
             "n_docs": len(diffs),
             "est_median": est, "ci_median": ci, "ci_width": ci[1] - ci[0],
@@ -503,13 +572,19 @@ def p4_plateau(cells, pool, objects, nulls):
                 "p_perm": p_perm,
             },
             "null_analytic_pool_median": cf,
+            "null_analytic_ma1": out_ma1,
             "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных "
-                         "элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026); блок-2 "
-                         "перестановка сохраняет лаг-1 (DC+MA(1)), уничтожает лаги ≥ 2",
+                         "элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026). r5 (D1): "
+                         "block-2 — pair-block null: сохраняет ЧЁТНЫЙ лаг-1 (x_{2i}, x_{2i+1}), "
+                         "рандомизирует НЕЧЁТНЫЙ лаг-1 и лаги ≥ 2; «DC+MA(1) null» было ложным "
+                         "label (ревью: MA(1)-лаг-1 вдвое). MA(1)-null, matched по лаг-0/лаг-1 — "
+                         "null_analytic_ma1 (второй столбец)",
             "delta_min": DELTA_MIN, "alpha": ALPHA_P4,
             "prereg": "полоса k=9..96 (буква ТЗ §1.5-4 «плато ρ̄(k≥9)»), агрегатор = per-doc mean "
                       "по лагам, DELTA_MIN = 2e-4 (≈ sd null / пол-ширина CI, замер 1e-4…6e-4), "
-                      "вердикт против matched null — всё зафиксировано ДО прогона (r4, MAJOR-2)",
+                      "вердикт против matched null — всё зафиксировано ДО прогона (r4, MAJOR-2); "
+                      "r5 (D2): σ/эффект — первичный канал, p_perm — вторичный (family-wise, "
+                      "NNULL=199 ⇒ min p = 0.005 ≤ α/6 = 0.00833)",
             "truncation": "полоса ограничена k_alphabet (K=96), не N (N = 82…383): «полного» "
                           "плато при k>96 в артефакте нет — обрезка объявлена явно (r4, MAJOR-2)",
             "sensitivity_median_over_lags": {
@@ -522,7 +597,7 @@ def p4_plateau(cells, pool, objects, nulls):
                          "CI — парный бутстрап медиан (seed 117, B=1000)",
             "verdict": verdict,
         }
-    return out
+    return out, z_ma1
 
 
 def _sigma_of(obs, med_null):
@@ -534,10 +609,12 @@ def _sigma_of(obs, med_null):
 
 def p5_hump(cells, pool, objects, nulls):
     """П5: горб excess ρ̄(3,4) − f_DC ≠ 0 (ТЗ §1.5-5). Rev.4 (MAJOR-1): sign-тест —
-    против matched null (blk=2, 60 сидов), НЕ против Binomial(n, 0.5): null e3 ≈ −1/N,
+    против matched null (pair-block, r5: 199 сидов), НЕ против Binomial(n, 0.5): null e3 ≈ −1/N,
     P(e3>0) ≈ 0.2, не 0.5. Два канала: (a) sign-счёт ē против null-распределения счёта;
-    (b) уровень: pool-медианы e3/e4/ē против null-медиан (σ). Confirmed — если любой
-    канал значим (α = 0.05 / |σ| ≥ 3). Один комбинированный тест (rev.3, MINOR-12)."""
+    (b) уровень: pool-медиана ē против null-медианы (σ). r5 (D3): level-канал ТОЛЬКО по ē
+    (|σ(ē)| ≥ 3); e3/e4 — описательно (было max по 3 статистикам — та же инфляция, что sign-OR;
+    вердикты не меняются: σ_ee = −10.2/−10.9/+14.1). Confirmed — если любой канал значим
+    (α = 0.05 / |σ| ≥ 3). Один комбинированный тест (rev.3, MINOR-12)."""
     out = {}
     for obj in objects:
         es, e3s, e4s = [], [], []
@@ -577,12 +654,12 @@ def p5_hump(cells, pool, objects, nulls):
                 ("ee", float(np.median(es)), med_null_ee))
         }
         sig_sign = p_sign_ee <= ALPHA_P5
-        sig_level = max(abs(s) for s in sigma.values()) >= 3.0
+        sig_level = abs(sigma["ee"]) >= 3.0   # r5 (D3): level ТОЛЬКО по ē; e3/e4 — описательно
         if sig_sign or sig_level:
             sign = ("positive (excess > 0 — горб)" if np.median(es) > 0
                     else "negative (excess < 0 — анти-горб)")
             verdict = (f"confirmed: excess(3,4) ≠ 0, знак {sign} (каналы: sign={'да' if sig_sign else 'нет'}"
-                       f", level={'да' if sig_level else 'нет'})")
+                       f", level(ē)={'да' if sig_level else 'нет'})")
         else:
             verdict = "not_resolved: excess(3,4) == 0 в пределах теста (оба канала)"
         out[obj] = {
@@ -599,14 +676,21 @@ def p5_hump(cells, pool, objects, nulls):
                                 float(cnt_null_ee.std() / len(pool))],
                 "p_perm_sign_ee": p_sign_ee,
                 "p_perm_sign_e3": p_sign_e3,
-                "sigma": sigma,
+                "sigma": {"ee": sigma["ee"]},
+                "sigma_descriptive": {"e3": sigma["e3"], "e4": sigma["e4"]},
                 "med_null_e3": [float(med_null3.mean()), float(med_null3.std())],
                 "med_null_e4": [float(med_null4.mean()), float(med_null4.std())],
                 "med_null_ee": [float(med_null_ee.mean()), float(med_null_ee.std())],
+                "level_channel_note": "r5 (arch-review D3): level-канал — ТОЛЬКО по ē "
+                                      "(было max(|σ(e3)|,|σ(e4)|,|σ(ē)|) — та же инфляция, что "
+                                      "sign-OR); e3/e4 — описательно (sigma_descriptive)",
+                "pair_block_note": "r5 (arch-review D1): block-2 — pair-block null (чётный "
+                                   "лаг-1 + DC), НЕ DC+MA(1) (нечётный лаг-1 тоже рандомизируется; "
+                                   "ревью измерило: MA(1)-лаг-1 вдвое)",
             },
             "alpha": ALPHA_P5,
             "statistic": "per-doc ē = mean(ρ̄(3)−f_dc, ρ̄(4)−f_dc); r4: sign-счёт и уровень — "
-                         "против matched null (blk=2 перестановка, 60 сидов)",
+                         "против matched null (pair-block перестановка; r5: 199 сидов)",
             "verdict": verdict,
         }
     return out
@@ -655,9 +739,52 @@ def srcs_of(nms, docs):
     return s
 
 
-def aggregates(docs, cells, nong, nong_by_dom):
-    """Агрегаты L23: доменные строки (n≥12), source-строки, pooled. Одна схема (rev.3,
-    MINOR-9). dip_mean_1 — из mean-клетки, dip_med_1 — из median-клетки (MAJOR-5)."""
+def t0_headline(cells, nong, objects):
+    """r5 (arch-review D5): заголовочный вопрос T0 — компенсируется ли отрицательная площадь
+    лага-1 положительной при k≥2 (Σρ̄ ≈ 0?). Отчёт per object × {T, T−k} × {none, bartlett}:
+    excess = Σ(ρ̂(k) − f_dc). T-none-full — ПОЛНАЯ сумма по всем лагам (точно: sum_rho_full =
+    (r−1)/2, тождество G1/Gram); T-k и bartlett — частичные по k=1..K (K=96, объявлено).
+    D6: тождество S(0) = 1 + 2Σρ̄ выполняется только для unit-variance нормировки ρ̂; для
+    энерго-взвешенной (norm=T: c(k)/c(0)) замыкается Gram-тождество 1 + 2Σρ̂ = r (G8), не
+    unit-ACF; для T-k unit-variance-тождество не выполняется вовсе (знаменатель переменный).
+    Per-doc значения выводимы из store (cells: sum_rho_full, f_dc, rho, rho_Tk, N, r)."""
+    out = {}
+    for obj in objects:
+        recs = []
+        for nm in nong:
+            c = cells[(nm, 23, obj, "median")]
+            if c.get("sum_rho_full") is None or c.get("f_dc") is None or c.get("N") is None:
+                continue
+            N, K, fdc = c["N"], c["K"], c["f_dc"]
+            rho = np.asarray(c["rho"], dtype=float)
+            rho_Tk = np.asarray(c["rho_Tk"], dtype=float)
+            w = 1.0 - np.arange(1, K + 1, dtype=float) / (K + 1)   # Bartlett по k=1..K
+            recs.append({
+                "T_none_full": c["sum_rho_full"] - (N - 1) * fdc,
+                "T_none_K96": float(rho.sum()) - K * fdc,
+                "Tk_none_K96": float(rho_Tk.sum()) - K * fdc,
+                "T_bart_K96": float((w * rho).sum()) - float(w.sum()) * fdc,
+                "Tk_bart_K96": float((w * rho_Tk).sum()) - float(w.sum()) * fdc,
+                "r": c["r"], "f_dc": fdc,
+            })
+        if not recs:
+            out[obj] = {"n_docs": 0}
+            continue
+        keys = ("T_none_full", "T_none_K96", "Tk_none_K96", "T_bart_K96", "Tk_bart_K96")
+        out[obj] = {
+            "n_docs": len(recs),
+            "excess_median": {k: float(np.median([r[k] for r in recs])) for k in keys},
+            "excess_mean": {k: float(np.mean([r[k] for r in recs])) for k in keys},
+            "r_median": float(np.median([r["r"] for r in recs])),
+            "f_dc_median": float(np.median([r["f_dc"] for r in recs])),
+        }
+    return out
+
+
+def aggregates(docs, cells, nong, nong_by_dom, objects):
+    """Агрегаты L23: доменные строки (n≥12), source-строки (r5, D4: +gen + provenance_limited
+    у corpus), source-компаньон (r5, D4), pooled, t0_headline (r5, D5/D6). Одна схема
+    (rev.3, MINOR-9). dip_mean_1 — из mean-клетки, dip_med_1 — из median-клетки (MAJOR-5)."""
     K_NOTE = "K = max {24,32,96} ≤ N−1 per doc (реестр §0.2)"
 
     def row(nms, allowed, extra=None):
@@ -686,18 +813,52 @@ def aggregates(docs, cells, nong, nong_by_dom):
     for dm in ("wiki", "math", "code", "chat"):
         nms = nong_by_dom.get(dm, [])
         agg[dm] = row(nms, len(nms) >= 12)   # §0.3: доменное утверждение только при n ≥ 12
-    for src, tag in (("own", "P1_own"), ("corpus", "P2_corpus")):
+    # r5 (arch-review D4): gen-строка (у gen-доков dom — реальный домен, не источник) +
+    # corpus-строка — provenance_limited (16/16 доков без токенов, G0a)
+    gen_nms = [nm for nm in nong if docs[nm]["source"] == "gen_layers"]
+    agg["source_gen_layers"] = row(gen_nms, len(gen_nms) >= 12)
+    for src, tag, extra in (
+            ("own", "P1_own", None),
+            ("corpus", "P2_corpus", {
+                "provenance_limited": True, "domain_like": False,
+                "note": "r5 (arch-review D4): 16/16 доков без токенов (G0a corpus_toks absent) — "
+                        "«те ли токены» невыполнимо в принципе; строка НЕ домен-подобная; "
+                        "корпус-зависимые числа — provenance_limited до восстановления токенов"})):
         nms = nong_by_dom.get(src, [])
-        agg[f"source_{tag}"] = row(nms, len(nms) >= 12)
+        agg[f"source_{tag}"] = row(nms, len(nms) >= 12, extra=extra)
     vals = [cells[(nm, 23, "h_raw", "mean")]["dip_mean_1"] for nm in nong
             if cells[(nm, 23, "h_raw", "mean")]["dip_mean_1"] is not None]
     pooled = row(nong, True, extra={
         "filter_note": "degen-фильтр (§0.3) — НЕ loopy-фильтр якоря G1′ (тот: nonwiki nonloopy); "
                        "различие фильтров — в имени/полях",
+        "anchor_comparability": "r5 (arch-review D4): pooled dip_V_med НЕ сопоставим с LADDER-якорем "
+                                "−0.0722 (фильтр degen_tz n=53 vs nonwiki-nonloopy n=35; 16 из 53 — "
+                                "корпус без токенов — число частично corpus-обусловлено)",
         "dip_dh_mean": float(np.median(vals)) if vals else None,
         "dip_dh_mean_tz_name": "dip_raw,mean (ТЗ §0.2)",
     })
     agg["pooled_nondeg"] = pooled
+    # r5 (arch-review D4): source-компаньон-таблица (gen-only / +corpus / +own / все)
+    comp = {}
+    for tag, nms in (
+            ("gen_only", [nm for nm in nong if docs[nm]["source"] == "gen_layers"]),
+            ("gen_plus_corpus", [nm for nm in nong
+                                 if docs[nm]["source"] in ("gen_layers", "P2_corpus")]),
+            ("gen_plus_own", [nm for nm in nong
+                              if docs[nm]["source"] in ("gen_layers", "P1_own")]),
+            ("all_nondeg", list(nong))):
+        comp[tag] = row(nms, True)
+    agg["source_companion"] = comp
+    agg["source_companion_note"] = "r5 (arch-review D4): компаньон-таблица по источникам " \
+        "(gen-only / +corpus / +own / все nondegen) — для отсечения corpus-условленности"
+    # r5 (arch-review D5/D6): заголовочный вопрос T0 (Σρ̄) — агрегирован, без перепрогона
+    agg["t0_headline"] = t0_headline(cells, nong, objects)
+    agg["t0_headline_note"] = ("r5 (arch-review D5/D6): excess = Σ(ρ̂(k) − f_dc) per object × norm × "
+        "window; T_none_full — полная сумма по всем лагам (точно, тождество G1/Gram: "
+        "sum_rho_full = (r−1)/2); T_none_K96 / Tk_none_K96 / T_bart_K96 / Tk_bart_K96 — "
+        "частичные по k=1..96 (объявлено). Тождество S(0) = 1 + 2Σρ̄ — только для unit-variance "
+        "нормировки; для norm=T замыкается Gram-тождество 1 + 2Σρ̂ = r (G8), не unit-ACF; для "
+        "T-k unit-variance-тождество не выполняется вовсе (D6). Per-doc — из store (cells)")
     return agg
 
 
@@ -841,8 +1002,8 @@ def main():
         "outcomes": [
             "A: большинство доков r_max >= 1 (frac_rmax_below_1 ≤ 0.5) ⇒ T0 = учётный гейт, не арбитр (T1-T3 — с оговоркой)",
             "B: большинство доков r_max < 1 (frac_rmax_below_1 > 0.5) ⇒ T0 = арбитр, T1-T3 идут с оговоркой",
-            "C: П4 CI ∋ 0 и |est| ≥ DELTA_MIN ⇒ DC+MA(1) достаточна",
-            "D: П4 CI ∌ 0 ⇒ есть структура сверх DC+MA(1), локализуется по k (AT0_2)",
+            "C: |est − E_null| ≥ DELTA_MIN и p_perm > α ⇒ структуры сверх pair-block null не обнаружено (confirmed)",
+            "D: p_perm ≤ α ⇒ структура сверх pair-block null, локализуется по k (AT0_3, T0.3)",
         ],
         "reachability": "A: НЕДОСТИЖИМ на текущих данных — r_max = 4/Σ‖Δu‖² ≤ 4/19.3 ≈ 0.208 < 1 "
                         "(замер Σ‖Δu‖² = 19.3…518.3 по 478 du_unit-клеткам) ⇒ реализован исход B "
@@ -918,20 +1079,29 @@ def main():
         "note": "пре-рег 3 — декларация статуса, не гипотеза; словарь §0.4 неприменим",
     }
     # П4: плато ρ̄(k≥9) == f_DC (rev.4, CRIT-1: вердикт против matched null; полоса/агрегатор/
-    # DELTA_MIN — в артефактном поле prereg)
-    prereg["4_plateau_vs_fDC"] = p4_plateau(cells, pool4, objects, nulls)
+    # DELTA_MIN — в артефактном поле prereg; r5: pair-block relabel + MA(1)-столбец)
+    p4_res, z_ma1 = p4_plateau(cells, pool4, objects, nulls)
+    prereg["4_plateau_vs_fDC"] = p4_res
     prereg["4_plateau_vs_fDC"]["pool4_n"] = len(pool4)
     prereg["4_plateau_vs_fDC"]["pool5_note"] = f"П4-пул (K=96) n={len(pool4)} из {len(nong)} nondegen; " \
         f"исключены: {sorted(set(nong) - set(pool4))}"
-    # П5: горб (rev.4, MAJOR-1: matched null; rev.3, MINOR-12: один комбинированный test, α=0.05)
+    # П5: горб (rev.4, MAJOR-1: matched null; rev.3, MINOR-12: один комбинированный test, α=0.05;
+    # r5, D3: level-канал только по ē)
     prereg["5_hump"] = p5_hump(cells, pool5, objects, nulls)
+    # r5 (arch-review D6): следствие двух нормировок — заявлено явно
+    prereg["normalization_consequence"] = (
+        "r5 (arch-review D6): тождество S(0) = 1 + 2Σρ̄ выполняется ТОЛЬКО для unit-variance "
+        "нормировки ρ̂; для энерго-взвешенной (norm=T: c(k)/c(0)) замыкается Gram-тождество "
+        "1 + 2Σ_{k<N}ρ̂(k) = r (G8), не unit-ACF; для T-k нормировки (знаменатель "
+        "Σ_{t<N−k}‖x_t‖² переменный) unit-variance-тождество не выполняется вовсе. "
+        "Заголовочный T0 (Σρ̄) — в aggregates.t0_headline с явными нормировками")
     # П6: Δ_med не вычисляется (П3) — assert _bad_names(out) до записи
     prereg["6_median_sum_absent"] = {"verdict": "pending (assert до записи)",
                                      "note": "compliance-проверка (поля Δ_med/S0 отсутствуют); "
                                              "словарь §0.4 неприменим"}
 
     # ---------------- агрегаты / вывод ----------------
-    agg = aggregates(docs, cells, nong, nong_by_dom)
+    agg = aggregates(docs, cells, nong, nong_by_dom, objects)
     per_doc = {}
     for nm, d in sorted(docs.items()):
         pd = {}
@@ -943,6 +1113,7 @@ def main():
             "mcos": d["mcos"], "mshare": d["mshare"], "share_unavailable": d["share_unavailable"],
             "gen_sha": d.get("gen_sha"), "T": int(d["layers"][23][0].shape[0]),
             "l1_tpu": l1_status.get(nm),
+            "null_ma1_z": {obj: z_ma1[obj].get(nm) for obj in objects},
             "layers": pd,
         }
     out = {
@@ -1027,9 +1198,10 @@ def main():
             f"ci={prereg['3_rmax_status']['ci']})")
     for obj in objects:
         p4 = prereg["4_plateau_vs_fDC"][obj]
-        logline(f"П4 {obj}: est={p4['est_median']:+.4f} null(E)={p4['null_block2']['E']:+.4f} "
-                f"p_perm={p4['null_block2']['p_perm']:.3f} ci={p4['ci_median']} "
-                f"-> {p4['verdict']}")
+        ma1 = p4["null_analytic_ma1"]
+        logline(f"П4 {obj}: est={p4['est_median']:+.4f} null_pairblock(E)={p4['null_block2']['E']:+.4f} "
+                f"p_perm={p4['null_block2']['p_perm']:.3f} ma1(z_med={ma1['median_z']:+.2f}, "
+                f"n_nm={ma1['n_no_match']}) ci={p4['ci_median']} -> {p4['verdict']}")
         p5 = prereg["5_hump"][obj]
         logline(f"П5 {obj}: e3={p5['e3_median']:+.4f} e4={p5['e4_median']:+.4f} "
                 f"pos_ee={p5['pos']}/{p5['n']} p_sign={p5['null_block2']['p_perm_sign_ee']:.3f} "

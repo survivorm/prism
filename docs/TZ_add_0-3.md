@@ -326,7 +326,10 @@ r = N · f_DC,    f_DC ≡ ‖mean(x)‖² / mean(‖x‖²)
 
 **Статус (v1.2): ИСПОЛНЕН** (`results/AT0/T0_ACCOUNTING.json`, 2880 клеток, 96 доков;
 прогон на TZ-sha `647c03ab`). **Пин артефакта (v1.2, D4):** file sha256 `d4a4b10135e8b63f361f6fe75475cff7d44b6810e9248d03a8bdf96b5b73d94a`,
-store sha256 `23281c64cc418ff1fedad2a5013c4bf7c8b7dd7680ac8d4fa7cf746c62fd1732`. Ранний build
+store sha256 `23281c64cc418ff1fedad2a5013c4bf7c8b7dd7680ac8d4fa7cf746c62fd1732`. **r6-cosmetic (2026-11-13):** post-hoc аннотация по
+`docs/AT0_1_review.md` — file на диске `b0f74312…` (= run `d4a4b101` + текстовые пометки: P4 direction,
+MA(1)-applicability, t0_headline_note, tpu_dev, n_l1_absent_docs/cells; чисел прогона и store не изменено;
+ответка — `docs/AT0_1_review_answer.md`). Run-пин `d4a4b101` для чисел остаётся в силе. Ранний build
 (ревью читал file `cbd86b9` / store `1af1e9f3`, NNULL=60, p=1/61) **superseded** — в запиненной
 сборке NNULL=199, min p = 0.005 — **разрешение per-test пермутационного нуля (1/199 ≈ 0.005), НЕ
 family-wise поправка** (Bonferroni на 3 объекта ≈ 0.015–0.017 — вердикт не меняется; v1.3, D1′). Результаты: (1) gram_resid max = 1.04e-14 ✓; (2) r ≤ r_max —
