@@ -220,10 +220,10 @@
   "size": 11494
  },
  "results/e94/S4pp.json": {
-  "date": "2026-11-12T05:10:00",
-  "note": "E94 S4pp: 23/23 ok, T=0 teacher-forcing probe (M1 branch at w13 k=117, undec at w4 k=70), gate2_met=false - arm B NOT launched; +S3_report_diag (width never observed to bite) +gate2_caveat; hygiene re-run after self-review: 4 flag values + 1 reading changed, 0 numeric moves",
-  "sha256_16": "33a6e708a151ef4c",
-  "size": 47892
+  "date": "2026-11-12",
+  "note": "S4pp v10 (канон; v7→v8→v9→v10, ремедиация r12/r13/r14-цикла): v8-remediation r13/F1 (audit H10: logit_bias вперёд, белый список расщеплён, объём 412), F3 (note без литералов чужого артефакта, ratio из ТЕКУЩЕГО), F6 (spec-строка r11/r12/r13); v9 — динамическая note (spread вычисляется из артефакта); v10 — финальный честный прогон (24/24, halt=None). Ревью: r13 PASS_WITH_MINORS (2_REVIEW_E94_S4pp_exec_r13.md), повторное р15 (2_REVIEW_E94_S4pp_exec_r14.md) PASS. Эмиссии v7=v8=v9=v10: 24/24, 0 diffs (T=0 детерминирован). Аудит e94_s4pp_audit.py: PASS 0 fail (H10 412 полей, H11 строковый чек note). sha v7 (в git HEAD): 33a6e708a151ef4c; v8/v9 бэкапы: S4pp_v8.json/S4pp_v9.json.",
+  "sha256_16": "bb7b45e6a584b2f1",
+  "size": 69054
  },
  "results/e94/S5.json": {
   "date": "2026-11-12T10:21:13",
@@ -248,5 +248,23 @@
   "note": "E94 S6 raw-корпус: 2304 raw (response + timings + wall_s) основного прогона dry=0.0; источник rebuild_from_raw и офлайн-эхо-чека.",
   "sha256_16": "73eb575b2ac89cea",
   "size": 1179991
+ },
+ "results/e94/S4pp_v8.json": {
+  "date": "2026-11-12",
+  "note": "S4pp v8 — промежуточная версия трейла v7→v10 (не канон; канон = S4pp.json v10).",
+  "sha256_16": "233cb622b8c7286b",
+  "size": 68374
+ },
+ "results/e94/S4pp_v9.json": {
+  "date": "2026-11-12",
+  "note": "S4pp v9 — промежуточная версия трейла v7→v10 (не канон; канон = S4pp.json v10).",
+  "sha256_16": "43be508d0e520ff9",
+  "size": 68891
+ },
+ "results/e94/S4pp_v7.json": {
+  "date": "2026-11-12",
+  "note": "S4pp v7 — бэкап канона на момент r12-ревью (совпадает с S4pp.json в git HEAD, sha 33a6e708a151ef4c); трейл v7→v10.",
+  "sha256_16": "6aa6bc764e0bb93b",
+  "size": 65523
  }
 }

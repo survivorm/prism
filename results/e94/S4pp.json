@@ -1,12 +1,12 @@
 {
  "exp": "E94_S4pp",
- "spec": "docs/dynamic/0_E94_PROBES_S3S2S4.md (раздел ИСПРАВЛЕНИЯ ПО r3-РЕВЬЮ)",
- "started_local": "2026-11-12 05:47",
- "wall_s": 43.1,
+ "spec": "docs/dynamic/0_E94_PROBES_S3S2S4.md (разделы ИСПРАВЛЕНИЯ ПО r3/r7/r8/r9/r10-РЕВЬЮ + ИСПРАВЛЕНИЯ ПО r13-РЕВЬЮ; r11/r12-ремедиации — доп. регистрация в том же файле + 2_REVIEW_E94_S4pp_exec_r11/r12.md)",
+ "started_local": "2026-11-12 21:10",
+ "wall_s": 74.5,
  "halt_reason": null,
  "server": {
   "port": 8114,
-  "pid": 888073,
+  "pid": 3468149,
   "dri": [
    "/dev/dri/renderD128",
    "/dev/dri/renderD128"
@@ -120,13 +120,32 @@
    "role": "контроль воспроизводимости адреса (зона уверенности)"
   }
  },
- "requests_n": 23,
- "requests_ok": 23,
- "notes": [],
+ "tamper_rehearsal": {
+  "rc": 3,
+  "halt_reason": "crash",
+  "assertion": true,
+  "servers_before": [],
+  "servers_after": [],
+  "has_requests_key": false,
+  "lit_unique": true,
+  "out_lit_unique": true,
+  "ok": true
+ },
+ "requests_n": 24,
+ "requests_ok": 24,
+ "notes": [
+  "тег строки verdict='branchA' = идентификатор решающей ветки §A предрегистрации (r8/F3), а НЕ механизм M1: с r7/MAJOR-1 механизм определяется noop-плечом (S4pp-noop) и записан в summary.probes[i].verdict_mechanism и summary.verdict; чтение тега 'решающая ветка = M1' запрещено",
+  "решающий флип (S4pp-2, w13 k=117) одиночен и лежит над шумом top1_lp_spread (поле summary.S3_report_diag.top1_lp_spread; SYCL-шум: значение гуляет между прогонами без зафиксированной границы, r8/F1); spread мерян на адресах S3-свипа (w4 k=70, w13 k=101), а не на самом адресе флипа (w13 k=117) — экстраполяция (r13/F3); численное отношение g12/spread — в финальной note (вычислено из этого артефакта); конкурентное объяснение «дребезг» слабо; в любом случае вывод НЕ зависит от величины g12 — он опирается на noop-плечо (детерминировано при T=0, seed=8181)",
+  "атрибуция сдвига dry vs top_k в этом прогоне невозможна: дифф цепей рук = ровно 2 поля (top_k, dry_multiplier), меняются ВМЕСТЕ (H8); поле 'samplers' эха — статическая цепь сервера (одинаково во всех 24 строках, включая noop-руку с dry выключенным) — кандидатов не разделяет (0 новых запросов, r13/F8)",
+  "отношение решающего флипа к шуму, этот артефакт: g12(S4pp-2)=0.0085, top1_lp_spread: probe=4.095e-04, ctrlA=2.599e-04 — ratio ~21x (g12/spread probe); spread — SYCL-шум без зафиксированной границы (r8/F1), значение вычислено из этого артефакта; флип остаётся одиночным во всех прогонах (24/24, эмиссии идентичны, сверка в пакетах)"
+ ],
  "summary": {
-  "verdict": "M1 в одной точке из двух: различение есть, воспроизведения нет (вторая точка противоречит — читать как намёк, не как результат)",
+  "verdict": "S4pp-1: не различает (эмиссент = вершина отчёта 318; совместимо с M1 и M2); S4pp-2: сработала решающая ветка §A (эмиссент 5522 ∉ {ban 4383, top1 3039}); НО ТРЕТЬЯ ВЕТКА ЖИВА: S4pp-noop (no-op цепь) вернул эмиссию на вершину отчёта — «M1» по этой строке СНЯТ, читается «сдвиг цепью (не различает)». Агрегат для этой пары не предрегистрирован — это пересказ, не агрегатное чтение.",
   "ref": {
    "emit": 310,
+   "addr": "Q2 w4 k=70",
+   "top1": 318,
+   "ban_sent": null,
    "verdict": "ref_ok",
    "reading": "опора есть: флип воспроизвёлся в этом запуске (эмиссент = B)"
   },
@@ -138,12 +157,37 @@
     "emit": 318,
     "top1": 318,
     "rank": 1,
+    "n_tl": 20,
     "echo_bias": [
      310
     ],
     "manip_ok": true,
     "verdict": "undec",
-    "reading": "НЕ РАЗЛИЧАЕТ: эмиссент = вершина отчёта 318; совместимо и с M2 (следует за отчётом), и с M1 (собственный второй кандидат совпал). Вывод о механизме запрещён."
+    "reading": "НЕ РАЗЛИЧАЕТ: эмиссент = вершина отчёта 318; совместимо и с M2 (следует за отчётом), и с M1 (собственный второй кандидат совпал). Вывод о механизме запрещён.",
+    "chain": {
+     "temperature": 0.0,
+     "top_k": 400,
+     "top_p": 1.0,
+     "min_p": 0.0,
+     "typical_p": 1.0,
+     "xtc_probability": 0.0,
+     "repeat_penalty": 1.0,
+     "seed": 8181,
+     "presence_penalty": 0.0,
+     "frequency_penalty": 0.0,
+     "repeat_last_n": 0,
+     "dry_multiplier": 1.0,
+     "dry_base": 1.0,
+     "top_n_sigma": -1.0,
+     "mirostat": 0.0
+    },
+    "sent_logit_bias": [
+     [
+      310,
+      -100.0
+     ]
+    ],
+    "verdict_mechanism": "не различает (эмиссент = вершина отчёта, совместимо с M1 и M2)"
    },
    {
     "tag": "S4pp-2",
@@ -152,12 +196,37 @@
     "emit": 5522,
     "top1": 3039,
     "rank": 4,
+    "n_tl": 20,
     "echo_bias": [
      4383
     ],
     "manip_ok": true,
-    "verdict": "M1",
-    "reading": "M1 УСТАНОВЛЕН: выбор = 5522, а это не вершина отчёта (3039) и не забаненный"
+    "verdict": "branchA",
+    "reading": "РЕШАЮЩАЯ ВЕТКА §A: выбор = 5522, а это не вершина отчёта (3039) и не забаненный — срабатывание ветки; механизм — в verdict_mechanism сводки",
+    "chain": {
+     "temperature": 0.0,
+     "top_k": 400,
+     "top_p": 1.0,
+     "min_p": 0.0,
+     "typical_p": 1.0,
+     "xtc_probability": 0.0,
+     "repeat_penalty": 1.0,
+     "seed": 8181,
+     "presence_penalty": 0.0,
+     "frequency_penalty": 0.0,
+     "repeat_last_n": 0,
+     "dry_multiplier": 1.0,
+     "dry_base": 1.0,
+     "top_n_sigma": -1.0,
+     "mirostat": 0.0
+    },
+    "sent_logit_bias": [
+     [
+      4383,
+      -100.0
+     ]
+    ],
+    "verdict_mechanism": "M1 НЕ УСТАНОВЛЕН: третья ветка жива (no-op цепь при том же бане вернула эмиссент на вершину отчёта); сдвиг — цепью (кандидат dry: штраф 1.0, активен при dry_penalty_last_n=64; на S4pp-2 (g12=0.0085 < 0.025) — пере-ранжирование re-ranker'ом (dry поднимает ранг) ИЛИ переупорядочение буфера top_k (partial_sort, tie-break по позиции); оба — сдвиг цепью, r12/F8, r13/F2)"
    }
   ],
   "controls": [
@@ -204,8 +273,42 @@
   ],
   "S4pp_0": {
    "emit": 310,
+   "addr": "Q2 w4 k=70",
+   "manip_ok": true,
    "verdict": "nondec_snip",
-   "reading": "бан вершины отчёта сработал (эмиссент 310 != A 318); НЕ РАЗЛИЧАЕТ и НЕ контроль применимости: на этом адресе A и так не эмитировалась, вывод о механизме запрещён"
+   "reading": "бан вершины отчёта применён (manip_ok по эхо), эффекта на эмиссент нет (эмиссент 310 = базовый B 310); НЕ РАЗЛИЧАЕТ и НЕ контроль применимости: на этом адресе A и так не эмитировалась, вывод о механизме запрещён"
+  },
+  "S4pp_noop": {
+   "emit": 3039,
+   "top1": 3039,
+   "addr": "Q2 w13 k=117",
+   "ban_sent": 4383,
+   "chain": {
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "repeat_penalty": 1.0,
+    "seed": 8181,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "dry_multiplier": 0.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "mirostat": 0.0
+   },
+   "sent_logit_bias": [
+    [
+     4383,
+     -100.0
+    ]
+   ],
+   "manip_ok": true,
+   "verdict": "third_branch",
+   "reading": "ТРЕТЬЯ ВЕТКА ЖИВА: с no-op цепью эмиссент вернулся на вершину отчёта 3039 — штатная цепь (top_k=400, dry=1.0, top_n_sigma=-1.0) была тем, что сдвигало эмиссию; элиминация: при T=0 усечательные сэмплеры (top_k, top_n_sigma, min_p/typ_p/top_p, xtc) не могут снять argmax — маскируют только кандидатов с logit ниже argmax; пере-ранжируют только добавляющие к logits: penalties/dry/mirostat/logit_bias; в этом прогоне penalties нейтральны (1.0/0.0/0.0, repeat_last_n=0), mirostat=0, logit_bias одинаков в обеих руках (фактические цепи рук — в summary, поле chain) — значит кандидат-сдвигатель = dry (dry_multiplier=1.0, dry_base=1.0: штраф = 1.0*pow(1.0, repeat_exp) = 1.0 — пере-ранжирование повторяющихся токенов, активен при dry_penalty_last_n=64) — только где argmax СТРОГИЙ (S4pp-1: g12=0.639 > tie-порога 0.025). На S4pp-2 (g12=0.0085 < 0.025) вершина может быть классом равенства; при значениях этой цепи (top_p=1.0, min_p=0.0, typ_p=1.0, xtc=0.0, top_n_sigma=-1.0) прочие усечатели инертны по значению, и top_k=400 не может СНЯТЬ argmax (3039 в топ-400), но тезис «обрезка ≠ перестановка» ложен как факт о top_k: top_k_impl делает partial_sort in-place (llama-sampler.cpp:321) — буфер ПЕРЕУПОРЯДОЧИВАЕТСЯ, и ничья равных logits решается ПОЗИЦИЕЙ в буфере после сортировки (tie-break по позиции — ровно этот случай). «Рез по границе» исключен числами v7: под штатной цепью top1 отчёта = 3039 не срезан, а эмиссия 5522 = rank 4 того же отчёта (ids_head) — чтобы выиграть, её надо ПОДНЯТЬ по рангу; обрезка меняет head только удалив его, head жив. Значит сдвиг на S4pp-2 = пере-ранжирование re-ranker'ом (dry-штраф поднимает ранг) ИЛИ переупорядочение буфера top_k (tie-break по позиции); оба — сдвиг цепью (r12/F8/F10, r13/F2). Tie-контроли (ctrlTieA/B): бан сместил эмиссент со своей вершины как ожидается (ctrl_ok, moved=true: 18→19, 3240→11639) — аномального флипа (эмиссент вне {вершина, бан}) на tie-адресах нет; третья ветка на них не проверялась (нет noop-плеча, r13/F7). Вывод «M1 снят / третья ветка жива» НЕ зависит от элиминации: он опирается на noop-плечо (тот же бан 4383, вернулась вершина отчёта). Строка читается «сдвиг цепью (не различает)»"
   },
   "repro": {
    "emit": 8810,
@@ -224,11 +327,13 @@
     "top1": null,
     "n_tl": 0,
     "echo_backend": false
-   }
+   },
+   "informative": false
   },
   "S2_pair_diff": {
    "differs": false,
    "pairs_same": true,
+   "report_nonvacuous": false,
    "reading": "эмиссент не изменился (310); ПРО ОТЧЁТ НИЧЕГО НЕ ИЗВЕСТНО: он пуст с обеих сторон (n_tl=0 и 0 при post_sampling_probs=true), сравнивать нечего"
   },
   "S3_topk": [
@@ -336,6 +441,8 @@
      20
     ],
     "distinct_ids_head": 1,
+    "top1_lp_spread": 0.0004095137119293213,
+    "top1_lp_spread_note": "max−min по top1_lp за 6 k одного адреса и одной руки",
     "distinct_emits": [
      310
     ],
@@ -348,6 +455,8 @@
      20
     ],
     "distinct_ids_head": 1,
+    "top1_lp_spread": 0.0002599060535430908,
+    "top1_lp_spread_note": "max−min по top1_lp за 6 k одного адреса и одной руки",
     "distinct_emits": [
      488
     ],
@@ -407,6 +516,7 @@
    "addr": "Q2 w4 k=70",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": null,
    "base": {
     "emit": 310,
     "top1": 318,
@@ -415,7 +525,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.65,
+   "wall_s": 1.42,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -445,14 +555,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 318,
-   "top1_lp": -0.4771536588668823,
-   "top2_lp": -1.1154135465621948,
-   "g12": 0.6382598876953125,
+   "top1_lp": -0.4773583710193634,
+   "top2_lp": -1.1148858070373535,
+   "g12": 0.6375274360179901,
    "rank": 2,
-   "emit_lp": -1.1154135465621948,
+   "emit_lp": -1.1148858070373535,
    "n_tl": 20,
    "ids_head": [
     318,
@@ -481,6 +600,7 @@
      -100.0
     ]
    ],
+   "sent_extra": null,
    "base": {
     "emit": 310,
     "top1": 318,
@@ -489,7 +609,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.53,
+   "wall_s": 0.91,
    "emit": 318,
    "content": " (",
    "te": 70,
@@ -524,14 +644,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 318,
-   "top1_lp": -0.47751274704933167,
-   "top2_lp": -1.1145881414413452,
-   "g12": 0.6370753943920135,
+   "top1_lp": -0.47721925377845764,
+   "top2_lp": -1.1153457164764404,
+   "g12": 0.6381264626979828,
    "rank": 1,
-   "emit_lp": -0.47751274704933167,
+   "emit_lp": -0.47721925377845764,
    "n_tl": 20,
    "ids_head": [
     318,
@@ -562,6 +691,7 @@
      -100.0
     ]
    ],
+   "sent_extra": null,
    "base": {
     "emit": 4383,
     "top1": 3039,
@@ -570,7 +700,7 @@
     "rank2": 3240
    },
    "status": "ok",
-   "wall_s": 0.54,
+   "wall_s": 1.51,
    "emit": 5522,
    "content": " movie",
    "te": 117,
@@ -605,14 +735,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 3039,
-   "top1_lp": -3.055631160736084,
-   "top2_lp": -3.0645976066589355,
-   "g12": 0.008966445922851562,
+   "top1_lp": -3.055647134780884,
+   "top2_lp": -3.0637571811676025,
+   "g12": 0.00811004638671875,
    "rank": 4,
-   "emit_lp": -3.8077759742736816,
+   "emit_lp": -3.807619333267212,
    "n_tl": 20,
    "ids_head": [
     3039,
@@ -628,8 +767,103 @@
     4383
    ],
    "manip_ok": true,
-   "verdict": "M1",
-   "reading": "M1 УСТАНОВЛЕН: выбор = 5522, а это не вершина отчёта (3039) и не забаненный"
+   "verdict": "branchA",
+   "reading": "РЕШАЮЩАЯ ВЕТКА §A: выбор = 5522, а это не вершина отчёта (3039) и не забаненный — срабатывание ветки; механизм — в verdict_mechanism сводки"
+  },
+  {
+   "tag": "S4pp-noop",
+   "role": "r7/MAJOR-1: бан эмиссента на адресе S4pp-2 при заведомо no-op цепи (top_k=0, dry=0.0, top_n_sigma=-1.0)",
+   "kind": "noop",
+   "addr": "Q2 w13 k=117",
+   "ban_tok": 4383,
+   "sent_logit_bias": [
+    [
+     4383,
+     -100.0
+    ]
+   ],
+   "sent_extra": {
+    "top_k": 0,
+    "dry_multiplier": 0.0,
+    "top_n_sigma": -1.0
+   },
+   "base": {
+    "emit": 4383,
+    "top1": 3039,
+    "rank": 3,
+    "g12": 0.0085,
+    "rank2": 3240
+   },
+   "status": "ok",
+   "wall_s": 1.39,
+   "emit": 3039,
+   "content": " experience",
+   "te": 117,
+   "tp": 1,
+   "stop_type": "limit",
+   "echo": {
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0,
+    "min_p": 0.0,
+    "typical_p": 1.0,
+    "xtc_probability": 0.0,
+    "seed": 8181,
+    "cache_prompt": null,
+    "backend_sampling": false,
+    "post_sampling_probs": false,
+    "n_probs": 20,
+    "logit_bias": [
+     {
+      "bias": -100.0,
+      "token": 4383
+     }
+    ],
+    "samplers": [
+     "penalties",
+     "dry",
+     "top_n_sigma",
+     "top_k",
+     "typ_p",
+     "top_p",
+     "min_p",
+     "xtc",
+     "temperature"
+    ],
+    "speculative.types": "none",
+    "dry_multiplier": 0.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
+   },
+   "top1": 3039,
+   "top1_lp": -3.056068181991577,
+   "top2_lp": -3.0650339126586914,
+   "g12": 0.008965730667114258,
+   "rank": 1,
+   "emit_lp": -3.056068181991577,
+   "n_tl": 20,
+   "ids_head": [
+    3039,
+    3240,
+    4383,
+    5522,
+    11390,
+    16078
+   ],
+   "sorted_desc": true,
+   "max_is_first": true,
+   "echo_bias_tokens": [
+    4383
+   ],
+   "manip_ok": true,
+   "verdict": "third_branch",
+   "reading": "ТРЕТЬЯ ВЕТКА ЖИВА: с no-op цепью эмиссент вернулся на вершину отчёта 3039 — штатная цепь (top_k=400, dry=1.0, top_n_sigma=-1.0) была тем, что сдвигало эмиссию; элиминация: при T=0 усечательные сэмплеры (top_k, top_n_sigma, min_p/typ_p/top_p, xtc) не могут снять argmax — маскируют только кандидатов с logit ниже argmax; пере-ранжируют только добавляющие к logits: penalties/dry/mirostat/logit_bias; в этом прогоне penalties нейтральны (1.0/0.0/0.0, repeat_last_n=0), mirostat=0, logit_bias одинаков в обеих руках (фактические цепи рук — в summary, поле chain) — значит кандидат-сдвигатель = dry (dry_multiplier=1.0, dry_base=1.0: штраф = 1.0*pow(1.0, repeat_exp) = 1.0 — пере-ранжирование повторяющихся токенов, активен при dry_penalty_last_n=64) — только где argmax СТРОГИЙ (S4pp-1: g12=0.639 > tie-порога 0.025). На S4pp-2 (g12=0.0085 < 0.025) вершина может быть классом равенства; при значениях этой цепи (top_p=1.0, min_p=0.0, typ_p=1.0, xtc=0.0, top_n_sigma=-1.0) прочие усечатели инертны по значению, и top_k=400 не может СНЯТЬ argmax (3039 в топ-400), но тезис «обрезка ≠ перестановка» ложен как факт о top_k: top_k_impl делает partial_sort in-place (llama-sampler.cpp:321) — буфер ПЕРЕУПОРЯДОЧИВАЕТСЯ, и ничья равных logits решается ПОЗИЦИЕЙ в буфере после сортировки (tie-break по позиции — ровно этот случай). «Рез по границе» исключен числами v7: под штатной цепью top1 отчёта = 3039 не срезан, а эмиссия 5522 = rank 4 того же отчёта (ids_head) — чтобы выиграть, её надо ПОДНЯТЬ по рангу; обрезка меняет head только удалив его, head жив. Значит сдвиг на S4pp-2 = пере-ранжирование re-ranker'ом (dry-штраф поднимает ранг) ИЛИ переупорядочение буфера top_k (tie-break по позиции); оба — сдвиг цепью (r12/F8/F10, r13/F2). Tie-контроли (ctrlTieA/B): бан сместил эмиссент со своей вершины как ожидается (ctrl_ok, moved=true: 18→19, 3240→11639) — аномального флипа (эмиссент вне {вершина, бан}) на tie-адресах нет; третья ветка на них не проверялась (нет noop-плеча, r13/F7). Вывод «M1 снят / третья ветка жива» НЕ зависит от элиминации: он опирается на noop-плечо (тот же бан 4383, вернулась вершина отчёта). Строка читается «сдвиг цепью (не различает)»"
   },
   {
    "tag": "S4pp-ctrlA",
@@ -643,6 +877,7 @@
      -100.0
     ]
    ],
+   "sent_extra": null,
    "base": {
     "emit": 488,
     "top1": 488,
@@ -651,7 +886,7 @@
     "rank2": 369
    },
    "status": "ok",
-   "wall_s": 0.5,
+   "wall_s": 0.94,
    "emit": 369,
    "content": " is",
    "te": 101,
@@ -686,14 +921,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 488,
-   "top1_lp": -0.4521630108356476,
-   "top2_lp": -1.1429932117462158,
-   "g12": 0.6908302009105682,
+   "top1_lp": -0.45216789841651917,
+   "top2_lp": -1.1430649757385254,
+   "g12": 0.6908970773220062,
    "rank": 2,
-   "emit_lp": -1.1429932117462158,
+   "emit_lp": -1.1430649757385254,
    "n_tl": 20,
    "ids_head": [
     488,
@@ -724,6 +968,7 @@
      -100.0
     ]
    ],
+   "sent_extra": null,
    "base": {
     "emit": 310,
     "top1": 310,
@@ -732,7 +977,7 @@
     "rank2": 364
    },
    "status": "ok",
-   "wall_s": 0.49,
+   "wall_s": 0.85,
    "emit": 364,
    "content": " for",
    "te": 67,
@@ -767,14 +1012,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 310,
-   "top1_lp": -0.660184383392334,
-   "top2_lp": -1.0000948905944824,
-   "g12": 0.33991050720214844,
+   "top1_lp": -0.6600944995880127,
+   "top2_lp": -1.0001481771469116,
+   "g12": 0.3400536775588989,
    "rank": 2,
-   "emit_lp": -1.0000948905944824,
+   "emit_lp": -1.0001481771469116,
    "n_tl": 20,
    "ids_head": [
     310,
@@ -805,6 +1059,7 @@
      -100.0
     ]
    ],
+   "sent_extra": null,
    "base": {
     "emit": 18,
     "top1": 18,
@@ -813,7 +1068,7 @@
     "rank2": 19
    },
    "status": "ok",
-   "wall_s": 0.47,
+   "wall_s": 0.97,
    "emit": 19,
    "content": "4",
    "te": 65,
@@ -848,14 +1103,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 18,
-   "top1_lp": -1.6585384607315063,
-   "top2_lp": -1.6831623315811157,
-   "g12": 0.024623870849609375,
+   "top1_lp": -1.6585651636123657,
+   "top2_lp": -1.6831852197647095,
+   "g12": 0.02462005615234375,
    "rank": 2,
-   "emit_lp": -1.6831623315811157,
+   "emit_lp": -1.6831852197647095,
    "n_tl": 20,
    "ids_head": [
     18,
@@ -886,6 +1150,7 @@
      -100.0
     ]
    ],
+   "sent_extra": null,
    "base": {
     "emit": 3240,
     "top1": 3240,
@@ -894,7 +1159,7 @@
     "rank2": 11639
    },
    "status": "ok",
-   "wall_s": 0.54,
+   "wall_s": 1.12,
    "emit": 11639,
    "content": " noise",
    "te": 95,
@@ -929,14 +1194,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 3240,
-   "top1_lp": -3.4985620975494385,
-   "top2_lp": -3.523376703262329,
-   "g12": 0.024814605712890625,
+   "top1_lp": -3.4985642433166504,
+   "top2_lp": -3.5234341621398926,
+   "g12": 0.024869918823242188,
    "rank": 2,
-   "emit_lp": -3.523376703262329,
+   "emit_lp": -3.5234341621398926,
    "n_tl": 20,
    "ids_head": [
     3240,
@@ -967,6 +1241,7 @@
      -100.0
     ]
    ],
+   "sent_extra": null,
    "base": {
     "emit": 310,
     "top1": 318,
@@ -975,7 +1250,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.5,
+   "wall_s": 1.31,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -1010,14 +1285,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 318,
-   "top1_lp": -0.4771452844142914,
-   "top2_lp": -1.1155368089675903,
-   "g12": 0.638391524553299,
+   "top1_lp": -0.4771745800971985,
+   "top2_lp": -1.1155585050582886,
+   "g12": 0.6383839249610901,
    "rank": 2,
-   "emit_lp": -1.1155368089675903,
+   "emit_lp": -1.1155585050582886,
    "n_tl": 20,
    "ids_head": [
     318,
@@ -1034,7 +1318,7 @@
    ],
    "manip_ok": true,
    "verdict": "nondec_snip",
-   "reading": "бан вершины отчёта сработал (эмиссент 310 != A 318); НЕ РАЗЛИЧАЕТ и НЕ контроль применимости: на этом адресе A и так не эмитировалась, вывод о механизме запрещён"
+   "reading": "бан вершины отчёта применён (manip_ok по эхо), эффекта на эмиссент нет (эмиссент 310 = базовый B 310); НЕ РАЗЛИЧАЕТ и НЕ контроль применимости: на этом адресе A и так не эмитировалась, вывод о механизме запрещён"
   },
   {
    "tag": "S4pp-repro",
@@ -1043,6 +1327,7 @@
    "addr": "Q2 w4 k=69",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": null,
    "base": {
     "emit": 8810,
     "top1": 8810,
@@ -1051,7 +1336,7 @@
     "rank2": 1797
    },
    "status": "ok",
-   "wall_s": 0.47,
+   "wall_s": 1.36,
    "emit": 8810,
    "content": "UNCTION",
    "te": 69,
@@ -1081,14 +1366,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 8810,
-   "top1_lp": -0.0004713453818112612,
-   "top2_lp": -9.687110900878906,
-   "g12": 9.686639555497095,
+   "top1_lp": -0.00047170318430289626,
+   "top2_lp": -9.686195373535156,
+   "g12": 9.685723670350853,
    "rank": 1,
-   "emit_lp": -0.0004713453818112612,
+   "emit_lp": -0.00047170318430289626,
    "n_tl": 20,
    "ids_head": [
     8810,
@@ -1112,6 +1406,10 @@
    "addr": "Q2 w4 k=70",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "backend_sampling": true,
+    "post_sampling_probs": true
+   },
    "base": {
     "emit": 310,
     "top1": 318,
@@ -1120,7 +1418,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.49,
+   "wall_s": 0.9,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -1150,7 +1448,16 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": null,
    "top1_lp": null,
@@ -1175,6 +1482,10 @@
    "addr": "Q2 w4 k=70",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "backend_sampling": false,
+    "post_sampling_probs": true
+   },
    "base": {
     "emit": 310,
     "top1": 318,
@@ -1183,7 +1494,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.48,
+   "wall_s": 1.31,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -1213,7 +1524,16 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": null,
    "top1_lp": null,
@@ -1238,6 +1558,9 @@
    "addr": "Q2 w4 k=70",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 1
+   },
    "base": {
     "emit": 310,
     "top1": 318,
@@ -1246,7 +1569,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.46,
+   "wall_s": 0.97,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -1276,14 +1599,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 318,
-   "top1_lp": -0.4769783616065979,
-   "top2_lp": -1.1156541109085083,
-   "g12": 0.6386757493019104,
+   "top1_lp": -0.47712695598602295,
+   "top2_lp": -1.1155815124511719,
+   "g12": 0.6384545564651489,
    "rank": 2,
-   "emit_lp": -1.1156541109085083,
+   "emit_lp": -1.1155815124511719,
    "n_tl": 20,
    "ids_head": [
     318,
@@ -1307,6 +1639,9 @@
    "addr": "Q2 w13 k=101",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 1
+   },
    "base": {
     "emit": 488,
     "top1": 488,
@@ -1315,7 +1650,7 @@
     "rank2": 369
    },
    "status": "ok",
-   "wall_s": 0.54,
+   "wall_s": 1.31,
    "emit": 488,
    "content": " you",
    "te": 101,
@@ -1345,14 +1680,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 488,
-   "top1_lp": -0.45225417613983154,
-   "top2_lp": -1.1428859233856201,
-   "g12": 0.6906317472457886,
+   "top1_lp": -0.4524284601211548,
+   "top2_lp": -1.1425586938858032,
+   "g12": 0.6901302337646484,
    "rank": 1,
-   "emit_lp": -0.45225417613983154,
+   "emit_lp": -0.4524284601211548,
    "n_tl": 20,
    "ids_head": [
     488,
@@ -1376,6 +1720,9 @@
    "addr": "Q2 w4 k=70",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 2
+   },
    "base": {
     "emit": 310,
     "top1": 318,
@@ -1384,7 +1731,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.5,
+   "wall_s": 1.16,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -1414,14 +1761,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 318,
-   "top1_lp": -0.4771551787853241,
-   "top2_lp": -1.1154664754867554,
-   "g12": 0.6383112967014313,
+   "top1_lp": -0.47699958086013794,
+   "top2_lp": -1.115679144859314,
+   "g12": 0.638679563999176,
    "rank": 2,
-   "emit_lp": -1.1154664754867554,
+   "emit_lp": -1.115679144859314,
    "n_tl": 20,
    "ids_head": [
     318,
@@ -1445,6 +1801,9 @@
    "addr": "Q2 w13 k=101",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 2
+   },
    "base": {
     "emit": 488,
     "top1": 488,
@@ -1453,7 +1812,7 @@
     "rank2": 369
    },
    "status": "ok",
-   "wall_s": 0.51,
+   "wall_s": 1.35,
    "emit": 488,
    "content": " you",
    "te": 101,
@@ -1483,14 +1842,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 488,
-   "top1_lp": -0.45204219222068787,
-   "top2_lp": -1.1432461738586426,
-   "g12": 0.6912039816379547,
+   "top1_lp": -0.4522528648376465,
+   "top2_lp": -1.1428275108337402,
+   "g12": 0.6905746459960938,
    "rank": 1,
-   "emit_lp": -0.45204219222068787,
+   "emit_lp": -0.4522528648376465,
    "n_tl": 20,
    "ids_head": [
     488,
@@ -1514,6 +1882,9 @@
    "addr": "Q2 w4 k=70",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 3
+   },
    "base": {
     "emit": 310,
     "top1": 318,
@@ -1522,7 +1893,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.5,
+   "wall_s": 1.09,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -1552,14 +1923,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 318,
-   "top1_lp": -0.4773860275745392,
-   "top2_lp": -1.1148678064346313,
-   "g12": 0.6374817788600922,
+   "top1_lp": -0.47740909457206726,
+   "top2_lp": -1.1149003505706787,
+   "g12": 0.6374912559986115,
    "rank": 2,
-   "emit_lp": -1.1148678064346313,
+   "emit_lp": -1.1149003505706787,
    "n_tl": 20,
    "ids_head": [
     318,
@@ -1583,6 +1963,9 @@
    "addr": "Q2 w13 k=101",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 3
+   },
    "base": {
     "emit": 488,
     "top1": 488,
@@ -1591,7 +1974,7 @@
     "rank2": 369
    },
    "status": "ok",
-   "wall_s": 0.53,
+   "wall_s": 1.44,
    "emit": 488,
    "content": " you",
    "te": 101,
@@ -1621,14 +2004,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 488,
-   "top1_lp": -0.4523056149482727,
-   "top2_lp": -1.142771601676941,
-   "g12": 0.6904659867286682,
+   "top1_lp": -0.4523153603076935,
+   "top2_lp": -1.1427336931228638,
+   "g12": 0.6904183328151703,
    "rank": 1,
-   "emit_lp": -0.4523056149482727,
+   "emit_lp": -0.4523153603076935,
    "n_tl": 20,
    "ids_head": [
     488,
@@ -1652,6 +2044,9 @@
    "addr": "Q2 w4 k=70",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 4
+   },
    "base": {
     "emit": 310,
     "top1": 318,
@@ -1660,7 +2055,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.5,
+   "wall_s": 1.23,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -1690,14 +2085,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 318,
-   "top1_lp": -0.47717592120170593,
-   "top2_lp": -1.1152679920196533,
-   "g12": 0.6380920708179474,
+   "top1_lp": -0.47727420926094055,
+   "top2_lp": -1.1151392459869385,
+   "g12": 0.6378650367259979,
    "rank": 2,
-   "emit_lp": -1.1152679920196533,
+   "emit_lp": -1.1151392459869385,
    "n_tl": 20,
    "ids_head": [
     318,
@@ -1721,6 +2125,9 @@
    "addr": "Q2 w13 k=101",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 4
+   },
    "base": {
     "emit": 488,
     "top1": 488,
@@ -1729,7 +2136,7 @@
     "rank2": 369
    },
    "status": "ok",
-   "wall_s": 0.53,
+   "wall_s": 1.43,
    "emit": 488,
    "content": " you",
    "te": 101,
@@ -1759,14 +2166,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 488,
-   "top1_lp": -0.4522330164909363,
-   "top2_lp": -1.1428477764129639,
-   "g12": 0.6906147599220276,
+   "top1_lp": -0.4521685540676117,
+   "top2_lp": -1.143025517463684,
+   "g12": 0.6908569633960724,
    "rank": 1,
-   "emit_lp": -0.4522330164909363,
+   "emit_lp": -0.4521685540676117,
    "n_tl": 20,
    "ids_head": [
     488,
@@ -1790,6 +2206,9 @@
    "addr": "Q2 w4 k=70",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 8
+   },
    "base": {
     "emit": 310,
     "top1": 318,
@@ -1798,7 +2217,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.51,
+   "wall_s": 1.61,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -1828,14 +2247,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 318,
-   "top1_lp": -0.47684258222579956,
-   "top2_lp": -1.1159284114837646,
-   "g12": 0.6390858292579651,
+   "top1_lp": -0.47700995206832886,
+   "top2_lp": -1.1155922412872314,
+   "g12": 0.6385822892189026,
    "rank": 2,
-   "emit_lp": -1.1159284114837646,
+   "emit_lp": -1.1155922412872314,
    "n_tl": 20,
    "ids_head": [
     318,
@@ -1859,6 +2287,9 @@
    "addr": "Q2 w13 k=101",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 8
+   },
    "base": {
     "emit": 488,
     "top1": 488,
@@ -1867,7 +2298,7 @@
     "rank2": 369
    },
    "status": "ok",
-   "wall_s": 0.53,
+   "wall_s": 1.22,
    "emit": 488,
    "content": " you",
    "te": 101,
@@ -1897,14 +2328,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 488,
-   "top1_lp": -0.45234376192092896,
-   "top2_lp": -1.1426589488983154,
-   "g12": 0.6903151869773865,
+   "top1_lp": -0.45227327942848206,
+   "top2_lp": -1.142802119255066,
+   "g12": 0.6905288398265839,
    "rank": 1,
-   "emit_lp": -0.45234376192092896,
+   "emit_lp": -0.45227327942848206,
    "n_tl": 20,
    "ids_head": [
     488,
@@ -1928,6 +2368,9 @@
    "addr": "Q2 w4 k=70",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 400
+   },
    "base": {
     "emit": 310,
     "top1": 318,
@@ -1936,7 +2379,7 @@
     "rank2": 310
    },
    "status": "ok",
-   "wall_s": 0.51,
+   "wall_s": 1.07,
    "emit": 310,
    "content": " to",
    "te": 70,
@@ -1966,14 +2409,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 318,
-   "top1_lp": -0.4771615266799927,
-   "top2_lp": -1.1155073642730713,
-   "g12": 0.6383458375930786,
+   "top1_lp": -0.47727447748184204,
+   "top2_lp": -1.115130066871643,
+   "g12": 0.637855589389801,
    "rank": 2,
-   "emit_lp": -1.1155073642730713,
+   "emit_lp": -1.115130066871643,
    "n_tl": 20,
    "ids_head": [
     318,
@@ -1997,6 +2449,9 @@
    "addr": "Q2 w13 k=101",
    "ban_tok": null,
    "sent_logit_bias": null,
+   "sent_extra": {
+    "top_k": 400
+   },
    "base": {
     "emit": 488,
     "top1": 488,
@@ -2005,7 +2460,7 @@
     "rank2": 369
    },
    "status": "ok",
-   "wall_s": 0.53,
+   "wall_s": 1.03,
    "emit": 488,
    "content": " you",
    "te": 101,
@@ -2035,14 +2490,23 @@
      "xtc",
      "temperature"
     ],
-    "speculative.types": "none"
+    "speculative.types": "none",
+    "dry_multiplier": 1.0,
+    "dry_base": 1.0,
+    "top_n_sigma": -1.0,
+    "repeat_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
+    "repeat_last_n": 0,
+    "mirostat": 0,
+    "xtc_threshold": 0.10000000149011612
    },
    "top1": 488,
-   "top1_lp": -0.4523473083972931,
-   "top2_lp": -1.1427122354507446,
-   "g12": 0.6903649270534515,
+   "top1_lp": -0.45226094126701355,
+   "top2_lp": -1.1428812742233276,
+   "g12": 0.6906203329563141,
    "rank": 1,
-   "emit_lp": -0.4523473083972931,
+   "emit_lp": -0.45226094126701355,
    "n_tl": 20,
    "ids_head": [
     488,
