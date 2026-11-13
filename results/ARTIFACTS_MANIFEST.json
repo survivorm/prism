@@ -249,6 +249,24 @@
   "sha256_16": "73eb575b2ac89cea",
   "size": 1179991
  },
+ "results/e94/S3b.json": {
+  "date": "2026-11-13T10:51:32",
+  "note": "E94 S3b v3 (канон; r1-ревью артефакта PASS_WITH_MINORS, 2 текстовых MINOR/COSMETIC ремедированы в v3): top_k на post-sampling наборе — rule 1a, mech_ok: N_probe=N_ctrl=(1,2,4), N_off=20 (потолок n_probs); 7 запросов T=1.0, один SYCL-сервер; эхо top_k=1/2/4/40/1/2/4, post_sampling_probs=true во всех 7; report_field=top_probs (post-sampling схема); selftest 50/50. ВАЖНО: v1 (S3b_v1.json) — ложный report_empty (imя поля top_logprobs vs top_probs); v2 (S3b_v2.json) — до текстовой ремедиации.",
+  "sha256_16": "9a1297a27e53bad1",
+  "size": 27700
+ },
+ "results/e94/S3b_v1.json": {
+  "date": "2026-11-13T10:41:11",
+  "note": "E94 S3b v1 — ЗАМЕНЁН (ложный result): код читал только pre-sampling поле top_logprobs; при post_sampling_probs=true отчёт в схеме top_probs/prob → ложный N=0 на всех 7 строк → ложный rule 3 (report_empty). Хранится как доказательство бага и пере-прогона (см. S3b.json v2).",
+  "sha256_16": "e0bc3250df7429c1",
+  "size": 26330
+ },
+ "results/e94/S3b_v2.json": {
+  "date": "2026-11-13",
+  "note": "E94 S3b v2 — заменён v3 (текстовая ремедиация 2_REVIEW_E94_S3b_exec_r1: B3-формулировка «компонент = N, эхо-поля не считаются» + note «жадная инвариантность — свойство T=0, не T=1.0» → динамическая p0). Числа/вердикт те же (rule 1a, N=(1,2,4)/(1,2,4)/20).",
+  "sha256_16": "8e90138b7c5d16a0",
+  "size": 27173
+ },
  "results/e94/S4pp_v8.json": {
   "date": "2026-11-12",
   "note": "S4pp v8 — промежуточная версия трейла v7→v10 (не канон; канон = S4pp.json v10).",
