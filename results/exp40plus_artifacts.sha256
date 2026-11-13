@@ -1,6 +1,6 @@
 # Крупные артефакты серии E-45…E-48, которые НЕ лежат в git (results/*.npz, *.pt в .gitignore),
 # и которые НЕ пересоздаются воспроизводимо: они читают calibration-пул потоком с Hub
-# (не закреплён, см. docs/regen_queue.md R1/R12), поэтому повтор команды даёт ДРУГУЮ выборку.
+# (не закреплён, см. docs/regen_queue.md R1/R12 — в git-истории), поэтому повтор команды даёт ДРУГУЮ выборку.
 # Смысл этого файла — идентичность: у закоммиченных выводов серии есть точный контрольный
 # отпечаток источника. Проверка: sha256sum -c results/exp40plus_artifacts.sha256
 # (файлы лежат в рабочем каталоге репозитория, в results/).
@@ -24,3 +24,5 @@ f133bf715c9fa4a9d7cbb4b6bf77b50c4a3e612891160abd6e683e4902f28fb9  /data/prism_ke
 # sizes (байт):
 # 1578794007  results/exp48b_lfm3_gen_kinematics.npz   # R9, с гейном w
 # 1578590069  /data/prism_kernels/exp48b/exp48b_lfm3_gen_kinematics.A0_backup.npz   # прежняя политика
+4188e4d10fafdd9d9ccc5134a1aa68adfa3b42576ccb38e19f3551bd71da0d4b  results/exp49b2_floor_qwen_cbfix.json
+965b788dc280159dbb668ea8aff5142abf620173d7b2e22fdc4b03e6d9d4be81  results/exp49b2_floor_lfm3_cbfix.json

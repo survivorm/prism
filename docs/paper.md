@@ -921,9 +921,7 @@ last-norm + head, переносимые между GQA-Qwen и conv-LFM3. [И] 
 (механика) и непереносимые (домен/режим); заявки вида «наш метод работает для LLM вообще»
 обязаны ссылаться на 4.11, а не на числа одной модели.
 
-**Источник.** E-47/E-48-история (`docs/leaf_dynamics.md` §8–§10 — в git-истории); `results/exp47a_kinematics_cache.json`,
-`exp47b_gen_kinematics.json`, `exp47c_p2_loop_prediction.json`, `exp48a_lfm3_kinematics.json`,
-`exp48b_lfm3_gen_kinematics.json`; чекер `experiments/exp40plus_doc_check.py`.
+**Источник.** E-47/E-48-история (`docs/leaf_dynamics.md` §8–§10 — в git-истории); `results/exp47a_kinematics_cache.json`, `results/exp47b_gen_kinematics.json`, `results/exp47c_p2_loop_prediction.json`, `results/exp48a_lfm3_kinematics.json`, `results/exp48b_lfm3_gen_kinematics.json`; чекер `experiments/exp40plus_doc_check.py`.
 
 ### 4.12. След повреждений, приписка кривизны порядку, кинематика шага (E-49…E-53)
 
@@ -1035,7 +1033,7 @@ kNN-фоллбеки 4–6 %; причинный тест порядка не в
 
 **Источник.** `docs/E52a_perturb_axis.md`; история линии и аудиты (`docs/leaf_dynamics.md` §11,
 `docs/E49_review.md`, `docs/E50v4_analysis.md`, `docs/E52h_health_candidates.md`,
-`docs/E52k_scale_results.md`, `docs/E53_between.md`, `docs/AUDIT_50_52.md` — в git-истории); `results/exp49b2_floor_*.json`,
+`docs/E52k_scale_results.md`, `docs/E53_between.md`, `docs/AUDIT_50_52.md` — в git-истории); `results/exp49b2_floor_qwen.json`, `results/exp49b2_floor_lfm3.json`, `results/exp49b2_floor_qwen_cbfix.json`, `results/exp49b2_floor_lfm3_cbfix.json`,
 `exp50v4_s*.json`, `exp51_higher_order_qwen.json`, `exp52a_perturb_*.json`, `exp52e_amp_*.json`,
 `exp52h_*.json`, `exp52j_*.json`, `exp53_between.json`.
 
