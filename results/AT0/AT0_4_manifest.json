@@ -1,0 +1,8 @@
+{
+ "manifest": {
+  "claim_sha256": "0463088e6f9087102eb1d51c1447efeedc78f8887b7532ff0a19156ab0ba749f",
+  "store_sha256": "f1cc7265dd40c8744174fe3d6e0889199907c5652012970100639205c440ee4d",
+  "date": "2026-11-14T06:36:18",
+  "aggregation_rebuild": true
+ }
+}

@@ -1,0 +1,14 @@
+AT0_4 REBUILD (exec-review P2/P3) 2026-11-14 06:36:17
+rebuild script sha256: bf80334d2e512867a2e452ed66d8af11991a59fc92d6c51d8f897da3aa31a50b
+experiment script sha256: a4b7a1385d74fdfb3f2c7760a13a36935869155aaa9d3cb7724641057bb5a4ff
+docs=8 seeds=[11, 12, 13] store-per_doc groups=14
+P4: 6/6 медиан и вердиктов bit-идентичны старому блоку (flags=0)
+P4 outliers (независимый пересчёт): {'own_w0': '2/6', 'own_w4': '6/6'}
+summary: префикс (до f_DC) неизменён; суффикс = медианный тест + per-doc исключения + P5 mirror
+store diff: только ['prereg.P4_random_order_insensitive', 'provenance', 'verdict']; в verdict — только summary (pretest_results неизменён)
+store: /home/survivor/work/prism/results/AT0/store/f1cc7265dd40c874.json (sha f1cc7265dd40c874)
+claim: /home/survivor/work/prism/results/AT0/AT0_4_MIX.json
+manifest: /home/survivor/work/prism/results/AT0/AT0_4_manifest.json
+sha-цепочка: store==имя, claim.store==store, manifest.claim==claim, manifest.store==store
+старый store удалён: 71d3b5d868ed00c7.json
+AT0_4 REBUILD DONE

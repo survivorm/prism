@@ -1,0 +1,169 @@
+AT0_4 T0.4 «Разводящая клетка 3×2» (CPU-форварды)
+py3.12.9 torch2.14.1+cu130 np2.5.3 transformers5.15.1 threads=4/4
+docs=8 (P1_own, T=384, L=23, K=96, N=383)
+G0: P1_own sha 783e16338cdcb652 config b90b86f35c8e6925 field bcc607c561f95e3e
+trained load: 2.0s
+σ_t-таблица: 320 unique-тензоров (1D: 115 — вкл. RMSNorm gain, баг ndim≥2 исправлен), sha e350b277ec76519b
+S2 (trained tied): PASS
+CKPT: resume — 112 клеток уже посчитаны (скип)
+S1: R0×real (8 доков) — R0 liveness: head-acc на собственных генерациях
+  R0/trained/real/own_w0: r=0.0801 f_dc=0.0002 r_max=0.1711 d_eff=11.29 acc=0.953 [resume]
+  R0/trained/real/own_w1: r=0.0041 f_dc=0.0000 r_max=0.0123 d_eff=21.18 acc=0.945 [resume]
+  R0/trained/real/own_w2: r=0.0040 f_dc=0.0000 r_max=0.0123 d_eff=20.79 acc=0.974 [resume]
+  R0/trained/real/own_w3: r=0.0057 f_dc=0.0000 r_max=0.0125 d_eff=31.93 acc=0.956 [resume]
+  R0/trained/real/own_w4: r=0.0704 f_dc=0.0002 r_max=0.2010 d_eff=9.64 acc=0.943 [resume]
+  R0/trained/real/own_w5: r=0.0035 f_dc=0.0000 r_max=0.0102 d_eff=11.37 acc=0.977 [resume]
+  R0/trained/real/own_w6: r=0.0055 f_dc=0.0000 r_max=0.0110 d_eff=27.41 acc=0.948 [resume]
+  R0/trained/real/own_w7: r=0.0033 f_dc=0.0000 r_max=0.0102 d_eff=18.35 acc=0.966 [resume]
+S1: own_w0=0.9530, own_w1=0.9452, own_w2=0.9739, own_w3=0.9556, own_w4=0.9426, own_w5=0.9765, own_w6=0.9478, own_w7=0.9661 | PASS (≥0.9)
+S3 R2_S11: finite=PASS min=-9.106 max=7.519
+S3 R1_S11: finite=PASS min=-7.521 max=8.408
+S3 R2_S12: finite=PASS min=-7.085 max=7.96
+S3 R1_S12: finite=PASS min=-8.281 max=6.151
+S3 R2_S13: finite=PASS min=-7.764 max=10.38
+S3 R1_S13: finite=PASS min=-7.96 max=6.149
+R0×mix (8 доков)
+  R0/trained/mix/own_w0: r=0.0265 f_dc=0.0001 r_max=0.0763 d_eff=28.90 acc=0.919 [resume]
+  R0/trained/mix/own_w1: r=0.0236 f_dc=0.0001 r_max=0.0562 d_eff=26.39 acc=0.091 [resume]
+  R0/trained/mix/own_w2: r=0.0272 f_dc=0.0001 r_max=0.0689 d_eff=29.21 acc=0.104 [resume]
+  R0/trained/mix/own_w3: r=0.0193 f_dc=0.0001 r_max=0.0755 d_eff=31.80 acc=0.055 [resume]
+  R0/trained/mix/own_w4: r=0.0307 f_dc=0.0001 r_max=0.0927 d_eff=30.29 acc=0.930 [resume]
+  R0/trained/mix/own_w5: r=0.0256 f_dc=0.0001 r_max=0.0812 d_eff=22.31 acc=0.099 [resume]
+  R0/trained/mix/own_w6: r=0.0150 f_dc=0.0000 r_max=0.0480 d_eff=31.17 acc=0.060 [resume]
+  R0/trained/mix/own_w7: r=0.0214 f_dc=0.0001 r_max=0.0611 d_eff=24.96 acc=0.078 [resume]
+R2×{real,mix} seed=11
+  R2/S11/real/own_w0: r=0.1179 f_dc=0.0003 r_max=0.2529 d_eff=5.26 acc=0.000 [resume]
+  R2/S11/real/own_w1: r=0.0061 f_dc=0.0000 r_max=0.0137 d_eff=29.21 acc=0.000 [resume]
+  R2/S11/real/own_w2: r=0.0057 f_dc=0.0000 r_max=0.0152 d_eff=42.26 acc=0.000 [resume]
+  R2/S11/real/own_w3: r=0.0057 f_dc=0.0000 r_max=0.0139 d_eff=40.20 acc=0.000 [resume]
+  R2/S11/real/own_w4: r=0.1569 f_dc=0.0004 r_max=0.3128 d_eff=4.47 acc=0.000 [resume]
+  R2/S11/real/own_w5: r=0.0072 f_dc=0.0000 r_max=0.0213 d_eff=16.81 acc=0.000 [resume]
+  R2/S11/real/own_w6: r=0.0053 f_dc=0.0000 r_max=0.0133 d_eff=41.02 acc=0.000 [resume]
+  R2/S11/real/own_w7: r=0.0062 f_dc=0.0000 r_max=0.0147 d_eff=24.11 acc=0.000 [resume]
+  R2/S11/mix/own_w0: r=0.0270 f_dc=0.0001 r_max=0.4076 d_eff=15.43 acc=0.000 [resume]
+  R2/S11/mix/own_w1: r=0.0058 f_dc=0.0000 r_max=0.0144 d_eff=105.47 acc=0.000 [resume]
+  R2/S11/mix/own_w2: r=0.0070 f_dc=0.0000 r_max=0.0157 d_eff=84.75 acc=0.000 [resume]
+  R2/S11/mix/own_w3: r=0.0056 f_dc=0.0000 r_max=0.0169 d_eff=113.15 acc=0.000 [resume]
+  R2/S11/mix/own_w4: r=0.0324 f_dc=0.0001 r_max=0.5061 d_eff=13.79 acc=0.000 [resume]
+  R2/S11/mix/own_w5: r=0.0069 f_dc=0.0000 r_max=0.0208 d_eff=60.88 acc=0.000 [resume]
+  R2/S11/mix/own_w6: r=0.0069 f_dc=0.0000 r_max=0.0161 d_eff=98.35 acc=0.000 [resume]
+  R2/S11/mix/own_w7: r=0.0066 f_dc=0.0000 r_max=0.0164 d_eff=102.42 acc=0.000 [resume]
+R1×{real,mix} seed=11 (ствол = R2_S11 + trained tied-пара)
+  R1/S11/real/own_w0: r=0.1220 f_dc=0.0003 r_max=0.3371 d_eff=5.00 acc=0.000 [resume]
+  R1/S11/real/own_w1: r=0.0085 f_dc=0.0000 r_max=0.0210 d_eff=27.28 acc=0.000 [resume]
+  R1/S11/real/own_w2: r=0.0070 f_dc=0.0000 r_max=0.0185 d_eff=29.18 acc=0.003 [resume]
+  R1/S11/real/own_w3: r=0.0062 f_dc=0.0000 r_max=0.0172 d_eff=36.67 acc=0.000 [resume]
+  R1/S11/real/own_w4: r=0.1450 f_dc=0.0004 r_max=0.3472 d_eff=4.64 acc=0.000 [resume]
+  R1/S11/real/own_w5: r=0.0077 f_dc=0.0000 r_max=0.0232 d_eff=15.60 acc=0.000 [resume]
+  R1/S11/real/own_w6: r=0.0063 f_dc=0.0000 r_max=0.0161 d_eff=36.04 acc=0.000 [resume]
+  R1/S11/real/own_w7: r=0.0075 f_dc=0.0000 r_max=0.0157 d_eff=23.31 acc=0.000 [resume]
+  R1/S11/mix/own_w0: r=0.0120 f_dc=0.0000 r_max=0.5183 d_eff=17.88 acc=0.000 [resume]
+  R1/S11/mix/own_w1: r=0.0065 f_dc=0.0000 r_max=0.0192 d_eff=80.31 acc=0.000 [resume]
+  R1/S11/mix/own_w2: r=0.0066 f_dc=0.0000 r_max=0.0178 d_eff=72.72 acc=0.005 [resume]
+  R1/S11/mix/own_w3: r=0.0077 f_dc=0.0000 r_max=0.0193 d_eff=90.74 acc=0.000 [resume]
+  R1/S11/mix/own_w4: r=0.0152 f_dc=0.0000 r_max=0.5741 d_eff=14.40 acc=0.000 [resume]
+  R1/S11/mix/own_w5: r=0.0093 f_dc=0.0000 r_max=0.0238 d_eff=49.44 acc=0.000 [resume]
+  R1/S11/mix/own_w6: r=0.0086 f_dc=0.0000 r_max=0.0186 d_eff=73.02 acc=0.000 [resume]
+  R1/S11/mix/own_w7: r=0.0058 f_dc=0.0000 r_max=0.0163 d_eff=86.22 acc=0.000 [resume]
+R2×{real,mix} seed=12
+  R2/S12/real/own_w0: r=0.1116 f_dc=0.0003 r_max=0.2708 d_eff=4.90 acc=0.000 [resume]
+  R2/S12/real/own_w1: r=0.0072 f_dc=0.0000 r_max=0.0146 d_eff=30.71 acc=0.000 [resume]
+  R2/S12/real/own_w2: r=0.0069 f_dc=0.0000 r_max=0.0163 d_eff=43.99 acc=0.000 [resume]
+  R2/S12/real/own_w3: r=0.0062 f_dc=0.0000 r_max=0.0131 d_eff=44.22 acc=0.000 [resume]
+  R2/S12/real/own_w4: r=0.1552 f_dc=0.0004 r_max=0.3098 d_eff=4.32 acc=0.000 [resume]
+  R2/S12/real/own_w5: r=0.0075 f_dc=0.0000 r_max=0.0199 d_eff=17.17 acc=0.000 [resume]
+  R2/S12/real/own_w6: r=0.0059 f_dc=0.0000 r_max=0.0134 d_eff=43.88 acc=0.000 [resume]
+  R2/S12/real/own_w7: r=0.0058 f_dc=0.0000 r_max=0.0135 d_eff=26.34 acc=0.000 [resume]
+  R2/S12/mix/own_w0: r=0.0204 f_dc=0.0001 r_max=0.3650 d_eff=18.30 acc=0.000 [resume]
+  R2/S12/mix/own_w1: r=0.0062 f_dc=0.0000 r_max=0.0156 d_eff=118.54 acc=0.000 [resume]
+  R2/S12/mix/own_w2: r=0.0067 f_dc=0.0000 r_max=0.0158 d_eff=119.40 acc=0.000 [resume]
+  R2/S12/mix/own_w3: r=0.0057 f_dc=0.0000 r_max=0.0176 d_eff=137.69 acc=0.000 [resume]
+  R2/S12/mix/own_w4: r=0.0238 f_dc=0.0001 r_max=0.4441 d_eff=15.34 acc=0.000 [resume]
+  R2/S12/mix/own_w5: r=0.0086 f_dc=0.0000 r_max=0.0214 d_eff=62.33 acc=0.000 [resume]
+  R2/S12/mix/own_w6: r=0.0060 f_dc=0.0000 r_max=0.0153 d_eff=132.14 acc=0.000 [resume]
+  R2/S12/mix/own_w7: r=0.0061 f_dc=0.0000 r_max=0.0148 d_eff=121.63 acc=0.000 [resume]
+R1×{real,mix} seed=12 (ствол = R2_S12 + trained tied-пара)
+  R1/S12/real/own_w0: r=0.1120 f_dc=0.0003 r_max=0.3036 d_eff=4.86 acc=0.000 [resume]
+  R1/S12/real/own_w1: r=0.0067 f_dc=0.0000 r_max=0.0174 d_eff=28.85 acc=0.000 [resume]
+  R1/S12/real/own_w2: r=0.0086 f_dc=0.0000 r_max=0.0211 d_eff=30.03 acc=0.000 [resume]
+  R1/S12/real/own_w3: r=0.0073 f_dc=0.0000 r_max=0.0189 d_eff=39.09 acc=0.000 [resume]
+  R1/S12/real/own_w4: r=0.1476 f_dc=0.0004 r_max=0.3368 d_eff=4.50 acc=0.000 [resume]
+  R1/S12/real/own_w5: r=0.0082 f_dc=0.0000 r_max=0.0200 d_eff=17.16 acc=0.000 [resume]
+  R1/S12/real/own_w6: r=0.0069 f_dc=0.0000 r_max=0.0164 d_eff=41.12 acc=0.000 [resume]
+  R1/S12/real/own_w7: r=0.0071 f_dc=0.0000 r_max=0.0158 d_eff=24.72 acc=0.000 [resume]
+  R1/S12/mix/own_w0: r=0.0260 f_dc=0.0001 r_max=0.4736 d_eff=14.55 acc=0.000 [resume]
+  R1/S12/mix/own_w1: r=0.0070 f_dc=0.0000 r_max=0.0193 d_eff=92.14 acc=0.026 [resume]
+  R1/S12/mix/own_w2: r=0.0076 f_dc=0.0000 r_max=0.0205 d_eff=82.70 acc=0.005 [resume]
+  R1/S12/mix/own_w3: r=0.0073 f_dc=0.0000 r_max=0.0164 d_eff=114.48 acc=0.003 [resume]
+  R1/S12/mix/own_w4: r=0.0288 f_dc=0.0001 r_max=0.5607 d_eff=12.87 acc=0.000 [resume]
+  R1/S12/mix/own_w5: r=0.0088 f_dc=0.0000 r_max=0.0223 d_eff=62.70 acc=0.000 [resume]
+  R1/S12/mix/own_w6: r=0.0078 f_dc=0.0000 r_max=0.0172 d_eff=95.49 acc=0.000 [resume]
+  R1/S12/mix/own_w7: r=0.0061 f_dc=0.0000 r_max=0.0158 d_eff=109.94 acc=0.005 [resume]
+R2×{real,mix} seed=13
+  R2/S13/real/own_w0: r=0.1225 f_dc=0.0003 r_max=0.2580 d_eff=4.32 acc=0.000 [resume]
+  R2/S13/real/own_w1: r=0.0062 f_dc=0.0000 r_max=0.0145 d_eff=28.63 acc=0.000 [resume]
+  R2/S13/real/own_w2: r=0.0067 f_dc=0.0000 r_max=0.0165 d_eff=37.20 acc=0.000 [resume]
+  R2/S13/real/own_w3: r=0.0053 f_dc=0.0000 r_max=0.0125 d_eff=40.86 acc=0.000 [resume]
+  R2/S13/real/own_w4: r=0.1533 f_dc=0.0004 r_max=0.3019 d_eff=3.97 acc=0.000 [resume]
+  R2/S13/real/own_w5: r=0.0074 f_dc=0.0000 r_max=0.0182 d_eff=16.33 acc=0.000 [resume]
+  R2/S13/real/own_w6: r=0.0054 f_dc=0.0000 r_max=0.0125 d_eff=40.32 acc=0.000 [resume]
+  R2/S13/real/own_w7: r=0.0067 f_dc=0.0000 r_max=0.0134 d_eff=24.60 acc=0.000 [resume]
+  R2/S13/mix/own_w0: r=0.0236 f_dc=0.0001 r_max=0.4737 d_eff=18.39 acc=0.000 [resume]
+  R2/S13/mix/own_w1: r=0.0064 f_dc=0.0000 r_max=0.0151 d_eff=101.33 acc=0.000 [resume]
+  R2/S13/mix/own_w2: r=0.0077 f_dc=0.0000 r_max=0.0170 d_eff=92.41 acc=0.000 [resume]
+  R2/S13/mix/own_w3: r=0.0065 f_dc=0.0000 r_max=0.0171 d_eff=104.59 acc=0.000 [resume]
+  R2/S13/mix/own_w4: r=0.0275 f_dc=0.0001 r_max=0.5753 d_eff=15.90 acc=0.000 [resume]
+  R2/S13/mix/own_w5: r=0.0078 f_dc=0.0000 r_max=0.0217 d_eff=53.62 acc=0.000 [resume]
+  R2/S13/mix/own_w6: r=0.0070 f_dc=0.0000 r_max=0.0164 d_eff=103.45 acc=0.000 [resume]
+  R2/S13/mix/own_w7: r=0.0065 f_dc=0.0000 r_max=0.0166 d_eff=91.66 acc=0.000 [resume]
+R1×{real,mix} seed=13 (ствол = R2_S13 + trained tied-пара)
+  R1/S13/real/own_w0: r=0.1253 f_dc=0.0003 r_max=0.2974 d_eff=5.02 acc=0.000 [resume]
+  R1/S13/real/own_w1: r=0.0075 f_dc=0.0000 r_max=0.0188 d_eff=26.50 acc=0.005 [resume]
+  R1/S13/real/own_w2: r=0.0086 f_dc=0.0000 r_max=0.0187 d_eff=30.09 acc=0.000 [resume]
+  R1/S13/real/own_w3: r=0.0075 f_dc=0.0000 r_max=0.0197 d_eff=35.82 acc=0.000 [resume]
+  R1/S13/real/own_w4: r=0.1551 f_dc=0.0004 r_max=0.3116 d_eff=3.93 acc=0.000 [resume]
+  R1/S13/real/own_w5: r=0.0096 f_dc=0.0000 r_max=0.0257 d_eff=14.49 acc=0.000 [resume]
+  R1/S13/real/own_w6: r=0.0060 f_dc=0.0000 r_max=0.0172 d_eff=36.12 acc=0.000 [resume]
+  R1/S13/real/own_w7: r=0.0077 f_dc=0.0000 r_max=0.0153 d_eff=24.50 acc=0.003 [resume]
+  R1/S13/mix/own_w0: r=0.0250 f_dc=0.0001 r_max=0.5141 d_eff=14.19 acc=0.000 [resume]
+  R1/S13/mix/own_w1: r=0.0061 f_dc=0.0000 r_max=0.0197 d_eff=77.64 acc=0.003 [resume]
+  R1/S13/mix/own_w2: r=0.0062 f_dc=0.0000 r_max=0.0203 d_eff=69.79 acc=0.000 [resume]
+  R1/S13/mix/own_w3: r=0.0059 f_dc=0.0000 r_max=0.0172 d_eff=101.35 acc=0.000 [resume]
+  R1/S13/mix/own_w4: r=0.0274 f_dc=0.0001 r_max=0.5809 d_eff=12.63 acc=0.000 [resume]
+  R1/S13/mix/own_w5: r=0.0113 f_dc=0.0000 r_max=0.0280 d_eff=39.64 acc=0.000 [resume]
+  R1/S13/mix/own_w6: r=0.0079 f_dc=0.0000 r_max=0.0216 d_eff=75.27 acc=0.008 [resume]
+  R1/S13/mix/own_w7: r=0.0067 f_dc=0.0000 r_max=0.0186 d_eff=81.92 acc=0.000 [resume]
+S4: max |r−N·f_DC|/(N·f_DC) = 5.699e-16 PASS
+S5: max telescope = 4.441e-16 PASS
+G_nd R1_S11: 7/8 не-вырожденных доков (real) (cv>0.05 ∧ d_eff≥3.0 ∧ ent>0.5)
+G_nd R1_S12: 7/8 не-вырожденных доков (real) (cv>0.05 ∧ d_eff≥3.0 ∧ ent>0.5)
+G_nd R1_S13: 6/8 не-вырожденных доков (real) (cv>0.05 ∧ d_eff≥3.0 ∧ ent>0.5)
+G_nd R2_S11: 7/8 не-вырожденных доков (real) (cv>0.05 ∧ d_eff≥3.0 ∧ ent>0.5)
+G_nd R2_S12: 7/8 не-вырожденных доков (real) (cv>0.05 ∧ d_eff≥3.0 ∧ ent>0.5)
+G_nd R2_S13: 6/8 не-вырожденных доков (real) (cv>0.05 ∧ d_eff≥3.0 ∧ ent>0.5)
+G_nd4 R1_S11: median ‖h‖ = 37.35 (R0 real: 126.75, ratio 0.29)
+G_nd4 R1_S12: median ‖h‖ = 38.71 (R0 real: 126.75, ratio 0.31)
+G_nd4 R1_S13: median ‖h‖ = 38.11 (R0 real: 126.75, ratio 0.3)
+G_nd4 R2_S11: median ‖h‖ = 37.52 (R0 real: 126.75, ratio 0.3)
+G_nd4 R2_S12: median ‖h‖ = 38.25 (R0 real: 126.75, ratio 0.3)
+G_nd4 R2_S13: median ‖h‖ = 38.27 (R0 real: 126.75, ratio 0.3)
+P1 R2×real S11: reachable 0/8, median_r=None → vacuous
+P1 R2×real S12: reachable 0/8, median_r=None → vacuous
+P1 R2×real S13: reachable 0/8, median_r=None → vacuous
+P2 S11: median|r R1−R2| = 0.0013 → same
+P2 S12: median|r R1−R2| = 0.0010 → same
+P2 S13: median|r R1−R2| = 0.0018 → same
+P3 R0: median r(mix)−r(real) = 0.0158 → confirmed
+P4 R1 S11: median|r real−mix| = 0.0018 → null
+P4 R2 S11: median|r real−mix| = 0.0009 → null
+P4 R1 S12: median|r real−mix| = 0.0010 → null
+P4 R2 S12: median|r real−mix| = 0.0007 → null
+P4 R1 S13: median|r real−mix| = 0.0018 → null
+P4 R2 S13: median|r real−mix| = 0.0011 → null
+P5 R0: median f_DC(mix)−f_DC(real) = 0.0000 → confirmed
+store: /home/survivor/work/prism/results/AT0/store/71d3b5d868ed00c7.json (sha 71d3b5d868ed00c7)
+CKPT: удалён (прогон завершён успешно)
+written: /home/survivor/work/prism/results/AT0/AT0_4_MIX.json
+written: /home/survivor/work/prism/results/AT0/AT0_4_manifest.json
+AT0_4 gates: ALL PASS
+AT0_4 DONE
