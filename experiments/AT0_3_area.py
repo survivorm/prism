@@ -42,6 +42,10 @@ L/C — cross-object стратификация (dip по v_tangent, эстим�
 
 Артефакты: results/AT0/store/<sha16>.json (полный), results/AT0/AT0_3_AREA.json (claim),
 results/AT0/AT0_3_manifest.json, results/AT0/AT0_3_run.log.
+r3.3 (fixreview-REVIEW): count-aware concentration + top2-базис; Fisher/hypergeometric
+detection-тест (биномиальный → sensitivity) + detector null calibration + max-ρ-распределения;
+anti_ratio по чётности; corpus/domain claim-gate; source KS sensitivity; KS-диагностика;
+p=2 guard; G2-гейт полноты сетки; median self-check; wording (H1 directional / H2 association).
 """
 import hashlib
 import importlib
@@ -339,6 +343,24 @@ def ks_stat(a, b):
     return float(np.max(np.abs(cdf_a - cdf_b)))
 
 
+def ks_diagnostic(xL, xC):
+    """r3.3 (fixreview-REVIEW M1): детерминированные KS-диагностики — позиция максимума
+    CDF-gap и число пересечений F_L−F_C на объединённом образце. Защита от copy-paste
+    ks-статистики между объектами: два объекта с разными распределениями не дают
+    идентичной тройки (stat, max_gap_x, n_crossings)."""
+    xL = np.sort(np.asarray(xL, dtype=float))
+    xC = np.sort(np.asarray(xC, dtype=float))
+    pooled = np.unique(np.concatenate([xL, xC]))
+    d = (np.searchsorted(xL, pooled, side="right") / len(xL)
+         - np.searchsorted(xC, pooled, side="right") / len(xC))
+    i = int(np.argmax(np.abs(d)))
+    crossings = int(np.sum(np.sign(d[:-1]) * np.sign(d[1:]) < 0)) if len(d) > 1 else 0
+    return {"max_gap_x": float(pooled[i]),
+            "max_gap_side": "L>C" if d[i] > 0 else "C>L",
+            "n_crossings": crossings,
+            "n_pooled_unique": int(len(pooled))}
+
+
 def perm_two_sample_stat(xL, xC, stat, b=B_PERM, seed=SEED_PERM):
     """Перестановочный two-sample тест на произвольной статистике (KS / разность медиан / mean).
     Перестановка ярлыков: пул перемешивается, режется nL/nC, stat(a,c) пересчитывается.
@@ -362,6 +384,9 @@ def perm_two_sample_stat(xL, xC, stat, b=B_PERM, seed=SEED_PERM):
 
 
 def median_diff(a, b):
+    """Чистая функция (a, b) → median(a) − median(b). r3.3 (fixreview-REVIEW O3): тело
+    зафиксировано — замыкания на внешние переменные нет; self-check в obj_test:
+    stat_obs == median_L − median_C."""
     return float(np.median(a) - np.median(b))
 
 
@@ -409,7 +434,12 @@ def concentration_test(rho, p, K, b=B_PERM, seed=SEED_PERM, doc_idx=0):
     p-value = (1 + #{max_perm >= max_obs})/(b+1).
     r3.2 (fixreview #3): per-doc seed (seed + doc_idx*SEED_STRIDE) — нуль независим
     между доками (в r3 фиксированный seed=117 был у всех доков: первый перестановочный
-    выбор идентичен для доков с одинаковым K → cross-doc корреляция нуля)."""
+    выбор идентичен для доков с одинаковым K → cross-doc корреляция нуля).
+    r3.3 (fixreview-REVIEW O1): нуль перемешивает ПОЗИЦИИ значений отриц. массы по
+    фактическим лагам k=1..K (rng.choice(K, n_neg, replace=False)+1) — неравномощность
+    классов остатков входит в нуль автоматически: перестановочный тест count-aware
+    by construction; исправлена аналитическая concentration (базис count(r)/K),
+    не p-value."""
     rho = np.asarray(rho, dtype=float)
     k = np.arange(1, int(K) + 1)
     m = rho < 0
@@ -495,8 +525,14 @@ def obj_test(cells, L, C, obj, mode):
     ks = perm_two_sample_stat(vL, vC, ks_stat)
     med = perm_two_sample_stat(vL, vC, median_diff)
     mean = perm_two_sample(vL, vC)
+    # r3.3 (fixreview-REVIEW O3): self-check — перестановочная статистика медиан равна
+    # разности медиан на том же пуле (инцидент r3.2: статистика, вычисленная по другому
+    # объекту, была бы тихой ошибкой)
+    assert abs(med["stat_obs"] - (float(np.median(vL)) - float(np.median(vC)))) < 1e-12, \
+        "median stat_obs != median_L − median_C (проверьте пулы perm/oddvals)"
     res["odd_frac"] = {
         "ks": ks, "median": med, "mean": mean,
+        "ks_diagnostic": ks_diagnostic(vL, vC),  # r3.3 (M1): защита от copy-paste между объектами
         "mean_L": mean["mean_L"], "mean_C": mean["mean_C"],
         "median_L": float(np.median(vL)), "median_C": float(np.median(vC)),
     }
@@ -548,9 +584,11 @@ def obj_test(cells, L, C, obj, mode):
                              "отрицательную площадь на нечётных k (KS + направление L>C, "
                              "пре-рег подтверждён)")
         else:
-            of["verdict"] = ("refuted: распределения различимы (KS p≤0.05), но направление "
-                             "противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; "
-                             "kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)")
+            of["verdict"] = ("refuted: направление пре-рега не подтвердилось (KS p≤0.05, "
+                             "распределения различимы в обратную сторону: медианы L<C) — "
+                             "directional refutation, НЕ mechanistic refutation период-2 "
+                             "(estimand слеп к p≥3, G10); kill НЕ установлен (mean-тест слеп "
+                             "к бимодальности loopy, r3 C2)")
     else:
         of["verdict"] = ("kill по пре-регу: распределения неразличимы (KS p>0.05); "
                          "период-2 не подтверждён; G10: estimand слеп к периодам p≥3 "
@@ -611,15 +649,32 @@ def period_structure(cells, L, C, R):
             out["note"] = "no_negative_area"
             return out
         order = np.argsort(prof)[::-1]
-        out["max_res_share"] = float(prof[order[0]])
-        out["top2_res_share"] = float(prof[order[0]] + prof[order[1]])
-        out["concentration"] = float(prof[order[0]] * p)
-        out["dom_residues"] = [int(order[0]), int(order[1])]
-        if p % 2 == 0:
-            out["anti_frac"] = float(prof[p // 2])
-        else:
-            out["anti_frac"] = float(prof[p // 2] + prof[p // 2 + 1])
-        out["baseline_max"] = 1.0 / p
+        r1, r2 = int(order[0]), int(order[1])
+        # r3.3 (fixreview-REVIEW E1/M2): count-aware базис — классы остатков K=96 mod p
+        # неравномощны (p ∤ K): равномерный 1/p-базис завышал величину concentration до
+        # +29% (p=31). Перестановочный тест и так count-aware by construction (см.
+        # concentration_test) — исправлена аналитическая величина (effect size),
+        # не значимость.
+        counts = np.bincount(np.arange(1, int(K) + 1) % p, minlength=p)
+        baseline = counts / int(K)
+        out["max_res_share"] = float(prof[r1])
+        out["top2_res_share"] = float(prof[r1] + prof[r2])
+        out["concentration"] = float(prof[r1] / baseline[r1])
+        out["conc_1overp_legacy"] = float(prof[r1] * p)  # r3.2 величина — для видимости diff
+        out["dom_residues"] = [r1, r2]
+        n_anti = 1 if p % 2 == 0 else 2  # нечётный p: {floor, ceil} — два соседних класса
+        out["anti_frac"] = (float(prof[p // 2]) if p % 2 == 0
+                            else float(prof[p // 2] + prof[p // 2 + 1]))
+        out["anti_baseline"] = float(n_anti / p)  # r3.3 (E3): собственная базисная норма (parity)
+        out["anti_ratio"] = float(out["anti_frac"] / (n_anti / p))
+        out["baseline_max"] = float(baseline[r1])
+        out["top2_baseline"] = float(baseline[r1] + baseline[r2])  # r3.3 (M2): сумма двух баз
+        if p == 2:
+            # r3.3 (N2): p=2 вырожден — два класса: top2 ≡ 1, anti_frac ≡ dom_residue
+            out["p2_degenerate"] = True
+            out["top2_res_share"] = None
+            out["top2_baseline"] = None
+            out["note"] = "p=2: вырожденный случай (top2≡1, anti_frac≡dom_residue) — не цитировать"
         out["conc_perm"] = concentration_test(rho, p, K, doc_idx=doc_idx)
         return out
 
@@ -641,8 +696,17 @@ def period_structure(cells, L, C, R):
         kcomp = Counter(d.get("K") for d in rows.values())
         k96rows = {nm: d for nm, d in rows.items() if d.get("K") == 96}
         ndet96 = sum(1 for d in k96rows.values() if d.get("p") is not None)
-        out["per_doc"][lab] = rows
-        out["detection"][lab] = {
+        # r3.3 (E2): max ρ_du(k) по k=2..K=96 — распределение по стратумам (порог
+        # детектора ρ≥0.9 не должен сидеть на краю clean-распределения)
+        maxrho = {}
+        for nm, row in rows.items():
+            if row.get("K") != 96:
+                continue
+            cc = cells[(nm, PRIMARY_L, PRIMARY_OBJ)]
+            if cc.get("absent"):
+                continue
+            maxrho[nm] = float(np.max(np.asarray(cc["rho"], dtype=float)[1:]))
+        det_row = {
             "n_total": len(names),
             "K_composition": {str(k): v for k, v in sorted(kcomp.items())},
             "n_detected_full": sum(1 for d in rows.values() if d.get("p") is not None),
@@ -650,6 +714,17 @@ def period_structure(cells, L, C, R):
             "k96": {"n_total": len(k96rows), "n_detected": ndet96,
                     "p_values": sorted({d["p"] for d in k96rows.values() if d.get("p") is not None})},
         }
+        if maxrho:
+            arr = np.array(sorted(maxrho.values()))
+            det_row["max_rho_k2_k96"] = {
+                "per_doc": maxrho,
+                "median": float(np.median(arr)),
+                "q90": float(np.quantile(arr, 0.9)),
+                "max": float(arr.max()),
+                "note": "r3.3 (E2): max ρ_du(k), k=2..96 — распределение по стратумам",
+            }
+        out["per_doc"][lab] = rows
+        out["detection"][lab] = det_row
     nL = out["detection"]["loopy"]["k96"]["n_total"]
     nC = out["detection"]["clean"]["k96"]["n_total"]
     dL = out["detection"]["loopy"]["k96"]["n_detected"]
@@ -659,52 +734,237 @@ def period_structure(cells, L, C, R):
     if 0 < d < n:
         p0 = d / n
         pmf_obs = binom_pmf(dL, nL, p0)
-        p_two = sum(binom_pmf(i, nL, p0) for i in range(nL + 1)
-                    if binom_pmf(i, nL, p0) <= pmf_obs + 1e-15)
+        p_two_binom = sum(binom_pmf(i, nL, p0) for i in range(nL + 1)
+                          if binom_pmf(i, nL, p0) <= pmf_obs + 1e-15)
+        # r3.3 (fixreview-REVIEW E2): 2×2 с фиксированными маргиналами — условный точный
+        # тест = Fisher/hypergeometric (as-or-less-likely). Биномиальный с пуловым p0
+        # оставлен как sensitivity (неусловный, того же порядка; его pmf под глубоким
+        # underflow может уйти в 0 — задокументировано, r3.2 #7; для n≤96 не критично).
+        i_min = max(0, nL - (n - d))
+        i_max = min(nL, d)
+        denom = float(comb(n, nL))
+        hyp_pmf = {i: float(comb(d, i) * comb(n - d, nL - i) / denom)
+                   for i in range(i_min, i_max + 1)}
+        p_fisher = sum(v for v in hyp_pmf.values() if v <= hyp_pmf[dL] + 1e-15)
         out["detection"]["test"] = {
             "pool": "K=96 (r3.1 #3: K=32-доки исключены — p-диапазон зависит от K)",
             "nL": nL, "nC": nC, "dL": dL, "dC": dC, "p0_pool": float(p0),
-            "p_two_sided_exact": float(p_two),
-            "note": ("H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); "
-                     "двусторонний тест по as-or-less-likely convention (не scipy binomtest — "
-                     "там doubled-min, числа будут отличаться, r3.1 #7); r3.2 #7: при глубоком "
-                     "underflow pmf (очень большие n) p_two может уйти в 0 — задокументировано; "
-                     "для n≤96 не критично"),
+            "p_fisher_as_or_less": float(p_fisher),
+            "p_two_sided_exact_binomial_sensitivity": float(p_two_binom),
+            "test_family_note": ("r3.3 (E2): первичный — Fisher/hypergeometric (условный "
+                                 "точный тест для 2×2 с фиксированными маргиналами, "
+                                 "as-or-less-likely convention); биномиальный с пуловым p0 — "
+                                 "только sensitivity"),
+            "selection_note": ("r3.3 (E2): loopy-стратификатор (v_tangent mcos>0.95 ∨ "
+                               "wiki_0/4) и H2-детектор (du_unit ρ(k)≥0.9 ∧ ρ(2k)≥0.81) "
+                               "делят лагово-корреляционный путь — асимметрия детекций "
+                               "частично selection-on-the-statistic (определение clean-"
+                               "стратума завязано на dip того же пути); null-калибровка "
+                               "детектора — results.period_structure.detector_null_calibration; "
+                               "H2 = ассоциация, НЕ независимая/механистическая детекция"),
+            "denominator_note": ("знаменатель явно: dL/nL = доля loopy K=96-доков, у которых "
+                                 "ДЕТЕКТИРУЕМ п≥2 (детектор начинается с k≥2; forced p=1-доки — "
+                                 "p=None — НЕ считаются «имеющими период»"),
         }
     det = [d for d in out["per_doc"]["loopy"].values() if d.get("p") is not None
            and "concentration" in d and d.get("K") == 96]
     if det:
         concs = np.array([d["concentration"] for d in det])
-        top2 = np.array([d["top2_res_share"] for d in det])
-        anti = np.array([d["anti_frac"] for d in det])
+        concs_leg = np.array([d["conc_1overp_legacy"] for d in det])
+        top2 = np.array([d["top2_res_share"] for d in det
+                         if d["top2_res_share"] is not None])
         per_p = {nm: (d["p"], d["conc_perm"].get("p_perm"))
                  for nm, d in out["per_doc"]["loopy"].items()
                  if d.get("p") is not None and d.get("K") == 96}
+        n_sig = sum(1 for _, pp in per_p.values() if pp is not None and pp <= ALPHA)
+        # r3.3 (E3): анти-фаза — разбивка по чётности, каждый с собственной базой;
+        # p=2 исключён (вырожденный, N2)
+        anti_docs = {nm: d for nm, d in out["per_doc"]["loopy"].items()
+                     if d.get("p") is not None and d.get("K") == 96 and d.get("p") != 2}
+        even = [d for d in anti_docs.values() if d["p"] % 2 == 0]
+        odd = [d for d in anti_docs.values() if d["p"] % 2 == 1]
+        anti_ratios = np.array([d["anti_ratio"] for d in anti_docs.values()])
+
+        def _anti_block(g):
+            if not g:
+                return None
+            a = np.array([d["anti_frac"] for d in g])
+            r = np.array([d["anti_ratio"] for d in g])
+            return {"n": len(g), "p_values": sorted({d["p"] for d in g}),
+                    "mean_anti_frac": float(a.mean()),
+                    "mean_anti_ratio": float(r.mean()),
+                    "n_below_own_baseline": int((r < 1).sum())}
+
         out["aggregate"] = {
             "pool": "K=96 (r3.1 #3)",
             "n_detected_loopy": len(det),
+            # r3.3 (E1): count-aware concentration (базис count(r)/K); *_legacy_1overp —
+            # r3.2 величины (1/p-базис) для видимости diff: 1/p-базис завышен при p ∤ K
+            # (до +29%, p=31); перестановочные p и так были count-aware — исправлена
+            # величина effect size, не значимость
             "mean_concentration": float(concs.mean()),
             "median_concentration": float(np.median(concs)),
             "min_concentration": float(concs.min()),
             "frac_conc_above_1": float((concs > 1).mean()),
-            "mean_top2_res_share": float(top2.mean()),
-            "top2_baseline_note": "равномерная база = 2/p (varies per doc)",
-            "mean_anti_frac": float(anti.mean()),
-            "anti_phase_finding": ("анти-фаза (k≡p/2 mod p) НЕ носитель: "
-                                   f"mean anti_frac = {float(anti.mean()):.3f} — ниже "
-                                   "равномерной базы (r3 C3: букв. p/2-эстиманд ≈ 0); "
-                                   "реальный носитель — классы остатков dom_residues mod p "
-                                   "(интерпретация «фаза границы лупа» — гипотеза, не результат)"),
+            "mean_concentration_legacy_1overp": float(concs_leg.mean()),
+            "median_concentration_legacy_1overp": float(np.median(concs_leg)),
+            "min_concentration_legacy_1overp": float(concs_leg.min()),
+            "baseline_note": ("r3.3 (E1): count-aware базис = count(k≡r mod p)/K по k=1..K "
+                              "(классы остатков неравномощны при p ∤ K); top2_baseline — "
+                              "сумма двух баз (r3.3 M2)"),
+            "mean_top2_res_share": float(top2.mean()) if top2.size else None,
+            "mean_anti_phase": {
+                "estimand": ("чётный p: класс k≡p/2 (1 класс, база 1/p); нечётный p: "
+                             "{floor(p/2), ceil(p/2)} (2 класса, база 2/p) — букв. C3-эстиманд, "
+                             "parity-correct (ревьюерский пункт об odd-p отозван: код уже "
+                             "корректен)"),
+                "even": _anti_block(even),
+                "odd": _anti_block(odd),
+                "all": {"n": len(anti_docs),
+                        "mean_anti_ratio": float(anti_ratios.mean()) if anti_ratios.size else None,
+                        "median_anti_ratio": float(np.median(anti_ratios)) if anti_ratios.size else None,
+                        "n_below_own_baseline": int((anti_ratios < 1).sum()) if anti_ratios.size else 0},
+                "per_doc": {nm: {"p": d["p"],
+                                 "parity": "even" if d["p"] % 2 == 0 else "odd",
+                                 "anti_frac": d["anti_frac"],
+                                 "anti_baseline": d["anti_baseline"],
+                                 "anti_ratio": d["anti_ratio"]}
+                            for nm, d in sorted(anti_docs.items())},
+                "finding": (f"анти-фаза — не главный носитель: в "
+                            f"{int((anti_ratios < 1).sum())}/{len(anti_ratios)} доках anti_ratio < 1 "
+                            "(ниже базы собственного класса); носители — классы dom_residues "
+                            "(масса концентрирована в 1–2 классах); смешанно-чётностный агрегат "
+                            "«mean_anti_frac» без нормировки не интерпретируем (r3.3 E3) — "
+                            "использовать anti_ratio и parity split; интерпретация «фаза "
+                            "границы лупа» — гипотеза, не результат"),
+            },
             "per_doc_conc_p": per_p,
             "per_doc_conc_p_format": "(p_detection, p_value_concentration_test)",
-            "n_per_doc_p_le_alpha": sum(1 for _, pp in per_p.values()
-                                        if pp is not None and pp <= ALPHA),
+            "n_per_doc_p_le_alpha": n_sig,
             "per_doc_p_floor_note": (
-                # r32.1-COSMETIC: per-doc conc p насыщен на полу 1/(B+1) — max_obs≈6× базы
-                # ⇒ все перестановки ниже наблюдения ⇒ n_ge=0. Пер-doc тест НЕ дискриминирует
-                # за порогом значимости; сила результата — в значимости (≠шум), не в величине p.
-                f"per-doc conc p насыщен на полу 1/(B+1)≈0.001 (n_per_doc_p_le_alpha={sum(1 for _, pp in per_p.values() if pp is not None and pp <= ALPHA)}/{len(per_p)} значимых)"),
+                # r3.3 (E6): per-doc conc p насыщен на полу 1/(B+1): утверждение «N/N доков
+                # превысили максимум перестановочного нуля» — утверждение о ЗНАЧИМОСТИ,
+                # не о величине эффекта.
+                f"per-doc conc p насыщен на полу 1/(B+1)≈0.001: {n_sig}/{len(per_p)} доков "
+                "превысили максимум перестановочного нуля — это утверждение о значимости "
+                "(≠шум), не о величине эффекта: p не цитировать как шкалу свидетельств, "
+                "доки не ранжировать по p"),
         }
+    return out
+
+
+def detector_null_calibration(cells, L, C, R, b_null=200, seed=SEED_PERM):
+    """r3.3 (fixreview-REVIEW E2): null-калибровка p-детектора (offline, ACF-profile level).
+
+    Суррогаты (per K=96-док, du_unit rho):
+      shuffle_full  — перестановка значений rho по k=1..K (вся лаговая структура уничтожена);
+      keep_short    — k=1..8 зафиксированы, значения перемешаны по k=9..K (короткая
+                      структура сохранена; периоды ≤8 в сохранённом окне детектируются —
+                      честно отчитывается);
+      kill_peak     — убит детектируемый период: значения на k=p и k=2p заменены медианой
+                      вектора (периодический компонент уничтожен, остальное сохранено).
+                      Детерминирован — одна реализация на док.
+    На каждом суррогате — тот же detect_period; отчитывается false-detection rate.
+    Ограничение: суррогаты на уровне ACF-профиля (значения rho), не сырого сигнала;
+    полноценный phase-scramble траекторий требует пере-форвардов (за рамками).
+    """
+    gidx = {nm: i for i, nm in enumerate(L + C + R)}
+    out = {}
+    for lab, names in (("loopy", L), ("clean", C)):
+        per_doc = {}
+        for nm in names:
+            c = cells[(nm, PRIMARY_L, PRIMARY_OBJ)]
+            if c.get("absent") or c["K"] != 96:
+                continue
+            rho = np.asarray(c["rho"], dtype=float)
+            K = int(c["K"])
+            p_obs = detect_period(rho, K)
+            rng = np.random.default_rng(seed + gidx[nm] * SEED_STRIDE)
+            f_full = f_short = 0
+            for _ in range(b_null):
+                if detect_period(rng.permutation(rho), K) is not None:
+                    f_full += 1
+                if detect_period(np.concatenate([rho[:8], rng.permutation(rho[8:])]), K) is not None:
+                    f_short += 1
+            row = {"p_obs": p_obs,
+                   "p_false_shuffle_full": (1 + f_full) / (b_null + 1),
+                   "p_false_keep_short": (1 + f_short) / (b_null + 1),
+                   "kill_peak_fires": None, "kill_peak_same_p": None}
+            if p_obs is not None:
+                kill = rho.copy()
+                for kk in (p_obs, 2 * p_obs):
+                    if kk <= K:
+                        kill[kk - 1] = float(np.median(rho))
+                p_kill = detect_period(kill, K)
+                row["kill_peak_fires"] = bool(p_kill is not None)
+                row["kill_peak_same_p"] = bool(p_kill == p_obs)
+            per_doc[nm] = row
+        vals = list(per_doc.values())
+        n_kill = sum(1 for v in vals if v["kill_peak_fires"] is not None)
+        out[lab] = {
+            "n_docs": len(per_doc),
+            "b_null": int(b_null), "seed": int(seed),
+            "per_doc": per_doc,
+            "false_detection_rate": {
+                "shuffle_full_mean": float(np.mean([v["p_false_shuffle_full"] for v in vals])) if vals else None,
+                "shuffle_full_max": float(np.max([v["p_false_shuffle_full"] for v in vals])) if vals else None,
+                "keep_short_mean": float(np.mean([v["p_false_keep_short"] for v in vals])) if vals else None,
+                "keep_short_max": float(np.max([v["p_false_keep_short"] for v in vals])) if vals else None,
+                "kill_peak": (sum(1 for v in vals if v["kill_peak_fires"]) / n_kill) if n_kill else None,
+                "kill_peak_same_p": (sum(1 for v in vals if v["kill_peak_same_p"]) / n_kill) if n_kill else None,
+            },
+        }
+    out["note"] = ("r3.3 (E2): суррогаты на уровне ACF-профиля (значения rho), не сырого "
+                   "сигнала: shuffle_full/keep_short — перестановки позиций, kill_peak — "
+                   "уничтожение детектируемых гармоник k=p, 2p. keep_short устойчиво выше "
+                   "shuffle_full: (а) сохранённое окно k=1..8 — периоды p≤8 детектируются в нём "
+                   "легитимно (сверьте per_doc p_obs с kill_peak_same_p_obs), (б) высокий ρ-базис "
+                   "loopy-профилей (см. detection.max_rho_k2_k96); clean — оба на полу. "
+                   "Низкий false-detection rate ⇒ детектор специфичен к периодической структуре "
+                   "этих профилей; высокий ⇒ порог детектора неспецифичен.")
+    return out
+
+
+def source_sensitivity(cells, L, C, docs):
+    """r3.3 (fixreview-REVIEW E5): source-стратифицированная чувствительность primary KS.
+
+    Конфаунд L/C × источник объявлен (verdict.confounds); функция численно проверяет,
+    что направление первичного результата (KS/медианы по odd_frac, du_unit, K=96) не
+    зависит от смешения источников. Пулы: gen_only / gen_plus_own / gen_plus_corpus /
+    all_K96 (первичный пул). Те же B/seed, что у primary; no claim — первичный пул
+    остаётся all_K96.
+    """
+    def k96_odd(names):
+        vals = []
+        for nm in names:
+            c = cells[(nm, PRIMARY_L, PRIMARY_OBJ)]
+            if c.get("absent") or c["K"] != 96:
+                continue
+            f = c["neg"]["fracs"]
+            if f is None:
+                continue
+            vals.append(f["odd_frac"])
+        return vals
+
+    out = {"B": B_PERM, "seed": SEED_PERM,
+           "note": ("r3.3 (E5): чувствительность primary KS к составу источников "
+                    "(первичный пул — all_K96); те же B/seed, что у primary; описательно, "
+                    "no claim")}
+    for key, sel in (("gen_only", lambda nm: docs[nm]["source"] == "gen_layers"),
+                     ("gen_plus_own", lambda nm: docs[nm]["source"] in ("gen_layers", "P1_own")),
+                     ("gen_plus_corpus", lambda nm: docs[nm]["source"] in ("gen_layers", "P2_corpus")),
+                     ("all_K96", lambda nm: True)):
+        vL = k96_odd([nm for nm in L if sel(nm)])
+        vC = k96_odd([nm for nm in C if sel(nm)])
+        if len(vL) < 3 or len(vC) < 3:
+            out[key] = {"n_L": len(vL), "n_C": len(vC), "status": "not_testable (n<3)"}
+            continue
+        ks = perm_two_sample_stat(vL, vC, ks_stat)
+        med = perm_two_sample_stat(vL, vC, median_diff)
+        out[key] = {"n_L": len(vL), "n_C": len(vC),
+                    "ks": {"stat_obs": ks["stat_obs"], "p": ks["p"]},
+                    "median": {"stat_obs": med["stat_obs"], "p": med["p"]},
+                    "median_L": float(np.median(vL)), "median_C": float(np.median(vC))}
     return out
 
 
@@ -787,10 +1047,20 @@ def main():
     L, C, R = stratify(docs)
     logline(f"loopy n={len(L)} clean n={len(C)} remainder n={len(R)} {R}")
 
-    # G2: число клеток
+    # G2: число клеток (r3.3 N3: полнота сетки — гейт, не только лог-строка)
     n_cells = len(cells)
     n_present = sum(1 for c in cells.values() if not c.get("absent"))
-    logline(f"G2: клеток (doc,L,obj)={n_cells} present={n_present}")
+    expected_cells = len(docs) * len(LAYERS) * len(OBJECTS)
+    absent_cells = sorted(f"{nm}/L{L}/{obj}" for (nm, L, obj), c in cells.items()
+                          if c.get("absent"))
+    g2_ok = n_cells == expected_cells
+    logline(f"G2: клеток (doc,L,obj)={n_cells}/{expected_cells} present={n_present} "
+            f"absent={len(absent_cells)} ok={g2_ok}"
+            + (f" [{', '.join(absent_cells[:10])}{'...' if len(absent_cells) > 10 else ''}]"
+               if absent_cells else ""))
+    if not g2_ok:
+        logline(f"G2 FAIL: сетка неполная ({n_cells} != {expected_cells}) — стоп")
+        raise SystemExit(1)
 
     # Гейты ACF
     g1_max = max(c["gram_resid"] for c in cells.values() if not c.get("absent"))
@@ -902,13 +1172,40 @@ def main():
             f"(K-full {pdet['clean']['n_detected_full']}/{pdet['clean']['n_total']}, K={pdet['clean']['K_composition']})")
     logline(f"  detected loopy p={pdet['loopy']['k96']['p_values']}")
     if "test" in pdet:
-        logline(f"  detection-rate test (exact two-sided, K=96): p={pdet['test']['p_two_sided_exact']:.3e}")
+        logline(f"  detection-rate test (Fisher as-or-less-likely, K=96): "
+                f"p={pdet['test']['p_fisher_as_or_less']:.3e} "
+                f"(binomial sensitivity: {pdet['test']['p_two_sided_exact_binomial_sensitivity']:.3e})")
     if pagg:
-        logline(f"  aggregate (detected loopy, K=96): mean_conc={pagg['mean_concentration']:.2f} "
+        mp = pagg["mean_anti_phase"]["all"]
+        ev = pagg["mean_anti_phase"]["even"]
+        od = pagg["mean_anti_phase"]["odd"]
+        logline(f"  aggregate (detected loopy, K=96, count-aware базис r3.3): "
                 f"median={pagg['median_concentration']:.2f} min={pagg['min_concentration']:.2f} "
-                f"frac>1={pagg['frac_conc_above_1']:.3f} top2_share={pagg['mean_top2_res_share']:.3f} "
-                f"anti_frac={pagg['mean_anti_frac']:.3f} "
+                f"frac>1={pagg['frac_conc_above_1']:.3f} "
+                f"(1/p legacy: median {pagg['median_concentration_legacy_1overp']:.2f}) "
+                f"anti_ratio<1: {mp['n_below_own_baseline']}/{mp['n']} "
+                f"(even n={ev['n'] if ev else 0}, odd n={od['n'] if od else 0}) "
                 f"per-doc p≤0.05: {pagg['n_per_doc_p_le_alpha']}/{pagg['n_detected_loopy']}")
+
+    # r3.3 (E2/E5): null-калибровка детектора + source KS sensitivity
+    ps["detector_null_calibration"] = detector_null_calibration(cells, L, C, R)
+    for lab in ("loopy", "clean"):
+        fr = ps["detector_null_calibration"][lab]["false_detection_rate"]
+        kp = f"{fr['kill_peak']:.3f}" if fr.get("kill_peak") is not None else "n/a"
+        logline(f"detector-null {lab} (B_null={ps['detector_null_calibration'][lab]['b_null']}): "
+                f"shuffle_full mean/max {fr['shuffle_full_mean']:.3f}/{fr['shuffle_full_max']:.3f} | "
+                f"keep_short {fr['keep_short_mean']:.3f}/{fr['keep_short_max']:.3f} | "
+                f"kill_peak fires={kp}")
+    srcsens = source_sensitivity(cells, L, C, docs)
+    for key in ("gen_only", "gen_plus_own", "gen_plus_corpus", "all_K96"):
+        row = srcsens[key]
+        if "ks" in row:
+            logline(f"source-sensitivity {key}: n={row['n_L']}/{row['n_C']} "
+                    f"KS d={row['ks']['stat_obs']:.4f} p={row['ks']['p']:.4f} | "
+                    f"median d={row['median']['stat_obs']:+.4f} p={row['median']['p']:.4f} "
+                    f"(med {row['median_L']:.4f}/{row['median_C']:.4f})")
+        else:
+            logline(f"source-sensitivity {key}: n={row['n_L']}/{row['n_C']} {row['status']}")
 
     # copy-rate квантили (резы q25/q75; первичный объект, L23)
     with_cr = [nm for nm in sorted(docs) if docs[nm]["copy_rate"] is not None]
@@ -934,20 +1231,32 @@ def main():
     dom_summary = {}
     for dom, names in sorted(dom_names.items()):
         nondeg = [nm for nm in names if not docs[nm]["degen_tz"]]
+        n_elig = len(nondeg) >= DOMAIN_MIN_N
+        n_tok = sum(1 for nm in nondeg if docs[nm]["copy_rate"] is not None)
+        prov_ok = n_tok > 0
+        # r3.3 (E4): claim-gate = n-правило И provenance (источник с токенами).
+        # corpus (G16: 0/16 с токенами) — n-eligible, но provenance-limited ⇒ descriptive_only.
         dom_summary[dom] = {
             "n_docs": len(names), "n_nondeg": len(nondeg),
-            "domain_claim_eligible": len(nondeg) >= DOMAIN_MIN_N,
+            "n_nondeg_with_tokens": n_tok,
+            "n_claim_eligible": bool(n_elig),
+            "provenance_limited": bool(not prov_ok),
+            "descriptive_only": bool(not prov_ok),
+            "domain_claim_eligible": bool(n_elig and prov_ok),
             "nondeg": stratum_summary(cells, (PRIMARY_OBJ, PRIMARY_L), nondeg),
         }
-        logline(f"  домен {dom}: n={len(names)} nondeg={len(nondeg)} "
-                f"claim={'да' if len(nondeg) >= DOMAIN_MIN_N else 'нет (n<12)'}")
-    # пре-рег: «остальные — пул» — nondeg-доки доменов с n_nondeg<12
+        why = ("да" if n_elig and prov_ok
+               else ("нет (n<12)" if not n_elig
+                     else "нет (источник не токен-верифицирован — descriptive only)"))
+        logline(f"  домен {dom}: n={len(names)} nondeg={len(nondeg)} with_tokens={n_tok} claim={why}")
+    # пре-рег: «остальные — пул» — nondeg-доки не-claim-доменов
     pool_names = [nm for nm in sorted(docs)
                   if not docs[nm]["degen_tz"]
                   and not dom_summary[docs[nm]["dom"]]["domain_claim_eligible"]]
     dom_summary["pooled_nondeg"] = {
         "n_docs": len(pool_names),
-        "note": "пре-рег «остальные — пул»: nondeg-доки доменов с n_nondeg<12",
+        "note": ("пре-рег «остальные — пул»: nondeg-доки не-claim-доменов (n_nondeg<12 или "
+                 "источник не токен-верифицирован, r3.3 E4)"),
         "summary": stratum_summary(cells, (PRIMARY_OBJ, PRIMARY_L), pool_names),
     }
     logline(f"  пул (не-claim домены): n={len(pool_names)}")
@@ -1053,8 +1362,9 @@ def main():
                      "kill": "KS p>α (du_unit) — «не подтверждено»; G10: estimand слеп к p≥3",
                      "refuted": "KS p≤α ∧ медианы L<C (du_unit) — различимо, направление против пре-рега",
                      "descriptive": "v_tangent — двухсторонний, no claim; forced_outcome при clean b1>0.8",
-                     "H2_period_structure": "detection-rate (loopy vs clean, exact binomial) + "
-                                            "concentration > 1 (r3 §3.3)"},
+                     "H2_period_structure": "detection-rate (loopy vs clean; r3.3 E2: "
+                                            "Fisher/hypergeometric, биномиальный — sensitivity) + "
+                                            "concentration > 1 (r3 §3.3; r3.3 E1: count-aware базис)"},
         "n12_rule": f"доменное утверждение при n_nondeg≥{DOMAIN_MIN_N}",
         "copy_rate_def": "lk4 (канон exp64_b4_battery.py:25-32): доля позиций, где 4-грам "
                          "(t-3..t) встречался раньше и предсказал t+1; окно hit[3:383] = 380 "
@@ -1097,7 +1407,11 @@ def main():
         "G1_gram": {"max_resid": g1_max, "ok": bool(g1_ok), "threshold": 1e-10},
         "G3_rNfDC": {"bad": g3_bad, "ok": g3_bad == 0, "rel": 1e-9},
         "Telescope": {"max": tele_max, "ok": bool(tele_ok), "threshold": 1e-6},
-        "G2_cells": {"n_cells": n_cells, "n_present": n_present},
+        "G2_cells": {"n_cells": n_cells, "n_present": n_present,
+                     "expected": expected_cells, "ok": bool(g2_ok),
+                     "absent": absent_cells,
+                     "note": ("r3.3 (N3): полнота сетки — гейт (expected = docs×LAYERS×OBJECTS), "
+                              "не только лог-строка; absent — явный список")},
         "G15_layer_types": {"config_sha256": cfg_sha, "config": os.path.basename(cfg_path),
                             "full_labels_npz": sorted(full_labels),
                             "mapping": {str(L): LAYER_TYPE[L] for L in LAYERS},
@@ -1110,13 +1424,20 @@ def main():
         "robustness_test": rt,
         "descriptive_test": dt,
         "period_structure": ps,
+        "source_sensitivity": srcsens,  # r3.3 (E5): source KS sensitivity
         "source_strata": {**src_strata, "note": src_strata_note},
         "strata": strata,
         "copy_rate_quartiles": {
             "q25": q25, "q75": q75, "n_with_tokens": len(with_cr), "summary": copy_summary,
+            "note": ("r3.3 (M3): copy-rate-градиент конфаундирован с L/C (loopy/degen-доки "
+                     "свыше copy-rate) — описательно, не каузальный вывод"),
         },
         "domain": dom_summary,
-        "layer_type": lt,
+        "layer_type": {**lt, "layer_specific_note": ("r3.3 (M4): первичный — L23 "
+                                                     "full_attention; значимый слой-эффект "
+                                                     "ограничивает обобщение на все слои — "
+                                                     "cross-layer pooling требует контроля "
+                                                     "layer-type")},
     }
     # notes (r2-ревью + r3): mean/median, бимодальность, A_neg magnitude, сноска о полосах
     sm_l = strata[PRIMARY_OBJ]["loopy"].get("odd_frac")
@@ -1169,7 +1490,7 @@ def main():
     # r3.1 (fixreview #4): H2-гейт — median + доля >1 (robust к выбросам), не min
     # (пре-рег §3.3 фиксирует «detection-rate + концентрации»; min-гейт был ad-hoc fragile)
     h2_test_present = "test" in pdet
-    h2_ok = bool(pdet.get("test", {}).get("p_two_sided_exact", 1) <= ALPHA)
+    h2_ok = bool(pdet.get("test", {}).get("p_fisher_as_or_less", 1) <= ALPHA)
     if h2_ok and pagg:
         h2_ok = (pagg.get("median_concentration", 0) > 1
                  and pagg.get("frac_conc_above_1", 0) >= 0.8)
@@ -1184,7 +1505,7 @@ def main():
                    else ("L>C" if pof["median_L"] > pof["median_C"] else "равны"))
     else:
         med_dir = "n/a"
-    h2p = pdet.get("test", {}).get("p_two_sided_exact")
+    h2p = pdet.get("test", {}).get("p_fisher_as_or_less")
     h1_v = pof.get("verdict", "n/a")
     # r3.2 (fixreview #1, критично): в r3.1 было h1_v.split(":")[0].strip() — для kill-вердикта
     # "kill по пре-регу: ..." давало "kill по пре-регу" (не "kill") → h1_clauses.get → 'n/a',
@@ -1211,7 +1532,8 @@ def main():
     # пустого подмножества; f"{None:.3f}" — TypeError (latent crash).
     def _fx(x, fmt=".3f"):
         return format(x, fmt) if x is not None else "n/a"
-    h2_word = ("подтверждён" if h2_ok
+    h2_word = ("подтверждён (ассоциация: стратификатор и детектор делят лаговый путь — "
+               "selection_note/detector_null_calibration)" if h2_ok
                else ("тест не определён (not_testable)" if not h2_test_present else "НЕ подтверждён"))
     # r3.2 (fixreview #4): лид-фраза H2 — не «Положительный результат», если H2 не подтверждён
     h2_lead = ("Положительный результат (H2, пре-рег аддендум 3)" if h2_ok
@@ -1230,14 +1552,17 @@ def main():
         f"детектируется у loopy {pdet['loopy']['k96']['n_detected']}/{pdet['loopy']['k96']['n_total']} vs clean "
         f"{pdet['clean']['k96']['n_detected']}/{pdet['clean']['k96']['n_total']} (тест на K=96 пуле; "
         f"K=32-доки исключены)"
-        f"{(' (exact p=' + format(h2p, '.2e') + ')') if h2p is not None else ''}"
-        f"{('; концентрация A_neg по классам остатков mod p: median ' + format(pagg['median_concentration'], '.2f') + '× базы, top2_share ' + format(pagg['mean_top2_res_share'], '.3f')) if pagg else ''}; "
-        f"анти-фаза p/2 НЕ носитель (anti_frac≈0). Локация отриц. площади резко различена и инвертирована "
+        f"{(' (Fisher p=' + format(h2p, '.2e') + ')') if h2p is not None else ''}"
+        f"{('; концентрация A_neg по классам остатков mod p: median ' + format(pagg['median_concentration'], '.2f') + '× count-aware базы (r3.3 E1; r3.2 1/p-значение ' + format(pagg['median_concentration_legacy_1overp'], '.2f') + '), top2_share ' + _fx(pagg.get('mean_top2_res_share'), '.3f')) if pagg else ''}; "
+        f"анти-фаза — не главный носитель (anti_ratio<1 у большинства доков, parity split — r3.3 E3). Локация отриц. площади резко различена и инвертирована "
         f"относительно пре-рега (K=96 пул): loopy — в хвосте k≥9 (медиана {_fx(tail_l96)} vs clean {_fx(tail_c96)}), "
         f"clean — на лаге 1 (k1 {_fx(k1c96)} vs loopy {_fx(k1l96)}{ratio_txt}). "
         f"Распределение odd_frac у loopy бимодально, у clean унимодально; равенство средних — артефакт "
         f"смеси. Согласуется с T0.1: чистый путь платит на лаге 1, лупы размазывают плату периодически "
-        f"по хвосту на фазе dom_residues mod p (интерпретация «граница лупа» — гипотеза, не результат) "
+        f"по хвосту на фазе dom_residues mod p (интерпретация «граница лупа» — гипотеза, не результат). "
+        f"Source-чувствительность (r3.3 E5): направление первичного результата стабильно по "
+        f"составу источников (results.source_sensitivity). Layer-specific (r3.3 M4): первичный "
+        f"слой L23 full_attention — обобщение на все слои требует контроля layer-type. "
         f"— это положительный результат, не kill."
     )
     verdict = {
@@ -1254,15 +1579,21 @@ def main():
         },
         "H2_period_structure": {
             "status": h2_status,
-            "gate": "detection p≤α (K=96) ∧ median_concentration>1 ∧ frac(conc>1)≥0.8 (r3.1: min-гейт "
-                    "заменён — fragile к одному выбросу; r3.2: min — secondary/описательный, "
-                    "НЕ часть гейта — min отчитан в aggregate, читатель не должен путать)",
+            "gate": ("detection p≤α (K=96; r3.3 E2: Fisher/hypergeometric — условный точный "
+                     "тест 2×2, биномиальный — sensitivity) ∧ median_concentration>1 ∧ "
+                     "frac(conc>1)≥0.8 (concentration — count-aware базис, r3.3 E1; r3.1: "
+                     "min-гейт заменён — fragile к одному выбросу; r3.2: min — "
+                     "secondary/описательный, НЕ часть гейта — min отчитан в aggregate, "
+                     "читатель не должен путать)"),
             "detection": pdet,
             "aggregate": pagg,
-            "finding": ("loopy-доки несут периодическую лаговую структуру (p из пиков ρ); "
-                        "отрицательная площадь организована по классам остатков mod p "
-                        f"(dom_residues; медиана концентрации {_fx(pagg.get('median_concentration'), '.2f')}× базы) — "
-                        "НЕ на анти-фазе p/2 (anti_frac≈0) и не на нечётных k; чистые — без периода, "
+            "finding": ("loopy-доки несут периодическую лаговую структуру (p из пиков ρ) — "
+                        "АССОЦИАЦИЯ (стратификатор и детектор делят лагово-корреляционный "
+                        "путь; selection_note + detector_null_calibration); отрицательная "
+                        f"площадь организована по классам остатков mod p (dom_residues; медиана "
+                        f"концентрации {_fx(pagg.get('median_concentration'), '.2f')}× count-aware "
+                        "базиса, r3.3 E1) — НЕ на анти-фазе p/2 (anti_ratio<1 у большинства "
+                        "доков, r3.3 E3) и не на нечётных k; чистые — без периода, "
                         "площадь на лаге 1"),
         },
         "robustness": {"object": SECONDARY_OBJ, "verdict": rt["verdict"],
@@ -1300,7 +1631,12 @@ def main():
             "к «чистым», т.е. в пользу нулевой гипотезы H1 (r3 C6)",
             "K-гетерогенность: коруся K=32 исключены из первичного пула (K=96, r3 C5); "
             "fixed-band k=1..24 — K-гомогенный robustness",
+            "layer_type: первичный — L23 (full_attention); слой-эффект (full vs linear) "
+            "значим (results.layer_type) — обобщение на все слои ограничено (r3.3 M4)",
         ],
+        "layer_specific_note": ("r3.3 (M4): первичный контраст — L23 full_attention; "
+                                 "значимый слой-эффект (results.layer_type) ограничивает "
+                                 "обобщение на все слои без контроля layer-type"),
         "summary": summary,
     }
     provenance = {
@@ -1321,6 +1657,22 @@ def main():
             "v_tangent_descriptive": "forced_outcome (clean b1>0.8 ⇒ odd_frac≡1, r3 §3.5)",
             "odd_frac_period2": "estimand слеп к p≥3 (odd_frac(p=5,7)=0.500, p=8=0.586, p=24=0.509) — "
                                 "H1 было структурно near-null на этом пуле (r3 C3, §3.6)",
+        },
+        "r3.3_fixreview_review": {
+            "review": "docs/AT0_3_fixreview_REVIEW.md (дополненное, 2026-11-14)",
+            "changes": ("count-aware concentration + top2-базис (E1/M2); Fisher/hypergeometric "
+                        "detection-тест (биномиальный → sensitivity) + detector null calibration + "
+                        "max-ρ-распределения (E2); anti_ratio по чётности (E3); corpus/domain "
+                        "claim-gate (E4); source KS sensitivity (E5); p-floor-формулировка (E6); "
+                        "KS-диагностика (M1); copy-rate-конфаунд (M3); layer-specific (M4); "
+                        "p=2 guard (N2); G2-гейт полноты сетки (N3); median self-check (O3); "
+                        "wording: H1 = directional refutation, H2 = association"),
+            "reviewer_retracted": ("ревьюер отозвал собственные пункты: anti_frac для нечётных p "
+                                   "(двухклассовый {floor,ceil} уже был в коде) и K-зависимый tail "
+                                   "(K=96-пул уже был в коде)"),
+            "invariance": ("per_doc rho/neg/fracs бит-идентичны r3.2 store (bba6fde3a7e807d4) — "
+                           "disk-only пересчёт, без пере-форвардов; primary KS/median p — без "
+                           "изменений; смена: только тестовые/агрегатные блоки и wording"),
         },
     }
     per_doc = {}

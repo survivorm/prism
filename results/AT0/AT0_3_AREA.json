@@ -1,6 +1,6 @@
 {
  "meta": {
-  "script_sha256": "cae67c607c83fdf748a93df49a53f516aad9e2a2a33412b5b390edfdd771fe50",
+  "script_sha256": "bcd664cd5a343a860d4dfe59d7be6101eeb28f3281249a167aadbe493472f35f",
   "field_sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
   "gen_sha256": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
   "own_sha256": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198",
@@ -90,7 +90,7 @@
    "kill": "KS p>α (du_unit) — «не подтверждено»; G10: estimand слеп к p≥3",
    "refuted": "KS p≤α ∧ медианы L<C (du_unit) — различимо, направление против пре-рега",
    "descriptive": "v_tangent — двухсторонний, no claim; forced_outcome при clean b1>0.8",
-   "H2_period_structure": "detection-rate (loopy vs clean, exact binomial) + concentration > 1 (r3 §3.3)"
+   "H2_period_structure": "detection-rate (loopy vs clean; r3.3 E2: Fisher/hypergeometric, биномиальный — sensitivity) + concentration > 1 (r3 §3.3; r3.3 E1: count-aware базис)"
   },
   "n12_rule": "доменное утверждение при n_nondeg≥12",
   "copy_rate_def": "lk4 (канон exp64_b4_battery.py:25-32): доля позиций, где 4-грам (t-3..t) встречался раньше и предсказал t+1; окно hit[3:383] = 380 позиций (r2-фикс: было hit[4:383] — off-by-one против пре-рега «позиции [3,382]»); только доки с токенами (80/96: gen 64 + own 16; corpus 0/16); квантили — резы q25/q75 (low≤q25, mid(q25,q75], high>q75; 25/50/25, не равные трети)",
@@ -140,7 +140,11 @@
   },
   "G2_cells": {
    "n_cells": 1440,
-   "n_present": 1440
+   "n_present": 1440,
+   "expected": 1440,
+   "ok": true,
+   "absent": [],
+   "note": "r3.3 (N3): полнота сетки — гейт (expected = docs×LAYERS×OBJECTS), не только лог-строка; absent — явный список"
   },
   "G15_layer_types": {
    "config_sha256": "b90b86f35c8e6925ef74ee04d0e758f0a845c83a42089ad82bbaa948de9b4204",
@@ -305,11 +309,17 @@
      "n_C": 51,
      "B": 1000
     },
+    "ks_diagnostic": {
+     "max_gap_x": 0.530483354472581,
+     "max_gap_side": "L>C",
+     "n_crossings": 1,
+     "n_pooled_unique": 92
+    },
     "mean_L": 0.6273837003813592,
     "mean_C": 0.6229655916226662,
     "median_L": 0.521420595657899,
     "median_C": 0.6117377185286142,
-    "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
+    "verdict": "refuted: направление пре-рега не подтвердилось (KS p≤0.05, распределения различимы в обратную сторону: медианы L<C) — directional refutation, НЕ mechanistic refutation период-2 (estimand слеп к p≥3, G10); kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
    },
    "odd_frac_k24": {
     "test": {
@@ -335,7 +345,7 @@
     "status": "refuted (L.tail > C.tail — пре-рег-предсказание «чистые в хвосте» не подтвердилось)",
     "note": "пре-рег-предсказание #2: чистые — в хвосте k≥9 (C.tail > L.tail); отчитано явно (fail-loud, r2)"
    },
-   "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
+   "verdict": "refuted: направление пре-рега не подтвердилось (KS p≤0.05, распределения различимы в обратную сторону: медианы L<C) — directional refutation, НЕ mechanistic refutation период-2 (estimand слеп к p≥3, G10); kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
   },
   "robustness_test": {
    "object": "h_raw",
@@ -473,11 +483,17 @@
      "n_C": 51,
      "B": 1000
     },
+    "ks_diagnostic": {
+     "max_gap_x": 0.5286835374759348,
+     "max_gap_side": "L>C",
+     "n_crossings": 1,
+     "n_pooled_unique": 92
+    },
     "mean_L": 0.6269059754109089,
     "mean_C": 0.6226718585502166,
     "median_L": 0.5213680087527982,
     "median_C": 0.6083120397667104,
-    "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
+    "verdict": "refuted: направление пре-рега не подтвердилось (KS p≤0.05, распределения различимы в обратную сторону: медианы L<C) — directional refutation, НЕ mechanistic refutation период-2 (estimand слеп к p≥3, G10); kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
    },
    "odd_frac_k24": {
     "test": {
@@ -503,7 +519,7 @@
     "status": "refuted (L.tail > C.tail — пре-рег-предсказание «чистые в хвосте» не подтвердилось)",
     "note": "пре-рег-предсказание #2: чистые — в хвосте k≥9 (C.tail > L.tail); отчитано явно (fail-loud, r2)"
    },
-   "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
+   "verdict": "refuted: направление пре-рега не подтвердилось (KS p≤0.05, распределения различимы в обратную сторону: медианы L<C) — directional refutation, НЕ mechanistic refutation период-2 (estimand слеп к p≥3, G10); kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)"
   },
   "descriptive_test": {
    "object": "v_tangent",
@@ -641,6 +657,12 @@
      "n_C": 51,
      "B": 1000
     },
+    "ks_diagnostic": {
+     "max_gap_x": 0.5977690469116894,
+     "max_gap_side": "L>C",
+     "n_crossings": 1,
+     "n_pooled_unique": 34
+    },
     "mean_L": 0.6829019290882898,
     "mean_C": 0.983706765866669,
     "median_L": 0.5294740130694515,
@@ -687,13 +709,17 @@
       "K": 96,
       "max_res_share": 0.328706782240904,
       "top2_res_share": 0.6066542880949586,
-      "concentration": 4.93060173361356,
+      "concentration": 4.507978727875255,
+      "conc_1overp_legacy": 4.93060173361356,
       "dom_residues": [
        1,
        14
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.06666666666666667,
+      "anti_baseline": 0.13333333333333333,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.07291666666666667,
+      "top2_baseline": 0.13541666666666669,
       "conc_perm": {
        "max_obs": 0.328706782240904,
        "n_neg": 52,
@@ -706,13 +732,17 @@
       "K": 96,
       "max_res_share": 0.35556445315540985,
       "top2_res_share": 0.612590237911383,
-      "concentration": 9.600240235196067,
+      "concentration": 8.533546875729837,
+      "conc_1overp_legacy": 9.600240235196067,
       "dom_residues": [
        1,
        26
       ],
       "anti_frac": 0.030954118071774846,
-      "baseline_max": 0.037037037037037035,
+      "anti_baseline": 0.07407407407407407,
+      "anti_ratio": 0.41788059396896043,
+      "baseline_max": 0.041666666666666664,
+      "top2_baseline": 0.07291666666666666,
       "conc_perm": {
        "max_obs": 0.35556445315540985,
        "n_neg": 45,
@@ -726,12 +756,16 @@
       "max_res_share": 0.33053799599712547,
       "top2_res_share": 0.6385565648182105,
       "concentration": 2.6443039679770037,
+      "conc_1overp_legacy": 2.6443039679770037,
       "dom_residues": [
        1,
        7
       ],
       "anti_frac": 0.0322419919619362,
+      "anti_baseline": 0.125,
+      "anti_ratio": 0.2579359356954896,
       "baseline_max": 0.125,
+      "top2_baseline": 0.25,
       "conc_perm": {
        "max_obs": 0.33053799599712547,
        "n_neg": 84,
@@ -744,13 +778,17 @@
       "K": 96,
       "max_res_share": 0.389487388866844,
       "top2_res_share": 0.6904273443613347,
-      "concentration": 7.7897477773368795,
+      "concentration": 7.478157866243404,
+      "conc_1overp_legacy": 7.7897477773368795,
       "dom_residues": [
        1,
        19
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.05,
+      "anti_baseline": 0.05,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.052083333333333336,
+      "top2_baseline": 0.09375,
       "conc_perm": {
        "max_obs": 0.389487388866844,
        "n_neg": 58,
@@ -767,13 +805,17 @@
       "K": 96,
       "max_res_share": 0.4652344127962537,
       "top2_res_share": 0.8691778608557883,
-      "concentration": 5.117578540758791,
+      "concentration": 4.96250040316004,
+      "conc_1overp_legacy": 5.117578540758791,
       "dom_residues": [
        1,
        10
       ],
       "anti_frac": 0.07507868385179906,
-      "baseline_max": 0.09090909090909091,
+      "anti_baseline": 0.18181818181818182,
+      "anti_ratio": 0.4129327611848948,
+      "baseline_max": 0.09375,
+      "top2_baseline": 0.17708333333333331,
       "conc_perm": {
        "max_obs": 0.4652344127962537,
        "n_neg": 70,
@@ -787,12 +829,16 @@
       "max_res_share": 0.2688864349187071,
       "top2_res_share": 0.5187952205904627,
       "concentration": 6.453274438048971,
+      "conc_1overp_legacy": 6.453274438048971,
       "dom_residues": [
        1,
        23
       ],
       "anti_frac": 0.0,
+      "anti_baseline": 0.041666666666666664,
+      "anti_ratio": 0.0,
       "baseline_max": 0.041666666666666664,
+      "top2_baseline": 0.08333333333333333,
       "conc_perm": {
        "max_obs": 0.2688864349187071,
        "n_neg": 72,
@@ -809,13 +855,17 @@
       "K": 96,
       "max_res_share": 0.34706499423689186,
       "top2_res_share": 0.6737481482911992,
-      "concentration": 2.429454959658243,
+      "concentration": 2.3798742461958295,
+      "conc_1overp_legacy": 2.429454959658243,
       "dom_residues": [
        1,
        6
       ],
       "anti_frac": 0.18253876669936175,
-      "baseline_max": 0.14285714285714285,
+      "anti_baseline": 0.2857142857142857,
+      "anti_ratio": 0.6388856834477662,
+      "baseline_max": 0.14583333333333334,
+      "top2_baseline": 0.28125,
       "conc_perm": {
        "max_obs": 0.34706499423689186,
        "n_neg": 83,
@@ -828,13 +878,17 @@
       "K": 96,
       "max_res_share": 0.42580719369312126,
       "top2_res_share": 0.8042790834321019,
-      "concentration": 3.8322647432380914,
+      "concentration": 3.716135508594513,
+      "conc_1overp_legacy": 3.8322647432380914,
       "dom_residues": [
        1,
        8
       ],
       "anti_frac": 0.08826757136546595,
-      "baseline_max": 0.1111111111111111,
+      "anti_baseline": 0.2222222222222222,
+      "anti_ratio": 0.3972040711445968,
+      "baseline_max": 0.11458333333333333,
+      "top2_baseline": 0.21875,
       "conc_perm": {
        "max_obs": 0.42580719369312126,
        "n_neg": 86,
@@ -852,12 +906,16 @@
       "max_res_share": 0.2748404480148685,
       "top2_res_share": 0.5270432982491546,
       "concentration": 8.794894336475792,
+      "conc_1overp_legacy": 8.794894336475792,
       "dom_residues": [
        1,
        31
       ],
       "anti_frac": 0.0016079992810931576,
+      "anti_baseline": 0.03125,
+      "anti_ratio": 0.05145597699498104,
       "baseline_max": 0.03125,
+      "top2_baseline": 0.0625,
       "conc_perm": {
        "max_obs": 0.2748404480148685,
        "n_neg": 63,
@@ -870,13 +928,17 @@
       "K": 96,
       "max_res_share": 0.31671116045442466,
       "top2_res_share": 0.584006888651039,
-      "concentration": 4.75066740681637,
+      "concentration": 4.343467343374966,
+      "conc_1overp_legacy": 4.75066740681637,
       "dom_residues": [
        1,
        14
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.06666666666666667,
+      "anti_baseline": 0.13333333333333333,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.07291666666666667,
+      "top2_baseline": 0.13541666666666669,
       "conc_perm": {
        "max_obs": 0.31671116045442466,
        "n_neg": 65,
@@ -889,13 +951,17 @@
       "K": 96,
       "max_res_share": 0.37594118304905944,
       "top2_res_share": 0.658444711278928,
-      "concentration": 7.14288247793213,
+      "concentration": 6.015058928784951,
+      "conc_1overp_legacy": 7.14288247793213,
       "dom_residues": [
        1,
        18
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.05263157894736842,
+      "anti_baseline": 0.10526315789473684,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.37594118304905944,
        "n_neg": 56,
@@ -908,13 +974,17 @@
       "K": 96,
       "max_res_share": 0.2602069160148238,
       "top2_res_share": 0.4806012525586364,
-      "concentration": 3.9031037402223574,
+      "concentration": 3.5685519910604406,
+      "conc_1overp_legacy": 3.9031037402223574,
       "dom_residues": [
        1,
        14
       ],
       "anti_frac": 0.0720924600778706,
-      "baseline_max": 0.06666666666666667,
+      "anti_baseline": 0.13333333333333333,
+      "anti_ratio": 0.5406934505840295,
+      "baseline_max": 0.07291666666666667,
+      "top2_baseline": 0.13541666666666669,
       "conc_perm": {
        "max_obs": 0.2602069160148238,
        "n_neg": 64,
@@ -927,13 +997,17 @@
       "K": 96,
       "max_res_share": 0.4433719598476432,
       "top2_res_share": 0.8043277595314757,
-      "concentration": 7.5373233174099346,
+      "concentration": 7.0939513575622914,
+      "conc_1overp_legacy": 7.5373233174099346,
       "dom_residues": [
        1,
        16
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.058823529411764705,
+      "anti_baseline": 0.11764705882352941,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.4433719598476432,
        "n_neg": 45,
@@ -950,13 +1024,17 @@
       "K": 96,
       "max_res_share": 0.33170501683185344,
       "top2_res_share": 0.603598751248594,
-      "concentration": 5.970690302973362,
+      "concentration": 5.307280269309655,
+      "conc_1overp_legacy": 5.970690302973362,
       "dom_residues": [
        1,
        17
       ],
       "anti_frac": 0.015335914169425912,
-      "baseline_max": 0.05555555555555555,
+      "anti_baseline": 0.05555555555555555,
+      "anti_ratio": 0.2760464550496664,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.33170501683185344,
        "n_neg": 53,
@@ -969,13 +1047,17 @@
       "K": 96,
       "max_res_share": 0.3648558625657778,
       "top2_res_share": 0.6644495457195599,
-      "concentration": 6.202549663618222,
+      "concentration": 5.837693801052445,
+      "conc_1overp_legacy": 6.202549663618222,
       "dom_residues": [
        1,
        16
       ],
       "anti_frac": 0.0706123748087139,
-      "baseline_max": 0.058823529411764705,
+      "anti_baseline": 0.11764705882352941,
+      "anti_ratio": 0.6002051858740682,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.3648558625657778,
        "n_neg": 57,
@@ -996,13 +1078,17 @@
       "K": 96,
       "max_res_share": 0.29358674446292654,
       "top2_res_share": 0.5449349620744282,
-      "concentration": 3.816627678018045,
+      "concentration": 3.5230409335551185,
+      "conc_1overp_legacy": 3.816627678018045,
       "dom_residues": [
        1,
        12
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.07692307692307693,
+      "anti_baseline": 0.15384615384615385,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.08333333333333333,
+      "top2_baseline": 0.15625,
       "conc_perm": {
        "max_obs": 0.29358674446292654,
        "n_neg": 45,
@@ -1015,13 +1101,17 @@
       "K": 96,
       "max_res_share": 0.28537469080408084,
       "top2_res_share": 0.491869388633375,
-      "concentration": 8.846615414926505,
+      "concentration": 6.84899257929794,
+      "conc_1overp_legacy": 8.846615414926505,
       "dom_residues": [
        1,
        30
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.03225806451612903,
+      "anti_baseline": 0.06451612903225806,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.041666666666666664,
+      "top2_baseline": 0.07291666666666666,
       "conc_perm": {
        "max_obs": 0.28537469080408084,
        "n_neg": 63,
@@ -1035,12 +1125,16 @@
       "max_res_share": 0.33407480256065153,
       "top2_res_share": 0.6539631507152993,
       "concentration": 5.3451968409704245,
+      "conc_1overp_legacy": 5.3451968409704245,
       "dom_residues": [
        1,
        15
       ],
       "anti_frac": 0.000830832775512215,
+      "anti_baseline": 0.0625,
+      "anti_ratio": 0.01329332440819544,
       "baseline_max": 0.0625,
+      "top2_baseline": 0.125,
       "conc_perm": {
        "max_obs": 0.33407480256065153,
        "n_neg": 66,
@@ -1053,13 +1147,17 @@
       "K": 96,
       "max_res_share": 0.3111415295284632,
       "top2_res_share": 0.5815304914064721,
-      "concentration": 4.355981413398485,
+      "concentration": 4.267083833533209,
+      "conc_1overp_legacy": 4.355981413398485,
       "dom_residues": [
        1,
        13
       ],
       "anti_frac": 0.07483889895368663,
-      "baseline_max": 0.07142857142857142,
+      "anti_baseline": 0.07142857142857142,
+      "anti_ratio": 1.047744585351613,
+      "baseline_max": 0.07291666666666667,
+      "top2_baseline": 0.13541666666666669,
       "conc_perm": {
        "max_obs": 0.3111415295284632,
        "n_neg": 62,
@@ -1072,13 +1170,17 @@
       "K": 96,
       "max_res_share": 0.3845807745071314,
       "top2_res_share": 0.7024707237483991,
-      "concentration": 6.922453941128365,
+      "concentration": 6.1532923921141025,
+      "conc_1overp_legacy": 6.922453941128365,
       "dom_residues": [
        1,
        17
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.05555555555555555,
+      "anti_baseline": 0.05555555555555555,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.3845807745071314,
        "n_neg": 54,
@@ -1095,13 +1197,17 @@
       "K": 96,
       "max_res_share": 0.37276556920975973,
       "top2_res_share": 0.6515653552701246,
-      "concentration": 7.082545814985435,
+      "concentration": 5.964249107356156,
+      "conc_1overp_legacy": 7.082545814985435,
       "dom_residues": [
        1,
        18
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.05263157894736842,
+      "anti_baseline": 0.10526315789473684,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.37276556920975973,
        "n_neg": 51,
@@ -1114,13 +1220,17 @@
       "K": 96,
       "max_res_share": 0.2672026667331582,
       "top2_res_share": 0.4949599609738311,
-      "concentration": 4.008040000997372,
+      "concentration": 3.664493715197598,
+      "conc_1overp_legacy": 4.008040000997372,
       "dom_residues": [
        1,
        14
       ],
       "anti_frac": 0.05880972700198307,
-      "baseline_max": 0.06666666666666667,
+      "anti_baseline": 0.13333333333333333,
+      "anti_ratio": 0.44107295251487305,
+      "baseline_max": 0.07291666666666667,
+      "top2_baseline": 0.13541666666666669,
       "conc_perm": {
        "max_obs": 0.2672026667331582,
        "n_neg": 64,
@@ -1133,13 +1243,17 @@
       "K": 96,
       "max_res_share": 0.43227835695766764,
       "top2_res_share": 0.7835748495618418,
-      "concentration": 7.34873206828035,
+      "concentration": 6.916453711322682,
+      "conc_1overp_legacy": 7.34873206828035,
       "dom_residues": [
        1,
        16
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.058823529411764705,
+      "anti_baseline": 0.11764705882352941,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.43227835695766764,
        "n_neg": 63,
@@ -1156,13 +1270,17 @@
       "K": 96,
       "max_res_share": 0.3418729402197034,
       "top2_res_share": 0.6214825570324928,
-      "concentration": 6.153712923954661,
+      "concentration": 5.469967043515254,
+      "conc_1overp_legacy": 6.153712923954661,
       "dom_residues": [
        1,
        17
       ],
       "anti_frac": 0.015540300609702733,
-      "baseline_max": 0.05555555555555555,
+      "anti_baseline": 0.05555555555555555,
+      "anti_ratio": 0.2797254109746492,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.3418729402197034,
        "n_neg": 48,
@@ -1175,13 +1293,17 @@
       "K": 96,
       "max_res_share": 0.3733795341858218,
       "top2_res_share": 0.6805076081470562,
-      "concentration": 6.347452081158971,
+      "concentration": 5.974072546973149,
+      "conc_1overp_legacy": 6.347452081158971,
       "dom_residues": [
        1,
        16
       ],
       "anti_frac": 0.05411891239295699,
-      "baseline_max": 0.058823529411764705,
+      "anti_baseline": 0.11764705882352941,
+      "anti_ratio": 0.4600107553401344,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.3733795341858218,
        "n_neg": 57,
@@ -1206,13 +1328,17 @@
       "K": 96,
       "max_res_share": 0.31254890199471913,
       "top2_res_share": 0.5818648899689095,
-      "concentration": 4.063135725931349,
+      "concentration": 3.75058682393663,
+      "conc_1overp_legacy": 4.063135725931349,
       "dom_residues": [
        1,
        12
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.07692307692307693,
+      "anti_baseline": 0.15384615384615385,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.08333333333333333,
+      "top2_baseline": 0.15625,
       "conc_perm": {
        "max_obs": 0.31254890199471913,
        "n_neg": 45,
@@ -1225,13 +1351,17 @@
       "K": 96,
       "max_res_share": 0.29771994162951054,
       "top2_res_share": 0.5113230729888484,
-      "concentration": 9.229318190514826,
+      "concentration": 7.145278599108253,
+      "conc_1overp_legacy": 9.229318190514826,
       "dom_residues": [
        1,
        30
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.03225806451612903,
+      "anti_baseline": 0.06451612903225806,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.041666666666666664,
+      "top2_baseline": 0.07291666666666666,
       "conc_perm": {
        "max_obs": 0.29771994162951054,
        "n_neg": 63,
@@ -1245,12 +1375,16 @@
       "max_res_share": 0.3306045560066155,
       "top2_res_share": 0.6489763815129203,
       "concentration": 5.289672896105848,
+      "conc_1overp_legacy": 5.289672896105848,
       "dom_residues": [
        1,
        15
       ],
       "anti_frac": 0.016852303607634966,
+      "anti_baseline": 0.0625,
+      "anti_ratio": 0.26963685772215945,
       "baseline_max": 0.0625,
+      "top2_baseline": 0.125,
       "conc_perm": {
        "max_obs": 0.3306045560066155,
        "n_neg": 66,
@@ -1263,13 +1397,17 @@
       "K": 96,
       "max_res_share": 0.3013814947220161,
       "top2_res_share": 0.562315912831002,
-      "concentration": 4.2193409261082255,
+      "concentration": 4.133231927616221,
+      "conc_1overp_legacy": 4.2193409261082255,
       "dom_residues": [
        1,
        13
       ],
       "anti_frac": 0.0836767885503177,
-      "baseline_max": 0.07142857142857142,
+      "anti_baseline": 0.07142857142857142,
+      "anti_ratio": 1.1714750397044478,
+      "baseline_max": 0.07291666666666667,
+      "top2_baseline": 0.13541666666666669,
       "conc_perm": {
        "max_obs": 0.3013814947220161,
        "n_neg": 62,
@@ -1282,13 +1420,17 @@
       "K": 96,
       "max_res_share": 0.3957065645802163,
       "top2_res_share": 0.7214110422605816,
-      "concentration": 7.122718162443894,
+      "concentration": 6.331305033283461,
+      "conc_1overp_legacy": 7.122718162443894,
       "dom_residues": [
        1,
        17
       ],
       "anti_frac": 0.0,
-      "baseline_max": 0.05555555555555555,
+      "anti_baseline": 0.05555555555555555,
+      "anti_ratio": 0.0,
+      "baseline_max": 0.0625,
+      "top2_baseline": 0.11458333333333334,
       "conc_perm": {
        "max_obs": 0.3957065645802163,
        "n_neg": 65,
@@ -1568,6 +1710,55 @@
        31,
        32
       ]
+     },
+     "max_rho_k2_k96": {
+      "per_doc": {
+       "chat_0": 0.9525538936128956,
+       "chat_10": 0.920326768495796,
+       "chat_15": 0.9694088737689821,
+       "chat_3": 0.9129321708261201,
+       "chat_9": 0.7973651238665336,
+       "code_0": 0.9515755475413755,
+       "code_1": 0.9271504076331567,
+       "code_10": 0.8219286746033859,
+       "code_13": 0.9786032197738679,
+       "code_14": 0.9492115040529776,
+       "code_3": 0.897612119164406,
+       "code_6": 0.9063362194533982,
+       "code_8": 0.9573338004304809,
+       "own_w1": 0.9039731827043676,
+       "own_w10": 0.9442915684154058,
+       "own_w11": 0.9537584799283705,
+       "own_w12": 0.826683046879384,
+       "own_w14": 0.936713200667512,
+       "own_w15": 0.9512270687945914,
+       "own_w2": 0.6597457691518903,
+       "own_w3": 0.8468297914740739,
+       "own_w5": 0.9609771554889884,
+       "own_w6": 0.903351385028724,
+       "own_w7": 0.9410574349503881,
+       "own_w8": 0.9649085617394464,
+       "own_w9": 0.9517599612050838,
+       "wiki_0": 0.05332429664850947,
+       "wiki_1": 0.9028142392464882,
+       "wiki_10": 0.9434512144859318,
+       "wiki_11": 0.9524303685585062,
+       "wiki_12": 0.8253362232222309,
+       "wiki_14": 0.9399128051991832,
+       "wiki_15": 0.9521503873594396,
+       "wiki_2": 0.6506802784660194,
+       "wiki_3": 0.848897811711873,
+       "wiki_4": 0.13412545058473754,
+       "wiki_5": 0.9601373340140043,
+       "wiki_6": 0.9052096041442993,
+       "wiki_7": 0.9402147831380057,
+       "wiki_8": 0.9647132500170257,
+       "wiki_9": 0.9504006535827938
+      },
+      "median": 0.9399128051991832,
+      "q90": 0.9609771554889884,
+      "max": 0.9786032197738679,
+      "note": "r3.3 (E2): max ρ_du(k), k=2..96 — распределение по стратумам"
      }
     },
     "clean": {
@@ -1582,6 +1773,65 @@
       "n_total": 51,
       "n_detected": 0,
       "p_values": []
+     },
+     "max_rho_k2_k96": {
+      "per_doc": {
+       "chat_1": 0.3884265360908073,
+       "chat_11": 0.11910566352922093,
+       "chat_12": 0.05870167923048178,
+       "chat_13": 0.06396561790264613,
+       "chat_14": 0.04768787896180774,
+       "chat_2": 0.03811110105066164,
+       "chat_4": 0.019647303994504834,
+       "chat_5": 0.3137262835650985,
+       "chat_6": 0.06030519224011434,
+       "chat_7": 0.4753326007806714,
+       "chat_8": 0.2880783237516615,
+       "code_11": 0.42038090475601064,
+       "code_12": 0.034380081363548046,
+       "code_15": 0.0767698677151243,
+       "code_2": 0.038580876573367465,
+       "code_4": 0.3170022960805897,
+       "code_5": 0.04900132360274596,
+       "code_7": 0.11723202842874536,
+       "code_9": 0.040271588752444284,
+       "cor_w0": 0.04056590112006914,
+       "cor_w1": 0.028372320241260435,
+       "cor_w10": 0.061095412468014205,
+       "cor_w12": 0.046693616700624926,
+       "cor_w13": 0.04141486204267479,
+       "cor_w14": 0.03557598401428369,
+       "cor_w15": 0.047846247085694404,
+       "cor_w2": 0.027603607874864402,
+       "cor_w3": 0.041787211126873766,
+       "cor_w4": 0.1484655220888256,
+       "cor_w5": 0.0891772964993362,
+       "cor_w6": 0.07749943742282143,
+       "cor_w7": 0.04151899993428593,
+       "cor_w9": 0.050697308560292656,
+       "math_0": 0.035471400482908644,
+       "math_1": 0.1895914364099023,
+       "math_10": 0.027302797601950438,
+       "math_11": 0.028351298203003965,
+       "math_12": 0.4647127644648953,
+       "math_13": 0.06803008033829054,
+       "math_14": 0.740919514849233,
+       "math_15": 0.04891393357193511,
+       "math_2": 0.06594067057204489,
+       "math_3": 0.04128732978209111,
+       "math_4": 0.12167124976034423,
+       "math_5": 0.06639879867693664,
+       "math_6": 0.11975132927755233,
+       "math_7": 0.10039792008917496,
+       "math_8": 0.08735698864061267,
+       "math_9": 0.13877769144626728,
+       "own_w13": 0.16149062208584114,
+       "wiki_13": 0.17211557625821852
+      },
+      "median": 0.06396561790264613,
+      "q90": 0.3170022960805897,
+      "max": 0.740919514849233,
+      "note": "r3.3 (E2): max ρ_du(k), k=2..96 — распределение по стратумам"
      }
     },
     "remainder": {
@@ -1595,6 +1845,16 @@
       "n_total": 2,
       "n_detected": 0,
       "p_values": []
+     },
+     "max_rho_k2_k96": {
+      "per_doc": {
+       "own_w0": 0.0660141496206548,
+       "own_w4": 0.13517876592834768
+      },
+      "median": 0.10059645777450124,
+      "q90": 0.1282623042975784,
+      "max": 0.13517876592834768,
+      "note": "r3.3 (E2): max ρ_du(k), k=2..96 — распределение по стратумам"
      }
     },
     "test": {
@@ -1604,21 +1864,279 @@
      "dL": 30,
      "dC": 0,
      "p0_pool": 0.32608695652173914,
-     "p_two_sided_exact": 2.18081796329386e-07,
-     "note": "H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); двусторонний тест по as-or-less-likely convention (не scipy binomtest — там doubled-min, числа будут отличаться, r3.1 #7); r3.2 #7: при глубоком underflow pmf (очень большие n) p_two может уйти в 0 — задокументировано; для n≤96 не критично"
+     "p_fisher_as_or_less": 2.120335433704179e-15,
+     "p_two_sided_exact_binomial_sensitivity": 2.18081796329386e-07,
+     "test_family_note": "r3.3 (E2): первичный — Fisher/hypergeometric (условный точный тест для 2×2 с фиксированными маргиналами, as-or-less-likely convention); биномиальный с пуловым p0 — только sensitivity",
+     "selection_note": "r3.3 (E2): loopy-стратификатор (v_tangent mcos>0.95 ∨ wiki_0/4) и H2-детектор (du_unit ρ(k)≥0.9 ∧ ρ(2k)≥0.81) делят лагово-корреляционный путь — асимметрия детекций частично selection-on-the-statistic (определение clean-стратума завязано на dip того же пути); null-калибровка детектора — results.period_structure.detector_null_calibration; H2 = ассоциация, НЕ независимая/механистическая детекция",
+     "denominator_note": "знаменатель явно: dL/nL = доля loopy K=96-доков, у которых ДЕТЕКТИРУЕМ п≥2 (детектор начинается с k≥2; forced p=1-доки — p=None — НЕ считаются «имеющими период»"
     }
    },
    "aggregate": {
     "pool": "K=96 (r3.1 #3)",
     "n_detected_loopy": 30,
-    "mean_concentration": 5.908370724006618,
-    "median_concentration": 6.062201613464012,
-    "min_concentration": 2.429454959658243,
+    "mean_concentration": 5.413786268177715,
+    "median_concentration": 5.407581942242839,
+    "min_concentration": 2.3798742461958295,
     "frac_conc_above_1": 1.0,
+    "mean_concentration_legacy_1overp": 5.908370724006618,
+    "median_concentration_legacy_1overp": 6.062201613464012,
+    "min_concentration_legacy_1overp": 2.429454959658243,
+    "baseline_note": "r3.3 (E1): count-aware базис = count(k≡r mod p)/K по k=1..K (классы остатков неравномощны при p ∤ K); top2_baseline — сумма двух баз (r3.3 M2)",
     "mean_top2_res_share": 0.632315043423947,
-    "top2_baseline_note": "равномерная база = 2/p (varies per doc)",
-    "mean_anti_frac": 0.02911325480597452,
-    "anti_phase_finding": "анти-фаза (k≡p/2 mod p) НЕ носитель: mean anti_frac = 0.029 — ниже равномерной базы (r3 C3: букв. p/2-эстиманд ≈ 0); реальный носитель — классы остатков dom_residues mod p (интерпретация «фаза границы лупа» — гипотеза, не результат)",
+    "mean_anti_phase": {
+     "estimand": "чётный p: класс k≡p/2 (1 класс, база 1/p); нечётный p: {floor(p/2), ceil(p/2)} (2 класса, база 2/p) — букв. C3-эстиманд, parity-correct (ревьюерский пункт об odd-p отозван: код уже корректен)",
+     "even": {
+      "n": 12,
+      "p_values": [
+       8,
+       14,
+       16,
+       18,
+       20,
+       24,
+       32
+      ],
+      "mean_anti_frac": 0.02007708582577579,
+      "mean_anti_ratio": 0.28060946549176685,
+      "n_below_own_baseline": 10
+     },
+     "odd": {
+      "n": 18,
+      "p_values": [
+       7,
+       9,
+       11,
+       13,
+       15,
+       17,
+       19,
+       27,
+       31
+      ],
+      "mean_anti_frac": 0.03513736745944034,
+      "mean_anti_ratio": 0.21716030300329575,
+      "n_below_own_baseline": 18
+     },
+     "all": {
+      "n": 30,
+      "mean_anti_ratio": 0.24253996799868416,
+      "median_anti_ratio": 0.032374650701588244,
+      "n_below_own_baseline": 28
+     },
+     "per_doc": {
+      "chat_0": {
+       "p": 15,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.13333333333333333,
+       "anti_ratio": 0.0
+      },
+      "chat_10": {
+       "p": 27,
+       "parity": "odd",
+       "anti_frac": 0.030954118071774846,
+       "anti_baseline": 0.07407407407407407,
+       "anti_ratio": 0.41788059396896043
+      },
+      "chat_15": {
+       "p": 8,
+       "parity": "even",
+       "anti_frac": 0.0322419919619362,
+       "anti_baseline": 0.125,
+       "anti_ratio": 0.2579359356954896
+      },
+      "chat_3": {
+       "p": 20,
+       "parity": "even",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.05,
+       "anti_ratio": 0.0
+      },
+      "code_0": {
+       "p": 11,
+       "parity": "odd",
+       "anti_frac": 0.07507868385179906,
+       "anti_baseline": 0.18181818181818182,
+       "anti_ratio": 0.4129327611848948
+      },
+      "code_1": {
+       "p": 24,
+       "parity": "even",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.041666666666666664,
+       "anti_ratio": 0.0
+      },
+      "code_13": {
+       "p": 7,
+       "parity": "odd",
+       "anti_frac": 0.18253876669936175,
+       "anti_baseline": 0.2857142857142857,
+       "anti_ratio": 0.6388856834477662
+      },
+      "code_14": {
+       "p": 9,
+       "parity": "odd",
+       "anti_frac": 0.08826757136546595,
+       "anti_baseline": 0.2222222222222222,
+       "anti_ratio": 0.3972040711445968
+      },
+      "code_6": {
+       "p": 32,
+       "parity": "even",
+       "anti_frac": 0.0016079992810931576,
+       "anti_baseline": 0.03125,
+       "anti_ratio": 0.05145597699498104
+      },
+      "code_8": {
+       "p": 15,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.13333333333333333,
+       "anti_ratio": 0.0
+      },
+      "own_w1": {
+       "p": 19,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.10526315789473684,
+       "anti_ratio": 0.0
+      },
+      "own_w10": {
+       "p": 15,
+       "parity": "odd",
+       "anti_frac": 0.0720924600778706,
+       "anti_baseline": 0.13333333333333333,
+       "anti_ratio": 0.5406934505840295
+      },
+      "own_w11": {
+       "p": 17,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.11764705882352941,
+       "anti_ratio": 0.0
+      },
+      "own_w14": {
+       "p": 18,
+       "parity": "even",
+       "anti_frac": 0.015335914169425912,
+       "anti_baseline": 0.05555555555555555,
+       "anti_ratio": 0.2760464550496664
+      },
+      "own_w15": {
+       "p": 17,
+       "parity": "odd",
+       "anti_frac": 0.0706123748087139,
+       "anti_baseline": 0.11764705882352941,
+       "anti_ratio": 0.6002051858740682
+      },
+      "own_w5": {
+       "p": 13,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.15384615384615385,
+       "anti_ratio": 0.0
+      },
+      "own_w6": {
+       "p": 31,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.06451612903225806,
+       "anti_ratio": 0.0
+      },
+      "own_w7": {
+       "p": 16,
+       "parity": "even",
+       "anti_frac": 0.000830832775512215,
+       "anti_baseline": 0.0625,
+       "anti_ratio": 0.01329332440819544
+      },
+      "own_w8": {
+       "p": 14,
+       "parity": "even",
+       "anti_frac": 0.07483889895368663,
+       "anti_baseline": 0.07142857142857142,
+       "anti_ratio": 1.047744585351613
+      },
+      "own_w9": {
+       "p": 18,
+       "parity": "even",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.05555555555555555,
+       "anti_ratio": 0.0
+      },
+      "wiki_1": {
+       "p": 19,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.10526315789473684,
+       "anti_ratio": 0.0
+      },
+      "wiki_10": {
+       "p": 15,
+       "parity": "odd",
+       "anti_frac": 0.05880972700198307,
+       "anti_baseline": 0.13333333333333333,
+       "anti_ratio": 0.44107295251487305
+      },
+      "wiki_11": {
+       "p": 17,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.11764705882352941,
+       "anti_ratio": 0.0
+      },
+      "wiki_14": {
+       "p": 18,
+       "parity": "even",
+       "anti_frac": 0.015540300609702733,
+       "anti_baseline": 0.05555555555555555,
+       "anti_ratio": 0.2797254109746492
+      },
+      "wiki_15": {
+       "p": 17,
+       "parity": "odd",
+       "anti_frac": 0.05411891239295699,
+       "anti_baseline": 0.11764705882352941,
+       "anti_ratio": 0.4600107553401344
+      },
+      "wiki_5": {
+       "p": 13,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.15384615384615385,
+       "anti_ratio": 0.0
+      },
+      "wiki_6": {
+       "p": 31,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.06451612903225806,
+       "anti_ratio": 0.0
+      },
+      "wiki_7": {
+       "p": 16,
+       "parity": "even",
+       "anti_frac": 0.016852303607634966,
+       "anti_baseline": 0.0625,
+       "anti_ratio": 0.26963685772215945
+      },
+      "wiki_8": {
+       "p": 14,
+       "parity": "even",
+       "anti_frac": 0.0836767885503177,
+       "anti_baseline": 0.07142857142857142,
+       "anti_ratio": 1.1714750397044478
+      },
+      "wiki_9": {
+       "p": 18,
+       "parity": "even",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.05555555555555555,
+       "anti_ratio": 0.0
+      }
+     },
+     "finding": "анти-фаза — не главный носитель: в 28/30 доках anti_ratio < 1 (ниже базы собственного класса); носители — классы dom_residues (масса концентрирована в 1–2 классах); смешанно-чётностный агрегат «mean_anti_frac» без нормировки не интерпретируем (r3.3 E3) — использовать anti_ratio и parity split; интерпретация «фаза границы лупа» — гипотеза, не результат"
+    },
     "per_doc_conc_p": {
      "chat_0": [
       15,
@@ -1743,7 +2261,745 @@
     },
     "per_doc_conc_p_format": "(p_detection, p_value_concentration_test)",
     "n_per_doc_p_le_alpha": 30,
-    "per_doc_p_floor_note": "per-doc conc p насыщен на полу 1/(B+1)≈0.001 (n_per_doc_p_le_alpha=30/30 значимых)"
+    "per_doc_p_floor_note": "per-doc conc p насыщен на полу 1/(B+1)≈0.001: 30/30 доков превысили максимум перестановочного нуля — это утверждение о значимости (≠шум), не о величине эффекта: p не цитировать как шкалу свидетельств, доки не ранжировать по p"
+   },
+   "detector_null_calibration": {
+    "loopy": {
+     "n_docs": 41,
+     "b_null": 200,
+     "seed": 117,
+     "per_doc": {
+      "chat_0": {
+       "p_obs": 15,
+       "p_false_shuffle_full": 0.024875621890547265,
+       "p_false_keep_short": 0.03980099502487562,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "chat_10": {
+       "p_obs": 27,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.01990049751243781,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "chat_15": {
+       "p_obs": 8,
+       "p_false_shuffle_full": 0.0845771144278607,
+       "p_false_keep_short": 0.14427860696517414,
+       "kill_peak_fires": true,
+       "kill_peak_same_p": false
+      },
+      "chat_3": {
+       "p_obs": 20,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "chat_9": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_0": {
+       "p_obs": 11,
+       "p_false_shuffle_full": 0.03482587064676617,
+       "p_false_keep_short": 0.04975124378109453,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "code_1": {
+       "p_obs": 24,
+       "p_false_shuffle_full": 0.01990049751243781,
+       "p_false_keep_short": 0.009950248756218905,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "code_10": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_13": {
+       "p_obs": 7,
+       "p_false_shuffle_full": 0.14427860696517414,
+       "p_false_keep_short": 0.21890547263681592,
+       "kill_peak_fires": true,
+       "kill_peak_same_p": false
+      },
+      "code_14": {
+       "p_obs": 9,
+       "p_false_shuffle_full": 0.03980099502487562,
+       "p_false_keep_short": 0.03980099502487562,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "code_3": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_6": {
+       "p_obs": 32,
+       "p_false_shuffle_full": 0.009950248756218905,
+       "p_false_keep_short": 0.01990049751243781,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "code_8": {
+       "p_obs": 15,
+       "p_false_shuffle_full": 0.024875621890547265,
+       "p_false_keep_short": 0.029850746268656716,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w1": {
+       "p_obs": 19,
+       "p_false_shuffle_full": 0.009950248756218905,
+       "p_false_keep_short": 0.014925373134328358,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w10": {
+       "p_obs": 15,
+       "p_false_shuffle_full": 0.01990049751243781,
+       "p_false_keep_short": 0.029850746268656716,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w11": {
+       "p_obs": 17,
+       "p_false_shuffle_full": 0.024875621890547265,
+       "p_false_keep_short": 0.029850746268656716,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w12": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "own_w14": {
+       "p_obs": 18,
+       "p_false_shuffle_full": 0.014925373134328358,
+       "p_false_keep_short": 0.009950248756218905,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w15": {
+       "p_obs": 17,
+       "p_false_shuffle_full": 0.05472636815920398,
+       "p_false_keep_short": 0.029850746268656716,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w2": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "own_w3": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "own_w5": {
+       "p_obs": 13,
+       "p_false_shuffle_full": 0.01990049751243781,
+       "p_false_keep_short": 0.05472636815920398,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w6": {
+       "p_obs": 31,
+       "p_false_shuffle_full": 0.014925373134328358,
+       "p_false_keep_short": 0.009950248756218905,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w7": {
+       "p_obs": 16,
+       "p_false_shuffle_full": 0.009950248756218905,
+       "p_false_keep_short": 0.024875621890547265,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w8": {
+       "p_obs": 14,
+       "p_false_shuffle_full": 0.03482587064676617,
+       "p_false_keep_short": 0.04477611940298507,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "own_w9": {
+       "p_obs": 18,
+       "p_false_shuffle_full": 0.024875621890547265,
+       "p_false_keep_short": 0.024875621890547265,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_0": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "wiki_1": {
+       "p_obs": 19,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.009950248756218905,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_10": {
+       "p_obs": 15,
+       "p_false_shuffle_full": 0.029850746268656716,
+       "p_false_keep_short": 0.03482587064676617,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_11": {
+       "p_obs": 17,
+       "p_false_shuffle_full": 0.03980099502487562,
+       "p_false_keep_short": 0.03482587064676617,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_12": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "wiki_14": {
+       "p_obs": 18,
+       "p_false_shuffle_full": 0.009950248756218905,
+       "p_false_keep_short": 0.009950248756218905,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_15": {
+       "p_obs": 17,
+       "p_false_shuffle_full": 0.04975124378109453,
+       "p_false_keep_short": 0.029850746268656716,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_2": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "wiki_3": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "wiki_4": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "wiki_5": {
+       "p_obs": 13,
+       "p_false_shuffle_full": 0.05472636815920398,
+       "p_false_keep_short": 0.029850746268656716,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_6": {
+       "p_obs": 31,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.01990049751243781,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_7": {
+       "p_obs": 16,
+       "p_false_shuffle_full": 0.009950248756218905,
+       "p_false_keep_short": 0.009950248756218905,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_8": {
+       "p_obs": 14,
+       "p_false_shuffle_full": 0.029850746268656716,
+       "p_false_keep_short": 0.029850746268656716,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      },
+      "wiki_9": {
+       "p_obs": 18,
+       "p_false_shuffle_full": 0.01990049751243781,
+       "p_false_keep_short": 0.01990049751243781,
+       "kill_peak_fires": false,
+       "kill_peak_same_p": false
+      }
+     },
+     "false_detection_rate": {
+      "shuffle_full_mean": 0.02269142094406019,
+      "shuffle_full_max": 0.14427860696517414,
+      "keep_short_mean": 0.027666545322169632,
+      "keep_short_max": 0.21890547263681592,
+      "kill_peak": 0.06666666666666667,
+      "kill_peak_same_p": 0.0
+     }
+    },
+    "clean": {
+     "n_docs": 51,
+     "b_null": 200,
+     "seed": 117,
+     "per_doc": {
+      "chat_1": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_11": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_12": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_13": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_14": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_2": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_4": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_5": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_6": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_7": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "chat_8": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_11": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_12": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_15": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_2": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_4": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_5": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_7": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "code_9": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w0": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w1": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w10": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w12": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w13": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w14": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w15": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w2": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w3": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w4": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w5": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w6": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w7": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "cor_w9": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_0": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_1": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_10": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_11": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_12": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_13": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_14": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_15": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_2": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_3": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_4": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_5": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_6": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_7": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_8": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "math_9": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "own_w13": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      },
+      "wiki_13": {
+       "p_obs": null,
+       "p_false_shuffle_full": 0.004975124378109453,
+       "p_false_keep_short": 0.004975124378109453,
+       "kill_peak_fires": null,
+       "kill_peak_same_p": null
+      }
+     },
+     "false_detection_rate": {
+      "shuffle_full_mean": 0.004975124378109452,
+      "shuffle_full_max": 0.004975124378109453,
+      "keep_short_mean": 0.004975124378109452,
+      "keep_short_max": 0.004975124378109453,
+      "kill_peak": null,
+      "kill_peak_same_p": null
+     }
+    },
+    "note": "r3.3 (E2): суррогаты на уровне ACF-профиля (значения rho), не сырого сигнала: shuffle_full/keep_short — перестановки позиций, kill_peak — уничтожение детектируемых гармоник k=p, 2p. keep_short устойчиво выше shuffle_full: (а) сохранённое окно k=1..8 — периоды p≤8 детектируются в нём легитимно (сверьте per_doc p_obs с kill_peak_same_p_obs), (б) высокий ρ-базис loopy-профилей (см. detection.max_rho_k2_k96); clean — оба на полу. Низкий false-detection rate ⇒ детектор специфичен к периодической структуре этих профилей; высокий ⇒ порог детектора неспецифичен."
+   }
+  },
+  "source_sensitivity": {
+   "B": 1000,
+   "seed": 117,
+   "note": "r3.3 (E5): чувствительность primary KS к составу источников (первичный пул — all_K96); те же B/seed, что у primary; описательно, no claim",
+   "gen_only": {
+    "n_L": 28,
+    "n_C": 36,
+    "ks": {
+     "stat_obs": 0.4603174603174603,
+     "p": 0.002997002997002997
+    },
+    "median": {
+     "stat_obs": -0.07865510117967611,
+     "p": 0.013986013986013986
+    },
+    "median_L": 0.5237905780656109,
+    "median_C": 0.602445679245287
+   },
+   "gen_plus_own": {
+    "n_L": 41,
+    "n_C": 37,
+    "ks": {
+     "stat_obs": 0.4528675016479895,
+     "p": 0.000999000999000999
+    },
+    "median": {
+     "stat_obs": -0.08186690859197365,
+     "p": 0.03996003996003996
+    },
+    "median_L": 0.521420595657899,
+    "median_C": 0.6032875042498727
+   },
+   "gen_plus_corpus": {
+    "n_L": 28,
+    "n_C": 50,
+    "ks": {
+     "stat_obs": 0.4914285714285714,
+     "p": 0.000999000999000999
+    },
+    "median": {
+     "stat_obs": -0.08831612216277551,
+     "p": 0.001998001998001998
+    },
+    "median_L": 0.5237905780656109,
+    "median_C": 0.6121067002283864
+   },
+   "all_K96": {
+    "n_L": 41,
+    "n_C": 51,
+    "ks": {
+     "stat_obs": 0.482544237207078,
+     "p": 0.000999000999000999
+    },
+    "median": {
+     "stat_obs": -0.09031712287071525,
+     "p": 0.000999000999000999
+    },
+    "median_L": 0.521420595657899,
+    "median_C": 0.6117377185286142
    }
   },
   "source_strata": {
@@ -2849,12 +4105,17 @@
       "b33_96": 0.6325557488521052
      }
     }
-   }
+   },
+   "note": "r3.3 (M3): copy-rate-градиент конфаундирован с L/C (loopy/degen-доки свыше copy-rate) — описательно, не каузальный вывод"
   },
   "domain": {
    "chat": {
     "n_docs": 16,
     "n_nondeg": 11,
+    "n_nondeg_with_tokens": 11,
+    "n_claim_eligible": false,
+    "provenance_limited": false,
+    "descriptive_only": false,
     "domain_claim_eligible": false,
     "nondeg": {
      "n_docs": 11,
@@ -2910,6 +4171,10 @@
    "code": {
     "n_docs": 16,
     "n_nondeg": 8,
+    "n_nondeg_with_tokens": 8,
+    "n_claim_eligible": false,
+    "provenance_limited": false,
+    "descriptive_only": false,
     "domain_claim_eligible": false,
     "nondeg": {
      "n_docs": 8,
@@ -2965,7 +4230,11 @@
    "corpus": {
     "n_docs": 16,
     "n_nondeg": 16,
-    "domain_claim_eligible": true,
+    "n_nondeg_with_tokens": 0,
+    "n_claim_eligible": true,
+    "provenance_limited": true,
+    "descriptive_only": true,
+    "domain_claim_eligible": false,
     "nondeg": {
      "n_docs": 16,
      "n_no_negative_area": 0,
@@ -3022,6 +4291,10 @@
    "math": {
     "n_docs": 16,
     "n_nondeg": 16,
+    "n_nondeg_with_tokens": 16,
+    "n_claim_eligible": true,
+    "provenance_limited": false,
+    "descriptive_only": false,
     "domain_claim_eligible": true,
     "nondeg": {
      "n_docs": 16,
@@ -3077,6 +4350,10 @@
    "own": {
     "n_docs": 16,
     "n_nondeg": 1,
+    "n_nondeg_with_tokens": 1,
+    "n_claim_eligible": false,
+    "provenance_limited": false,
+    "descriptive_only": false,
     "domain_claim_eligible": false,
     "nondeg": {
      "n_docs": 1,
@@ -3132,6 +4409,10 @@
    "wiki": {
     "n_docs": 16,
     "n_nondeg": 1,
+    "n_nondeg_with_tokens": 1,
+    "n_claim_eligible": false,
+    "provenance_limited": false,
+    "descriptive_only": false,
     "domain_claim_eligible": false,
     "nondeg": {
      "n_docs": 1,
@@ -3185,56 +4466,58 @@
     }
    },
    "pooled_nondeg": {
-    "n_docs": 21,
-    "note": "пре-рег «остальные — пул»: nondeg-доки доменов с n_nondeg<12",
+    "n_docs": 37,
+    "note": "пре-рег «остальные — пул»: nondeg-доки не-claim-доменов (n_nondeg<12 или источник не токен-верифицирован, r3.3 E4)",
     "summary": {
-     "n_docs": 21,
+     "n_docs": 37,
      "n_no_negative_area": 0,
      "n_absent": 0,
      "K_composition": {
-      "96": 21
+      "32": 2,
+      "96": 35
      },
      "K_composition_all": {
-      "96": 21
+      "32": 2,
+      "96": 35
      },
      "K_note": "K_composition — только доки с отриц. площадью; K_composition_all — все non-absent доки (r3.2 fixreview-мелкое #2: absent-доки не имеют K по конструкции cells)",
      "A_neg": {
-      "median": -1.2799498870681902
+      "median": -1.0738737093693447
      },
      "odd_frac": {
-      "median": 0.6034542559558386,
+      "median": 0.6273622822398804,
       "ci": [
-       0.5793950837217848,
-       0.6506227080569729
+       0.6014371025347355,
+       0.6508760182822965
       ]
      },
      "even_frac": {
-      "median": 0.39654574404416143,
+      "median": 0.37263771776011956,
       "ci": [
-       0.3493772919430272,
-       0.4206049162782151
+       0.34912398171770354,
+       0.3985628974652645
       ]
      },
      "k1_frac": {
-      "median": 0.29790278660638103,
+      "median": 0.3517755755506677,
       "ci": [
-       0.21446470836722664,
-       0.3597483660604024
+       0.31503309454147765,
+       0.3854663274906111
       ]
      },
      "tail_frac": {
-      "median": 0.5981482177735439,
+      "median": 0.5261043738393875,
       "ci": [
-       0.5026309977213097,
-       0.7289170051466172
+       0.4934146153727049,
+       0.5635099701059331
       ]
      },
      "band_frac": {
-      "b1": 0.29790278660638103,
-      "b2": 0.05641954388765239,
-      "b3_8": 0.05665530753078521,
-      "b9_32": 0.16244961347131465,
-      "b33_96": 0.37751793062824535
+      "b1": 0.3517755755506677,
+      "b2": 0.06301191050717488,
+      "b3_8": 0.056975850965144126,
+      "b9_32": 0.16264132223230784,
+      "b33_96": 0.3572449791255857
      }
     }
    }
@@ -3249,7 +4532,8 @@
    "n_docs": 64,
    "n_full_layers": 2,
    "n_linear_layers": 3,
-   "note": "gen-доки только (TPU L1-деградация исключена); per-doc среднее odd_frac по слоям типа; ПАРНЫЙ перестановочный (знак-флип внутри пары) — тот же док даёт обе величины (р. 2, review r2)"
+   "note": "gen-доки только (TPU L1-деградация исключена); per-doc среднее odd_frac по слоям типа; ПАРНЫЙ перестановочный (знак-флип внутри пары) — тот же док даёт обе величины (р. 2, review r2)",
+   "layer_specific_note": "r3.3 (M4): первичный — L23 full_attention; значимый слой-эффект ограничивает обобщение на все слои — cross-layer pooling требует контроля layer-type"
   },
   "notes": [
    "mean vs median (odd_frac, du_unit, L23, K=96): mean L=0.6274 vs C=0.6230 (mean-тест — secondary, r3); медианы L=0.5214 vs C=0.6117 — противоположное направление; PRIMARY-тест KS (p=0.0010): совпадение средних — артефакт бимодальности loopy, не «одинаковые распределения» (r3 C2)",
@@ -3263,14 +4547,14 @@
   "object": "du_unit",
   "H1_period2": {
    "status": "refuted",
-   "detail": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)",
+   "detail": "refuted: направление пре-рега не подтвердилось (KS p≤0.05, распределения различимы в обратную сторону: медианы L<C) — directional refutation, НЕ mechanistic refutation период-2 (estimand слеп к p≥3, G10); kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)",
    "primary_ks_p": 0.000999000999000999,
    "median_direction": "L<C",
    "G10_note": "estimand odd_frac различает ТОЛЬКО period-2; периоды лупов пула 5/7/8/24/… ⇒ «loopy→нечётные» было структурно неотличимо от нуля (r3 C3, §3.6): kill интерпретируется как «не подтверждено», не как «опровергнуто механизмом»"
   },
   "H2_period_structure": {
    "status": "confirmed",
-   "gate": "detection p≤α (K=96) ∧ median_concentration>1 ∧ frac(conc>1)≥0.8 (r3.1: min-гейт заменён — fragile к одному выбросу; r3.2: min — secondary/описательный, НЕ часть гейта — min отчитан в aggregate, читатель не должен путать)",
+   "gate": "detection p≤α (K=96; r3.3 E2: Fisher/hypergeometric — условный точный тест 2×2, биномиальный — sensitivity) ∧ median_concentration>1 ∧ frac(conc>1)≥0.8 (concentration — count-aware базис, r3.3 E1; r3.1: min-гейт заменён — fragile к одному выбросу; r3.2: min — secondary/описательный, НЕ часть гейта — min отчитан в aggregate, читатель не должен путать)",
    "detection": {
     "loopy": {
      "n_total": 41,
@@ -3317,6 +4601,55 @@
        31,
        32
       ]
+     },
+     "max_rho_k2_k96": {
+      "per_doc": {
+       "chat_0": 0.9525538936128956,
+       "chat_10": 0.920326768495796,
+       "chat_15": 0.9694088737689821,
+       "chat_3": 0.9129321708261201,
+       "chat_9": 0.7973651238665336,
+       "code_0": 0.9515755475413755,
+       "code_1": 0.9271504076331567,
+       "code_10": 0.8219286746033859,
+       "code_13": 0.9786032197738679,
+       "code_14": 0.9492115040529776,
+       "code_3": 0.897612119164406,
+       "code_6": 0.9063362194533982,
+       "code_8": 0.9573338004304809,
+       "own_w1": 0.9039731827043676,
+       "own_w10": 0.9442915684154058,
+       "own_w11": 0.9537584799283705,
+       "own_w12": 0.826683046879384,
+       "own_w14": 0.936713200667512,
+       "own_w15": 0.9512270687945914,
+       "own_w2": 0.6597457691518903,
+       "own_w3": 0.8468297914740739,
+       "own_w5": 0.9609771554889884,
+       "own_w6": 0.903351385028724,
+       "own_w7": 0.9410574349503881,
+       "own_w8": 0.9649085617394464,
+       "own_w9": 0.9517599612050838,
+       "wiki_0": 0.05332429664850947,
+       "wiki_1": 0.9028142392464882,
+       "wiki_10": 0.9434512144859318,
+       "wiki_11": 0.9524303685585062,
+       "wiki_12": 0.8253362232222309,
+       "wiki_14": 0.9399128051991832,
+       "wiki_15": 0.9521503873594396,
+       "wiki_2": 0.6506802784660194,
+       "wiki_3": 0.848897811711873,
+       "wiki_4": 0.13412545058473754,
+       "wiki_5": 0.9601373340140043,
+       "wiki_6": 0.9052096041442993,
+       "wiki_7": 0.9402147831380057,
+       "wiki_8": 0.9647132500170257,
+       "wiki_9": 0.9504006535827938
+      },
+      "median": 0.9399128051991832,
+      "q90": 0.9609771554889884,
+      "max": 0.9786032197738679,
+      "note": "r3.3 (E2): max ρ_du(k), k=2..96 — распределение по стратумам"
      }
     },
     "clean": {
@@ -3331,6 +4664,65 @@
       "n_total": 51,
       "n_detected": 0,
       "p_values": []
+     },
+     "max_rho_k2_k96": {
+      "per_doc": {
+       "chat_1": 0.3884265360908073,
+       "chat_11": 0.11910566352922093,
+       "chat_12": 0.05870167923048178,
+       "chat_13": 0.06396561790264613,
+       "chat_14": 0.04768787896180774,
+       "chat_2": 0.03811110105066164,
+       "chat_4": 0.019647303994504834,
+       "chat_5": 0.3137262835650985,
+       "chat_6": 0.06030519224011434,
+       "chat_7": 0.4753326007806714,
+       "chat_8": 0.2880783237516615,
+       "code_11": 0.42038090475601064,
+       "code_12": 0.034380081363548046,
+       "code_15": 0.0767698677151243,
+       "code_2": 0.038580876573367465,
+       "code_4": 0.3170022960805897,
+       "code_5": 0.04900132360274596,
+       "code_7": 0.11723202842874536,
+       "code_9": 0.040271588752444284,
+       "cor_w0": 0.04056590112006914,
+       "cor_w1": 0.028372320241260435,
+       "cor_w10": 0.061095412468014205,
+       "cor_w12": 0.046693616700624926,
+       "cor_w13": 0.04141486204267479,
+       "cor_w14": 0.03557598401428369,
+       "cor_w15": 0.047846247085694404,
+       "cor_w2": 0.027603607874864402,
+       "cor_w3": 0.041787211126873766,
+       "cor_w4": 0.1484655220888256,
+       "cor_w5": 0.0891772964993362,
+       "cor_w6": 0.07749943742282143,
+       "cor_w7": 0.04151899993428593,
+       "cor_w9": 0.050697308560292656,
+       "math_0": 0.035471400482908644,
+       "math_1": 0.1895914364099023,
+       "math_10": 0.027302797601950438,
+       "math_11": 0.028351298203003965,
+       "math_12": 0.4647127644648953,
+       "math_13": 0.06803008033829054,
+       "math_14": 0.740919514849233,
+       "math_15": 0.04891393357193511,
+       "math_2": 0.06594067057204489,
+       "math_3": 0.04128732978209111,
+       "math_4": 0.12167124976034423,
+       "math_5": 0.06639879867693664,
+       "math_6": 0.11975132927755233,
+       "math_7": 0.10039792008917496,
+       "math_8": 0.08735698864061267,
+       "math_9": 0.13877769144626728,
+       "own_w13": 0.16149062208584114,
+       "wiki_13": 0.17211557625821852
+      },
+      "median": 0.06396561790264613,
+      "q90": 0.3170022960805897,
+      "max": 0.740919514849233,
+      "note": "r3.3 (E2): max ρ_du(k), k=2..96 — распределение по стратумам"
      }
     },
     "remainder": {
@@ -3344,6 +4736,16 @@
       "n_total": 2,
       "n_detected": 0,
       "p_values": []
+     },
+     "max_rho_k2_k96": {
+      "per_doc": {
+       "own_w0": 0.0660141496206548,
+       "own_w4": 0.13517876592834768
+      },
+      "median": 0.10059645777450124,
+      "q90": 0.1282623042975784,
+      "max": 0.13517876592834768,
+      "note": "r3.3 (E2): max ρ_du(k), k=2..96 — распределение по стратумам"
      }
     },
     "test": {
@@ -3353,21 +4755,279 @@
      "dL": 30,
      "dC": 0,
      "p0_pool": 0.32608695652173914,
-     "p_two_sided_exact": 2.18081796329386e-07,
-     "note": "H0: вероятность детекции одинакова у loopy и clean (p0 = доля в пуле); двусторонний тест по as-or-less-likely convention (не scipy binomtest — там doubled-min, числа будут отличаться, r3.1 #7); r3.2 #7: при глубоком underflow pmf (очень большие n) p_two может уйти в 0 — задокументировано; для n≤96 не критично"
+     "p_fisher_as_or_less": 2.120335433704179e-15,
+     "p_two_sided_exact_binomial_sensitivity": 2.18081796329386e-07,
+     "test_family_note": "r3.3 (E2): первичный — Fisher/hypergeometric (условный точный тест для 2×2 с фиксированными маргиналами, as-or-less-likely convention); биномиальный с пуловым p0 — только sensitivity",
+     "selection_note": "r3.3 (E2): loopy-стратификатор (v_tangent mcos>0.95 ∨ wiki_0/4) и H2-детектор (du_unit ρ(k)≥0.9 ∧ ρ(2k)≥0.81) делят лагово-корреляционный путь — асимметрия детекций частично selection-on-the-statistic (определение clean-стратума завязано на dip того же пути); null-калибровка детектора — results.period_structure.detector_null_calibration; H2 = ассоциация, НЕ независимая/механистическая детекция",
+     "denominator_note": "знаменатель явно: dL/nL = доля loopy K=96-доков, у которых ДЕТЕКТИРУЕМ п≥2 (детектор начинается с k≥2; forced p=1-доки — p=None — НЕ считаются «имеющими период»"
     }
    },
    "aggregate": {
     "pool": "K=96 (r3.1 #3)",
     "n_detected_loopy": 30,
-    "mean_concentration": 5.908370724006618,
-    "median_concentration": 6.062201613464012,
-    "min_concentration": 2.429454959658243,
+    "mean_concentration": 5.413786268177715,
+    "median_concentration": 5.407581942242839,
+    "min_concentration": 2.3798742461958295,
     "frac_conc_above_1": 1.0,
+    "mean_concentration_legacy_1overp": 5.908370724006618,
+    "median_concentration_legacy_1overp": 6.062201613464012,
+    "min_concentration_legacy_1overp": 2.429454959658243,
+    "baseline_note": "r3.3 (E1): count-aware базис = count(k≡r mod p)/K по k=1..K (классы остатков неравномощны при p ∤ K); top2_baseline — сумма двух баз (r3.3 M2)",
     "mean_top2_res_share": 0.632315043423947,
-    "top2_baseline_note": "равномерная база = 2/p (varies per doc)",
-    "mean_anti_frac": 0.02911325480597452,
-    "anti_phase_finding": "анти-фаза (k≡p/2 mod p) НЕ носитель: mean anti_frac = 0.029 — ниже равномерной базы (r3 C3: букв. p/2-эстиманд ≈ 0); реальный носитель — классы остатков dom_residues mod p (интерпретация «фаза границы лупа» — гипотеза, не результат)",
+    "mean_anti_phase": {
+     "estimand": "чётный p: класс k≡p/2 (1 класс, база 1/p); нечётный p: {floor(p/2), ceil(p/2)} (2 класса, база 2/p) — букв. C3-эстиманд, parity-correct (ревьюерский пункт об odd-p отозван: код уже корректен)",
+     "even": {
+      "n": 12,
+      "p_values": [
+       8,
+       14,
+       16,
+       18,
+       20,
+       24,
+       32
+      ],
+      "mean_anti_frac": 0.02007708582577579,
+      "mean_anti_ratio": 0.28060946549176685,
+      "n_below_own_baseline": 10
+     },
+     "odd": {
+      "n": 18,
+      "p_values": [
+       7,
+       9,
+       11,
+       13,
+       15,
+       17,
+       19,
+       27,
+       31
+      ],
+      "mean_anti_frac": 0.03513736745944034,
+      "mean_anti_ratio": 0.21716030300329575,
+      "n_below_own_baseline": 18
+     },
+     "all": {
+      "n": 30,
+      "mean_anti_ratio": 0.24253996799868416,
+      "median_anti_ratio": 0.032374650701588244,
+      "n_below_own_baseline": 28
+     },
+     "per_doc": {
+      "chat_0": {
+       "p": 15,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.13333333333333333,
+       "anti_ratio": 0.0
+      },
+      "chat_10": {
+       "p": 27,
+       "parity": "odd",
+       "anti_frac": 0.030954118071774846,
+       "anti_baseline": 0.07407407407407407,
+       "anti_ratio": 0.41788059396896043
+      },
+      "chat_15": {
+       "p": 8,
+       "parity": "even",
+       "anti_frac": 0.0322419919619362,
+       "anti_baseline": 0.125,
+       "anti_ratio": 0.2579359356954896
+      },
+      "chat_3": {
+       "p": 20,
+       "parity": "even",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.05,
+       "anti_ratio": 0.0
+      },
+      "code_0": {
+       "p": 11,
+       "parity": "odd",
+       "anti_frac": 0.07507868385179906,
+       "anti_baseline": 0.18181818181818182,
+       "anti_ratio": 0.4129327611848948
+      },
+      "code_1": {
+       "p": 24,
+       "parity": "even",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.041666666666666664,
+       "anti_ratio": 0.0
+      },
+      "code_13": {
+       "p": 7,
+       "parity": "odd",
+       "anti_frac": 0.18253876669936175,
+       "anti_baseline": 0.2857142857142857,
+       "anti_ratio": 0.6388856834477662
+      },
+      "code_14": {
+       "p": 9,
+       "parity": "odd",
+       "anti_frac": 0.08826757136546595,
+       "anti_baseline": 0.2222222222222222,
+       "anti_ratio": 0.3972040711445968
+      },
+      "code_6": {
+       "p": 32,
+       "parity": "even",
+       "anti_frac": 0.0016079992810931576,
+       "anti_baseline": 0.03125,
+       "anti_ratio": 0.05145597699498104
+      },
+      "code_8": {
+       "p": 15,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.13333333333333333,
+       "anti_ratio": 0.0
+      },
+      "own_w1": {
+       "p": 19,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.10526315789473684,
+       "anti_ratio": 0.0
+      },
+      "own_w10": {
+       "p": 15,
+       "parity": "odd",
+       "anti_frac": 0.0720924600778706,
+       "anti_baseline": 0.13333333333333333,
+       "anti_ratio": 0.5406934505840295
+      },
+      "own_w11": {
+       "p": 17,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.11764705882352941,
+       "anti_ratio": 0.0
+      },
+      "own_w14": {
+       "p": 18,
+       "parity": "even",
+       "anti_frac": 0.015335914169425912,
+       "anti_baseline": 0.05555555555555555,
+       "anti_ratio": 0.2760464550496664
+      },
+      "own_w15": {
+       "p": 17,
+       "parity": "odd",
+       "anti_frac": 0.0706123748087139,
+       "anti_baseline": 0.11764705882352941,
+       "anti_ratio": 0.6002051858740682
+      },
+      "own_w5": {
+       "p": 13,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.15384615384615385,
+       "anti_ratio": 0.0
+      },
+      "own_w6": {
+       "p": 31,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.06451612903225806,
+       "anti_ratio": 0.0
+      },
+      "own_w7": {
+       "p": 16,
+       "parity": "even",
+       "anti_frac": 0.000830832775512215,
+       "anti_baseline": 0.0625,
+       "anti_ratio": 0.01329332440819544
+      },
+      "own_w8": {
+       "p": 14,
+       "parity": "even",
+       "anti_frac": 0.07483889895368663,
+       "anti_baseline": 0.07142857142857142,
+       "anti_ratio": 1.047744585351613
+      },
+      "own_w9": {
+       "p": 18,
+       "parity": "even",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.05555555555555555,
+       "anti_ratio": 0.0
+      },
+      "wiki_1": {
+       "p": 19,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.10526315789473684,
+       "anti_ratio": 0.0
+      },
+      "wiki_10": {
+       "p": 15,
+       "parity": "odd",
+       "anti_frac": 0.05880972700198307,
+       "anti_baseline": 0.13333333333333333,
+       "anti_ratio": 0.44107295251487305
+      },
+      "wiki_11": {
+       "p": 17,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.11764705882352941,
+       "anti_ratio": 0.0
+      },
+      "wiki_14": {
+       "p": 18,
+       "parity": "even",
+       "anti_frac": 0.015540300609702733,
+       "anti_baseline": 0.05555555555555555,
+       "anti_ratio": 0.2797254109746492
+      },
+      "wiki_15": {
+       "p": 17,
+       "parity": "odd",
+       "anti_frac": 0.05411891239295699,
+       "anti_baseline": 0.11764705882352941,
+       "anti_ratio": 0.4600107553401344
+      },
+      "wiki_5": {
+       "p": 13,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.15384615384615385,
+       "anti_ratio": 0.0
+      },
+      "wiki_6": {
+       "p": 31,
+       "parity": "odd",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.06451612903225806,
+       "anti_ratio": 0.0
+      },
+      "wiki_7": {
+       "p": 16,
+       "parity": "even",
+       "anti_frac": 0.016852303607634966,
+       "anti_baseline": 0.0625,
+       "anti_ratio": 0.26963685772215945
+      },
+      "wiki_8": {
+       "p": 14,
+       "parity": "even",
+       "anti_frac": 0.0836767885503177,
+       "anti_baseline": 0.07142857142857142,
+       "anti_ratio": 1.1714750397044478
+      },
+      "wiki_9": {
+       "p": 18,
+       "parity": "even",
+       "anti_frac": 0.0,
+       "anti_baseline": 0.05555555555555555,
+       "anti_ratio": 0.0
+      }
+     },
+     "finding": "анти-фаза — не главный носитель: в 28/30 доках anti_ratio < 1 (ниже базы собственного класса); носители — классы dom_residues (масса концентрирована в 1–2 классах); смешанно-чётностный агрегат «mean_anti_frac» без нормировки не интерпретируем (r3.3 E3) — использовать anti_ratio и parity split; интерпретация «фаза границы лупа» — гипотеза, не результат"
+    },
     "per_doc_conc_p": {
      "chat_0": [
       15,
@@ -3492,13 +5152,13 @@
     },
     "per_doc_conc_p_format": "(p_detection, p_value_concentration_test)",
     "n_per_doc_p_le_alpha": 30,
-    "per_doc_p_floor_note": "per-doc conc p насыщен на полу 1/(B+1)≈0.001 (n_per_doc_p_le_alpha=30/30 значимых)"
+    "per_doc_p_floor_note": "per-doc conc p насыщен на полу 1/(B+1)≈0.001: 30/30 доков превысили максимум перестановочного нуля — это утверждение о значимости (≠шум), не о величине эффекта: p не цитировать как шкалу свидетельств, доки не ранжировать по p"
    },
-   "finding": "loopy-доки несут периодическую лаговую структуру (p из пиков ρ); отрицательная площадь организована по классам остатков mod p (dom_residues; медиана концентрации 6.06× базы) — НЕ на анти-фазе p/2 (anti_frac≈0) и не на нечётных k; чистые — без периода, площадь на лаге 1"
+   "finding": "loopy-доки несут периодическую лаговую структуру (p из пиков ρ) — АССОЦИАЦИЯ (стратификатор и детектор делят лагово-корреляционный путь; selection_note + detector_null_calibration); отрицательная площадь организована по классам остатков mod p (dom_residues; медиана концентрации 5.41× count-aware базиса, r3.3 E1) — НЕ на анти-фазе p/2 (anti_ratio<1 у большинства доков, r3.3 E3) и не на нечётных k; чистые — без периода, площадь на лаге 1"
   },
   "robustness": {
    "object": "h_raw",
-   "verdict": "refuted: распределения различимы (KS p≤0.05), но направление противоположно пре-регу (медианы L<C) — период-2 НЕ носитель; kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)",
+   "verdict": "refuted: направление пре-рега не подтвердилось (KS p≤0.05, распределения различимы в обратную сторону: медианы L<C) — directional refutation, НЕ mechanistic refutation период-2 (estimand слеп к p≥3, G10); kill НЕ установлен (mean-тест слеп к бимодальности loopy, r3 C2)",
    "ks_p": 0.000999000999000999
   },
   "descriptive": {
@@ -3551,9 +5211,11 @@
   "confounds": [
    "L/C × источник: L=68% own+wiki, C=60% corpus+math (r3 C6) — первичный контраст не идентифицирован отдельно от источника; source-стратификация — описательная (n<12)",
    "corpus (16, все в C) без токенов: degen только по mcos (mshare выброшен) → смещение к «чистым», т.е. в пользу нулевой гипотезы H1 (r3 C6)",
-   "K-гетерогенность: коруся K=32 исключены из первичного пула (K=96, r3 C5); fixed-band k=1..24 — K-гомогенный robustness"
+   "K-гетерогенность: коруся K=32 исключены из первичного пула (K=96, r3 C5); fixed-band k=1..24 — K-гомогенный robustness",
+   "layer_type: первичный — L23 (full_attention); слой-эффект (full vs linear) значим (results.layer_type) — обобщение на все слои ограничено (r3.3 M4)"
   ],
-  "summary": "Период-2 как носитель отриц. площади: не подтверждён (H1: refuted; KS p=1.0e-03, медианы L<C) — распределения различимы (KS), направление против пре-рега (медианы L<C); kill НЕ установлен (равенство средних — артефакт бимодальности, r3 C2). G10: estimand odd_frac структурно слеп к периодам p≥3 (odd_frac(p=5,7)=0.500, p=8=0.586, p=24=0.509) — предсказание «loopy→нечётные» было структурно near-null на этом пуле. Положительный результат (H2, пре-рег аддендум 3): period-structure подтверждён — периодическая лаговая структура детектируется у loopy 30/41 vs clean 0/51 (тест на K=96 пуле; K=32-доки исключены) (exact p=2.18e-07); концентрация A_neg по классам остатков mod p: median 6.06× базы, top2_share 0.632; анти-фаза p/2 НЕ носитель (anti_frac≈0). Локация отриц. площади резко различена и инвертирована относительно пре-рега (K=96 пул): loopy — в хвосте k≥9 (медиана 0.892 vs clean 0.543), clean — на лаге 1 (k1 0.330 vs loopy 0.074, 4.5×). Распределение odd_frac у loopy бимодально, у clean унимодально; равенство средних — артефакт смеси. Согласуется с T0.1: чистый путь платит на лаге 1, лупы размазывают плату периодически по хвосту на фазе dom_residues mod p (интерпретация «граница лупа» — гипотеза, не результат) — это положительный результат, не kill."
+  "layer_specific_note": "r3.3 (M4): первичный контраст — L23 full_attention; значимый слой-эффект (results.layer_type) ограничивает обобщение на все слои без контроля layer-type",
+  "summary": "Период-2 как носитель отриц. площади: не подтверждён (H1: refuted; KS p=1.0e-03, медианы L<C) — распределения различимы (KS), направление против пре-рега (медианы L<C); kill НЕ установлен (равенство средних — артефакт бимодальности, r3 C2). G10: estimand odd_frac структурно слеп к периодам p≥3 (odd_frac(p=5,7)=0.500, p=8=0.586, p=24=0.509) — предсказание «loopy→нечётные» было структурно near-null на этом пуле. Положительный результат (H2, пре-рег аддендум 3): period-structure подтверждён (ассоциация: стратификатор и детектор делят лаговый путь — selection_note/detector_null_calibration) — периодическая лаговая структура детектируется у loopy 30/41 vs clean 0/51 (тест на K=96 пуле; K=32-доки исключены) (Fisher p=2.12e-15); концентрация A_neg по классам остатков mod p: median 5.41× count-aware базы (r3.3 E1; r3.2 1/p-значение 6.06), top2_share 0.632; анти-фаза — не главный носитель (anti_ratio<1 у большинства доков, parity split — r3.3 E3). Локация отриц. площади резко различена и инвертирована относительно пре-рега (K=96 пул): loopy — в хвосте k≥9 (медиана 0.892 vs clean 0.543), clean — на лаге 1 (k1 0.330 vs loopy 0.074, 4.5×). Распределение odd_frac у loopy бимодально, у clean унимодально; равенство средних — артефакт смеси. Согласуется с T0.1: чистый путь платит на лаге 1, лупы размазывают плату периодически по хвосту на фазе dom_residues mod p (интерпретация «граница лупа» — гипотеза, не результат). Source-чувствительность (r3.3 E5): направление первичного результата стабильно по составу источников (results.source_sensitivity). Layer-specific (r3.3 M4): первичный слой L23 full_attention — обобщение на все слои требует контроля layer-type. — это положительный результат, не kill."
  },
  "provenance": {
   "artifact": true,
@@ -3571,10 +5233,16 @@
   "G10_forced_outcomes": {
    "v_tangent_descriptive": "forced_outcome (clean b1>0.8 ⇒ odd_frac≡1, r3 §3.5)",
    "odd_frac_period2": "estimand слеп к p≥3 (odd_frac(p=5,7)=0.500, p=8=0.586, p=24=0.509) — H1 было структурно near-null на этом пуле (r3 C3, §3.6)"
+  },
+  "r3.3_fixreview_review": {
+   "review": "docs/AT0_3_fixreview_REVIEW.md (дополненное, 2026-11-14)",
+   "changes": "count-aware concentration + top2-базис (E1/M2); Fisher/hypergeometric detection-тест (биномиальный → sensitivity) + detector null calibration + max-ρ-распределения (E2); anti_ratio по чётности (E3); corpus/domain claim-gate (E4); source KS sensitivity (E5); p-floor-формулировка (E6); KS-диагностика (M1); copy-rate-конфаунд (M3); layer-specific (M4); p=2 guard (N2); G2-гейт полноты сетки (N3); median self-check (O3); wording: H1 = directional refutation, H2 = association",
+   "reviewer_retracted": "ревьюер отозвал собственные пункты: anti_frac для нечётных p (двухклассовый {floor,ceil} уже был в коде) и K-зависимый tail (K=96-пул уже был в коде)",
+   "invariance": "per_doc rho/neg/fracs бит-идентичны r3.2 store (bba6fde3a7e807d4) — disk-only пересчёт, без пере-форвардов; primary KS/median p — без изменений; смена: только тестовые/агрегатные блоки и wording"
   }
  },
  "store": {
-  "path": "store/bba6fde3a7e807d4.json",
-  "sha256": "bba6fde3a7e807d41e75a56a3d243e77ba191da58d7c6be029237fcdcd7da058"
+  "path": "store/98933432b88ae6e9.json",
+  "sha256": "98933432b88ae6e98ea438f6ff0439375424c6705cc48111c1d3b9e8a38836cb"
  }
 }

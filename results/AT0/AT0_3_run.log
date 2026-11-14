@@ -4,7 +4,7 @@ G1′: field.py sha bcc607c561f95e3e + _selfcheck
 G15: layer_types сверены с config config.json sha b90b86f35c8e6925 (full 0-based=npz [3, 7, 11, 15, 19, 23]; в LAYERS full=[11, 23])
 docs=96 (gen=64 own=16 cor=16)
 loopy n=41 clean n=53 remainder n=2 ['own_w0', 'own_w4']
-G2: клеток (doc,L,obj)=1440 present=1440
+G2: клеток (doc,L,obj)=1440/1440 present=1440 absent=0 ok=True
 G1_gram max_resid=1.035e-14 ok=True  G3 r=N·f_dc bad=0  Telescope max=1.666e-15 ok=True
 G0a_tpu_curves: dip_L23 meta-vs-recomputed n=32 skipped=0 max_abs_dev=2.083e-04 ok
 PRIMARY (odd_frac, du_unit L23, L vs C, K=96): KS d=0.4825 p=0.0010 | median d=-0.0903 p=0.0010 | mean d=+0.0044 p=0.8761 (mean 0.6274/0.6230, med 0.5214/0.6117)
@@ -21,22 +21,28 @@ DESCRIPT (odd_frac, v_tangent L23, L vs C, K=96): KS d=0.5901 p=0.0010 | median 
   стратум remainder (du_unit): n=2 odd_frac=0.617406749689225 tail_frac=0.4677736705880616 A_neg=-1.042819944625691
 period-structure (du_unit L23, тест на K=96): loopy 30/41 (K-full 30/41, K={'96': 41}) | clean 0/51 (K-full 0/53, K={'32': 2, '96': 51})
   detected loopy p=[7, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 24, 27, 31, 32]
-  detection-rate test (exact two-sided, K=96): p=2.181e-07
-  aggregate (detected loopy, K=96): mean_conc=5.91 median=6.06 min=2.43 frac>1=1.000 top2_share=0.632 anti_frac=0.029 per-doc p≤0.05: 30/30
+  detection-rate test (Fisher as-or-less-likely, K=96): p=2.120e-15 (binomial sensitivity: 2.181e-07)
+  aggregate (detected loopy, K=96, count-aware базис r3.3): median=5.41 min=2.38 frac>1=1.000 (1/p legacy: median 6.06) anti_ratio<1: 28/30 (even n=12, odd n=18) per-doc p≤0.05: 30/30
+detector-null loopy (B_null=200): shuffle_full mean/max 0.023/0.144 | keep_short 0.028/0.219 | kill_peak fires=0.067
+detector-null clean (B_null=200): shuffle_full mean/max 0.005/0.005 | keep_short 0.005/0.005 | kill_peak fires=n/a
+source-sensitivity gen_only: n=28/36 KS d=0.4603 p=0.0030 | median d=-0.0787 p=0.0140 (med 0.5238/0.6024)
+source-sensitivity gen_plus_own: n=41/37 KS d=0.4529 p=0.0010 | median d=-0.0819 p=0.0400 (med 0.5214/0.6033)
+source-sensitivity gen_plus_corpus: n=28/50 KS d=0.4914 p=0.0010 | median d=-0.0883 p=0.0020 (med 0.5238/0.6121)
+source-sensitivity all_K96: n=41/51 KS d=0.4825 p=0.0010 | median d=-0.0903 p=0.0010 (med 0.5214/0.6117)
 copy-rate квантили (резы q25/q75; n_low=20 n_mid=41 n_high=19, q25=0.215 q75=0.937)
-  домен chat: n=16 nondeg=11 claim=нет (n<12)
-  домен code: n=16 nondeg=8 claim=нет (n<12)
-  домен corpus: n=16 nondeg=16 claim=да
-  домен math: n=16 nondeg=16 claim=да
-  домен own: n=16 nondeg=1 claim=нет (n<12)
-  домен wiki: n=16 nondeg=1 claim=нет (n<12)
-  пул (не-claim домены): n=21
+  домен chat: n=16 nondeg=11 with_tokens=11 claim=нет (n<12)
+  домен code: n=16 nondeg=8 with_tokens=8 claim=нет (n<12)
+  домен corpus: n=16 nondeg=16 with_tokens=0 claim=нет (источник не токен-верифицирован — descriptive only)
+  домен math: n=16 nondeg=16 with_tokens=16 claim=да
+  домен own: n=16 nondeg=1 with_tokens=1 claim=нет (n<12)
+  домен wiki: n=16 nondeg=1 with_tokens=1 claim=нет (n<12)
+  пул (не-claim домены): n=37
   source-strata gen: L n=28 C n=36 claim=да
   source-strata own: L n=13 C n=1 claim=нет (n<12, no claim)
   source-strata corpus: L n=0 C n=14 claim=нет (n<12, no claim)
   source-strata domain_chat: L n=5 C n=11 claim=нет (n<12, no claim)
   source-strata domain_code: L n=8 C n=8 claim=нет (n<12, no claim)
 layer-type (gen, full vs linear): n=64 d_obs=-0.01579541664497321 p=0.000999000999000999
-store: /home/survivor/work/prism/results/AT0/store/bba6fde3a7e807d4.json (sha bba6fde3a7e807d4)
+store: /home/survivor/work/prism/results/AT0/store/98933432b88ae6e9.json (sha 98933432b88ae6e9)
 written: /home/survivor/work/prism/results/AT0/AT0_3_AREA.json, /home/survivor/work/prism/results/AT0/AT0_3_manifest.json, /home/survivor/work/prism/results/AT0/AT0_3_run.log
 AT0_3 gates: ALL PASS
