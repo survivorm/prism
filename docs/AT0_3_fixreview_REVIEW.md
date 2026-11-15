@@ -1,149 +1,184 @@
-## Ревью `AT0_3_area.py` (r3.1)
+Принял r3.3. Сверил код и артефакты с открытым списком из прошлого ревью.
 
-### Что правильно улучшено (без оговорок)
-
-**1. Тавтологичный `G0a_tpu_hn_field` → реальный `G0a_tpu_curves`.** Главная правка. Проверка `dip_L23(recomputed from U, hn) == meta_curves[23].dip` — реальный тест согласованности `load_source` с продюсером; `U*hn == h` устранён. Провенанс покрывается SHA-сверкой `match_AT0_1`. Документация честная: `r3_note` фиксирует, что прошлая проверка была тавтологией.
-
-**2. `location_contrast` на K=96 pool.** `_fracs96(L96m, key)` фильтрует к тем же докам, что в primary KS. Full-pool + K-composition — secondary, явно. `ratio` guarded (`if k1l96 and k1l96 > 1e-6`).
-
-**3. `H2` gate: `median_concentration > 1 ∧ frac_conc_above_1 ≥ 0.8`** вместо `min_concentration > 1`. Robust к одному выбросу; gate задокументирован в `verdict.H2_period_structure.gate`. `min` остался описательно.
-
-**4. `prereg.sign_correction` / `prediction` помечены как исторические.** Явно `[ИСТОРИЧЕСКАЯ справка о правке v1.0→v1.1, НЕ актуальная гипотеза]` / `[Исходное предсказание v1.1; … это предсказание опровергнуто …]`. Актуальные тесты — в `test`/`decision`.
-
-**5. `perm_two_sample_stat` docstring.** Теперь: «two-sided для signed (median_diff, mean); right-tail для unsigned (KS)». Явно указывает, что KS — не two-sided.
-
-**6. `binom_pmf` convention.** «as-or-less-likely», не scipy binomtest (там doubled-min). Задокументировано в `pdet["test"]["note"]`.
-
-**7. `stratum_summary` — `K_composition`.** Теперь видно K=32/96 состав стратумов, что делает comparison secondary-vs-primary прозрачным.
+**Итог: практически весь список закрыт.** Ниже — что именно, чем подтверждено, и что осталось (в основном не баги, а невидимые в контексте поля).
 
 ---
 
-### Критический баг: `h1_short` ломает `kill` case
+## 1. Закрыто — с доказательствами
 
-```python
-h1_v = pof.get("verdict", "n/a")
-h1_short = h1_v.split(":")[0].strip()
-```
-
-Для `kill`-verdict строка начинается с `"kill по пре-регу: распределения неразличимы..."`. `split(":")[0].strip()` даёт `"kill по пре-регу"`, **не** `"kill"`. Затем:
-
-```python
-h1_clauses.get(h1_short, 'n/a')
-```
-
-`"kill по пре-регу"` не в словаре (`keys = {"refuted", "kill", "confirmed"}`) → **`'n/a'`**. Так что `summary` содержит `… — n/a. G10: …` вместо осмысленного клауза. И `H1_period2.status = "kill по пре-регу"` — нестандартный словарь (сравните с `H2_period_structure.status = "confirmed"|"not_confirmed"`).
-
-Для `confirmed`/`refuted` split работает (нет пробелов в префиксе). Только `kill` ломается — тот самый, который актуален в текущих данных (KS p ~0.965).
-
-**Фикс**:
-```python
-if h1_v.startswith("confirmed"):   h1_short = "confirmed"
-elif h1_v.startswith("refuted"):   h1_short = "refuted"
-elif h1_v.startswith("kill"):      h1_short = "kill"
-else:                              h1_short = "other"
-```
-
-Или `h1_short = h1_v.split(":")[0].split()[0].lower()`.
-
----
-
-### Существенное: `summary` — TypeError при `None` значениях
-
-```python
-f"... clean — на лаге 1 (k1 {k1c96:.3f} vs loopy {k1l96:.3f}{ratio_txt}) ..."
-```
-
-Если `k1l96 = None` (нет loopy с K=96 и отриц. площадью), `f"{None:.3f}"` — **TypeError**. Сейчас в данных есть 39 K=96 loopy с `k1_frac > 0`, так что не падает. Но `_fracs96` возвращает `None` для пустого списка — latent crash.
-
-**Фикс**:
-```python
-def _fmt(x): return f"{x:.3f}" if x is not None else "n/a"
-f"... k1 {_fmt(k1c96)} vs loopy {_fmt(k1l96)}{ratio_txt}"
-```
-
----
-
-### Существенное: `concentration_test` — один и тот же seed для всех доков
-
-```python
-def concentration_test(rho, p, K, b=B_PERM, seed=SEED_PERM):
-    ...
-    rng = np.random.default_rng(seed)
-```
-
-Все per-doc permutation-тесты используют `seed=117`. PRNG state идентичен на входе, дивергенция после первого `rng.choice(K, n_neg, ...)` — но для документов с одинаковыми K и `n_neg` первый choice может дать **коррелированные** результаты. 39 loopy docs с одинаковым seed → потенциальная cross-doc корреляция нулевых распределений. Это нарушает «per-doc независимость» null'а. В других местах серия использует `SEED_BASE + doc_idx * SEED_STRIDE`; здесь конвенция нарушена.
-
-**Фикс**: добавить `doc_seed` параметр:
-```python
-def concentration_test(rho, p, K, b=B_PERM, seed=SEED_PERM, doc_seed=0):
-    rng = np.random.default_rng(seed + doc_seed)
-```
-И в `per_doc`: `concentration_test(..., doc_seed=hash(nm) % 99991)` или через `doc_idx` (строкой идёт первая шкала). Согласуется с `null_ar_batch`/`run_cell` (там `SEED_BASE + doc_idx*SEED_STRIDE + s`).
-
-Влияние: p-values per-doc могут быть слегка correlated. При `B=1000` и `n_neg ~ 20` первый choice даёт `C(K, n_neg)` вариантов — после первого шага PRNG diverges. Скорее всего minor, но это **методологическая ошибка** — null должен быть независим.
-
----
-
-### Среднее: `pagg.get('median_concentration', float('nan'))` — «nan» в тексте
-
-```python
-"finding": (f"... (dom_residues; медиана концентрации "
-            f"{pagg.get('median_concentration', float('nan')):.2f}× базы) — ...")
-```
-
-Если `pagg` пуст (нет detected loopy K=96), `.get()` возвращает `nan`, форматирование даёт `"nan×"` в finding. Cosmetic, но сбивает. **Фикс**: `f"{pagg['median_concentration']:.2f}" if pagg.get('median_concentration') is not None else "n/a"`.
-
----
-
-### Среднее: `H2_period_structure.status = "not_confirmed"` для случая «нет теста»
-
-```python
-h2_ok = bool(pdet.get("test", {}).get("p_two_sided_exact", 1) <= ALPHA)
-if h2_ok and pagg:
-    h2_ok = (pagg.get("median_concentration", 0) > 1
-             and pagg.get("frac_conc_above_1", 0) >= 0.8)
-```
-
-Если `pdet["test"]` отсутствует (не сработал `if 0 < d < n`, например при `d = n` — все detected), `.get("p_two_sided_exact", 1)` = 1 > ALPHA → `h2_ok = False` → status `"not_confirmed"`. То есть **отсутствие теста** интерпретируется как **отрицательный результат**. Для current data `d < n` (часть clean не detected), так что не срабатывает. Но edge case.
-
-**Фикс**: различить:
-```python
-if "test" not in pdet:
-    h2_status = "not_testable (test не определено: 0<d<n не выполнено)"
-elif not h2_ok_gate:
-    h2_status = "not_confirmed"
-else:
-    h2_status = "confirmed"
-```
-
----
-
-### Мелкие
-
-**1. `binom_pmf` при underflow** (`pmf_obs = 0`): sum of 0s → `p_two = 0`, что неверно. Для n=39 не критично (не underflow), но при больших n — будет. Задокументировать.
-
-**2. `stratum_summary` — `K_composition` только для доков с negative area.** Не показывает K=32/96 для absent/no-area docs. Для текущих данных `n_noarea = 0` в обеих стратумах, но edge case невиден.
-
-**3. `binomial test` — `p_two` при `dL=0`** требует `pmf_obs = binom_pmf(0, nL, p0)` — OK, но если `nL` мало, граница точная.
-
-**4. `verdict.H2_period_structure.gate` — задокументирован, но без `note`** о том, что `min_concentration` — secondary, не gate. `pagg["min_concentration"]` в aggregate, не в gate. Читатель артефакта увидит `min=0.85` при `status=confirmed` — если не знает, что gate на `median`, будет сбит.
-
----
-
-### Сводка
-
-| # | Замечание | Критичность |
+| мой пункт | фикс | доказательство |
 |---|---|---|
-| **1** | `h1_short = h1_v.split(":")[0].strip()` — `"kill по пре-регу"` вместо `"kill"`; `h1_clauses.get` возвращает `'n/a'`; `H1_period2.status` нестандартный | **критично** — ломает `kill`-case в summary и вердикте |
-| **2** | `summary` `{k1l96:.3f}` — TypeError при `None` | средняя — latent crash |
-| **3** | `concentration_test` — same seed для всех docs | средняя — методологическая |
-| **4** | `H2_period_structure.status = "not_confirmed"` при `test` absent | средняя — edge case |
-| **5** | `pagg.get(..., nan)` → `"nan×"` в finding | косметика |
-| **6** | `H2_period_structure.gate` — без note о min-secondary | косметика |
-| **7** | `binom_pmf` underflow при больших n | задокументировать |
+| **E1** concentration baseline `1/p` | count-aware | `counts = np.bincount(np.arange(1,K+1) % p, minlength=p); baseline = counts/K; concentration = prof[r1]/baseline[r1]` + `conc_1overp_legacy` для diff |
+| **M2** top2 baseline | сумма двух баз | `top2_baseline = baseline[r1] + baseline[r2]` |
+| **E2** binomial → Fisher | Fisher primary | `hyp_pmf` через `comb(d,i)*comb(n-d,nL-i)/comb(n,nL)`, `p_fisher_as_or_less`; биномиальный → `p_two_sided_exact_binomial_sensitivity` |
+| **E2** selection-зависимость | null-калибровка | `detector_null_calibration`: `b_null=200`, `p_false_shuffle_full`, `p_false_keep_short`, + kill-peak интервенция |
+| **E3** anti_frac parity | своя база + ratio | `n_anti = 1 if p%2==0 else 2`, `anti_baseline`, `anti_ratio`, parity split, p=2 исключён |
+| **N2** p=2 вырожден | guard | `p2_degenerate=True`, `top2_res_share=None`, «не цитировать» |
+| **O3** median_diff чистота | тело + self-check | докстринг: «замыкания на внешние переменные нет; self-check: stat_obs == median_L − median_C» |
+| **M1** KS copy-paste защита | диагностика | `ks_diagnostic` → `max_gap_x`, `max_gap_side`, `n_crossings`, `n_pooled_unique` |
+| **E5** source sensitivity | добавлена | `source_sensitivity`: gen_only / gen_plus_own / gen_plus_corpus / all_K96, те же B/seed |
+| **E4** corpus claim gate | разделены флаги | `n_nondeg_with_tokens`, `provenance_limited`, `descriptive_only`, `domain_claim_eligible` |
+| **M3** copy-rate конфаунд | note | «конфаундирован с L/C … описательно, не каузальный вывод» |
+| **M4** layer-type обобщение | note | «первичный — L23 full_attention; cross-layer pooling требует контроля layer-type» |
+| **N3** G2 без гейта | hard gate | `G2 FAIL: сетка неполная … — стоп` + `raise SystemExit(1)` |
+| telescope scalar → vector | vector residual | `norm(du.sum(axis=0) - (U[-1]-U[0]))` |
 
-**Главное**: #1 — реальная **регрессия** r3.1: `kill`-case (главный в текущих данных) сломан. `summary` содержит `— n/a` вместо осмысленного клауза. Починка — 4 строки.
+---
 
-**После фикса #1**: скрипт **готов** — все критические замечания прошлых ревью адресованы, тавтология удалена, пулы согласованы, gate задокументирован. #2–#4 — желательные, но не блокеры для текущих данных (не срабатывают).
+## 2. Числа сошлись с моими предсказаниями
 
-**Итоговая рекомендация**: исправить #1 (`startswith`-based dispatch), #2 (`_fmt` для None), #3 (`doc_seed` в `concentration_test`). Перезапуск не требуется — можно поправить `verdict.summary` и `H1_period2.status` в claim-артефакте постфактум (числа верные, сломана только текстовая диспетчеризация).
+Ручной счёт (инструмент в этом turn недоступен):
+
+**Concentration correction** — я предсказывал две недели назад, теперь в артефакте:
+
+| doc | p | мой прогноз | артефакт `concentration` | legacy |
+|---|---:|---:|---:|---:|
+| code_13 | 7 | 2.380 | **2.3798742** | 2.4294550 |
+| wiki_6 | 31 | 7.145 | **7.1452786** | 9.2293182 |
+| own_w8 | 14 | 4.267 | **4.2670838** | 4.3559814 |
+| code_14 | 9 | 3.716 | **3.7161355** | 3.8322647 |
+
+Базы: `14/96=0.145833`, `4/96=0.041667`, `7/96=0.072917`, `11/96=0.114583` — все совпадают с `baseline_max` в артефакте.
+
+**Контроль на p | K:** code_1 p24 → `concentration == conc_1overp_legacy == 6.4532744`, база `4/96 = 1/24`. Правильно: при делимости поправка нулевая. То же chat_15 p8 (`0.125`), code_6 p32 (`0.03125`), wiki_7 p16 (`0.0625`).
+
+**anti_ratio own_w8:** `0.07483889895 / (1/14) = 1.0477446` — артефакт `1.047744585351613`. Совпадает с моим ручным счётом 1.048.
+
+**p-полы:**
+- `1/1001 = 0.000999001` — primary KS, concentration
+- `2/1001 = 0.001998002` — h_raw median
+- `1/201 = 0.004975124` — detector calibration, clean все на полу
+- chat_0: `0.024875622 × 201 = 5` → **4/200**; `0.039800995 × 201 = 8` → **7/200**
+
+**KS stat на решётке:** `0.482544237207078 × 2091 = 1009`, где `2091 = 41×51`. То есть stat = 1009/2091 — легитимная_grid-величина, одинаковая у du_unit и h_raw возможна.
+
+---
+
+## 3._detector null calibration — это существенный апгрейд
+
+Это не косметика. H2 прошёл путь:
+
+```
+r3.2: «30/41 vs 0/51, p=2.18e-7» — selection-on-the-statistic не калиброван
+r3.3: + ложные детекции на двух нулях + kill-peak интервенция
+```
+
+Что видно:
+
+- **clean: все на полу `1/201`** ⇒ 0 ложных детекций из 200 на каждом clean-доке;
+- **chat_0 (loopy): 4/200 под full-shuffle, 7/200 под keep_short** ⇒ 2–3.5%;
+- `kill_peak_fires` / `kill_peak_same_p` — детерминированная интервенция: обнулить ρ(p) и ρ(2p) до медианы, перезапустить детектор.
+
+Последнее — правильный ход: это проверка, что пик **несёт** детекцию, а не что детектор ловит что-то ещё.
+
+Оговорка в артефакте честная: для p≤8 `keep_short` легитимно сохраняет период, поэтому высокий `p_false_keep_short` там — не провал. Надо читать per-doc рядом с `p_obs`.
+
+**Следствие:** формулировка «АССОЦИАЦИЯ, не независимая/механистическая детекция» теперь подкреплена измеренной специфичностью, а не только оговоркой.
+
+---
+
+## 4. Новое — что видно только сейчас
+
+### N1. Разделение max ρ эмпирическое и широкое — это усиливает H2
+
+Из `max_rho_k2_k96`:
+
+| стратум | median | q90 | max |
+|---|---:|---:|---:|
+| clean | 0.0640 | 0.3170 | **0.7409** |
+| remainder | 0.1006 | 0.1283 | 0.1352 |
+| loopy | — | — | **0.9786** (code_13) |
+
+Порог детектора `thr=0.9`. **Clean max = 0.741 — на 0.16 ниже порога.** Это не тождество (стратификатор по `v_tangent mcos`, детектор по `du_unit ρ` — разные объекты), а измеренный зазор.
+
+Значит специфичность не хрупкая: порог можно опустить до ~0.75, и clean всё равно останется 0/51.
+
+### N2. Detection rate порогово-чувствителен на границе
+
+Loopy-доки около порога:
+
+```
+code_3   ρmax = 0.897612  → НЕ детектирован (недобор 0.0024 до 0.9)
+code_10  ρmax = 0.821929  → не детектирован
+chat_9   ρmax = 0.797365  → не детектирован
+```
+
+`code_3` промахивается на **0.0024**. То есть `30/41` — не устойчивая величина, а функция порога.
+
+Грубая оценка (ручной счёт, без учёта гармоники): при `thr=0.89` → 31/41; при `0.82` → 32/41; при `0.79` → 33/41; clean остаётся 0/51 вплоть до `thr≈0.74`.
+
+**Это возможность, не только риск:** sweep `thr ∈ {0.85, 0.88, 0.90, 0.92}` (с coupled `hthr = thr²`, сейчас `0.81 = 0.9²` хардкод) показал бы, что ассоциация усиливается при снижении порога, не задевая clean. Сейчас одна точка порога — и она рядом с границей.
+
+### N3. anti_ratio сильно скошен — mean без median misleading
+
+```
+all:  mean_anti_ratio = 0.2425,  median_anti_ratio = 0.0324
+even: mean 0.2806, n_below 10/12
+odd:  mean 0.2172, n_below 18/18
+```
+
+Mean/median расходятся в 7.5× ⇒ большинство доков ≈0, малое число ~0.4–1.0. Артефакт отчитывает оба — правильно. Но в тексте надо вести **median + n_below**, не mean.
+
+### N4. Асимметрия по чётности — содержательная, не артефакт
+
+`odd: 18/18 ниже базы`, `even: 10/12`. Оба исключения — чётные.
+
+Структурно объяснимо: при чётном p анти-фаза — **один** класс `p/2`, точно противоположный; при нечётном — два соседних `{floor, ceil}`, размазанные. Так что «анти-фаза иногда носитель» возможно только при чётном p. Это стоит написать как наблюдение, а не прятать в aggregate.
+
+### N5. Смещение к нулю работало против найденного результата
+
+`mshare` выброшен (`fl, mcos, _ = degen(...)`), corpus без токенов ⇒ часть вырожденных могла попасть в clean. Артефакт это объявляет: «смещение к «чистым», т.е. в пользу нулевой гипотезы H1».
+
+Но H1 **refuted**, не kill. Значит направление L<C найдено **вопреки** смещению к нулю. Это делает refutation консервативной — стоит сказать явно, это аргумент в пользу результата.
+
+---
+
+## 5. Осталось — в основном невидимое в контексте
+
+| # | что | почему нужно |
+|---|---|---|
+| **V1** | `ks_diagnostic` output в артефакте | функция есть, вывода не вижу. Без тройки `(stat, max_gap_x, n_crossings)` для du_unit и h_raw пункт M1 закрыт в коде, но не в данных — одинаковый KS stat 0.482544 у двух объектов остаётся необъяснённым |
+| **V2** | `source_sensitivity.gen_only` числа | функция есть, note есть, чисел не вижу. Primary остаётся `all_K96`; без gen_only KS нельзя сказать, снят ли конфаунд эмпирически |
+| **V3** | `domain.corpus.domain_claim_eligible` значение | структура флагов есть; для code вижу `false`. Для corpus надо убедиться, что `false` + `provenance_limited: true` |
+| **V4** | `meta.script_sha256` | привязка код↔данные. В видимых фрагментах есть claim/store sha, script sha не вижу |
+
+Мелкое:
+
+- ** floors несовместны**: `neg_fractions` использует `a_neg >= -1e-9`, `residue_profile` — `aneg <= 0`. При `aneg ~ 1e-18` второй посчитает доли из шума. Не сработало (`n_no_negative_area = 0` везде), но стоит унифицировать.
+- **два p-пола в одном артефакте**: `B_PERM=1000` → 0.000999; `b_null=200` → 0.004975. Для concentration есть `per_doc_p_floor_note`, для calibration — нет. Добавить, чтобы p не сравнивали между блоками.
+- **`LAYER_TYPE` fallback**: модульный dict `{11,23} → full` остаётся, хотя `load_config_layer_types()` его перекрывает. Если загрузка config упадёт молча — вернётся догадка. Сделать fallback fail-loud.
+
+---
+
+## 6. Что теперь можно публиковать
+
+**H1:**
+> Пре-рег «loopy концентрируют отрицательную площадь на нечётных k» опровергнут по направлению: KS p=0.000999, медианы L=0.5214 < C=0.6117. Kill не установлен — равенство средних (p=0.876) есть артефакт бимодальности loopy. Estimand структурно слеп к p≥3, поэтому это directional refutation, не mechanistic.
+
+**H2:**
+> Loopy-доки несут периодическую лаговую структуру: 30/41 K=96-доков детектированы, clean 0/51; Fisher exact; ложные детекции на clean-нулях 0/200, на loopy-нулях 2–3.5%. Отрицательная площадь организована по классам остатков mod p с count-aware концентрацией median ≈5× (min 2.38), 30/30 выше перестановочного нуля. Ассоциация, не независимая детекция: стратификатор и детектор делят лагово-корреляционный путь.
+
+**Location:**
+> k1_frac clean/loopy ≈4.5×, tail_frac loopy 0.892 vs clean 0.543, CI не пересекаются. Пре-рег «clean в хвосте» инвертирован.
+
+**Анти-фаза:**
+> Не главный носитель: 28/30 доков ниже собственной базы; median anti_ratio 0.032. Оба исключения — чётные p, что структурно ожидаемо.
+
+**Что пока нельзя:**
+- concentration legacy-числа (только как diff-колонка);
+- binomial p как primary;
+- «механистический носитель» / независимая детекция;
+- обобщение на все слои (L23 full_attention, слой-эффект значим);
+- корпусные доменные утверждения до V3.
+
+---
+
+## 7. Вердикт
+
+**r3.3: ACCEPT по существу, с четырьмя видимостными пунктами (V1–V4) и тремя мелкими.**
+
+Из моего открытого списка закрыто всё содержательное: count-aware база, Fisher, null-калибровка детектора, parity anti_ratio, p=2 guard, median purity + self-check, KS-диагностика, source sensitivity, claim-флаги, G2-гейт, vector telescope.
+
+`detector_null_calibration` + kill-peak — это больше, чем я просил: я требовал калибровку, вы добавили ещё и интервенцию на пик. Это переводит H2 из «ассоциация с оговоркой» в «ассоциация с измеренной специфичностью».
+
+Пришлите V1–V4 (или подтвердите, что они в полном артефакте) — и AT0_3 можно закрывать. Отдельно рекомендую threshold sweep из N2: он дешёвый, на диске, и может усилить H2 с 30/41 до 33/41 при clean 0/51.
