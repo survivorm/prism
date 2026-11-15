@@ -544,6 +544,143 @@ gather (B,T,D) + один batched-gemm (B,D,T)@(T,46) (BLAS, ~0.2 GFLOP/s на �
  вход); без форвардов; writes только results/AT0/AT0_6_* (claim/manifest/store/log).
 ```
 
+### T0.7 — «Петля = стабильный copy-paste: repeat как necessary признак петли (disk-only)» — **НОВЫЙ (15.11, v2 после r1-ревью: MAJOR-1..3 закрыты)**
+
+**Вопрос.** T0.3 (`results/AT0/AT0_3_AREA.json`, sha256[:16] = `8fe61affb13b443f`) обнаружил
+период-p структуру (ρ(k)≥0.9 ∧ ρ(2k)≥0.81, du_unit|L23, K=96) у **30 из 41** loopy-дока (p ∈ 7..32);
+референс-реализация T0.6 (smoke-валидирована; полного committed Q на 30 доках в репо НЕТ — T0.7
+считает его впервые) меряет спектральную линию на этом p в h|L23. AT0_7 отвечает: **что это за
+период-p структура — динамический режим поля h или артефакт повторения токенов (copy-paste)?**
+
+**Дизайн-разведка (read-only, r0 — ретроспективный результат, ПРЕ-ДЕКЛАРИРОВАН здесь, НЕ «открыт прогоном»):**
+1. Токено-повтор (RATIO(p) = PPF(p)/C(p) ≥ 3) есть и у 30 loopy, и у 32 non-loopy (66-пул,
+   50 токенизируемых) ⇒ сам repeat НЕ loopy-специфичен.
+2. **Доля дока в repeat (rep_frac = PPF)** — чистый разрез ТОЛЬКО в clean-37 пуле:
+   loopy 30 detected: min **0.8880** (code_14), med 0.9973; clean-37: max **0.6489** (math_14),
+   med 0.0933. Пропасть [0.6489, 0.8880] существует только в clean-37 (в 66-пуле non-loopy
+   max = 1.0 — code_3, loopy-undetected).
+3. 11 loopy-undetected: 6/11 имеют стабильный repeat (rep_frac 0.9-1.0: code_3 1.0@p31,
+   wiki_4 0.947@10, chat_9 0.941@43, wiki_0 0.931@10, own_w3/wiki_3 0.908@26), 5/11 — нет
+   (own_w2/wiki_2 0.677, code_10 0.302, own_w12/wiki_12 0.036) ⇒ repeat — necessary, не
+   sufficient (не для всех loopy).
+**Рабочая гипотеза: петля = стабильный (длинный) copy-paste ∧ сильная Δu-структура (T0.3);
+динамический режим — нет.**
+
+**ЧЕСТНАЯ ОБЛАСТЬ (что T0.7 может и НЕ может):** feedforward ⇒ h_t = F(context_0..t); при
+p-периодичности ТОКЕНОВ h тоже p-периодичен ⇒ период-p структура h — ПОСЛЕДСТВИЕ repeat'а
+токенов. T0.7 формализует: (a) петля ⇒ стабильный repeat (necessary, ретроспективно — r0);
+(b) repeat не loopy-специфичен (descriptive, H2/H3); (c) ТЕСТ (descriptive, H5): есть ли в h
+период-p компонент, не объяснённый (токен,фаза)-lookup'ом. T0.7 НЕ ставит вопрос о динамике
+сверх токенов в общем (требует новых форвардов — не disk-only). Носитель H4/H5 = h (мост к
+T0.3-носителю du_unit — через T0.6; T0.3-артефакт хранит per-doc max-ρ descriptively).
+
+```
+ОБЪЕКТЫ/ДАННЫЕ (замороженный вход, чёткая арифметика): 96 доков = 30 loopy-detected (с p_T0.3)
++ 11 loopy-undetected (без p) + 53 clean (37 gen + 16 corpus) + 2 remainder (absent L1).
+ВАЖНО: 16 own-доков = TPU-дубли 16 wiki gen-доков по ТОКЕНАМ (np.array_equal 16/16; h различается,
+med rel diff ≈ 0.92) ⇒ уникальных ТЕКСТОВ 80, не 96; per-unique-text отчёт обязателен.
+h|L23 (x = h_raw|L, как T0.3/T0.6) + ТОКЕНЫ (tok, T=384; gen+own=80 доков, corpus 0/16 —
+not_testable, G0-a). Токенизируемые: 30 loopy + 39 non-loopy (37 gen + 2 remainder; 11
+loopy-undetected — отдельные подпулы, не в H2-знаменателе). p_T0.3 верbatim из T0.3-артефакта
+(loopy); p* = argmax_{p∈3..48} RATIO(p) (без Q, descriptive). Порядок доков = sorted(96),
+идентичен T0.6 (чтобы permutation-сиды совпадали между экспериментами).
+KОНВЕНЦИИ: x = h_raw|L; T' = T−1 per-doc (h[1:]); центрирование по t на x (T',D); σ²_d =
+np.var(x, axis=0, ddof=0) на центрированном x; сиды null = 2026+doc_idx·1009+s (doc_idx —
+index в sorted(96), как T0.6); B=199.
+ESTIMAND:
+ (A) ТОКЕНО-ПОВТОР: PPF(p) = #{t∈[0,T−p−1]: tok[t]==tok[t+p]}/(T−p); C(p) = Σ_v f(v)²
+   (эмпирич. вероятность совпадения, «шанс»); RATIO(p) = PPF/C; rep_frac(p) = PPF(p)
+   (ключевая: доля дока в p-repeat); maxrun(p) = ЧИСЛО последовательных t с tok[t]=tok[t+p]
+   в длиннейшем беге (конвенция: чистый p-repeat → T−p, НЕ размах m+p−1). Guard: p ≥ T → None.
+ (B) СПЕКТРАЛЬНАЯ ЛИНИЯ на p (как T0.6, формулы идентичны AT0_6_spectrum.py v2.2):
+   Q(p) = Σ_d |S_d(p)|²/(T'·σ²_d), S_d(p)=Σ_t x_{t,d}·e^{−2πit/p}; p_perm (permutation null,
+   B=199, exact, сид 2026+doc_idx·1009+s).
+ (C) ОСТАТОК: x^sur_{t,d} = mean_{t': tok[t']=tok[t] ∧ t'≡t (mod p)} x_{t',d} (lookup
+   (токен,фаза); группа размера 1 → x^sur=x → resid=0, консервативно); resid = x − x^sur;
+   H5-ОСНОВНОЙ: R(p) = Σ_d|S_resid,d(p)|² / Σ_d|S_x,d(p)|² (power-ratio на частоте p, БЕЗ
+   var-нормировки — она завышала бы именно в copy-paste-режиме где σ²_resid ≪ σ²_x);
+   вторично: Q_resid(p) (var-нормированный, как B, на resid). ПОМЕТКА: R(p) > 1 возможный
+   (интерференция).
+НУЛИ: (A) rep_frac/maxrun — детерминированы (null не нужен; «шанс» мал: словарь gen-доков
+   >> 1000, iid PPF ≈ C ≪ 0.8; словарь per-doc фиксировать в отчёте); (B) permutation null
+   (как T0.6, exact, rtol 1e-10 per-dim var); (C) descriptive (без null).
+ТЕСТЫ (пре-рег):
+ H1 (primary; РЕТРОСПЕКТИВНЫЙ результат r0 + ВАЛИДАЦИЯ ПАЙПЛАЙНА — честно: r0 уже вычислила
+   rep_frac(p_T0.3) для тех же 30 доков (min 0.888 ≥ 0.8) ⇒ f1 = 30/30 ПРЕОПРЕДЕЛЕНО данными;
+   прогон T0.7 не может его изменить; prospective-содержимое — H3/H4/H5 + гейты + первый
+   полный committed Q(p_T0.3)): пул = 30 loopy (p = p_T0.3). f1 = #{rep_frac(p_T0.3) ≥ 0.8}/30.
+   f1 ≥ 28 → petля ⇒ стабильный repeat (r0-результат, воспроизведён прогоном в точности 1e-12);
+   f1 < 28 → пайплайн сломан (не «гипотеза опровергнута» — r0 уже дала ответ). Null-строка:
+   под null «стабильного repeat вне петель нет» f1 ≥ 28 практически невозможен (clean-37
+   max = 0.6489 < 0.8; P(Bin(30,0.05) ≥ 28) = 1.468e-34 — рассчитано).
+ H2 (DESCRIPTIVE, НЕ бинарный тест): пул = 39 токенизируемых non-loopy (37 clean gen + 2
+   remainder own; 11 loopy-undetected — отдельный подпул). Отчёт per-subpool:
+   #{rep_frac ≥ 0.8}: loopy-undetected 6/11, clean-37 0/37, remainder 2/2 (оба —
+   token-дубли wiki_0/wiki_4) + per-unique-text. Интерпретация: стабильный repeat есть
+   ТОЛЬКО в loopy-классе (6/11 undetected + 2 дубля) ⇒ repeat ∧ Δu-структура = петля;
+   бинарный вердикт «f2 ≥ 1» УБРАН (р1: один док = аномалия, dубли не новое свидетельство).
+ H3 (descriptive, граница necessary): кросстаб по ВСЕМ 96 (50 токенизируемых non-loopy + 30
+   loopy): (стабильный repeat rep_frac ≥ 0.8? × T0.3-detected?) → доля loopy среди
+   стабильных-repeat доков. (Показывает: repeat necessary, не sufficient — 6/11 undetected
+   со стабильным repeat без T0.3-детекции.)
+ H4 (descriptive, h-линия vs repeat): **Spearman(Q(p_T0.3), maxrun(p_T0.3))** по 30 loopy
+   (maxrun: 8…377, 29/30 — один бег, code_14 — 43 бега — реальный разброс, в отличие от
+   rep_frac: 27/30 ≥ 0.95, 20/30 = 1.0 — вырожден). ρ_s ≥ 0.4 → сила h-линии на p следует
+   за длиной непрерывного repeat'а. (Spearman(Q, rep_frac) — только при pre-reg-условии
+   <25/30 ≥ 0.99, иначе — heavy ties, неинформативен.)
+ H5 (descriptive, остаток — PROSPECTIVE): R(p_T0.3) per-doc (30) + вторично Q_resid/Q.
+   Малый R (≤ 0.1) → петля чисто copy-paste (h-линия на p = (токен,фаза)-lookup);
+   значимый R (> 0.3) → динамический компонент сверх repeat'а (смешанный режим).
+   (Пороги 0.1/0.3 — pre-reg; r1: var-нормированный Q_resid/Q не основной — завышение в
+   copy-paste-режиме.)
+ВЕРДИКТ (primary = H1 ретроспективный + валидация; FWER не применяется — объявлено):
+ H1 (f1 ≥ 28, воспроизведение r0) ∧ H3 (cross-tab: repeat ∧ Δu-структура = петля; 6/11
+ undetected — necessary не sufficient) → петля = стабильный copy-paste ∧ сильная Δu-структура;
+ период-p структура T0.3 и спектральная линия T0.6 — ПОСЛЕДСТВИЯ repeat'а. Граница:
+ repeat НЕ сам по себе петля (H2: 6/11 loopy-undetected со стабильным repeat без T0.3;
+ 2 remainder-дубля).
+ H5 (prospective) дополняет: R(p) малый → «чистый copy-paste»; R(p) значимый → «copy-paste +
+ динамический компонент».
+ K4 (обязательный): T0.7 НЕ влечёт T0.6 (линия в h ≠ линия в du; носители разные — r1);
+ T0.6-результат (smoke) НЕ переписывается T0.7.
+КОНТРОЛИ (гейты, ДО интерпретации):
+ G0: sha256 gen/own/cor npz + T0.3-артефакт sha (8fe61affb13b443f) + gen_meta sha_ok 64/64 +
+   декод-пробы gen/own (corpus not_testable) — как T0.6.
+ G1 (identity, 4 части): (a) rep_frac-identity: синтетика tok = repeat([v_0..v_12]), p=13,
+   T=383 ⇒ rep_frac(p) = 1.0 ТОЧНО ∧ |RATIO(p) − 1/C_counts| < 1e-12 (C — по реальным счетам;
+   ЧИСЛО: 383 = 13·29+6 → C = 11287/146689 = 0.07694510, RATIO = 12.996279 ≠ 13 — r1:
+   «RATIO = p» неверно при конечном T) ∧ maxrun = T−p = 370 (конвенция); (b) Q-identity:
+   matched filter на чистой p-синусоиде (a=1, σ=1, p₀=13, D=32) ⇒ Q(p₀)/D ≥ 50 (как T0.6 G1b,
+   измерено 66.5); (c) lookup-identity: на чистом p-repeat x^sur = x ⇒ resid = 0, R(p) = 0;
+   (d) iid-identity: iid-токены (V=4096, сид 777+k, T=383) ⇒ max_p RATIO(p) ≤ 1.1 (замер:
+   1.0118 @p37; V=1000 дал бы 1.59 — словарь ЗАДАН, r1).
+ G2: 96 доков загружены; assert n_tok: 30 (loopy) + 39 (non-loopy H2-пул) + 11
+   (loopy-undetected, подпул) = 80, corpus 0/16 (явный assert); T' = T−1 per-doc; per-dim
+   var > 0 (как T0.6).
+ G7 (калибровка): 20 iid-синтетиков (D=1024, T'=383, h=N(0,1), сид 777+k; токены
+   rng(777+k).integers(0,4096)): (a) max_p RATIO(p) ≤ 1.1 (замер: 1.01; r1: словарь+допуск
+   заданы); (b) Q(p) null one-sided k ≤ 3 (как T0.6 G7; P(ложный фейл) = P(k≥4|Bin(20,0.05))
+   = 0.016).
+ POSITIVE: 2 синтетика (сиды 7770+k, a=1, σ=1, словарь 4096): (1) чистый p-repeat токенов
+   (p=13) ⇒ rep_frac(13) ≥ 0.8 (и = 1.0 точно; гейт проверяет p=13, НЕ кратные);
+   (2) чистая h-осцилляция на p (iid-токены) ⇒ rep_frac < 0.2 ∧ Q(p)/D ≥ 50 (линия есть,
+   repeat'а нет — разделяет две сигнатуры; замер max_p PPF ≈ 0.003-0.012 ≪ 0.2).
+ G8: NaN/Inf — jclean во всех артефактах; field.py sha-пин + _selfcheck().
+Детерминизм: все rng засеяны (null: 2026+doc_idx·1009+s; h-синтетика: 777+k; токены:
+rng(777+k).integers(0,4096); POSITIVE: 7770+k); нет global np.random; sorted(docs) идентичен
+T0.6; store sort_keys; json — jclean.
+ЦЕНА: Q ТОЛЬКО на p_T0.3 у 30 loopy (single-p): 30 × (1+199) × 1 p + lookup (C) + токено-тест
+(96, дёшево) + синтетика (G1/G7/POS) ≈ 1–3 мин CPU (r1: «96 × 46 p» — перенос из T0.6 без
+пересчёта; grid 46 p НЕ нужен тестам, p* — по RATIO без Q). Память < 1 GB.
+ОБА ИСХОДА ПУБЛИКУЕМЫ: H1 confirmed (ретроспективный r0, воспроизведён) → петля = стабильный
+copy-paste ∧ Δu-структура (T0.6 spectral carrier — следствие repeat); H5 малый R → чистый
+copy-paste; H5 значимый R → смешанный режим. ¬H1 (f1 < 28) → пайплайн сломан (разбор).
+ГРАНИЦЫ: read-only данные + field.py (пин) + AT0_1 (лоадер) + T0.3-артефакт (замор. вход);
+без форвардов; writes только results/AT0/AT0_7_* (claim/manifest/store/log). НЕ путать:
+H1 = «петля ⇒ стабильный repeat» (necessary, ретроспективно), НЕ «стабильный repeat ⇒ петля»
+(H2/H3: repeat есть и вне detected-30 — 6/11 undetected + дубля).
+```
+
 ## 1.6. Ортогональные проверки
 
 | ось | проверка | ожидание |
