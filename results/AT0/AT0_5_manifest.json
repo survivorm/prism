@@ -1,0 +1,11 @@
+{
+ "experiment": "AT0_5",
+ "claim": "results/AT0/AT0_5_GENCHECK.json",
+ "claim_sha256": "173c62adf9252f81f2fc65b54c5a521e4c328f6e6c2426e47b32823a1a866a5d",
+ "store": "results/AT0/store/4732f98c6291fc8c7c41c3d47407eb0fcce1c009420068b9f83be78341952fcb.json",
+ "store_sha256": "4732f98c6291fc8c7c41c3d47407eb0fcce1c009420068b9f83be78341952fcb",
+ "run_log": "results/AT0/AT0_5_run.log",
+ "wall_sec": 46857.5,
+ "verdict": "branch2: fitted DC+MA(1) per-doc НЕ покрывает дип+плато на всех слоях (below: [1, 5, 11, 17, 23]; empty primary-пул: []) ⇒ структура сверх DC+MA(1) есть, T3 получает работу (in-sample GOF; generative-claim не делается)",
+ "date": "2026-11-15T20:30:09.071908"
+}

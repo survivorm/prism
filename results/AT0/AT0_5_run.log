@@ -1,0 +1,25 @@
+AT0_5 start 2026-11-15T07:29:11.591821 py=3.12.9 np=2.5.3 smoke=False
+trackio: run at05_gencheck_r1 init ok
+G1′: field.py sha bcc607c561f95e3e + _selfcheck ok
+G0: gen sha f142f297ec16209d gen_sha_ok 64/64; decode_probe[chat_0]=' theme version.\nThe theme version is the'; decode_probe[math_0]='0 granola bars for each person. Ava want'; decode_probe[code_0]="'s raw materials to TAC's warehouse. TAC"; decode_probe[own_w0]=' 3-hour class on how to make delicious B'
+G0 sources: corpus токенов 0/16 → not_testable (G16, унаследовано)
+degen (T0.1 флаг): 43/96; non-degen пул: 53
+build_paths: skip 2 (k < 16 / T0.1 K=0): own_w0L1(T=384,K=96; T0.1 K=0 (fp16_l1_degraded provenance)), own_w4L1(T=384,K=96; T0.1 K=0 (fp16_l1_degraded provenance))
+paths: 478 клеток из 480 (skip 2: k < 16 / T0.1 K=0; S1 телескоп — assert в build_paths)
+real-метрики: 478 клеток
+S0 ok; S2 iid: mean=0.000593 target=0.000000 ok=True; S3 AR(1): mean=0.4965 ok=True
+S4 period-2: r_even384=0.00e+00 r_odd383=2.61e-03 (=1/N=2.61e-03); S5 circ dev=5.91e-16 (lin wrap 1.58e-01); S8 spread=2.78e-16
+S9 якорь T0.1: 478 клеток, max_dev=0.00e+00, absent_T01=[], k_mismatch=[], n_mismatch=[]
+клетки: 478 (часть 1+2)
+G8 null: 2390 (doc,L,seed); (а) median|tail_excess|/sd_emp=1.04 (req ≤ 3.0; sd_emp=0.00047, sd_null_sim med=0.00012, f_dc_null med=0.00001); (б) dip: frac=1.00 med_gap=0.00011 (б) plat_lo: frac=0.97 med_gap=0.00078 (б) plat_hi: frac=0.97 med_gap=0.00045; frac(raw DC+MA(1) cov)=0.052 (reportable) ok=True
+ВЕРДИКТ (primary-пул: non-degen ∩ K96; in-sample GOF; C1: CI95 + source): L1 0.157 (8/51) CI95[0.082,0.280] below, L5 0.216 (11/51) CI95[0.125,0.346] below, L11 0.255 (13/51) CI95[0.155,0.389] below, L17 0.176 (9/51) CI95[0.096,0.303] below, L23 0.078 (4/51) CI95[0.031,0.185] below → branch2
+пул per layer: L1: elig 51 {'gen_layers': 36, 'P2_corpus': 14, 'P1_own': 1}, src_cov {'P1_own': 0.0, 'P2_corpus': 0.21428571428571427, 'gen_layers': 0.1388888888888889}, short 2, degen 41, f_le_0 49, out_of_model 1, d_eff 336/38 (diag/full); L5: elig 51 {'gen_layers': 36, 'P2_corpus': 14, 'P1_own': 1}, src_cov {'P1_own': 0.0, 'P2_corpus': 0.35714285714285715, 'gen_layers': 0.16666666666666666}, short 2, degen 43, f_le_0 49, out_of_model 1, d_eff 277/37 (diag/full); L11: elig 51 {'gen_layers': 36, 'P2_corpus': 14, 'P1_own': 1}, src_cov {'P1_own': 0.0, 'P2_corpus': 0.5, 'gen_layers': 0.16666666666666666}, short 2, degen 43, f_le_0 50, out_of_model 0, d_eff 322/40 (diag/full); L17: elig 51 {'gen_layers': 36, 'P2_corpus': 14, 'P1_own': 1}, src_cov {'P1_own': 0.0, 'P2_corpus': 0.2857142857142857, 'gen_layers': 0.1388888888888889}, short 2, degen 43, f_le_0 50, out_of_model 0, d_eff 510/43 (diag/full); L23: elig 51 {'gen_layers': 36, 'P2_corpus': 14, 'P1_own': 1}, src_cov {'P1_own': 0.0, 'P2_corpus': 0.2857142857142857, 'gen_layers': 0.0}, short 2, degen 43, f_le_0 50, out_of_model 0, d_eff 635/25 (diag/full)
+OOS (fit k=2..48, тест plat_hi_oos; reportable): L1 0.412, L5 0.588, L11 0.608, L17 0.510, L23 0.373
+лестница: selected_dist={'r32p1': 190, 'r32p2': 34, 'r32p4': 254}
+AR(1) норма: beta_med=0.275 R2_med=0.076
+калибровка null-on-null (reportable): chat_1|L1: marg ['0.950', '0.945', '0.955'], joint 0.855, d_eff 278/14 (diag/full); chat_1|L5: marg ['0.945', '0.910', '0.940'], joint 0.805, d_eff 223/16 (diag/full); chat_1|L11: marg ['0.925', '0.930', '0.935'], joint 0.805, d_eff 265/18 (diag/full); chat_1|L17: marg ['0.965', '0.860', '0.910'], joint 0.750, d_eff 510/20 (diag/full); chat_1|L23: marg ['0.980', '0.925', '0.955'], joint 0.870, d_eff 556/17 (diag/full)
+full-cov null-калибровка (r5 C2, reportable): L1 0.627, L5 0.725, L11 0.784, L17 0.804, L23 0.725; how: {'chol': 255, 'svd': 0}
+store: /home/survivor/work/prism/results/AT0/store/4732f98c6291fc8c7c41c3d47407eb0fcce1c009420068b9f83be78341952fcb.json (sha 4732f98c6291fc8c)
+written: /home/survivor/work/prism/results/AT0/AT0_5_GENCHECK.json, /home/survivor/work/prism/results/AT0/AT0_5_manifest.json, /home/survivor/work/prism/results/AT0/AT0_5_run.log
+AT0_5 gates: ALL PASS
+RUN_RC=0
