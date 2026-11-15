@@ -1,174 +1,441 @@
-# AT0_4_EXEC_REVIEW — внешнее ревью кода + артефакта (T0.4 «Разводящая клетка 3×2»)
+Принял r4. В контексте виден в основном `AT0_4_MIX.json`; `AT0_4_manifest.json`, `AT0_4_rebuild_r4.py`, `AT0_4_EXEC_REVIEW_r4_answers.md`, `AT0_4_mix.py` пришли пустыми. Поэтому **код-фиксы и sha-цепочку я не верифицирую**, но артефакта достаточно, чтобы ревьюить вердикты и числа.
 
-Ревьюер: внешний (prism-reviewer), 2026-11-14.
-Объекты: `experiments/AT0_4_mix.py` (sha 92effe83…, mtime 05:45:30) +
-`results/AT0/AT0_4_MIX.json` (claim), `AT0_4_manifest.json`, `AT0_4_run.log`,
-`store/71d3b5d868ed00c7.json`. База: `docs/AT0_4_prereg.md` (v3/v3.1), AGENTS.md
-(челк-лист само-аудита), docs/MARKERS.md, TZ-ревью (r1 PASS_WITH_MINORS, r2 PASS).
+Короткий вердикт:
 
-**VERDICT: PASS_WITH_MINORS** (условия перед коммитом — §4; маркер в конце файла)
+- **r4 закрывает большинство прежних дыр AT0_4**: scope, P4 doc-flags, P3/P5 inference, P1 diagnostics, P2 tied-note, `gnd_filter`, относительные дельты, `endpoint_cos`, c0 trained/random.
+- **самый сильный новый результат — c0 trained/random**, а не `r`: trained path energy систематически выше при том же порядке endpoint-косинусов.
+- **оставшиеся проблемы — в основном wording/consistency**, не арифметика: P2 “trunk_carries” слишком силён относительно relative-дельт; P1 synthetic null показывает, что бэнд не “coherent drift”; c0 headline post-hoc и должен иметь G_nd/clean sensitivity; own_w5 периодичен, но не order-flagged.
+- **AT0_4 можно закрывать как own-doc r/DC pilot**, но не как T0.4 corpus/profile.
 
-## 1. Проверено числами (чистое обосновано проверкой)
+---
 
-**Провенанс (G0) — все пины сверены с диском:**
-- `prism/field.py` sha bcc607c561f95e3e… — совпадает с meta и с диском.
-- `results/e64/tpu_v8/P1_own.npz` sha 783e16338cdcb652… — совпадает.
-- `/data/Qwen/Qwen3.5-0.8B/config.json` sha b90b86f35c8e6925… — совпадает.
-- **σ_t-таблица пересчитана независимо** с модели на диске (from_pretrained fp32,
-  named_parameters remove_duplicate): 320 unique-тензоров, 115 1D — sha
-  e350b277ec76519b… **совпадает** с meta/лагом. Т.е. вход рандомизации R1/R2
-  воспроизводится побайто с текущей модели на диске. trained tied (data_ptr) — true.
-- **SHA-цепочка:** manifest.claim_sha256 64f5dadb… = sha claim-файла ✓;
-  manifest.store_sha256 71d3b5d8… = sha store-файла = имя файла ✓.
-  claim.per_doc ≡ store.per_doc ✓; profiles: 14 инстансов × 8 доков × 96 значений ✓.
+# 1. Что r4 закрыл
 
-**Внутренняя арифметика — все 112 клеток перепроверены по claim:**
-- G1-тождество |r − N·f_DC|/(N·f_DC) ≤ 5.70e-16 (макс, S4 ✓); telescope ≤ 4.44e-16 (S5 ✓);
-  r_max = 4/c0 — точно во всех клетках; gram_resid (полный G1-аудит по всем 382 лагам)
-  ≤ 3.64e-15.
-- P3: пересчёт по per_doc — diffs [−0.0535, +0.0195, +0.0231, +0.0136, −0.0397,
-  +0.0221, +0.0094, +0.0181], медиана (0.0136+0.0181)/2 = 0.01585 = 0.015806… из артефакта ✓.
-- P2 S11: пересчёт по per_doc — медиана |r_R1−r_R2| = 0.0013 ✓ (S12/S13: 0.0010/0.0018,
-  все ≪ 0.1 → same×3 → cell_verdict trunk_carries).
-- **P5 = P3/383 ТОЧНО**: per-doc(P5) = per-doc(P3)/383 (проверено, отношение медиан
-  = 1.000000) — зеркало по G3, как и объявлено в пре-реге (см. §2, пункт 3).
+| прежний пункт | состояние в артефакте |
+|---|---|
+| C1 scope: own-doc, не corpus/profile | summary явно: own-doc r/DC carrier pilot; ρ̄(k) описательно; corpus T0.4 open |
+| C2 P4 median masks doc-level | `doc_order_provenance`: own_w4 6/6 systematic, own_w0 2/6 partial; связаны с period-1 loop / low c0 |
+| C3 P3/P5 “confirmed” без inference | `descriptive`, sign test p=0.2891, CI, Δmin, n=8 power note |
+| C4 P1 diagnostics | c0_stats, reachable_frac=0, low_motion_docs, synthetic_null, reachability_note |
+| C5 P2 head/embed naming | tied_note: hidden-state r — input-эмбеддинг, не head |
+| C6 gnd per-doc not used | `gnd_filter: true` в P1/P2/P4; n_docs падает до 7/6 |
+| относительные дельты | `median_abs_diff_rel`, `scale_note` в P4 |
+| r decomposition | `endpoint_cos` добавлен; r/r_max = (1−cos)/2 проверяется |
+| c0 trained/random | новый post-hoc блок: median ratio 1.4419, CI [1.2866, 1.6564], 8/8, pairwise 48/48 |
 
-**Гейты — значения в артефакте согласованы с логом и с пересчётом:**
-- S1: head-acc R0×real 0.9426–0.9765, все ≥ 0.90 ✓ (лог ↔ JSON совпадает).
-- S2: trained tied PASS; R1/R2-проверки исполняются в цикле прогонов (FATAL RC=4).
-- S3: все 6 инстансов finite, |h| ≤ 10.4 (1 док × 32 ток, ВСЕ 3 сида — v3.1 исполнен).
-- G_nd: ни одного not_testable, ни одного divergent. Все провалы гейта — G_nd1
-  (cv ≤ 0.05): own_w5 во ВСЕХ 6 random-инстансах (cv 0.029–0.047), plus own_w7 (S13,
-  0.0497) и own_w2 (S13, 0.0485). d_eff ≥ 3 и ent > 0.5 проходят везде.
-- G_nd4: median ‖h‖ random = 37.3–38.7 vs R0 126.75 (ratio 0.29–0.31) — на 3 порядка
-  ниже порога 100×.
-- Finiteness/невырожденность R0: d_eff 9.6–31.9, нет вырожденных клеток (c0>0 везде).
+Это хорошо.
 
-**Согласованность с пре-регом:**
-- P1: r_max < 1 во всех 24 (док×сид) клетках R2×real (макс 0.3128) → vacuous×3 —
-  **исполнено как объявлено a priori (v3.1)**: для случайного ствола E[r_max] ≈ 2/N ≈ 0.005 < 1,
-  vacuous — наиболее вероятный исход.
-- P4: медианы 0.0007–0.0018 < 0.1 → null×6, 0 флагов. НО per-doc — см. §2, пункт 2.
-- P3: confirmed (медиана 0.0158 > 0) — формально по пре-регу.
+---
 
-**Вход:** T=384, nuniq по докам 12–42 (w5=12 мин., w3=42 макс.) — vocab-limited
-d_eff объяснение в TZ §4.2 подтверждается (хотя диапазон «16..66» в TZ — неточно, §2 п.7).
+# 2. Главный новый результат: c0, не r
 
-## 2. Замечания (где / что / почему / чинить / серьёзность)
+Артефакт:
 
-**П1. [правка, провенанс — ГЕЙТ ПЕРЕД КОММИТОМ] Скрипт на диске ≠ скрипт, породивший артефакт.**
-- Где: `claim.meta.script_sha256 = f59035c024fa33496eb250c25cdbc29daf2883701abf5c6823ae358bac05113a`
-  (прогон 05:19:54) vs текущий `experiments/AT0_4_mix.py` = `92effe839acec490…` (mtime 05:45:30).
-- Что: файл правили ПОСЛЕ финального прогона; старая версия не сохранена нигде на диске
-  (скрипт untracked в git; `__pycache__/AT0_4_mix.cpython-312.pyc` — откомпилирован
-  05:45:30 от НОВОЙ версии (src_mtime/src_size в заголовке = текущие) — diff не восстановить).
-- Почему: чек-лист само-аудита AGENTS п.7 — «числа артефакта vs код: правки после старта
-  прогона — только если ветки не взяты (зафиксировать это)». Сейчас diff не зафиксирован.
-- Лучшая гипотеза (собирается из фактов): правка 05:45 = фикс «бага v3.0» — перенос записи
-  run.log в конец main (комментарий в коде это прямо называет); run.log на диске (mtime
-  05:32:03 — на 12 мин ПОЗЖЕ claim/manifest/store 05:19:54, что для текущей ветки кода
-  невозможно: все три записи в пределах 1 мс, лог — последним) = восстановление лога
-  продюсером из stdout-редакта nohup. Подтверждение гипотезы: лог содержит финальные
-  строки «ALL PASS»/«DONE», которых запись лога в баг-версии v3.0 физически не могла
-  включить (в stdout они есть). Направить/найтись файл stdout-копии не удалось —
-  гипотеза не подтверждена до конца.
-- Чинить: продюсер фиксирует diff f59035c0 ↔ 92effe83 в коммит-сообщении (или сохраняет
-  старую версию рядом). Если diff шире, чем перенос записи run.log — перепуск прогона.
-  Числа при этом НЕ затронуты: всё из §1 проверено против текущих компонентов
-  (σ-таблица пересчитана с модели на диске, пины G0, идентичности fp64), так что это
-  процессный гейт, а не блокер вердикта.
+```text
+c0 trained/random median ratio = 1.4419
+CI95 [1.2866, 1.6564]
+n=8 paired, 8/8 > 1
+pairwise 48/48 > 1, median 1.5097
+post-hoc, exec-review r4 §8.3, без форвардов
+```
 
-**П2. [правка, полнота артефакта] P4 «null 6/6» скрывает устойчивые per-doc выбросы; в блоке P4 нет per_doc.**
-- Где: `claim.prereg.P4_random_order_insensitive` — в отличие от P2, у P4 нет таблицы
-  per_doc (код: `p4[...] = {"median_abs_diff", "threshold", "verdict", "note"}` — per_doc не пишется).
-- Что: пересчёт по per_doc: |r_real − r_mix| ≥ 0.1 (порог P4) у **own_w4 во ВСЕХ 6
-  random-инстансах** (0.1188–0.1314) и у **own_w0 в 2 из 6** (0.1101, 0.1002; остальные
-  0.086–0.099 — в 0.01 от порога). Медианы (0.0007–0.0018) малы → по пре-рег-тесту (медиана)
-  вердикт «null» формально верен, НО: (a) артефакт не позволяет ревьюеру это проверить
-  без ручного пересчёта (в отличие от P2 — у P2 per_doc есть, у P4 нет);
-  (b) summary «random order-invariant: 6/6 null» — обобщение, которое данные не поддерживают
-  в форме «случайная модель не читает текст вообще»: w4 (nuniq=20, d_eff≈4–5) — док, на котором
-  случайные веса СИСТЕМАТИЧЕСКИ различают порядок (real r≈0.15 vs mix r≈0.02–0.03).
-- Почему: это не нарушение пре-рега (объявленный тест — медиана; TZ §12.7: порог априорный,
-  перестановочный нуль отклонён) — это проблема представимости результата: нулевой результат
-  с 2 систематическими исключениями должен публиковаться с исключениями.
-- Чинить: (1) добавить per_doc в блок P4 (одна строка в коде, пересборка артефакта не требует
-  пере-форварда — данные в per_doc уже есть; но артефакт пишется кодом → минимальный
-  перепуск агрегации из сохранённых клеток, либо правка кода + пересборка); (2) в note/summary
-  пометить: «null по медиане; per-doc исключения: own_w4 (6/6 ≥0.1), own_w0 (2/6 ≥0.1,
-  остальные 0.086–0.099)».
+Это сильнее, чем P1–P5 по `r`.
 
-**П3. [косметика] P5 «confirmed» — точное зеркало P3, не независимый сигнал.**
-- Где: `claim.prereg.P5_R0_real_vs_mix_fdc`: median_diff = 4.127e-5, verdict «confirmed»;
-  summary «f_DC confirmed (med 0.000)».
-- Что: P5 per-doc = P3 per-doc / 383 ТОЧНО (G3: f_DC ≡ r/N; проверено, отношение медиан 1.0).
-  «Confirmed» по строгому >0 пре-рега — формально верно, но это тот же самый результат, что
-  P3, делённый на N; медиана 4.1e-5 на шкале f_DC ~1e-4 — по сути ноль. Пре-рег сам пишет
-  «f_DC = r/N тождественно по G3, но пересчитана независимо» — т.е. как зеркало-контроль.
-- Чинить: пометить в summary/вердикте «confirmed (mirror of P3, G3 — не независимый сигнал)».
-  Код и вердикт менять не надо — исполнено ровно по пре-регу.
+Почему:
 
-**П4. [косметика, провенанс] Финальный run.log — это resume-проход, не проход, считавший форварды.**
-- Где: `AT0_4_run.log`: «CKPT: resume — 112 клеток уже посчитаны (скип)» — все 112 forward
-  выполнены в более раннем процессе, чей лог перезаписан.
-- Почему: ckpt-механизм задуман (анти-OOM, «краш теряет ≤1 forward»), resume честен
-  («[resume]» в каждой строке), детерминизм подтверждён пересчётом σ-таблицы и
-  идентичностями fp64 — риск минимальный. Но лог «кто считал» утерян, и это уже
-  совмещается с П1 (2 прогона + правка кода за ~30 мин).
-- Чинить: в manifest (или коммит-месседж) зафиксировать время старта/финиша forward-прогона;
-  дальше — лог resume-прохода хранить как есть.
+\[
+r=\frac{\|u_N-u_0\|^2}{c_0}
+=\frac{2(1-\cos(u_0,u_N))}{c_0}.
+\]
 
-**П5. [косметика] gates.S2_tied: значения R1/R2 — хардкод True.**
-- Где: `gates["S2_tied"] = {"trained": ..., "ok": True, **{f"R{c}_S{S}": True ...}}`.
-- Что: реальная проверка (data_ptr) исполняется в цикле с FATAL RC=4 — дошедший до артефакта
-  прогон = прохождение. Но в артефакт пишется литерал True, а не результат.
-- Чинить: писать фактический результат проверки (одна переменная в цикле).
+`endpoint_cos` в артефакте показывает, что на clean-доках trained/random endpoint-косинусы одного порядка, а `c0` систематически выше у trained.
 
-**П6. [косметика] G_nd4: «median/IQR ‖h‖» — двухэтажная статистика по 8 per-doc медианам.**
-- Где: `hnorm_rep` (median/IQR от 8 значений hn_med), а не пул 384×8 норм.
-- Почему: формулировка TZ «per-instance (real-режим, 8 доков) median/IQR ‖h‖» допускает
-  оба прочтения; при пороге 100× разница не имеет значения (ratio 0.3 ≪ 100).
-- Чинить: не чинить; при желании — уточнить формулировку в TZ на следующий эксперимент.
+Примеры:
 
-**П7. [косметика] TZ §4.2: «nuniq 16..66» — неточно, реально 12..42.**
-- Где: docs/AT0_4_prereg.md §4.2 G_nd2 (обоснование порога d_eff≥3).
-- Что: измерено по P1_own.npz: nuniq = [26,25,23,42,20,12,27,21] (w5=12 — минимум).
-  Вывод (d_eff≈5 у low-vocab доков — свойство входа, не коллапс) от этого не меняется.
-- Чинить: поправить диапазон в TZ при следующем правочном цикле.
+| doc | c0 trained | c0 random median | ratio |
+|---|---:|---:|---:|
+| own_w1 | 324.15 | 251.95 | 1.287 |
+| own_w2 | 324.13 | 229.75 | 1.411 |
+| own_w3 | 321.16 | 260.42 | 1.233 |
+| own_w5 | 391.05 | 193.76 | 2.018 |
+| own_w6 | 363.19 | 273.98 | 1.326 |
+| own_w0 | 23.37 | 14.11 | 1.656 |
+| own_w4 | 19.90 | 12.81 | 1.553 |
 
-## 3. Спор (обязательно спорь)
+То есть trained-траектория имеет больше суммарной энергии шагов при сопоставимом net displacement. Это можно интерпретировать как “trained path more wiggly / more step energy”, но **не как DC-profile carrier**.
 
-1. **Спорю с формулировкой summary «random order-invariant: 6/6 null»** как утверждением о
-   случайной модели вообще. Тест (медиана по пре-регу) пройден — вердикт «null» держится,
-   НО данные показывают систематическое исключение: own_w4 превышает порог 0.1 во ВСЕХ 6
-   random-инстансах (max 0.1314), own_w0 — в 2 из 6 и в пределах 0.01 от порога в остальных.
-   «Нечувствительна к порядку» — неверная формулировка для w4; корректно: «нечувствительна
-   по пре-рег-тесту (медиана); per-doc исключения w4/w0 опубликованы отдельно». Это не
-   меняет verdict-клетки (пре-рег объявил медиану), но меняет то, что можно цитировать.
-2. **Спорю с лейблом P5 «confirmed»**, если он читается как независимое подтверждение:
-   это P3/N до fp-точности (G3). Как mirror-контроль (проверка, что независимый пересчёт
-   f_DC не дал расхождения >1e-9 — расхождения 0) — полезный контроль, и именно так его
-   и надо подписывать. «f_DC confirmed (med 0.000)» в summary — вводит в заблуждение
-   (медиана 4.1e-5, т.е. на шкале f_DC ~1e-4 — ноль; «confirmed» за счёт строгого >0).
-3. **Спорю с implicit-предположением, что П1 «решается комментарием в коде».** Комментарий
-   «баг v3.0» объясняет МОТИВ правки 05:45, но не доказывает, что diff = только перенос
-   записи лога. Пока diff не зафиксирован (П1), правило AGENTS п.7 не исполнено — даже если
-   мотив правки безупречен. Требование: зафиксировать diff ДО коммита, не после вопросов.
-4. Нет спора по гейтам и арифметике: S1–S5, G_nd, G_nd4, P1/P2/P3, P4-медианы — всё
-   воспроизведено из артефакта и/или независимо пересчитано (§1). P1-vacuous×3 — не провал
-   и не «не нашли»: a priori объявленный наиболее вероятный исход (v3.1), опубликован честно.
+Важно: артефакт правильно пишет `post-hoc`. Это не пре-рег-подтверждение. Это сильный описательный результат, который надо вынести в headline pilot’а.
 
-## 4. Вердикт и условия перед коммитом
+---
 
-**PASS_WITH_MINORS.** Числа, гейты и провенанс (кроме П1) верифицированы; пре-рег исполнен
-дословно; все отрицательные/условные исходы (vacuous, null, trunk_carries) объявлены заранее.
+# 3. Оставшиеся проблемы
 
-Условия перед коммитом (обязательные):
-1. **П1:** зафиксировать diff f59035c0 (артефакт) ↔ 92effe83 (диск) в коммит-месседже;
-   если diff шире переноса записи run.log — перепуск прогона.
-2. **П2:** добавить per_doc в блок P4 + пометку про w4/w0 в note/summary (пересборка
-   агрегации без пере-форварда).
+## C1. c0 headline: post-hoc + G_nd consistency + pairwise independence
 
-Не блокирует: П3–П7 (косметика; П3 — пометить при правке summary по П2).
+### C1.1. Post-hoc статус должен остаться
 
-AT0_4_EXEC_DONE
+Блок честно помечен:
+
+```text
+post-hoc (exec-review r4 §8.3), без форвардов
+```
+
+Это правильно. Но если c0 станет главным результатом, нельзя подавать его как pre-registered confirmatory test.
+
+Формулировка:
+
+> Post-hoc paired c0 comparison: trained step energy exceeds random in 8/8 docs; descriptive, not pre-registered.
+
+### C1.2. Pairwise 48/48 — не 48 независимых наблюдений
+
+`pairwise 48/48 > 1` — это 8 доков × 6 random instances. Инстансы делят doc и trunk/seed structure. Их нельзя использовать как независимый sign test на 48.
+
+Артефакт, кажется, это понимает:
+
+```text
+per-instance — sign test
+```
+
+Хорошо. Но в summary надо явно:
+
+```text
+pairwise 48/48 descriptive; inferential sign test is per-doc / per-instance, not 48 independent trials.
+```
+
+### C1.3. c0 uses all docs, while P1/P2/P4 use gnd_filter
+
+В P1/P2/P4:
+
+```text
+gnd_filter: true
+n_docs = 7 или 6
+```
+
+В c0 trained/random:
+
+```text
+n=8 paired
+```
+
+При этом G_nd per-instance имеет `ok=false` для own_w5 / own_w2 в некоторых инстансах.
+
+Это не обязательно баг: c0 может быть валиден даже если cv_du low. Но consistency требует sensitivity:
+
+```text
+c0 ratio all 8
+c0 ratio clean-only (exclude own_w0/own_w4 period-1 loops)
+c0 ratio G_nd-filtered pairs
+```
+
+По видимым числам clean-only тоже должен быть >1, но это надо отчитать.
+
+Иначе headline “8/8” включает вырожденные low-motion доки, а P-тесты их частично исключают.
+
+---
+
+## C2. P2 “trunk_carries” слишком силён на фоне relative-дельт
+
+P2 S11:
+
+```text
+median_abs_diff_r = 0.001299
+median_abs_diff_rel = 0.17365
+verdict = same
+threshold = 0.1
+```
+
+S12:
+
+```text
+median_abs_diff_rel = 0.16268
+```
+
+То есть tied input embedding меняет `r` на **~16–18% относительно**, но абсолютная дельта мала из-за `r ∝ 1/c0`.
+
+Текущий verdict:
+
+```text
+trunk_carries
+```
+
+можно читать как “embed не влияет”. Это неверно.
+
+Правильная формулировка:
+
+> Trunk dominates the absolute r scale; trained tied input embedding produces a nonzero relative modulation (~16–18% median). “same” is absolute-threshold verdict, not zero-effect verdict.
+
+P4 scale_note уже делает это для order. P2 тоже нужен такой note.
+
+---
+
+## C3. P1 synthetic null показывает, что бэнд не “coherent drift”
+
+Synthetic null:
+
+```text
+iid_sphere:
+  c0 median 765.96
+  r median 0.002592
+  band_frac 0
+  reachable_frac 0
+
+iid_lowmotion_c0_2:
+  c0 median 2.0
+  r median 1.0017
+  band_frac 1.0
+  reachable_frac 1.0
+
+iid_lowmotion_c0_4:
+  c0 median 4.0
+  r median 0.9955
+  band_frac 1.0
+  reachable_frac 0.585
+
+drift_smooth_walk:
+  c0 median 0.00781
+  r median 191.64
+  band_frac 0
+  reachable_frac 1.0
+```
+
+Это важно.
+
+Бэнд `[0.75, 1.5]` **не является детектором когерентного дрейфа**. Smooth drift даёт `r ≈ 192`, потому что `c0` очень мал, а endpoint displacement конечен.
+
+Бэнд ловит某种 low-motion constructions с `endpoint² ≈ c0`, но не generic drift.
+
+Следствие:
+
+- P1 на данных vacuous — правильно.
+- Но не надо переименовывать P1 в “coherent_drift” и не надо интерпретировать бэнд как естественную гипотезу.
+- Лучше:
+
+```text
+P1_r_band_vacuous:
+  r ∈ [0.75,1.5] is an arbitrary ratio window;
+  structurally unreachable on data c0 ~ 260;
+  synthetic null shows it is not a generic drift detector.
+```
+
+P1 можно оставить как исторический пре-рег, но не как содержательный тест.
+
+---
+
+## C4. own_w5: period-13 есть, order_flag absent
+
+`token_provenance` / `doc_order_provenance`:
+
+```text
+own_w5:
+  min_period_90pct = 13
+  n_uniq = 12
+  max_share = 0.1536
+  order_flag = absent
+  max_abs_diff_r = null
+```
+
+Это не обязательно ошибка, но требует объяснения.
+
+own_w5 имеет token periodicity, но не low-motion period-1 loop. Возможно, он исключён из P4 live pairs из-за G_nd или относительная дельта мала.
+
+Надо разделить:
+
+```text
+token_periodicity: own_w5 period-13
+order_sensitivity_under_absolute_thr: not flagged / not live
+```
+
+Иначе читатель увидит `min_period_90pct=13` и `order_flag=absent` и решит, что детектор противоречив.
+
+Также own_w0 interp говорит “single-token mass ≥93%”, а `max_share=0.9296875` — чуть ниже 93%. Мелочь, но лучше “~93%”.
+
+---
+
+## C5. G_nd не фильтрует token-degenerate low-motion доки
+
+G_nd ok=true для own_w0/own_w4 во многих инстансах, потому что cv_du высокий / d_eff низкий, но это не “невырожденный вход”. Token provenance показывает period-1 loop.
+
+Это нормально для pilot scope, но headline должен стратифицировать:
+
+```text
+clean docs: own_w1, own_w2, own_w3, own_w6, own_w7
+period-1 low-motion: own_w0, own_w4
+periodic non-low-motion: own_w5
+```
+
+Сейчас summary говорит “все flags — вырожденные low-motion”, это верно для P4 flags. Но c0 headline включает все. Нужна clean-only sensitivity.
+
+---
+
+## C6. Hash-chain / rebuild r4 не видны
+
+`AT0_4_manifest.json` и `AT0_4_rebuild_r4.py` пустые в контексте.
+
+Артефакт даёт:
+
+```text
+store.path = store/e852a4bd88c92649.json
+store.sha256 = e852a4bd88c9264954a294f7a194825c85ab34a95dceb3c1fd0f6402e6e4a877
+```
+
+Но я не могу проверить:
+
+```text
+manifest.claim_sha256
+manifest.store_sha256
+rebuild r4 asserts
+script_sha256
+```
+
+Если r4 делал агрегационный rebuild, нужен тот же паттерн, что r3:
+
+- bit-identity старых чисел;
+- expected diff list;
+- independent recompute новых полей;
+- sha chain;
+- old store sha in provenance.
+
+Пока это не видно.
+
+---
+
+## C7. Mix permutation sensitivity не видна
+
+В артефакте есть paired real/mix, но не видно:
+
+```text
+multiple mix permutations
+shuffle seed sensitivity
+```
+
+Если осталась одна перестановка на док, надо явно:
+
+```text
+mix treatment fixed; no permutation-seed sensitivity.
+```
+
+Это не флипает verdict, но ограничивает P3/P4.
+
+---
+
+# 4. Что можно публиковать уже сейчас
+
+## 4.1. c0 trained/random
+
+Можно:
+
+> Post-hoc paired comparison on own_w0..7: trained total step energy c0 exceeds random median by 1.44× [CI95 1.29, 1.66], 8/8 docs; pairwise 48/48 descriptive. Endpoint cosine does not show a comparable systematic shift; r variation is largely c0-driven.
+
+Нельзя:
+
+> pre-registered proof of profile carrier.
+
+## 4.2. P4
+
+Можно:
+
+> Random models show null median absolute order sensitivity under threshold 0.1, but relative sensitivity is ~13–27% on live docs. Systematic absolute flags occur only on degenerate low-motion period-1 docs: own_w4 6/6, own_w0 2/6.
+
+Нельзя:
+
+> random models are order-invariant.
+
+## 4.3. P3/P5
+
+Можно:
+
+> Positive median real-vs-mix r/f_DC difference, descriptive only: sign test p=0.289, CI includes 0; n=8 has power only for unanimity. P5 is algebraic mirror of P3.
+
+Нельзя:
+
+> mix significantly increases DC.
+
+## 4.4. P1
+
+Можно:
+
+> P1 is structurally vacuous on this data: c0 median ~260 ⇒ r_max ≪ 1. Synthetic null shows the r-band is not a generic drift detector.
+
+Нельзя:
+
+> random weights fail orthogonal walk / coherent drift.
+
+## 4.5. P2
+
+Можно:
+
+> R1 vs R2 absolute r difference is below 0.1; trunk dominates absolute r scale. Tied input embedding still produces ~16–18% relative median modulation. Hidden-state r does not identify lm_head contribution.
+
+Нельзя:
+
+> embed has no effect / head contributes.
+
+---
+
+# 5. Минимальный патч перед закрытием AT0_4
+
+Без новых форвардов:
+
+1. **c0 sensitivity**
+   ```text
+   all 8
+   clean-only
+   G_nd-filtered pairs
+   ```
+   и явно post-hoc / pairwise not independent.
+
+2. **P2 wording**
+   ```text
+   trunk_carries_absolute_scale
+   tied_embed_relative_modulation ~0.16–0.18
+   ```
+
+3. **P1 wording**
+   ```text
+   P1_r_band_vacuous
+   synthetic drift_smooth_walk misses band ⇒ not coherent-drift detector
+   ```
+
+4. **own_w5 note**
+   ```text
+   token period-13 present; absolute order flag absent/not live
+   ```
+
+5. **G_nd stratification**
+   ```text
+   clean / period-1 low-motion / periodic non-low-motion
+   ```
+
+6. **Hash chain**
+   прислать manifest/rebuild r4 или подтвердить assert-цепочку.
+
+7. **Mix permutation note**
+   если одна перестановка — declare.
+
+---
+
+# 6. Итоговый вердикт
+
+**AT0_4 r4: ACCEPT as own-doc r/DC pilot, with wording/consistency fixes.**
+
+Главные закрытия:
+
+- scope honest;
+- P4 doc-level flags + degenerate provenance;
+- P3/P5 downgraded to descriptive with power note;
+- P1 vacuous diagnostics;
+- P2 tied input embedding note;
+- gnd_filter applied;
+- endpoint_cos/c0 decomposition added;
+- c0 trained/random emerged as strong post-hoc signal.
+
+Главные оставшиеся риски:
+
+- c0 headline post-hoc and needs clean/G_nd sensitivity;
+- P2 “trunk_carries” overclaims relative zero-effect;
+- P1 band interpretation unsupported by synthetic null;
+- own_w5 periodicity vs order-flag absence needs note;
+- hash-chain/rebuild r4 not visible.
+
+**T0.4 corpus/profile claim remains open.**  
+AT0_4 не закрывает “кто несёт профиль” и не закрывает corpus real/mix random×trained. Он закрывает более узкий, но полезный вопрос: на own-doc inputs `r` — это 2-DoF сводка endpoint cosine и c0, а c0 даёт систематический trained/random сигнал.

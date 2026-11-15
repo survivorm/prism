@@ -1,0 +1,25 @@
+transformers STUB (venv broken: ImportError: huggingface-hub>=1.5.0,<2.0 is required for a normal functioning of this module, but found huggingface-hub==2.4.0.) — data-only rebuild, форвардов нет
+AT0_4 REBUILD r5 (exec-review r5: c0-sensitivity, P2/P1 wording, w5/w7 notes, stratification) 2026-11-15 00:11:03
+rebuild script sha256: 6a2d37291974b73e674f9e8ce4b19c7528b41efaa43999c81be4169b74db5767
+experiment script sha256: fff89220f202b905fe7ac3b57a3c405b12efb7b603f5cfcca5d5dbe4d12e14ac (METRICS_VERSION=v2)
+docs=8 seeds=[11, 12, 13] store-per_doc groups=14
+G_nd not-ok: R1_S11.own_w5, R1_S12.own_w5, R1_S13.own_w5, R1_S13.own_w7, R2_S11.own_w5, R2_S12.own_w5, R2_S13.own_w2, R2_S13.own_w5
+token_provenance: bit-идентичен; period-карта: w0/w4=1, w5=13, w7=16, w1/w2/w3/w6=None
+P4: БИТ-НЕИЗМЕНЕН (build_p4 r5 не тронут); null ×6, outliers 2/6+6/6
+P3/P5: БИТ-НЕИЗМЕНЕНЫ (build_p3_p5 r5 не тронут)
+synthetic_null_r: 13.8s (B=200, seed=117)
+P1: vacuous ×3 НЕ ИЗМЕНИЛСЯ (per_doc/c0_stats bit-идентичны); band_meaning + r5 C3 (не детектор дрейфа; исторический пре-рег)
+P2: same ×3 + trunk_carries НЕ ИЗМЕНИЛИСЬ; + cell_relative_note (S11 0.1736, S12 0.1627, S13 0.1027) + scale_note (0.10–0.17, НЕ zero-effect)
+sensitivity: all_8 8/8 (pw 48/48, med 1.4419); no_period1 6/6 (med 1.3682); gnd_filtered 7/7 (pw 40/40, med 1.4426, w5 исключён); no_periodic 4/4 (med 1.3061) — ВСЕ > 1; независимый пересчёт сошёлся
+doc_order_provenance: w0 ≈93% / w4 ≈94%; w5 note (period-13, не live: G_nd); w7 note (period-16, max |Δr| 0.0017 < 0.1); note_key; doc-level note неизменен
+pretest_results: БИТ-НЕИЗМЕНЕН (ни один вердикт не изменился)
+summary:
+  old: AT0_4 (3×2 own-doc r/DC carrier pilot; r — 2-DoF сводка endpoint-косинус × c0, профиль ρ̄(k) не тестируется в P1–P5; corpus T0.4 — open): R2×real — S11 vacuous, S12 vacuous, S13 vacuous — structurally unreachable (r_max = 4/c0 ≤ 0.0125; c0 median ≈ 260 ≫ 4); R1 vs R2 (real): trunk_carries (hidden-state r — input-эмбеддинг, не head); R0 real-vs-mix: r descriptive (med 0.0158, sign test p=0.2891), CI [-0.0221, 0.0208] [при n=8 p<0.05 только при 8/8]; f_DC descriptive (med 0.0000, sign test p=0.2891), CI [-0.0001, 0.0001] [при n=8 p<0.05 только при 8/8] (mirror P3 по G3 — не независимый сигнал); random: null по медианному тесту 6/6; doc-level order sensitivity: own_w4 (6/6) systematic; own_w0 (2/6) partial — все — вырожденные low-motion доки (period-1 token loop; см. doc_order_provenance); 0 token-statistics флаг(ов), 0 not_testable; c0 (энергия шагов ‖Δu‖²): trained/random median ratio 1.4419 [CI95 1.2866, 1.6564] (n=8, paired по докам, 8/8 > 1; pairwise 48/48 > 1, median 1.5097; per-instance — sign test, см. per_instance); post-hoc (exec-review r4 §8.3), без форвардов
+  new: AT0_4 (3×2 own-doc r/DC carrier pilot; r — 2-DoF сводка endpoint-косинус × c0, профиль ρ̄(k) не тестируется в P1–P5; corpus T0.4 — open): R2×real — S11 vacuous, S12 vacuous, S13 vacuous — structurally unreachable (r_max = 4/c0 ≤ 0.0125; c0 median ≈ 260 ≫ 4); R1 vs R2 (real): trunk_carries (hidden-state r — input-эмбеддинг, не head); trunk_carries = абсолютный масштаб, НЕ zero-effect (relative-модуляция 0.10–0.17 — P2.cell_relative_note, r5 C2); R0 real-vs-mix: r descriptive (med 0.0158, sign test p=0.2891), CI [-0.0221, 0.0208] [при n=8 p<0.05 только при 8/8]; f_DC descriptive (med 0.0000, sign test p=0.2891), CI [-0.0001, 0.0001] [при n=8 p<0.05 только при 8/8] (mirror P3 по G3 — не независимый сигнал); random: null по медианному тесту 6/6; doc-level order sensitivity: own_w4 (6/6) systematic; own_w0 (2/6) partial — все — вырожденные low-motion доки (period-1 token loop; см. doc_order_provenance); 0 token-statistics флаг(ов), 0 not_testable; c0 (энергия шагов ‖Δu‖²): trained/random median ratio 1.4419 [CI95 1.2866, 1.6564] (n=8, paired по докам, 8/8 > 1; pairwise 48/48 > 1 (descriptive — НЕ 48 независимых наблюдения, см. pairwise_note), median 1.5097; per-instance — sign test, см. per_instance); post-hoc, descriptive — НЕ pre-registered confirmatory test (exec-review r4 §8.3, r5 C1.1), без форвардов; sensitivity all_8: 8/8, gnd_filtered_pairs: 7/7, no_period1_docs: 6/6, no_periodic_docs: 4/4
+store diff: только ['doc_order_provenance', 'meta.doc_stratification', 'meta.mix_note', 'prereg.P1_R2_real_orthogonal_walk', 'prereg.P2_R1_R2_trunk_vs_embed', 'provenance', 'r_decomposition', 'verdict.summary']
+store: /home/survivor/work/prism/results/AT0/store/ab8ec0ed2df2f8c7.json (sha ab8ec0ed2df2f8c7)
+claim: /home/survivor/work/prism/results/AT0/AT0_4_MIX.json
+manifest: /home/survivor/work/prism/results/AT0/AT0_4_manifest.json
+sha-цепочка: store==имя, claim.store==store, manifest.claim==claim, manifest.store==store
+старый store СОХРАНЁН (untracked, удаление — в коммите): e852a4bd88c92649.json
+AT0_4 REBUILD r5 DONE

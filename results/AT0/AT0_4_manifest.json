@@ -1,8 +1,16 @@
 {
  "manifest": {
-  "claim_sha256": "0463088e6f9087102eb1d51c1447efeedc78f8887b7532ff0a19156ab0ba749f",
-  "store_sha256": "f1cc7265dd40c8744174fe3d6e0889199907c5652012970100639205c440ee4d",
-  "date": "2026-11-14T06:36:18",
-  "aggregation_rebuild": true
+  "claim_sha256": "41de97c209f693533b7ee0e2796715875badacc866e6b23d109fd4675b39041a",
+  "store_sha256": "ab8ec0ed2df2f8c7d25fee648502236e0dc551a5beaa45e77422f8370712f2e5",
+  "date": "2026-11-15T00:11:20",
+  "aggregation_rebuild": true,
+  "aggregation_rebuild_r3": true,
+  "aggregation_rebuild_r4": true,
+  "aggregation_rebuild_r5": true,
+  "retired_stores": [
+   "f1cc7265dd40c874.json (deleted in rebuild r3; in git 61483f3)",
+   "4c0a1db2e7984621.json (deleted in rebuild r4 commit)",
+   "e852a4bd88c92649.json (retained on disk; delete at commit)"
+  ]
  }
 }

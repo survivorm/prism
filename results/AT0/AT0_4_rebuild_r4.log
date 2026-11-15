@@ -1,0 +1,24 @@
+transformers STUB (venv broken: ImportError: huggingface-hub>=1.5.0,<2.0 is required for a normal functioning of this module, but found huggingface-hub==2.4.0.) — data-only rebuild, форвардов нет
+AT0_4 REBUILD r4 (exec-review r4: 2-DoF r, scale-dependent thresholds, n=8) 2026-11-14 22:59:45
+rebuild script sha256: e2820c876c4e4e32605cbb0e70cccc078ffbade0bd5768ba5f8ef8242689d4db
+experiment script sha256: adc9119f83e21e2b915fa90f0215493de06f4d42b525896f8cebb76c15f9404e (METRICS_VERSION=v2)
+docs=8 seeds=[11, 12, 13] store-per_doc groups=14
+G_nd not-ok: R1_S11.own_w5, R1_S12.own_w5, R1_S13.own_w5, R1_S13.own_w7, R2_S11.own_w5, R2_S12.own_w5, R2_S13.own_w2, R2_S13.own_w5
+P4: verdicts null ×6 И per_doc_outliers 2/6+6/6 НЕ ИЗМЕНИЛИСЬ; gnd-фильтр: n_docs = R1 S11: 7, R2 S11: 7, R1 S12: 7, R2 S12: 7, R1 S13: 6, R2 S13: 6; relative: R1 S11: med_rel=0.2420, R2 S11: med_rel=0.2355, R1 S12: med_rel=0.1348, R2 S12: med_rel=0.0865, R1 S13: med_rel=0.2941, R2 S13: med_rel=0.2542
+P3/P5: медианы/CI/p/verdicts bit-идентичны; добавлен sign_test_resolution (n=8: 8/8 only)
+synthetic_null_r: 12.0s (B=200, seed=117)
+P1: vacuous ×3 НЕ ИЗМЕНИЛСЯ; gnd_not_ok: S11: ['own_w5'], S12: ['own_w5'], S13: ['own_w2', 'own_w5']; reachability_note + band_meaning добавлены
+P2: same ×3 + trunk_carries НЕ ИЗМЕНИЛИСЬ; n_docs S11: 7, S12: 7, S13: 5; medians: S11: 0.00128→0.00130, S12: 0.00101→0.00106, S13: 0.00180→0.00175
+r_decomposition: c0-test — doc-paired median ratio = 1.4419 [CI95 1.2866, 1.6564] (n=8, 8/8 > 1); pairwise 48/48, median 1.5097; per-instance 8/8 × 6 (p=0.0078)
+token_provenance: bit-идентичен; + token_provenance_meta (decode_backend); doc_order_provenance: w0 partial 2/6 + w4 systematic 6/6, оба period-1 loop
+pretest_results: БИТ-НЕИЗМЕНЕН (ни один вердикт не изменился)
+summary:
+  old: AT0_4 (3×2 own-doc r/DC carrier pilot; профиль ρ̄(k) — описательно, НЕ тестируется в P1–P5; corpus T0.4 — open): R2×real — S11 vacuous, S12 vacuous, S13 vacuous; R1 vs R2 (real): trunk_carries (hidden-state r — input-эмбеддинг, не head); R0 real-vs-mix: r descriptive (med 0.0158, sign test p=0.2891), CI [-0.0221, 0.0208]; f_DC descriptive (med 0.0000, sign test p=0.2891), CI [-0.0001, 0.0001] (mirror P3 по G3 — не независимый сигнал); random: null по медианному тесту 6/6; doc-level order sensitivity: own_w4 (6/6) systematic; own_w0 (2/6) partial; 0 token-statistics флаг(ов), 0 not_testable
+  new: AT0_4 (3×2 own-doc r/DC carrier pilot; r — 2-DoF сводка endpoint-косинус × c0, профиль ρ̄(k) не тестируется в P1–P5; corpus T0.4 — open): R2×real — S11 vacuous, S12 vacuous, S13 vacuous — structurally unreachable (r_max = 4/c0 ≤ 0.0125; c0 median ≈ 260 ≫ 4); R1 vs R2 (real): trunk_carries (hidden-state r — input-эмбеддинг, не head); R0 real-vs-mix: r descriptive (med 0.0158, sign test p=0.2891), CI [-0.0221, 0.0208] [при n=8 p<0.05 только при 8/8]; f_DC descriptive (med 0.0000, sign test p=0.2891), CI [-0.0001, 0.0001] [при n=8 p<0.05 только при 8/8] (mirror P3 по G3 — не независимый сигнал); random: null по медианному тесту 6/6; doc-level order sensitivity: own_w4 (6/6) systematic; own_w0 (2/6) partial — все — вырожденные low-motion доки (period-1 token loop; см. doc_order_provenance); 0 token-statistics флаг(ов), 0 not_testable; c0 (энергия шагов ‖Δu‖²): trained/random median ratio 1.4419 [CI95 1.2866, 1.6564] (n=8, paired по докам, 8/8 > 1; pairwise 48/48 > 1, median 1.5097; per-instance — sign test, см. per_instance); post-hoc (exec-review r4 §8.3), без форвардов
+store diff: только ['doc_order_provenance', 'meta.scope', 'prereg.P1_R2_real_orthogonal_walk', 'prereg.P2_R1_R2_trunk_vs_embed', 'prereg.P3_R0_real_vs_mix', 'prereg.P4_random_order_insensitive', 'prereg.P5_R0_real_vs_mix_fdc', 'provenance', 'r_decomposition', 'token_provenance_meta', 'verdict.summary']
+store: /home/survivor/work/prism/results/AT0/store/e852a4bd88c92649.json (sha e852a4bd88c92649)
+claim: /home/survivor/work/prism/results/AT0/AT0_4_MIX.json
+manifest: /home/survivor/work/prism/results/AT0/AT0_4_manifest.json
+sha-цепочка: store==имя, claim.store==store, manifest.claim==claim, manifest.store==store
+старый store СООБЩЁН (untracked, удаление — в коммите): 4c0a1db2e7984621.json
+AT0_4 REBUILD r4 DONE

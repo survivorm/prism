@@ -1,0 +1,33 @@
+transformers STUB (venv broken: ImportError: huggingface-hub>=1.5.0,<2.0 is required for a normal functioning of this module, but found huggingface-hub==2.4.0.) — data-only rebuild, форвардов нет
+AT0_4 REBUILD r3 (exec-review r3: C1–C6, R1–R3) 2026-11-14 15:06:21
+rebuild script sha256: b8a61a25be8c2aa18b925db5ff4accae6d1e68fffccd3a7df04440f14d916d83
+experiment script sha256: 7135dfd209774250bba6b875fa86199d91b666343624c733ff12ca9ece09be63 (METRICS_VERSION=v2)
+docs=8 seeds=[11, 12, 13] store-per_doc groups=14
+P4: 6/6 медиан/verdict/per_doc bit-идентичны; outliers (независимый пересчёт) = {'own_w0': '2/6', 'own_w4': '6/6'}; doc_order_flags: own_w4 6/6 systematic, own_w0 2/6 partial
+P3: confirmed→descriptive (med 0.015806 ≥ Δmin 0.01, но sign test p=0.2890625 ≥ α=0.05; CI [-0.022061988125800215, 0.020790703445898444])
+P5: confirmed→descriptive (mirror P3; med 4.13e-05, p=0.2890625)
+synthetic_null_r: 7.1s (B=200, seed=117)
+P1: per_doc bit-идентичны; verdict vacuous ×3 НЕ ИЗМЕНИЛСЯ; добавлены c0_stats/low_motion_docs/synthetic_null/band_note
+  P1 S11: c0 med/max = 267.68/300.96, low-motion(c0≤4): —
+  P1 S12: c0 med/max = 260.09/304.19, low-motion(c0≤4): —
+  P1 S13: c0 med/max = 259.67/320.96, low-motion(c0≤4): —
+P2: cell_verdict trunk_carries НЕ ИЗМЕНИЛСЯ; добавлен cell_note (r3 C5)
+token own_w0: uniq=26 max_share=0.930 rep8=0.928 rep16=0.927 min_period=1 decode=' 3-hour class on how to make delicious BBQ. ⏎ The class will be held a'
+token own_w1: uniq=25 max_share=0.102 rep8=0.000 rep16=0.000 min_period=None decode=" a choice between the two. ⏎ I've tried to use the 240gb SSD and it wo"
+token own_w2: uniq=23 max_share=0.128 rep8=0.000 rep16=0.677 min_period=None decode=' does it take to get a site to rank? ⏎ 3) how long does it take to get'
+token own_w3: uniq=42 max_share=0.076 rep8=0.003 rep16=0.003 min_period=None decode=' 2017-18 school year, the Denver Board of Education has been working w'
+token own_w4: uniq=20 max_share=0.940 rep8=0.939 rep16=0.938 min_period=1 decode='ANGALORE CY JUNCTION (YPR) to GONDIA JUNCTION (G) is the 1000000000000'
+token own_w5: uniq=12 max_share=0.154 rep8=0.000 rep16=0.000 min_period=13 decode=' people are committed to be poor. ⏎ Poor people are not rich. Rich peo'
+token own_w6: uniq=27 max_share=0.094 rep8=0.000 rep16=0.000 min_period=None decode=' ⏎ Biomedics 1 Day Extra contacts are made of a soft, non-slip, non-ir'
+token own_w7: uniq=21 max_share=0.065 rep8=0.000 rep16=0.976 min_period=16 decode=' settlement for the $3.5 billion deal. ⏎ The company is also adding $3'
+pretest_results: P1/P2/P4 не изменились; P3/P5: confirmed→descriptive (ожидаемое)
+summary:
+  old: AT0_4 (3×2): R2×real — S11 vacuous, S12 vacuous, S13 vacuous; R1 vs R2 (real): trunk_carries; R0 real-vs-mix: r confirmed (med 0.016), f_DC confirmed (med 0.000, mirror P3 по G3 — не независимый сигнал); random order-invariant: 6/6 null (медианный тест; per-doc исключения: own_w0 (2/6), own_w4 (6/6)), 0 token-statistics флаг(ов), 0 not_testable
+  new: AT0_4 (3×2 own-doc r/DC carrier pilot; профиль ρ̄(k) — описательно, НЕ тестируется в P1–P5; corpus T0.4 — open): R2×real — S11 vacuous, S12 vacuous, S13 vacuous; R1 vs R2 (real): trunk_carries (hidden-state r — input-эмбеддинг, не head); R0 real-vs-mix: r descriptive (med 0.0158, sign test p=0.2891), CI [-0.0221, 0.0208]; f_DC descriptive (med 0.0000, sign test p=0.2891), CI [-0.0001, 0.0001] (mirror P3 по G3 — не независимый сигнал); random: null по медианному тесту 6/6; doc-level order sensitivity: own_w4 (6/6) systematic; own_w0 (2/6) partial; 0 token-statistics флаг(ов), 0 not_testable
+store diff: только ['prereg.P1_R2_real_orthogonal_walk', 'prereg.P2_R1_R2_trunk_vs_embed', 'prereg.P3_R0_real_vs_mix', 'prereg.P4_random_order_insensitive', 'prereg.P5_R0_real_vs_mix_fdc', 'provenance', 'token_provenance', 'verdict.pretest_results', 'verdict.summary']
+store: /home/survivor/work/prism/results/AT0/store/4c0a1db2e7984621.json (sha 4c0a1db2e7984621)
+claim: /home/survivor/work/prism/results/AT0/AT0_4_MIX.json
+manifest: /home/survivor/work/prism/results/AT0/AT0_4_manifest.json
+sha-цепочка: store==имя, claim.store==store, manifest.claim==claim, manifest.store==store
+старый store удалён: f1cc7265dd40c874.json (full sha закреплён в provenance)
+AT0_4 REBUILD r3 DONE
