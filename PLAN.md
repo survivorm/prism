@@ -1027,15 +1027,101 @@ T0.4 corpus/profile — остаётся open. Ответы — отдельны
   верификации (sha256/размеры + цепочка)
   [x] AT0_4_rebuild_r4.py удалён (в репо только актуальный AT0_4_rebuild_r5.py);
   цитата r4-ответки на drift-ассерты переключена на r5 (строки 161–162)
-- DOING: [ ] коммит — ПО КОМАНДЕ (явные пути: PLAN.md, experiments/AT0_4_mix.py,
-  experiments/AT0_4_rebuild_r5.py, docs/AT0_4_EXEC_REVIEW.md, docs/AT0_4_EXEC_REVIEW_r5_answers.md,
-  results/AT0/* (claim/manifest/log/store ab8ec0ed…); УДАЛИТЬ: results/AT0/store/e852a4bd88c92649.json,
-  results/AT0/store/4c0a1db2e7984621.json (если ещё лежит), experiments/AT0_4_rebuild_r4.py (уже удалён))
+- DOING: [ ] коммит — ПО КОМАНДЕ — теперь покрывает r5+r6 (мастер-список путей — в блоке r6 ниже)
 - Границы (не менять): pretest_results (ни один вердикт: vacuous ×3, same ×3 + trunk_carries,
   descriptive ×2, null ×6, outliers 2/6+6/6); per_doc/gates/profiles/token_provenance
   бит-неизменны; METRICS_VERSION/forward-окно (данные из store, пере-форвардов НЕТ);
   docs/AT0_4_prereg.md (pre-рег v3 — не правим); файлы параллельной сессии (E-40) — не трогать;
   коммит — ПО КОМАНДЕ (явные пути; old-store e852a4bd… удаляем в коммите, как 4c0a1db2).
+
+## AT0_4 — exec-review r6 (docs/AT0_4_EXEC_REVIEW.md, 15.11), «r5 ACCEPT; один обязательный фикс + M1–M6»
+
+Запрос (фиксация): (1) ОБЯЗАТЕЛЬНО: factor-2 в строке-тождестве «4(1−cos)» → «2(1−cos)»
+(R2DOF_IDENTITY + дубли) — код всегда был прав, строка нет; (2) M1: c0_stats по testable-
+набору (унификация с reach); (3) M2: clean_no_periodic → no_period_ge90pct (own_w2: rep16
+0.6766 < 0.90 — не «clean») + срез no_w2; (4) M3: конвенция манифеста ≠ AT0_1 — не
+переносить инвариант; (5) M4: retired stores — удалить в коммите; (6) M5:
+meta.aggregation_script_sha256; (7) M6: decode_backend/бит-идентичность token_provenance;
+(8) O2: теорема c0 > 4 ⇒ r ≤ 4/c0 < 1 (в артефакт; T0-аддентум — по явной команде). БЕЗ
+форвардов. Ответы — отдельным md (протокол серии).
+
+- DONE:
+  [x] AT0_4_mix.py: factor-2 (R2DOF_IDENTITY + P2_SCALE_NOTE; scope строится из
+  R2DOF_IDENTITY), build_p1 (M1: testable-набор для c0_stats/low_motion/reachable_frac),
+  build_r_decomposition (M2: срез no_w2 + note 0.6766), meta (M5: aggregation_script_sha256;
+  M2: no_period_ge90pct + note), P1_BAND_MEANING (+O2 теорема c0 > 4 ⇒ r ≤ 4/c0 < 1)
+  [x] AT0_4_rebuild_r6.py: store 205a5965cf963eff (golden test на pinned ab8ec0ed…;
+  P4/P3/P5/dop бит-идентичны; pretest_results бит-неизменен; diff = ровно 8 ключей;
+  «4(1−cos» в store только цитата в provenance.reason; no_w2 — независимый пересчёт 3/3
+  pw18/18 med 1.2866; sha-цепочка 4/4; лог AT0_4_rebuild_r6.log md5 73f1c418…)
+  [x] trackio (AGENTS: обязательно для локальных CPU): run at0_4_rebuild_r6 (group CPU):
+  t=0 config (started_at/device/model/log/revision/script_sha/module_sha/seed), 9
+  stage-точек, finish status=ok + log_md5; atexit → status=crash (2 прерванных прогона —
+  assert-баги в самом rebuild — записаны как crash, БД gitignored пересоздана); лог r6 —
+  в реестре CPU_RUNS trackio_migration.py
+  [x] docs/AT0_4_EXEC_REVIEW_r6_answers.md: §2/M1/M2/M5 — принято и сделано; M3/M4 —
+  принято (M4 — в коммите); M6 — уже покрыто (decode_backend в token_provenance_meta с
+  r4 R-c + ассерт бит-идентичности); O2 — теорема в band_meaning; поправка к таблице
+  ревью: обе строки — R1_S13_real (подписаны R2_S13 — опечатка), идентичность в них
+  выполняется (r·c0 = 2(1−cos))
+- DOING: [ ] коммит — ПО КОМАНДЕ (мастер-список, явные пути: PLAN.md, experiments/AT0_4_mix.py,
+  experiments/AT0_4_rebuild_r5.py, experiments/AT0_4_rebuild_r6.py, experiments/trackio_migration.py,
+  docs/AT0_4_EXEC_REVIEW.md, docs/AT0_4_EXEC_REVIEW_r5_answers.md, docs/AT0_4_EXEC_REVIEW_r6_answers.md,
+  results/AT0/AT0_4_MIX.json, results/AT0/AT0_4_manifest.json, results/AT0/AT0_4_rebuild_r5.log,
+  results/AT0/AT0_4_rebuild_r6.log, results/AT0/store/205a5965cf963eff.json;
+  УДАЛИТЬ: results/AT0/store/{4c0a1db2e7984621,e852a4bd88c92649,ab8ec0ed2df2f8c7}.json — retired)
+  [ ] trackio_migration --fresh — ПОСЛЕ quiescence параллельной сессии (она пишет в ту же БД)
+- Границы (не менять): pretest_results (ни один вердикт); per_doc/gates/profiles/
+  token_provenance/doc_order_provenance бит-неизменны; forward-окно 12.11 (пере-форвардов
+  НЕТ); docs/AT0_4_prereg.md v3; paper.md/T0-аддентум — без явной команды; файлы
+  параллельной сессии (AT0_5/E-40) — не трогать; .trackio — gitignored кэш, не коммитить,
+  **никогда не rm -rf** (trackio потокобезопасен: ProcessLock+WAL+busy_timeout 30s;
+  дубликаты run name разрешены — crash-ран = честная запись, перепуск тем же именем;
+  регенерация — только migration --fresh после quiescence; моя ошибка r6 — два rm -rf
+  под живым писателем, потерял at05_selftest_tmp).
+
+## AT0_4 — exec-review r6.1 «косметика» (тот же docs/AT0_4_EXEC_REVIEW.md, §3 C1–C5, 15.11)
+
+Запрос (фиксация): вердикт не меняется («AT0_4 можно закрывать как own-doc r/DC pilot»);
+C1: значимость sensitivity-срезов — exact two-sided sign test (n≤4: bootstrap CI95 =
+min–max, не confirmatory); C2: точная формулировка P1-теоремы (net negative
+autocorrelation, lag-1 dip — отдельно) — для T0-аддентума, band_meaning-shorthand остаётся
+(ревью само: «допустимо как shorthand»); C3: таблица sub-90 периодичности no_w2-доков
+(из token_provenance, уже в store); C4: explicit rm retired stores; C5: manifest/rebuild
+«пришли пустыми» — проверить, что файлы на диске не пусты (артефакт экстракции у ревьюера),
+само-проверку приложить в ответку. БЕЗ форвардов, без новых вердиктов.
+
+- DONE:
+  [x] Факты: e852a4bd/4c0a1db2 уже не на диске (untracked, без git-истории; полные sha в
+  provenance r4/r5); ab8ec0ed — tracked (71e9bba) → git rm в коммите; 205a5965 (r6) —
+  untracked, будет заменён r6.1 → rm после прогона; files AT0_4_rebuild_r6.py/AT0_4_mix.py/
+  AT0_4_manifest.json на диске не пусты (31.7K/84K/675 B) — «пустые» = артефакт экстракции.
+  [x] AT0_4_rebuild_r6b.py (post-processor, pinned 205a5965…; БЕЗ импорта AT0_4_mix.py —
+  чистая постобработка store; trackio at0_4_rebuild_r6b, status=ok): C1 significance в каждом
+  срезе (exact sign test: 0.0078125/0.015625/0.03125 significant, 0.125/0.25 descriptive, пины
+  ассертами) + significance_note; C3 periodicity_check в no_w2 (таблица из token_provenance +
+  note: rep16<0.2 срез = {w1,w3,w5,w6} — w5 period-13, no_w2 не сужает); provenance
+  .aggregation_rebuild_r6b; store fd162b9a6e5e03b6 (script sha 547b1841…); chain 4/4;
+  лог AT0_4_rebuild_r6b.log md5 2a478ace…
+  [x] rm 205a5965cf963eff.json (заменён) + git rm ab8ec0ed2df2f8c7.json (tracked) — после
+  прогона, с проверкой sha до удаления; e852a4bd/4c0a1db2 — уже отсутствуют (записано в
+  manifest.retired_stores полными sha + в ответке C4)
+  [x] docs/AT0_4_EXEC_REVIEW_r6_answers.md: «Раунд 6 (r6.1, косметика)» — C1–C5
+  по пунктам (C2 — спор: band_meaning не тронут, точная формулировка для аддентума —
+  в ответке; C5 — sha трёх «пустых» файлов + self-check из логов) + финальное
+  публикуемое formulation c0-headline (с «descriptive»-оговоркой)
+  [x] mixed-script scan правок (grep -nP Cyrillic-Latin/CJK; 1 предсуществующий захват
+  «сensitivity» в §5 — исправлен; остальное — легитимная математика/история)
+- DOING: [ ] коммит r6+r6.1 — ПО КОМАНДЕ (мастер-список: PLAN.md, docs/AT0_4_EXEC_REVIEW.md,
+  docs/AT0_4_EXEC_REVIEW_r6_answers.md, experiments/AT0_4_mix.py, AT0_4_rebuild_r6.py,
+  AT0_4_rebuild_r6b.py, experiments/trackio_migration.py (1 строка — мой),
+  results/AT0/AT0_4_MIX.json, AT0_4_manifest.json, AT0_4_rebuild_r6.log, AT0_4_rebuild_r6b.log,
+  results/AT0/store/fd162b9a6e5e03b6.json (force-add; 205a5965 — удалён r6.1);
+  НЕ КОММИТИТЬ: AGENTS.md/run_one.sh/docs/dynamic/AT0_5/E-40 — параллельная сессия;
+  AT0_4_rebuild_r5.py + r5_answers.md — проверены, оба на диске (28.6K/12.7K)
+- Границы: ни одно число store не меняется (только новые ключи-метки); pretest_results/
+  per_doc/gates/token_provenance/profiles/doc_order_provenance/meta/prereg/verdict —
+  бит-неизменны; band_meaning не трогать (C2 — в ответку); Т0-аддентум/paper.md — по команде.
 
 ## AT0_5 — T0.5 «Генеративная проверка (disk-only)» (13.11)
 
@@ -1081,3 +1167,69 @@ T0.4 corpus/profile — остаётся open. Ответы — отдельны
 - Границы AT0_5: read-only данные (gen_layers_qwen.npz, P1_own, P2_corpus, T0 store);
   не менять field.py (пин bcc607c5) и AT0_1/AT0_2/AT0_3 скрипты; CPU numpy ≤4 тредов;
   артефакты results/AT0/ (AT0_5_GENCHECK.json — claim); не трогать файлы параллельной сессии.
+
+## Ночь 15.11 — автономка (сессия-лог)
+
+- **G8 AT0_5: v3 → v3.1 (переспека гейта, до перепуска):**
+  - v2 (tail-fit) всё ещё не калиброван: параметрическая DC+MA(1)-sim ЗАНИЖАЕТ флуктуацию
+    null в 1.6–5.5× (измерено на 3 доках: chat_0 L1 sim 0.00011 vs emp 0.00061; math_0 L5
+    1.6×; code_0 L11 4.4×). Причина: реальные строки Δh не гауссовы по колонкам
+    (концентрация row-power) ⇒ дисперсия пар-произведений под блочной перестановкой больше,
+    чем в sim с iid-колонками. Null здоров (200 перестановок: tail_excess сцентрован,
+    simметричен).
+  - v3: масштаб гейта (а) — ЭМПИРИЧЕСКОЕ null-распределение (пул по клеткам); (б) —
+    согласование sim-среднего. БАГ v3 (измерено): sample f_dc sim (field.f_dc(X_b))
+    перегружен шумом СРЕДНЕГО MA(1) по t (≈V/n ≈ 0.001–0.0024 >> fit f ≈ 0.0004) ⇒
+    «excess» sim = plat_hi_sim − fdcs(1−k̄/n) систематически отрицателен
+    (chat_0 L1 seed 1001, B=500: f=0.00043, mean fdcs=0.00117, mean excess=−0.00062 при
+    E[sim tail]=f(1−k/n)>0).
+  - v3.1: (б) — RAW-сравнение |null_stat − sim_mean| ≤ 3·sd_pool_stat (dip/plat_lo/plat_hi);
+    sd_null (reportable) = std(plat_hi_sim − f_fit(1−k̄/n)) (base = КОНСТРУКЦИОННЫЙ f:
+    MA(1) E[u_t u_{t+k}]=0 при k≥2). Ad-dendums: docs/AT0_5_prereg.md (G8-v3, G8-v3.1).
+  - Верификация (8 доков × 5 сидов): (а) med_ratio 0.825 ≤ 3 PASS; (б) dip 1.00 / plat_lo
+    0.95 / plat_hi 0.97–1.00 ≥ 0.90 PASS (на ДО-r5 состоянии файла; re-верификация на
+    финальном файле — в фоне, /tmp/g8v31_verify.log). **RE-ВЕРИФИКАЦИЯ (15.11 ~11:05,
+    финальный файл r5+v3.1, 40 клеток, 1066с): (а) med_ratio 0.840 ≤ 3 PASS; (б) dip
+    1.00 / plat_lo 0.97 / plat_hi 1.00 ≥ 0.90 PASS. Код, который исполняется в их
+    re-прогоне r1, верифицирован.**
+  - Боковой результат (reportable-кандидат): code_0 L11 — РЕАЛЬНЫЙ tail-excess +0.0056
+    (~10× своей null-флуктуации 0.0006): возможная подлинная длинно-лаг структура.
+- **Конфликт параллельных writers (15.11 06:40–07:30):** параллельная сессия (pi, PID
+  267216) вошла в тот же AT0_5_gencheck.py (r5-ревью docs/AT0_5_review.md: C1 CI primary,
+  C2 d_eff, C3 seed-коллизии, M1 M=0 edge, M5 null_cell scores; + AT0_4 r6 + E-40). Мой
+  G8-v3.1 и их r5-рефакторинг (fit_scale, 6-arg dcma1_sim_d_fit, seed (idx,li))
+  сошлись в одном файле; синтаксис сходится (py_compile OK), g8b-блок сохранён. Реагирование:
+  (1) прекратил свои записи в AT0_5_gencheck.py; (2) УБИЛ свой старый AT0_5 full-прогон
+  (PID 3246187, старт 14.11 23:26 на G8-v2 коде; гарантированно умирал бы на G8: 4.29>3;
+  RUN_RC=143); (3) их re-прогон r1 (PID 299773, старт 07:29, trackio активен) — НЕ трогаю;
+  (4) верификацию делаю read-only. Файл стабилен с 07:27:55.
+- **AT0_2 r6: ЗАВЕРШЁН** (~09:40–11:00 15.11): gates ALL PASS, артефакты
+  results/AT0/AT0_2_SHAPE.json (247K), AT0_2_manifest.json, AT0_2_run.log,
+  store/f7cc011ef856a6dc.json. Из логов: v_tangent blk8/16/32/ar1/ar2/ar4 — refuted
+  (Δmean 0.069–0.331, frac(p<α) 0.70–1.00). Дальше по протоколу: само-ревью артефакта →
+  external review → коммит ПО КОМАНДЕ.
+- **trackio-миграция (полный прогон): BLOCKED** — параллельная сессия активна (AT0_5 r1
+  пишет в ту же .trackio БД; quiescence-гейт ТЗ §5.1: mtime артефактов стабилен ≥10 мин +
+  нет живых писателей). Запущу после quiescence (координация: у них в PLAN «trackio_migration
+  --fresh — ПОСЛЕ quiescence параллельной сессии» — кто бьёт, решить с юзером; скрипт
+  идемпотентный, БД потокобезопасна: ProcessLock+WAL).
+- **Kaggle/e51: не трогаю.** Демон (logs/kaggle_daemon.sh) мёртв (~11.11), GPU-квота
+  30 ч/нед исчерпана с 10.11 21:33 (push фейлит каждые 45 мин; e51-кэш 2/64 qwen + 1/64
+  lfm3, процессы умерли). Ресет квоты — rolling 7 дней, первые часы освободятся ~17.11.
+  Перезапуск нецелесообразен до того + CPU занят прогоном r1.
+- Границы (соблюдаю): не трогать файлы паралл. сессии (AT0_4, E-40, AGENTS.md, run_one.sh,
+  docs/dynamic, их store); коммиты — по команде юзера; CPU — один эксперимент (мой вклад
+  только read-only верификация + лёгкие скрипты).
+
+### 15.11 ~12:30, AT0_2 r6: ВНЕШНЕЕ РЕВЬЮ — PASS (0 MAJOR, 2 MINOR)
+- Ревьюер: pi-subagent prism-reviewer (a82f38da), prompt: docs/dynamic/AT0_2_r6_REVIEW_prompt.md,
+  вердикт: docs/dynamic/AT0_2_r6_REVIEW.md. Пересчёты: sha-цепочка (self-hash конвенция подтверждена
+  побайтово), gates (positive control 4.4e-16, invariance 4.6e-15, G8 0), бит-экзактный пересчёт всех
+  81 агрегата, 3 клетки от нуля (real ≤1.3e-15 rel; iid-null bit-exact), log↔claim 162/162, E1–E8/M1–M5 закрыты.
+- MINOR-1: null-иерархия D_null для v_tangent не монотонна (object-dependent; h_raw/du_unit — полная).
+  Reportable-only, verdict не затрагивает. В отчёте: не утверждать иерархию для v_tangent.
+- MINOR-2 (Z1): α=0.05 не в хедере (только код + pre-reg doc) — чинить в следующем run.
+- N6 (раскрыть в отчёте): пулы расходятся для v_tangent (primary 3/3 not_testable Δ<0.05; all_96 refuted)
+  → решающий пул = primary (pre-reg): v_tangent = not_testable.
+- Z3: формулировку «participation ratio» из ревью-промпта в docs не переносить (факт: L1 band-share distance).
+- AT0_5 r1 (299773): S0–S9 пройдены (якорь T0.1 max_dev=0.0, 478 клеток), S11+ идут.
