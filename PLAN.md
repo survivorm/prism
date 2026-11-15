@@ -1233,3 +1233,87 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
   → решающий пул = primary (pre-reg): v_tangent = not_testable.
 - Z3: формулировку «participation ratio» из ревью-промпта в docs не переносить (факт: L1 band-share distance).
 - AT0_5 r1 (299773): S0–S9 пройдены (якорь T0.1 max_dev=0.0, 478 клеток), S11+ идут.
+
+## AT0_8 — T8.1 «Пороговое возбуждение» (multi-observable threshold, TЗ TZ_add_4-8.md §8, 15.11)
+
+- Запрос: «давай AT0_8, через петлю субагентского ревью. kaggle в наличии, если запуск
+  тяжелый — но только после ХОРОШЕГО ревью». AT0_8 := клетка T8.1 (⭐ решает статус «солитона»:
+  пороговое рождение vs генерическое включение компетентности). T8.2 — только при
+  «кандидат жив» (пре-рег TЗ), T8.3 — требует T2.2 (волна 3) + сырые h-вставки E-71B (нет на
+  диске) — оба НЕ в этой клетке.
+- Контракт TЗ §8: сетка 11 точек {0,0.2,0.4,0.5,0.55,0.6,0.65,0.7,0.75,0.85,1.0} (+2 точки
+  T9.1 {0.05,0.1} — ОБЩИЙ прогон 13 точек, «T8.1 и T9.1 — один прогон», §8.3; вердикт T8.1
+  — по 11-точечному подмножеству), 3 сида [11,12,13] (преемство exp71 FIX), ВСЕ параметры
+  рандомизированы при λ=0 (вкл. 1-D), наблюдаемые {dip, hump, plateau, nll_holdout, rep16,
+  loopy, pr_sigma, eff-rank, margin}, правило λ_c: нормированный переход u(λ)=(O(λ)−O(0))/(O(1)−O(0)),
+  λ_c := первое удержанное ≥2 соседних точки пересечение u=0.5, монотонность
+  |Spearman(λ,O)|≥0.9 (seed-avg, ДО прогона), excluded_non_monotone[], overshoot u>1 — флаг,
+  персистентность, бисекция до Δs≤0.02 (≤5 ит.), CI по сидам (разброс >1 шага ⇒ not_resolved),
+  Bonferroni α=0.05/4 (пары dip×{nll,eff-rank,loopy,margin}), семьи {dip,hump,plateau},
+  {pr_sigma,eff-rank}, {rep16,loopy} — согласованность внутри семьи, одиночки (nll_holdout,
+  margin) — только межсемейный (G10).
+- Документы (зафиксированы ДО прогона, пины data/calib_pins): main = первые 6 wiki-доков
+  (pin wiki n16/min64/max256, trunc 256); holdout = math[:2]+code[:1]+chat[:1] (пины n8/min64/
+  max64, 64 ток.), n_holdout=4, disjoint по домену+тексту (assert); prompt генерации = первые
+  32 ток. main[0]; T_gen=256, greedy (T=0), stop по EOS, degenerate_short при T_act<32.
+- Наблюдаемые (определения зафиксированы в пре-реге): dip/hump/plateau = curves_series(h23)
+  (пин e64_gpu.py, sha 8c517e18f801fa87…), документный медиан → кривая по медианам 6 доков;
+  nll_main в каждой записи (гейт-регресс) + nll_holdout (медиана 4 holdout-доков); margin =
+  медиана (top1−top2) по позициям → медиана по докам; pr_sigma = (Σσ²)²/Σσ⁴ и eff-rank =
+  exp(H(σ²/Σσ²)) — SVD h23 [T,1024] (float64) одного дока; rep16 = доля 16-окон (без
+  перекрытия) с <12 distinct, loopy = 1{max k1>0.95} — на генерации (prompt+gen ток., h23).
+- Health ray (§9.6): (dip_band_hinge=|dip(λ)−dip(1)|_seed, loopy, nll_holdout) + человекочитаемый
+  sample (decode генерации) в каждой записи (λ,сид).
+- Вердикты (пре-рег, приоритет V3>V2>V1>V0): V3 PATHOLOGY (u_dip(0.7)>1 ∧ rep16(0.7)>rep16(1)
+  seed-avg); V2 SOLITON_CANDIDATE (λ_c^dip отделён от ≥1 из 4, ≥2 шага + CI не пересекаются);
+  V1 GENERIC_COMPETENCE (все λ_c совпадают в ≤1 шага, CI пересекаются — слово «солитон»
+  снимается); V0 не-вердикт (non_monotone_excluded / not_resolved / no_range на dip).
+- Гейты (до записи): S2 λ=1 побитово = base (sha256 каждого тензора); S2b λ=0 — все тензоры
+  случайны (max|diff|>0, mean≈0, std-отношение ∈[0.8,1.25]); S3 полнота = точное равенство
+  множеств ключей (не truthiness); S4 nll в каждой записи; S5 конечность + pr_sigma≥1,
+  eff_rank≥1; S6 disjoint; S7 sha-пин e64_gpu.py; S8 health-ray+sample в каждой (λ,сид).
+- Прогон: локальный смоук (conda py3.12 torch2.14.1, модель /data/Qwen/Qwen3.5-0.8B — .venv
+  сломан: huggingface_hub 2.4.0, чужой, не чинить — правило серии); полный прогон — КАГЛ
+  (T4 GPU, fp32; CPU-оценка 13×10 док.×3 сида×~87с ≈ 9+ч — тяжелый, user ок). Ядро
+  kaggle_kernel/kernel-at08_threshold.py: flattened (curves/dcurve/vpath инлайном + sha-пин),
+  токены main/holdout/prompt встроены как константы (локально пред-токенизированы, sha в
+  пре-реге) — токенайзер на Kaggle не нужен.
+- DONE/DOING/NEXT:
+  [x] PLAN-блок; [x] разведка (ТЗ §8, exp71_soliton.py, пины, e64-функции, conda-env,
+  /data/Qwen/Qwen3.5-0.8B).
+  [x] docs/AT0_8_prereg.md (сетка, доки+sha, определения, правило λ_c, вердикты, гейты,
+  цена, границы: старый артефакт E-71 НЕ на диске — контекст по TЗ §8.2 citation, version
+  break: новый λ=0 = ВСЕ рандом (старый λ=0 — обученные 1-D)).
+  [x] experiments/AT0_8_threshold.py (модель-загрузка/интерполяция/наблюдаемые/генерация/
+  λ_c-машина/бисекция/гейты/store+claim+manifest+log, resume по ключам) + selftest_lam_c
+  (exec точных веток: resolved/non_monotone/no_range/выброс/overshoot/plan/refine).
+  [x] смоук локально (241.8с CPU; все гейты PASS; λ=1: nll_h 2.23, dip −0.179, rep16 0.0,
+  loopy 1 — base реально зациклился; λ=0: nll_h 12.7, dip −0.259, rep16 0.88, loopy 0 —
+  коллапс в повторение; S2 sha-ок; canonical sha store воспроизводится).
+  [x] Петля субагент-ревью (инфра субагентов сломана: ngenix 401, obleth output-кап ~300 ток.,
+  локальных LLM-серверов нет — см. docs/AT0_8_review_r1.md; выполнено 3-проходное
+  структурированное само-ревью с exec-проверками: 1 BLOCKER (нормировка u в бисекции),
+  1 MAJOR (CUDA), 8 MINOR + генератор-корреляция shape-дублей — все закрыты, смоук
+  воспроизведён, selftest расширен; промпты /tmp/at08_r{1,2,3}.md — для свежего контекста,
+  если инфра вернётся). ТОЛЬКО ПОТОМ Kaggle.
+[x] kaggle_kernel/kernel-at08 (build через push_all.py, exp-cell compile OK,
+  main_AT08threshold(**kwargs), results_dir=RES) — **полный прогон v2 COMPLETE**
+  (voroninmichael/prism-at08-threshold, T4 GPU, wall 841.0 s; v1 упал в бисекции на
+  np.mean(dict_values) — TypeError — фикс _bisect_lambda, v2).**Gates S1–S9 ALL PASS.**
+  Вердикт: **V0_NOT_RESOLVED** (dip non_monotone_excluded — seed-avg u: +1.71@0.55,
+  −1.74@0.70, −1.13@0.85, +1.0@1.0 — «горб-долина», не ступенька; защита пререга
+  сработала по назначению). Вторично: nll_holdout resolved λ_c=0.85 (L11/12/13,
+  bisect [0.75,0.85]), margin resolved 0.85/None/0.85. Смок (1 сид CPU, V2_FLAT
+  λ_c≈0.92) по dip НЕ подтвердился.
+  [x] pull + самосверка: все sha перепроверены локально (claim file sha b2923d74324e9180,
+  store canonical 018c3dac90eb1bba, store file 28a0c28d94d98239, manifest self-sha
+  74571c823aa5aa8b — конвенция AT0_2b-v2 C7); S3_complete 42/42; λ_c ∈ гриду.
+  [x] docs/AT0_8_results.md (прогон, вердикт, таблица вторичных, сравнение со смоком).
+  [ ] NEXT: trackio-backfill (AGENTS: Kaggle-прогоны — бэкилл migration-скриптом после pull)
+    — ОТЛОЖЕНО: параллельная сессия активна (общая .trackio БД, quiescence ТЗ §5.1, урок
+    trackio из AT0_4-блока). Реестр: +at0_8 (results/AT0_8_run.log, «[OK] AT0_8_threshold 841s»)
+    + строка at0_4_rebuild_r6 параллельной сессии — перепуск с обновлённой арифметикой
+    (115/130 → 117/132) после quiescence.
+- Границы: не менять e64_gpu.py/field.py/AT0_1..AT0_6; данные read-only (пины, /data);
+  venv не чинить; коммит — по команде (явные пути). T9.1 — НЕ эта клетка: 13-точечная сетка
+  и точка-данные для T9.1 отчитываются в store, но D-1_own/copy НЕ считаются.
