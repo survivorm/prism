@@ -62,6 +62,73 @@
     "gates.G8_gram: + n_l1_absent_docs = 2, n_l1_absent_cells = 6 (ревью #6)"
    ],
    "invariant": "числа прогона не менялись; manifest = claim + manifest-блок; добавленные величины — детерминированные пересчёты из записанных входов (sha256) либо явные счёты из артефакта"
+  },
+  "r7_annotation": {
+   "date": "2026-11-15",
+   "review": "docs/AT0_1_review.md (round 2: C1–C7)",
+   "chain": {
+    "run_script_sha256": "de3058693022320876da8028c4e63dd1ef57ca8fe9dc565f08f49d396a763f20",
+    "r5_claim_sha256": "d4a4b10135e8b63f361f6fe75475cff7d44b6810e9248d03a8bdf96b5b73d94a",
+    "r5_claim_note": "восстановлен перепуском de305869 (env r5: python 3.12.9/np 2.5.3, threads=4, TZ 67addba/647c03ab): bit-eq store 23281c64cc418ff1 + run.log e6dcd6fc62aeced0; пин results/AT0/store/claim_r5_d4a4b101.json; sha ранее был записан только в meta.r6_annotation.base_run (без пин-файла) — р7 закрепляет файл и воспроизведение",
+    "r6_claim_sha256": "b0f74312416285207ba99ae93ee75ecc446938b8b61ba82a19a04ac36b913994",
+    "r6_claim_note": "пин results/AT0/store/claim_r6_b0f74312.json; diff r5→r6 = ровно декларированные r6-изменения (assert в r7-скрипте); r6-аннотационный скрипт закреплен r7: experiments/at0_1_r6_annotation.py (round 3 MINOR-3)",
+    "r6_annotation_script_sha256": "0d52eda5f1f4128aebe1bfdce9f3c32532b4a5ec14be9e1172a6757d2bfe508e",
+    "r7_claim_sha256": "см. manifest-блок (self-sha невозможен)",
+    "annotation_script_sha256": "91fcc9bbe2df4b9fd828a04ce758caeb077aa2cd6c3817e73b3d5e5b32a5345b",
+    "store_sha256": "23281c64cc418ff1fedad2a5013c4bf7c8b7dd7680ac8d4fa7cf746c62fd1732"
+   },
+   "changes": [
+    "C1: null_analytic_ma1: + z_excess, z_raw_band, per_doc_ma1; E_doc переписан (было: «E[mean_band] = 0»)",
+    "C2: G0a_tpu_hn_field: max_rel_dev_reconstruction(+detail) → reconstruction_roundoff_identity(+detail), status = тождество, не гейт",
+    "C3: meta.r7_annotation.chain (r5/r6/r7 shas + скрипты); полная сверка r5→r6 и r6→r7 — assert",
+    "C4: null_analytic_ma1: + z_excess_eff, d_eff, se_factor_median, SE_eff_formula (Bartlett + participation ratio; ambient D — нижняя граница)",
+    "C5: SE_formula: /98 → /88 (K_MAX−8; код всегда считал /88)",
+    "C6: t0_headline: T_none_full из excess_median/excess_mean → identity_check_G1; + headline = r/f_dc; t0_headline_note дополнен",
+    "C7: self-audit расширен (l23_meta_vs_recomputed, roundoff, theta, z_raw_band=r5, T_none_full, pool) — assert'ы, не stdout",
+    "R3 (round 3 MINOR-1..6): дата 2026-11-14 → 2026-11-15; thread-ноты (d_eff/z_eff bit-eq в pinned 6-thread env); r6-скрипт закреплен (experiments/at0_1_r6_annotation.py); headline r/f_dc ≡ N (trivial) — заголовок = r per object; guard th is None — defensive note; дубль median_z/z_raw_band — note. Чисел прогона не тронуто"
+   ],
+   "invariant": "числа прогона не изменились: full diff r6→r7 — только декларированные пути (assert patterns_match); все остальные листы bit-eq",
+   "self_audit": {
+    "g0a_evidence_own_w0_bit_eq": {
+     "row_norm_median": 11.664189716913654,
+     "hn_median": 4.638944387435913,
+     "hn_vs_column_norms_max_rel": 0.00011897494248902518,
+     "row_norm_vs_hn_corr": 0.04291271434883484
+    },
+    "roundoff_identity_bit_eq": {
+     "max_rel_dev": 3.7939126356469717e-16,
+     "worst": {
+      "doc": "own_w6",
+      "L": 5
+     },
+     "max_by_source": {
+      "P1_own": 3.7939126356469717e-16,
+      "P2_corpus": 2.651087330108574e-16
+     },
+     "max_by_layer": {
+      "L1": 2.6175831752051945e-16,
+      "L11": 2.6682856128897777e-16,
+      "L17": 2.6607990136516047e-16,
+      "L23": 2.5493718517941864e-16,
+      "L5": 3.7939126356469717e-16
+     }
+    },
+    "l23_meta_vs_recomputed_bit_eq": {
+     "max_abs_dev_by_source": {
+      "P1_own": 0.00020829041663661396,
+      "P2_corpus": 5.5475605402977024e-05
+     },
+     "n_docs": {
+      "P1_own": 16,
+      "P2_corpus": 16
+     },
+     "worst_doc": "own_w4"
+    },
+    "pool4_n": 51,
+    "theta_bit_eq": "asserted (per doc × obj)",
+    "z_raw_band_eq_r5_statistic": "asserted (per doc × obj)",
+    "tnone_bit_eq": "asserted (per obj)"
+   }
   }
  },
  "gates": {
@@ -185,8 +252,8 @@
     "note": "TPU-ряды vs продюсерский meta L23 (fp16-точность ~1e-3; dev ≤ 1e-3 ⇒ ряды годны)"
    },
    "conclusion": "строки TPU-npz — сырые fp16-состояния; ‖row‖ — истинная норма (fp16-точность ~1e-3); моментные величины h_raw и R/A-split для TPU вычисляемы и вычислены",
-   "max_rel_dev_reconstruction": 3.7939126356469717e-16,
-   "max_rel_dev_reconstruction_detail": {
+   "reconstruction_roundoff_identity": 3.7939126356469717e-16,
+   "reconstruction_roundoff_identity_detail": {
     "definition": "max по TPU-докам (own_w0..15, cor_w0..15) × L ∈ {1,5,11,17,23} × row t ‖U·hn − h_raw‖₂/‖h_raw‖₂ (r6, docs/AT0_1_review.md, #5); U = u/max(‖u‖,1e-12), u = h_raw/max(‖h_raw‖,1e-12), hn = ‖h_raw‖ — зеркало load_source + cell-loop (experiments/AT0_1_accounting.py:185-189, 275-276)",
     "worst": {
      "doc": "own_w6",
@@ -208,7 +275,8 @@
      "results/e64/tpu_v8/P1_own.npz": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198",
      "results/e64/tpu_v8/P2_corpus.npz": "5f42a08442a5d3bcb8d7c4de5c9658340c0378a917a5e633b9b2aa589ceac125"
     },
-    "provenance": "post-hoc детерминированный пересчёт r6 (2026-11-13) — не перепуск эксперимента; числа прогона не менялись (experiments/at0_1_tpu_dev_recompute.py)"
+    "provenance": "post-hoc детерминированный пересчёт r7 (2026-11-15) из TPU-npz (входы sha256 ниже); bit-eq воспроизведение r6-значений — assert (r6: experiments/at0_1_tpu_dev_recompute.py, тавтология отмечена r7, C2)",
+    "status": "тождество (roundoff), НЕ provenance-гейт (r7, C2): U·hn ≡ h в обеих ветках max(·,1e-12) (hn>1e-12: U=u=h/hn ⇒ U·hn=h; hn≤1e-12: U=h/hn ⇒ U·hn=h) — измеряет только round-trip divide→multiply, провалить не может (кроме NaN/inf); годность TPU-рядов устанавливает l23_meta_vs_recomputed (max dev 2.08e-4 ≤ 1e-3), не эта величина"
    }
   },
   "G0b_gen_sha": {
@@ -349,9 +417,344 @@
      "n_no_match": 0,
      "n_abs_z_ge_3": 6,
      "theta_median_abs": 0.457322210431949,
-     "E_doc": "−f_dc (matched MA(1): ρ_true(k≥2) = 0 ⇒ E[mean_band] = 0)",
-     "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 98 — первый порядок, per-dim гауссов MA(1), D = скрытое измерение; Bartlett-поправка нулевая для k > p+1",
-     "note": "r5 (arch-review D1b): второй столбец — MA(1)-null, реально сохраняющий лаг-1 (θ matched к ρ(1), invertible-корень); описательно, вердикт — по первичному каналу (σ/эффект, D2)"
+     "E_doc": "s_doc = mean_band − f_dc: E ≈ 0 (matched MA(1) с DC: ρ_acf(k≥2) = 0 ⇒ E[rho_Tk(k≥2)] = ‖m‖²/(‖m‖²+var) = f_dc ⇒ E[mean_band] ≈ f_dc; r7, C1: формулировка r5/r6 «E[mean_band] = 0» неверна для T-k нормировки — DC не сокращается: c(0) = (‖m‖²+var)/D, c(k≥2) ≈ ‖m‖²/D)",
+     "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 88 — первый порядок, per-dim гауссов MA(1), D = скрытое измерение (r7, C5: делитель = K_MAX−8 = 88 лагов; в r5/r6 ошибочно записано /98; утверждение «Bartlett-поправка нулевая для k > p+1» неверно: var(ρ̂_k) ≈ (1/N)·Σ_j ρ(j)² = (1/N)(1+2ρ₁²) для MA(1))",
+     "note": "r5 (arch-review D1b): второй столбец — MA(1)-null, реально сохраняющий лаг-1 (θ matched к ρ(1), invertible-корень); описательно, вердикт — по первичному каналу (σ/эффект, D2)",
+     "z_excess": {
+      "median": -0.4109050469221357,
+      "mean": -0.2015875706123841,
+      "n_abs_z_ge_3": 6,
+      "def": "s_doc/se, s_doc = mean_{k=9..96} rho_Tk − f_dc; null: E[mean_band] = f_dc (C1)"
+     },
+     "z_excess_eff": {
+      "median": -0.043138314263474094,
+      "mean": -0.035176149334064225,
+      "n_abs_z_ge_3": 0,
+      "def": "s_doc/se_eff, se_eff = se·sqrt((1+2ρ₁²)·D/D_eff) (C4; ambient D — нижняя граница)"
+     },
+     "z_raw_band": {
+      "median": -0.21574175798491185,
+      "mean": -0.10828588005834365,
+      "n_abs_z_ge_3": 6,
+      "def": "mean_band/se — старая (r5/r6) статистика, сохранена диагностикой (C1); bit-eq со store per_doc.null_ma1_z.z (self-audit)"
+     },
+     "d_eff": {
+      "min": 8.227332678787114,
+      "median": 25.01641714942859,
+      "max": 52.37480003357894,
+      "def": "(Σλ)²/Σλ² participation ratio ковариации строк объекта (zero-mean, L23) (C4)"
+     },
+     "se_factor_median": 7.247495241936936,
+     "SE_eff_formula": "se_eff = se·sqrt((1+2ρ₁²)·D/D_eff) — r7, C4: Bartlett-фактор (1+2ρ₁²), ρ₁ = θ/(1+θ²) (matched null); D_eff = (Σλ)²/Σλ² participation ratio ковариации строк объекта (zero-mean, L23, per-doc, поле d_eff). Ambient D=1024 — нижняя граница (se ≤ se_eff); р.178 r_eff(0.05) из addentum — другая метрика (5%-порог ранга), не использована",
+     "c1_c4_note": "r7 (docs/AT0_1_review.md, C1/C4): r5/r6 z = (s_doc + f_dc)/se = mean_band/se тестировал null «mean_band = 0»; при matched MA(1) с DC E[mean_band] ≈ f_dc ⇒ E[s_doc] ≈ 0 ⇒ z_excess = s_doc/se (тест «плато на уровне f_dc»). Для v_tangent (f_dc_median ≈ 0.08) старый z (median 381) — by-product DC в числителе (r6 applicability), не plateau-сигнал; z_excess_ambient ≈ 10.5 (р. C1 ручной счёт), se_eff ×≈5.5 ⇒ z_excess_eff ≈ 1.9 — описательно (вердикт — по первичному каналу, r5 D2). Треды (round 3 MINOR-2): per_doc d_eff/z_excess_eff и se_factor_median — bit-eq только в pinned-окружении (run_one.sh: OpenBLAS/MKL_NUM_THREADS=6; r7-прогон: OMP_NUM_THREADS=4 — eigvalsh чувствителен к OpenBLAS/MKL-тредам); в другом thread-окружении дрейф 1–2 ulp (≤3.4e-15 rel, проверено независимо, ревью round 3). z_raw_band/z_excess/θ/T_none_full/roundoff/l23_meta — bit-eq в обоих окружениях. Round 3 MINOR-5/6: guard th is None (no_match-док в пуле) — defensive, не достигается на данных (все 51 доки пула matched); проверен exec'ом реальной ma1_recompute с имитированным no_match. Поля median_z/mean_z/n_abs_z_ge_3 (r5) bit-eq z_raw_band.median/mean/n_abs_z_ge_3 — дубль сохранён инвариантом r5-листьев; цитировать z_raw_band.",
+     "per_doc_ma1": {
+      "chat_1": {
+       "z_excess": -1.681278252410859,
+       "z_raw_band": -1.6114604317355572,
+       "z_excess_eff": -0.19301446037028894,
+       "d_eff": 16.720168788538672
+      },
+      "chat_11": {
+       "z_excess": 1.7361864019211757,
+       "z_raw_band": 1.8097634517146766,
+       "z_excess_eff": 0.24038670722399277,
+       "d_eff": 24.670115099407973
+      },
+      "chat_12": {
+       "z_excess": -1.682806144190978,
+       "z_raw_band": -1.6247018606570798,
+       "z_excess_eff": -0.28437034326608035,
+       "d_eff": 37.63107554129356
+      },
+      "chat_13": {
+       "z_excess": -3.205570602129823,
+       "z_raw_band": -3.159363082519536,
+       "z_excess_eff": -0.44382159121225456,
+       "d_eff": 25.31706187840747
+      },
+      "chat_14": {
+       "z_excess": -1.1307112863109974,
+       "z_raw_band": -1.0796012115497648,
+       "z_excess_eff": -0.17129803024618465,
+       "d_eff": 30.526554367718994
+      },
+      "chat_2": {
+       "z_excess": -1.1663954582654898,
+       "z_raw_band": -1.1146142061410864,
+       "z_excess_eff": -0.23728704524680505,
+       "d_eff": 52.37480003357894
+      },
+      "chat_4": {
+       "z_excess": 0.37316914824845415,
+       "z_raw_band": 0.4486225603905637,
+       "z_excess_eff": 0.0666620329751298,
+       "d_eff": 42.0526064897435
+      },
+      "chat_5": {
+       "z_excess": 2.735581650409461,
+       "z_raw_band": 2.7798350784099,
+       "z_excess_eff": 0.3201689866207705,
+       "d_eff": 19.055316554249902
+      },
+      "chat_6": {
+       "z_excess": 0.8285529731710778,
+       "z_raw_band": 0.8837378096678463,
+       "z_excess_eff": 0.11276451523621037,
+       "d_eff": 25.01641714942859
+      },
+      "chat_7": {
+       "z_excess": 0.665258947126074,
+       "z_raw_band": 0.7319427289121725,
+       "z_excess_eff": 0.07496249765429056,
+       "d_eff": 16.503185529559232
+      },
+      "chat_8": {
+       "z_excess": -2.322626790366653,
+       "z_raw_band": -2.285806679736979,
+       "z_excess_eff": -0.2156033890079373,
+       "d_eff": 12.73210404947382
+      },
+      "code_11": {
+       "z_excess": 7.316133713560048,
+       "z_raw_band": 7.378497737374317,
+       "z_excess_eff": 0.7811888857134571,
+       "d_eff": 14.568149827094553
+      },
+      "code_12": {
+       "z_excess": -0.28309739138552004,
+       "z_raw_band": -0.21574175798491185,
+       "z_excess_eff": -0.04240409499058273,
+       "d_eff": 29.547365927705652
+      },
+      "code_15": {
+       "z_excess": -0.7781081070036242,
+       "z_raw_band": -0.7218540224825928,
+       "z_excess_eff": -0.11189125031899008,
+       "d_eff": 26.583895930678235
+      },
+      "code_2": {
+       "z_excess": -1.003057186294358,
+       "z_raw_band": -0.9538365702767782,
+       "z_excess_eff": -0.1621807189334413,
+       "d_eff": 34.14360682944889
+      },
+      "code_4": {
+       "z_excess": -1.061453255442975,
+       "z_raw_band": -1.0152694172985997,
+       "z_excess_eff": -0.15439991723509588,
+       "d_eff": 27.465344013278866
+      },
+      "code_5": {
+       "z_excess": -0.1694638273351221,
+       "z_raw_band": -0.09978354829211258,
+       "z_excess_eff": -0.02739916213310123,
+       "d_eff": 34.40883104786885
+      },
+      "code_7": {
+       "z_excess": -1.5216297835160877,
+       "z_raw_band": -1.4809088407790991,
+       "z_excess_eff": -0.20237310165727412,
+       "d_eff": 23.057261797614522
+      },
+      "code_9": {
+       "z_excess": -1.2258097365673446,
+       "z_raw_band": -1.1813120123114182,
+       "z_excess_eff": -0.18989654194946193,
+       "d_eff": 30.812860160410633
+      },
+      "cor_w0": {
+       "z_excess": 1.5033067390866828,
+       "z_raw_band": 1.7117255394578614,
+       "z_excess_eff": 0.19402877315761452,
+       "d_eff": 22.604184204695443
+      },
+      "cor_w1": {
+       "z_excess": 1.0454763758568797,
+       "z_raw_band": 1.208704192686504,
+       "z_excess_eff": 0.14885481262247072,
+       "d_eff": 26.36454199624585
+      },
+      "cor_w10": {
+       "z_excess": -1.9869206479016814,
+       "z_raw_band": -1.8225832658328387,
+       "z_excess_eff": -0.2159475611838306,
+       "d_eff": 15.663261286554997
+      },
+      "cor_w12": {
+       "z_excess": 0.18237559192855454,
+       "z_raw_band": 0.3139767383091319,
+       "z_excess_eff": 0.025163947797199736,
+       "d_eff": 25.974469629683362
+      },
+      "cor_w13": {
+       "z_excess": 0.1542409460976821,
+       "z_raw_band": 0.2994465451895216,
+       "z_excess_eff": 0.021140795961407943,
+       "d_eff": 24.946661603466183
+      },
+      "cor_w14": {
+       "z_excess": -0.33713206436932136,
+       "z_raw_band": -0.2108710636124488,
+       "z_excess_eff": -0.041694813765913115,
+       "d_eff": 20.34290692138503
+      },
+      "cor_w15": {
+       "z_excess": -1.8751490497515484,
+       "z_raw_band": -1.7430443691881485,
+       "z_excess_eff": -0.21986496510693704,
+       "d_eff": 17.6838718652547
+      },
+      "cor_w2": {
+       "z_excess": -1.1553672642131931,
+       "z_raw_band": -0.9969152699102116,
+       "z_excess_eff": -0.1585956489329825,
+       "d_eff": 24.947150974792184
+      },
+      "cor_w3": {
+       "z_excess": -0.8982778645733777,
+       "z_raw_band": -0.72382166085266,
+       "z_excess_eff": -0.10494344259419258,
+       "d_eff": 18.579539139380312
+      },
+      "cor_w4": {
+       "z_excess": -0.4109050469221357,
+       "z_raw_band": -0.1412831956359835,
+       "z_excess_eff": -0.043138314263474094,
+       "d_eff": 14.927208063065114
+      },
+      "cor_w5": {
+       "z_excess": -1.5528312882841524,
+       "z_raw_band": -1.3096974744267398,
+       "z_excess_eff": -0.13475469352600639,
+       "d_eff": 10.53736795454853
+      },
+      "cor_w6": {
+       "z_excess": 0.3376787996339237,
+       "z_raw_band": 0.7179861933285124,
+       "z_excess_eff": 0.036657304002125815,
+       "d_eff": 16.172432364247708
+      },
+      "cor_w7": {
+       "z_excess": -1.7518570333795085,
+       "z_raw_band": -1.6282433176538398,
+       "z_excess_eff": -0.2239228399941743,
+       "d_eff": 21.83569586368308
+      },
+      "cor_w9": {
+       "z_excess": -0.0008135416407057538,
+       "z_raw_band": 0.11412072114837517,
+       "z_excess_eff": -0.00010676860486421623,
+       "d_eff": 23.273870214138274
+      },
+      "math_0": {
+       "z_excess": 1.2143237542865208,
+       "z_raw_band": 1.2869293068583263,
+       "z_excess_eff": 0.1984646920424968,
+       "d_eff": 34.89176941825191
+      },
+      "math_1": {
+       "z_excess": -0.2607489873182144,
+       "z_raw_band": -0.1897582268356588,
+       "z_excess_eff": -0.03835792572382259,
+       "d_eff": 27.13898752235598
+      },
+      "math_10": {
+       "z_excess": -0.820933792839741,
+       "z_raw_band": -0.7676544096239274,
+       "z_excess_eff": -0.1480802076864898,
+       "d_eff": 41.05231076269952
+      },
+      "math_11": {
+       "z_excess": -1.090079758681917,
+       "z_raw_band": -1.0442837004925598,
+       "z_excess_eff": -0.1701960636784205,
+       "d_eff": 31.623786393159257
+      },
+      "math_12": {
+       "z_excess": 3.588742300662503,
+       "z_raw_band": 3.6711939403415745,
+       "z_excess_eff": 0.34693035966888,
+       "d_eff": 12.778349935613289
+      },
+      "math_13": {
+       "z_excess": 1.7911602308802237,
+       "z_raw_band": 1.8529125613306354,
+       "z_excess_eff": 0.27872099968471514,
+       "d_eff": 30.725318564043572
+      },
+      "math_14": {
+       "z_excess": -4.494348213288605,
+       "z_raw_band": -4.429236739472485,
+       "z_excess_eff": -0.3539774646031762,
+       "d_eff": 8.227332678787114
+      },
+      "math_15": {
+       "z_excess": -1.008977899455095,
+       "z_raw_band": -0.9520676953672184,
+       "z_excess_eff": -0.15876191047386726,
+       "d_eff": 31.33495093421735
+      },
+      "math_2": {
+       "z_excess": -1.2264897860075803,
+       "z_raw_band": -1.1754083099602726,
+       "z_excess_eff": -0.16827132043018717,
+       "d_eff": 24.869213688422903
+      },
+      "math_3": {
+       "z_excess": 0.16968757816408137,
+       "z_raw_band": 0.22787398375495654,
+       "z_excess_eff": 0.028125152675316522,
+       "d_eff": 36.00729692445063
+      },
+      "math_4": {
+       "z_excess": -0.5295324376383561,
+       "z_raw_band": -0.4646783426938124,
+       "z_excess_eff": -0.08098365650931903,
+       "d_eff": 30.800693609272418
+      },
+      "math_5": {
+       "z_excess": 0.08492878287931754,
+       "z_raw_band": 0.1470833815550883,
+       "z_excess_eff": 0.012967337672397132,
+       "d_eff": 31.040226166657753
+      },
+      "math_6": {
+       "z_excess": 1.0110305745184716,
+       "z_raw_band": 1.0891006067927849,
+       "z_excess_eff": 0.14713837383446549,
+       "d_eff": 27.209073586042145
+      },
+      "math_7": {
+       "z_excess": 1.5991238820021756,
+       "z_raw_band": 1.657428509615784,
+       "z_excess_eff": 0.2136693337776905,
+       "d_eff": 22.65311908850913
+      },
+      "math_8": {
+       "z_excess": -3.2179770407798785,
+       "z_raw_band": -3.1309750727345698,
+       "z_excess_eff": -0.4890288735925689,
+       "d_eff": 29.447787059855703
+      },
+      "math_9": {
+       "z_excess": -2.6996334694528987,
+       "z_raw_band": -2.6202668563921763,
+       "z_excess_eff": -0.40752371363453016,
+       "d_eff": 29.32348113901473
+      },
+      "own_w13": {
+       "z_excess": 2.794965229466846,
+       "z_raw_band": 2.8481460443778817,
+       "z_excess_eff": 0.2555211992674355,
+       "d_eff": 11.11641666911654
+      },
+      "wiki_13": {
+       "z_excess": 3.137093286586,
+       "z_raw_band": 3.1934350982591284,
+       "z_excess_eff": 0.29658950724691224,
+       "d_eff": 11.849544791457651
+      }
+     }
     },
     "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026). r5 (D1): block-2 — pair-block null: сохраняет ЧЁТНЫЙ лаг-1 (x_{2i}, x_{2i+1}), рандомизирует НЕЧЁТНЫЙ лаг-1 и лаги ≥ 2; «DC+MA(1) null» было ложным label (ревью: MA(1)-лаг-1 вдвое). MA(1)-null, matched по лаг-0/лаг-1 — null_analytic_ma1 (второй столбец)",
     "delta_min": 0.0002,
@@ -391,9 +794,344 @@
      "n_no_match": 0,
      "n_abs_z_ge_3": 8,
      "theta_median_abs": 0.45587621085060537,
-     "E_doc": "−f_dc (matched MA(1): ρ_true(k≥2) = 0 ⇒ E[mean_band] = 0)",
-     "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 98 — первый порядок, per-dim гауссов MA(1), D = скрытое измерение; Bartlett-поправка нулевая для k > p+1",
-     "note": "r5 (arch-review D1b): второй столбец — MA(1)-null, реально сохраняющий лаг-1 (θ matched к ρ(1), invertible-корень); описательно, вердикт — по первичному каналу (σ/эффект, D2)"
+     "E_doc": "s_doc = mean_band − f_dc: E ≈ 0 (matched MA(1) с DC: ρ_acf(k≥2) = 0 ⇒ E[rho_Tk(k≥2)] = ‖m‖²/(‖m‖²+var) = f_dc ⇒ E[mean_band] ≈ f_dc; r7, C1: формулировка r5/r6 «E[mean_band] = 0» неверна для T-k нормировки — DC не сокращается: c(0) = (‖m‖²+var)/D, c(k≥2) ≈ ‖m‖²/D)",
+     "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 88 — первый порядок, per-dim гауссов MA(1), D = скрытое измерение (r7, C5: делитель = K_MAX−8 = 88 лагов; в r5/r6 ошибочно записано /98; утверждение «Bartlett-поправка нулевая для k > p+1» неверно: var(ρ̂_k) ≈ (1/N)·Σ_j ρ(j)² = (1/N)(1+2ρ₁²) для MA(1))",
+     "note": "r5 (arch-review D1b): второй столбец — MA(1)-null, реально сохраняющий лаг-1 (θ matched к ρ(1), invertible-корень); описательно, вердикт — по первичному каналу (σ/эффект, D2)",
+     "z_excess": {
+      "median": -0.4958197811856885,
+      "mean": -0.19094396673053737,
+      "n_abs_z_ge_3": 7,
+      "def": "s_doc/se, s_doc = mean_{k=9..96} rho_Tk − f_dc; null: E[mean_band] = f_dc (C1)"
+     },
+     "z_excess_eff": {
+      "median": -0.06464836692575962,
+      "mean": -0.03513754280241277,
+      "n_abs_z_ge_3": 0,
+      "def": "s_doc/se_eff, se_eff = se·sqrt((1+2ρ₁²)·D/D_eff) (C4; ambient D — нижняя граница)"
+     },
+     "z_raw_band": {
+      "median": -0.21562117252716537,
+      "mean": -0.08411930124124715,
+      "n_abs_z_ge_3": 8,
+      "def": "mean_band/se — старая (r5/r6) статистика, сохранена диагностикой (C1); bit-eq со store per_doc.null_ma1_z.z (self-audit)"
+     },
+     "d_eff": {
+      "min": 8.430933508464294,
+      "median": 26.016671585252315,
+      "max": 52.53374670965484,
+      "def": "(Σλ)²/Σλ² participation ratio ковариации строк объекта (zero-mean, L23) (C4)"
+     },
+     "se_factor_median": 7.017361043999897,
+     "SE_eff_formula": "se_eff = se·sqrt((1+2ρ₁²)·D/D_eff) — r7, C4: Bartlett-фактор (1+2ρ₁²), ρ₁ = θ/(1+θ²) (matched null); D_eff = (Σλ)²/Σλ² participation ratio ковариации строк объекта (zero-mean, L23, per-doc, поле d_eff). Ambient D=1024 — нижняя граница (se ≤ se_eff); р.178 r_eff(0.05) из addentum — другая метрика (5%-порог ранга), не использована",
+     "c1_c4_note": "r7 (docs/AT0_1_review.md, C1/C4): r5/r6 z = (s_doc + f_dc)/se = mean_band/se тестировал null «mean_band = 0»; при matched MA(1) с DC E[mean_band] ≈ f_dc ⇒ E[s_doc] ≈ 0 ⇒ z_excess = s_doc/se (тест «плато на уровне f_dc»). Для v_tangent (f_dc_median ≈ 0.08) старый z (median 381) — by-product DC в числителе (r6 applicability), не plateau-сигнал; z_excess_ambient ≈ 10.5 (р. C1 ручной счёт), se_eff ×≈5.5 ⇒ z_excess_eff ≈ 1.9 — описательно (вердикт — по первичному каналу, r5 D2). Треды (round 3 MINOR-2): per_doc d_eff/z_excess_eff и se_factor_median — bit-eq только в pinned-окружении (run_one.sh: OpenBLAS/MKL_NUM_THREADS=6; r7-прогон: OMP_NUM_THREADS=4 — eigvalsh чувствителен к OpenBLAS/MKL-тредам); в другом thread-окружении дрейф 1–2 ulp (≤3.4e-15 rel, проверено независимо, ревью round 3). z_raw_band/z_excess/θ/T_none_full/roundoff/l23_meta — bit-eq в обоих окружениях. Round 3 MINOR-5/6: guard th is None (no_match-док в пуле) — defensive, не достигается на данных (все 51 доки пула matched); проверен exec'ом реальной ma1_recompute с имитированным no_match. Поля median_z/mean_z/n_abs_z_ge_3 (r5) bit-eq z_raw_band.median/mean/n_abs_z_ge_3 — дубль сохранён инвариантом r5-листьев; цитировать z_raw_band.",
+     "per_doc_ma1": {
+      "chat_1": {
+       "z_excess": -1.7187152987491368,
+       "z_raw_band": -1.6565488827733739,
+       "z_excess_eff": -0.194709369011731,
+       "d_eff": 16.356909797838604
+      },
+      "chat_11": {
+       "z_excess": 1.9638964855892354,
+       "z_raw_band": 2.033401950533972,
+       "z_excess_eff": 0.26919227631319387,
+       "d_eff": 24.201599021411393
+      },
+      "chat_12": {
+       "z_excess": -1.6831365159667535,
+       "z_raw_band": -1.621420480799528,
+       "z_excess_eff": -0.2819611165342901,
+       "d_eff": 36.992616933139786
+      },
+      "chat_13": {
+       "z_excess": -3.2562489124017175,
+       "z_raw_band": -3.2119741816595813,
+       "z_excess_eff": -0.4467140495267281,
+       "d_eff": 24.875758683008694
+      },
+      "chat_14": {
+       "z_excess": -1.1187875306999633,
+       "z_raw_band": -1.0645312178487907,
+       "z_excess_eff": -0.1666973619471582,
+       "d_eff": 29.5190088658703
+      },
+      "chat_2": {
+       "z_excess": -1.1715675225252429,
+       "z_raw_band": -1.1173783573635725,
+       "z_excess_eff": -0.23873540953767702,
+       "d_eff": 52.53374670965484
+      },
+      "chat_4": {
+       "z_excess": 0.3824847225871566,
+       "z_raw_band": 0.4569447005964688,
+       "z_excess_eff": 0.06825796992450671,
+       "d_eff": 41.970330306815804
+      },
+      "chat_5": {
+       "z_excess": 2.9537769690607694,
+       "z_raw_band": 3.0037716416880604,
+       "z_excess_eff": 0.3483211714141298,
+       "d_eff": 19.24732762446707
+      },
+      "chat_6": {
+       "z_excess": 0.8669116042312992,
+       "z_raw_band": 0.9248070614021807,
+       "z_excess_eff": 0.1168618517469429,
+       "d_eff": 24.52292942525783
+      },
+      "chat_7": {
+       "z_excess": 0.6650636839085889,
+       "z_raw_band": 0.7323028829108101,
+       "z_excess_eff": 0.07418074428158669,
+       "d_eff": 16.116575204086192
+      },
+      "chat_8": {
+       "z_excess": -2.3532786388524927,
+       "z_raw_band": -2.316756177889337,
+       "z_excess_eff": -0.2154365992190159,
+       "d_eff": 12.356235567794178
+      },
+      "code_11": {
+       "z_excess": 7.724588697866829,
+       "z_raw_band": 7.788032775213728,
+       "z_excess_eff": 0.8091623214589904,
+       "d_eff": 13.984728451773284
+      },
+      "code_12": {
+       "z_excess": -0.2638886708523945,
+       "z_raw_band": -0.19110203970679496,
+       "z_excess_eff": -0.039335337091238785,
+       "d_eff": 29.26533307883952
+      },
+      "code_15": {
+       "z_excess": -0.8401510379327226,
+       "z_raw_band": -0.7845627073402778,
+       "z_excess_eff": -0.12183626152025306,
+       "d_eff": 26.981492679696977
+      },
+      "code_2": {
+       "z_excess": -0.8353487530388377,
+       "z_raw_band": -0.7848699361851583,
+       "z_excess_eff": -0.13563648235215986,
+       "d_eff": 34.41512241045276
+      },
+      "code_4": {
+       "z_excess": -1.14036799888727,
+       "z_raw_band": -1.0890397579963604,
+       "z_excess_eff": -0.1659088128104407,
+       "d_eff": 27.471705446693385
+      },
+      "code_5": {
+       "z_excess": -0.18050516397949612,
+       "z_raw_band": -0.11171154214043069,
+       "z_excess_eff": -0.029181295875252592,
+       "d_eff": 34.38782082918924
+      },
+      "code_7": {
+       "z_excess": -1.5315514641115324,
+       "z_raw_band": -1.4859988689869925,
+       "z_excess_eff": -0.2043331182148559,
+       "d_eff": 23.14080699992703
+      },
+      "code_9": {
+       "z_excess": -1.294359440338805,
+       "z_raw_band": -1.2333695941394585,
+       "z_excess_eff": -0.2009246942066918,
+       "d_eff": 30.908167213880358
+      },
+      "cor_w0": {
+       "z_excess": 1.3845200447187551,
+       "z_raw_band": 1.6911102027221347,
+       "z_excess_eff": 0.18887691025965792,
+       "d_eff": 25.35445921467597
+      },
+      "cor_w1": {
+       "z_excess": 1.009706929946423,
+       "z_raw_band": 1.1792701501320233,
+       "z_excess_eff": 0.15295357616791536,
+       "d_eff": 29.944827327742058
+      },
+      "cor_w10": {
+       "z_excess": -2.041035009744422,
+       "z_raw_band": -1.8654700462333953,
+       "z_excess_eff": -0.24756008517444617,
+       "d_eff": 19.340452869659376
+      },
+      "cor_w12": {
+       "z_excess": 0.4372465756207417,
+       "z_raw_band": 0.6189049427169716,
+       "z_excess_eff": 0.06230926025882673,
+       "d_eff": 27.657008757105487
+      },
+      "cor_w13": {
+       "z_excess": 0.10226992550376707,
+       "z_raw_band": 0.23064915897026658,
+       "z_excess_eff": 0.01531345757938202,
+       "d_eff": 29.91596364258793
+      },
+      "cor_w14": {
+       "z_excess": -0.2517215576852998,
+       "z_raw_band": -0.07375585199614697,
+       "z_excess_eff": -0.03296611109438418,
+       "d_eff": 22.80815747249647
+      },
+      "cor_w15": {
+       "z_excess": -2.066222357186369,
+       "z_raw_band": -1.9225144758751782,
+       "z_excess_eff": -0.25078419729345697,
+       "d_eff": 18.946217120012967
+      },
+      "cor_w2": {
+       "z_excess": -0.8401761107667712,
+       "z_raw_band": -0.6538372922297397,
+       "z_excess_eff": -0.12075165937732296,
+       "d_eff": 27.328565676706635
+      },
+      "cor_w3": {
+       "z_excess": -1.0573247823845164,
+       "z_raw_band": -0.8613352983354093,
+       "z_excess_eff": -0.12751735481451296,
+       "d_eff": 19.92975203600354
+      },
+      "cor_w4": {
+       "z_excess": -0.5853592622951007,
+       "z_raw_band": -0.21562117252716537,
+       "z_excess_eff": -0.06464836692575962,
+       "d_eff": 16.500422972681854
+      },
+      "cor_w5": {
+       "z_excess": -1.5460888756119522,
+       "z_raw_band": -1.2220417531607957,
+       "z_excess_eff": -0.14365485928381297,
+       "d_eff": 12.140067263373865
+      },
+      "cor_w6": {
+       "z_excess": -0.030324388218681955,
+       "z_raw_band": 0.4255471874622102,
+       "z_excess_eff": -0.0036027676079123383,
+       "d_eff": 19.15479925458443
+      },
+      "cor_w7": {
+       "z_excess": -1.5889080876093198,
+       "z_raw_band": -1.4307568889819573,
+       "z_excess_eff": -0.21664520476872434,
+       "d_eff": 24.79616796451094
+      },
+      "cor_w9": {
+       "z_excess": -0.12159840157212616,
+       "z_raw_band": 0.06024361186689278,
+       "z_excess_eff": -0.016273500222949582,
+       "d_eff": 24.117698945736258
+      },
+      "math_0": {
+       "z_excess": 1.2734924264149317,
+       "z_raw_band": 1.3472142655459944,
+       "z_excess_eff": 0.20598378445530066,
+       "d_eff": 34.18178110048732
+      },
+      "math_1": {
+       "z_excess": -0.1794791219031282,
+       "z_raw_band": -0.11129489259158377,
+       "z_excess_eff": -0.025885206632507294,
+       "d_eff": 26.016671585252315
+      },
+      "math_10": {
+       "z_excess": -0.8310682744455072,
+       "z_raw_band": -0.7680246168168281,
+       "z_excess_eff": -0.14926008524701811,
+       "d_eff": 40.65743763965625
+      },
+      "math_11": {
+       "z_excess": -1.0754039552208927,
+       "z_raw_band": -1.0264901568810976,
+       "z_excess_eff": -0.16751115928827484,
+       "d_eff": 31.439878126504112
+      },
+      "math_12": {
+       "z_excess": 3.7058316198113417,
+       "z_raw_band": 3.787237951567746,
+       "z_excess_eff": 0.34334975342597723,
+       "d_eff": 11.752436991429276
+      },
+      "math_13": {
+       "z_excess": 1.8130605681284597,
+       "z_raw_band": 1.874949509511522,
+       "z_excess_eff": 0.27674837296492555,
+       "d_eff": 29.546732301465607
+      },
+      "math_14": {
+       "z_excess": -4.8493326193974955,
+       "z_raw_band": -4.787408534688051,
+       "z_excess_eff": -0.3872676447094314,
+       "d_eff": 8.430933508464294
+      },
+      "math_15": {
+       "z_excess": -1.0177763060105443,
+       "z_raw_band": -0.9478700840232918,
+       "z_excess_eff": -0.1611254605047877,
+       "d_eff": 31.6992971854258
+      },
+      "math_2": {
+       "z_excess": -1.2572034244291403,
+       "z_raw_band": -1.1981545689588713,
+       "z_excess_eff": -0.17218481007422703,
+       "d_eff": 24.77506262263523
+      },
+      "math_3": {
+       "z_excess": 0.11450643621106549,
+       "z_raw_band": 0.17462224709348453,
+       "z_excess_eff": 0.01890472283964692,
+       "d_eff": 35.66006366831195
+      },
+      "math_4": {
+       "z_excess": -0.4958197811856885,
+       "z_raw_band": -0.43111484934122335,
+       "z_excess_eff": -0.07534242298995066,
+       "d_eff": 30.378367797030368
+      },
+      "math_5": {
+       "z_excess": 0.04813460786010296,
+       "z_raw_band": 0.11444772143062527,
+       "z_excess_eff": 0.0073183409306618215,
+       "d_eff": 30.787300986063077
+      },
+      "math_6": {
+       "z_excess": 1.030138677996695,
+       "z_raw_band": 1.1080959839323348,
+       "z_excess_eff": 0.14934609353477935,
+       "d_eff": 26.931600116083448
+      },
+      "math_7": {
+       "z_excess": 1.6563771840348342,
+       "z_raw_band": 1.7247245390019703,
+       "z_excess_eff": 0.22110861498054937,
+       "d_eff": 22.591760154488888
+      },
+      "math_8": {
+       "z_excess": -3.4151473566089003,
+       "z_raw_band": -3.333261428940463,
+       "z_excess_eff": -0.5126912465672939,
+       "d_eff": 28.69026685833571
+      },
+      "math_9": {
+       "z_excess": -2.696385208359786,
+       "z_raw_band": -2.6211268551338835,
+       "z_excess_eff": -0.40262569248795066,
+       "d_eff": 28.701014111650952
+      },
+      "own_w13": {
+       "z_excess": 3.1987526254674274,
+       "z_raw_band": 3.2537563695627907,
+       "z_excess_eff": 0.292671904234207,
+       "d_eff": 11.03074051194706
+      },
+      "wiki_13": {
+       "z_excess": 3.265379740756176,
+       "z_raw_band": 3.319223294378946,
+       "z_excess_eff": 0.30683193321798524,
+       "d_eff": 11.68333187531743
+      }
+     }
     },
     "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026). r5 (D1): block-2 — pair-block null: сохраняет ЧЁТНЫЙ лаг-1 (x_{2i}, x_{2i+1}), рандомизирует НЕЧЁТНЫЙ лаг-1 и лаги ≥ 2; «DC+MA(1) null» было ложным label (ревью: MA(1)-лаг-1 вдвое). MA(1)-null, matched по лаг-0/лаг-1 — null_analytic_ma1 (второй столбец)",
     "delta_min": 0.0002,
@@ -433,10 +1171,345 @@
      "n_no_match": 0,
      "n_abs_z_ge_3": 51,
      "theta_median_abs": 0.10988812201755967,
-     "E_doc": "−f_dc (matched MA(1): ρ_true(k≥2) = 0 ⇒ E[mean_band] = 0)",
-     "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 98 — первый порядок, per-dim гауссов MA(1), D = скрытое измерение; Bartlett-поправка нулевая для k > p+1",
+     "E_doc": "s_doc = mean_band − f_dc: E ≈ 0 (matched MA(1) с DC: ρ_acf(k≥2) = 0 ⇒ E[rho_Tk(k≥2)] = ‖m‖²/(‖m‖²+var) = f_dc ⇒ E[mean_band] ≈ f_dc; r7, C1: формулировка r5/r6 «E[mean_band] = 0» неверна для T-k нормировки — DC не сокращается: c(0) = (‖m‖²+var)/D, c(k≥2) ≈ ‖m‖²/D)",
+     "SE_formula": "sqrt(Σ_{k=9..96} 1/((N−k)·D)) / 88 — первый порядок, per-dim гауссов MA(1), D = скрытое измерение (r7, C5: делитель = K_MAX−8 = 88 лагов; в r5/r6 ошибочно записано /98; утверждение «Bartlett-поправка нулевая для k > p+1» неверно: var(ρ̂_k) ≈ (1/N)·Σ_j ρ(j)² = (1/N)(1+2ρ₁²) для MA(1))",
      "note": "r5 (arch-review D1b): второй столбец — MA(1)-null, реально сохраняющий лаг-1 (θ matched к ρ(1), invertible-корень); описательно, вердикт — по первичному каналу (σ/эффект, D2)",
-     "applicability": "MA(1) неприменима к v_tangent (r6, docs/AT0_1_review.md, #4): f_dc ≈ 0.08 (DC-dominant, f_dc_median = 0.0797); z = (s_doc + f_dc)/SE = mean_band/SE — blow-up (median_z = 381, n_abs_z_ge_3 = 51/51) — by-product DC-доминирования в числителе, не «огромная структура»; описательно только (вердикт — по первичному каналу, r5 D2)"
+     "applicability": "MA(1) неприменима к v_tangent (r6, docs/AT0_1_review.md, #4): f_dc ≈ 0.08 (DC-dominant, f_dc_median = 0.0797); z = (s_doc + f_dc)/SE = mean_band/SE — blow-up (median_z = 381, n_abs_z_ge_3 = 51/51) — by-product DC-доминирования в числителе, не «огромная структура»; описательно только (вердикт — по первичному каналу, r5 D2)",
+     "z_excess": {
+      "median": 10.547543645305291,
+      "mean": 17.485259911898225,
+      "n_abs_z_ge_3": 45,
+      "def": "s_doc/se, s_doc = mean_{k=9..96} rho_Tk − f_dc; null: E[mean_band] = f_dc (C1)"
+     },
+     "z_excess_eff": {
+      "median": 1.9309356150764339,
+      "mean": 2.6412005267243073,
+      "n_abs_z_ge_3": 21,
+      "def": "s_doc/se_eff, se_eff = se·sqrt((1+2ρ₁²)·D/D_eff) (C4; ambient D — нижняя граница)"
+     },
+     "z_raw_band": {
+      "median": 381.3249665142485,
+      "mean": 406.7255557540537,
+      "n_abs_z_ge_3": 51,
+      "def": "mean_band/se — старая (r5/r6) статистика, сохранена диагностикой (C1); bit-eq со store per_doc.null_ma1_z.z (self-audit)"
+     },
+     "d_eff": {
+      "min": 8.960613562561713,
+      "median": 34.53591809140419,
+      "max": 67.9148150879285,
+      "def": "(Σλ)²/Σλ² participation ratio ковариации строк объекта (zero-mean, L23) (C4)"
+     },
+     "se_factor_median": 5.485633247526761,
+     "SE_eff_formula": "se_eff = se·sqrt((1+2ρ₁²)·D/D_eff) — r7, C4: Bartlett-фактор (1+2ρ₁²), ρ₁ = θ/(1+θ²) (matched null); D_eff = (Σλ)²/Σλ² participation ratio ковариации строк объекта (zero-mean, L23, per-doc, поле d_eff). Ambient D=1024 — нижняя граница (se ≤ se_eff); р.178 r_eff(0.05) из addentum — другая метрика (5%-порог ранга), не использована",
+     "c1_c4_note": "r7 (docs/AT0_1_review.md, C1/C4): r5/r6 z = (s_doc + f_dc)/se = mean_band/se тестировал null «mean_band = 0»; при matched MA(1) с DC E[mean_band] ≈ f_dc ⇒ E[s_doc] ≈ 0 ⇒ z_excess = s_doc/se (тест «плато на уровне f_dc»). Для v_tangent (f_dc_median ≈ 0.08) старый z (median 381) — by-product DC в числителе (r6 applicability), не plateau-сигнал; z_excess_ambient ≈ 10.5 (р. C1 ручной счёт), se_eff ×≈5.5 ⇒ z_excess_eff ≈ 1.9 — описательно (вердикт — по первичному каналу, r5 D2). Треды (round 3 MINOR-2): per_doc d_eff/z_excess_eff и se_factor_median — bit-eq только в pinned-окружении (run_one.sh: OpenBLAS/MKL_NUM_THREADS=6; r7-прогон: OMP_NUM_THREADS=4 — eigvalsh чувствителен к OpenBLAS/MKL-тредам); в другом thread-окружении дрейф 1–2 ulp (≤3.4e-15 rel, проверено независимо, ревью round 3). z_raw_band/z_excess/θ/T_none_full/roundoff/l23_meta — bit-eq в обоих окружениях. Round 3 MINOR-5/6: guard th is None (no_match-док в пуле) — defensive, не достигается на данных (все 51 доки пула matched); проверен exec'ом реальной ma1_recompute с имитированным no_match. Поля median_z/mean_z/n_abs_z_ge_3 (r5) bit-eq z_raw_band.median/mean/n_abs_z_ge_3 — дубль сохранён инвариантом r5-листьев; цитировать z_raw_band.",
+     "per_doc_ma1": {
+      "chat_1": {
+       "z_excess": 5.078444757015737,
+       "z_raw_band": 520.5041513545325,
+       "z_excess_eff": 0.681712292354779,
+       "d_eff": 19.005002104383827
+      },
+      "chat_11": {
+       "z_excess": 47.60773309322143,
+       "z_raw_band": 464.7615986033098,
+       "z_excess_eff": 7.854223126615418,
+       "d_eff": 28.450837569355148
+      },
+      "chat_12": {
+       "z_excess": -21.552842568312172,
+       "z_raw_band": 341.5007998319166,
+       "z_excess_eff": -4.547011454924426,
+       "d_eff": 46.83632801681333
+      },
+      "chat_13": {
+       "z_excess": 42.32228925521761,
+       "z_raw_band": 487.326762799576,
+       "z_excess_eff": 7.715114617678632,
+       "d_eff": 34.53591809140419
+      },
+      "chat_14": {
+       "z_excess": 28.00718643172958,
+       "z_raw_band": 380.6937120900502,
+       "z_excess_eff": 5.466267648582881,
+       "d_eff": 39.99263576662938
+      },
+      "chat_2": {
+       "z_excess": 20.561167965426094,
+       "z_raw_band": 343.4433204019076,
+       "z_excess_eff": 5.260997245359215,
+       "d_eff": 67.9148150879285
+      },
+      "chat_4": {
+       "z_excess": 10.547543645305291,
+       "z_raw_band": 389.5985077396333,
+       "z_excess_eff": 2.3738140092865017,
+       "d_eff": 53.12193030275753
+      },
+      "chat_5": {
+       "z_excess": 9.997313889327275,
+       "z_raw_band": 538.9192908473025,
+       "z_excess_eff": 1.4648824007760424,
+       "d_eff": 22.972130142598452
+      },
+      "chat_6": {
+       "z_excess": 10.576386665892826,
+       "z_raw_band": 398.36215955191125,
+       "z_excess_eff": 1.9309356150764339,
+       "d_eff": 34.71906175251291
+      },
+      "chat_7": {
+       "z_excess": 53.447543173052736,
+       "z_raw_band": 567.2978788588966,
+       "z_excess_eff": 7.216490873609851,
+       "d_eff": 18.920485469973816
+      },
+      "chat_8": {
+       "z_excess": 5.901375718855892,
+       "z_raw_band": 586.9837725599482,
+       "z_excess_eff": 0.6412685024539453,
+       "d_eff": 12.85279331728419
+      },
+      "code_11": {
+       "z_excess": 133.18398769137062,
+       "z_raw_band": 570.601095848511,
+       "z_excess_eff": 17.54842072661454,
+       "d_eff": 18.033452475685362
+      },
+      "code_12": {
+       "z_excess": 18.578064556543602,
+       "z_raw_band": 401.36195251538044,
+       "z_excess_eff": 3.6700261698665133,
+       "d_eff": 40.84354855680825
+      },
+      "code_15": {
+       "z_excess": 32.33926080456703,
+       "z_raw_band": 389.37070652596867,
+       "z_excess_eff": 6.396303019581256,
+       "d_eff": 40.55344521324663
+      },
+      "code_2": {
+       "z_excess": 16.147479260741846,
+       "z_raw_band": 427.46469686423137,
+       "z_excess_eff": 3.2293152172326547,
+       "d_eff": 41.956532080952464
+      },
+      "code_4": {
+       "z_excess": 8.111952426973165,
+       "z_raw_band": 455.5951457794273,
+       "z_excess_eff": 1.418944090804537,
+       "d_eff": 31.872031915961802
+      },
+      "code_5": {
+       "z_excess": 3.001000584139805,
+       "z_raw_band": 376.30292004318113,
+       "z_excess_eff": 0.6426461174988427,
+       "d_eff": 47.85909058739416
+      },
+      "code_7": {
+       "z_excess": -24.232726161765466,
+       "z_raw_band": 319.4657231952208,
+       "z_excess_eff": -4.491071357178934,
+       "d_eff": 35.678905989555304
+      },
+      "code_9": {
+       "z_excess": -3.8334225950714247,
+       "z_raw_band": 354.92254101714246,
+       "z_excess_eff": -0.7660049162430773,
+       "d_eff": 41.57484011949245
+      },
+      "cor_w0": {
+       "z_excess": -4.957874751513842,
+       "z_raw_band": 265.9639836376657,
+       "z_excess_eff": -0.834239644879217,
+       "d_eff": 31.158120904638285
+      },
+      "cor_w1": {
+       "z_excess": 15.576870974173042,
+       "z_raw_band": 381.3249665142485,
+       "z_excess_eff": 2.846493974062449,
+       "d_eff": 36.13479791199508
+      },
+      "cor_w10": {
+       "z_excess": -1.5807017189806358,
+       "z_raw_band": 415.45583445279635,
+       "z_excess_eff": -0.23515939404921474,
+       "d_eff": 23.594491227947916
+      },
+      "cor_w12": {
+       "z_excess": 0.705225113796087,
+       "z_raw_band": 395.0302773553178,
+       "z_excess_eff": 0.1311701683917157,
+       "d_eff": 37.90081987515298
+      },
+      "cor_w13": {
+       "z_excess": -7.844618654683807,
+       "z_raw_band": 379.79051025705115,
+       "z_excess_eff": -1.4734150247942428,
+       "d_eff": 37.66893706134098
+      },
+      "cor_w14": {
+       "z_excess": 2.9034532226538317,
+       "z_raw_band": 404.8090028316614,
+       "z_excess_eff": 0.47760116119678114,
+       "d_eff": 29.149411915759707
+      },
+      "cor_w15": {
+       "z_excess": -4.17432017045317,
+       "z_raw_band": 382.3900651131092,
+       "z_excess_eff": -0.6638345390927796,
+       "d_eff": 26.971465152590238
+      },
+      "cor_w2": {
+       "z_excess": -2.7693379993028913,
+       "z_raw_band": 367.78234070261044,
+       "z_excess_eff": -0.486072195869774,
+       "d_eff": 33.861210614571135
+      },
+      "cor_w3": {
+       "z_excess": -0.5251951865601046,
+       "z_raw_band": 354.8645139135923,
+       "z_excess_eff": -0.07920343842314607,
+       "d_eff": 24.82526759478821
+      },
+      "cor_w4": {
+       "z_excess": -11.268811484779745,
+       "z_raw_band": 226.68405517904023,
+       "z_excess_eff": -1.7402636436082717,
+       "d_eff": 25.546535230488796
+      },
+      "cor_w5": {
+       "z_excess": -8.273517520016293,
+       "z_raw_band": 242.81866954284473,
+       "z_excess_eff": -1.00262554848021,
+       "d_eff": 16.566375015947276
+      },
+      "cor_w6": {
+       "z_excess": -6.510896590142637,
+       "z_raw_band": 215.77845219371437,
+       "z_excess_eff": -0.965945280798281,
+       "d_eff": 24.26086384453806
+      },
+      "cor_w7": {
+       "z_excess": -7.2320898191106,
+       "z_raw_band": 407.1599106018763,
+       "z_excess_eff": -1.288054674994751,
+       "d_eff": 33.947610369787206
+      },
+      "cor_w9": {
+       "z_excess": 3.277827577135192,
+       "z_raw_band": 364.6089150894152,
+       "z_excess_eff": 0.5247926525468724,
+       "d_eff": 28.272024378155557
+      },
+      "math_0": {
+       "z_excess": 13.768058299586151,
+       "z_raw_band": 362.78055285676106,
+       "z_excess_eff": 2.84554408600796,
+       "d_eff": 44.58218987797839
+      },
+      "math_1": {
+       "z_excess": 15.567209340359138,
+       "z_raw_band": 387.8091694795701,
+       "z_excess_eff": 2.681656560738683,
+       "d_eff": 30.69503936773877
+      },
+      "math_10": {
+       "z_excess": 18.412203796760807,
+       "z_raw_band": 304.40763082173123,
+       "z_excess_eff": 3.9790136584904587,
+       "d_eff": 48.329912080884974
+      },
+      "math_11": {
+       "z_excess": -13.901633827105794,
+       "z_raw_band": 351.81385151811685,
+       "z_excess_eff": -2.7000525836101548,
+       "d_eff": 39.356438652354015
+      },
+      "math_12": {
+       "z_excess": 172.07112418057315,
+       "z_raw_band": 605.5379579161635,
+       "z_excess_eff": 19.488710052390026,
+       "d_eff": 13.686967380952467
+      },
+      "math_13": {
+       "z_excess": 36.019242919253976,
+       "z_raw_band": 356.84711173040216,
+       "z_excess_eff": 6.925444357281682,
+       "d_eff": 38.30721196314392
+      },
+      "math_14": {
+       "z_excess": 25.15279544595115,
+       "z_raw_band": 804.5023597300735,
+       "z_excess_eff": 2.3232665366565746,
+       "d_eff": 8.960613562561713
+      },
+      "math_15": {
+       "z_excess": 25.469774129274146,
+       "z_raw_band": 302.66838470247,
+       "z_excess_eff": 4.972424636644665,
+       "d_eff": 39.37562929657127
+      },
+      "math_2": {
+       "z_excess": 12.224023721016945,
+       "z_raw_band": 415.1703778030869,
+       "z_excess_eff": 2.2083424713555777,
+       "d_eff": 33.880170697312984
+      },
+      "math_3": {
+       "z_excess": -4.383884767949421,
+       "z_raw_band": 375.6262508071565,
+       "z_excess_eff": -0.8777354764210724,
+       "d_eff": 42.017471674186076
+      },
+      "math_4": {
+       "z_excess": 1.213510742673172,
+       "z_raw_band": 347.48042086184944,
+       "z_excess_eff": 0.24275810057388397,
+       "d_eff": 41.6573704928142
+      },
+      "math_5": {
+       "z_excess": -6.957917087331149,
+       "z_raw_band": 308.74828526998266,
+       "z_excess_eff": -1.4035746920176178,
+       "d_eff": 42.28856805811974
+      },
+      "math_6": {
+       "z_excess": 24.883661083900815,
+       "z_raw_band": 380.0012996470667,
+       "z_excess_eff": 4.645232587558186,
+       "d_eff": 36.21063338814092
+      },
+      "math_7": {
+       "z_excess": 42.25562747574263,
+       "z_raw_band": 395.5383845124302,
+       "z_excess_eff": 6.9922676333239515,
+       "d_eff": 28.24111897998008
+      },
+      "math_8": {
+       "z_excess": 28.040271404971982,
+       "z_raw_band": 346.59234848061783,
+       "z_excess_eff": 5.171762710703749,
+       "d_eff": 35.48028136787297
+      },
+      "math_9": {
+       "z_excess": 31.471152531877674,
+       "z_raw_band": 332.05228735588395,
+       "z_excess_eff": 6.049780002520173,
+       "d_eff": 38.376715799157765
+      },
+      "own_w13": {
+       "z_excess": 51.421376312464666,
+       "z_raw_band": 608.3642003421365,
+       "z_excess_eff": 5.754360822909566,
+       "d_eff": 13.221354065302451
+      },
+      "wiki_13": {
+       "z_excess": 55.90590821834362,
+       "z_raw_band": 638.1242358082436,
+       "z_excess_eff": 6.483506881579851,
+       "d_eff": 14.108335442299028
+      }
+     }
     },
     "null_note": "closed form (full permutation точна; blk=2 при k≥2 — те же пары различных элементов): E[ρ̄(k) − f] = −(1−f)/(N−1) ≈ −1/N (N=383: −0.0026). r5 (D1): block-2 — pair-block null: сохраняет ЧЁТНЫЙ лаг-1 (x_{2i}, x_{2i+1}), рандомизирует НЕЧЁТНЫЙ лаг-1 и лаги ≥ 2; «DC+MA(1) null» было ложным label (ревью: MA(1)-лаг-1 вдвое). MA(1)-null, matched по лаг-0/лаг-1 — null_analytic_ma1 (второй столбец)",
     "delta_min": 0.0002,
@@ -815,62 +1888,80 @@
    "h_raw": {
     "n_docs": 53,
     "excess_median": {
-     "T_none_full": -0.5023582212969491,
      "T_none_K96": -0.49742793299978033,
      "Tk_none_K96": -0.49755840752819774,
      "T_bart_K96": -0.4899298553771797,
      "Tk_bart_K96": -0.49199065461797886
     },
     "excess_mean": {
-     "T_none_full": -0.5033896820053053,
      "T_none_K96": -0.493134747771351,
      "Tk_none_K96": -0.4937481768949659,
      "T_bart_K96": -0.4895058257236633,
      "Tk_bart_K96": -0.4918203679019137
     },
     "r_median": 0.004741200822737649,
-    "f_dc_median": 1.237911441968055e-05
+    "f_dc_median": 1.237911441968055e-05,
+    "identity_check_G1": {
+     "T_none_full_median": -0.5023582212969491,
+     "T_none_full_mean": -0.5033896820053053,
+     "identity": "T_none_full = (r−1)/2 − (N−1)·f_dc — Gram-тождество (G8): функция (r, N, f_dc), НЕ независимый excess по всем лагам (r7, C6; r6 — note в том же dict, r7 — вынесен в отдельный блок)",
+     "max_abs_sum_rho_full_minus_(r-1)/2": 8.326672684688674e-16,
+     "n_docs": 53,
+     "headline": "заголовочный T0 — r per object: r_median, f_dc_median (в блоке t0_headline); r/f_dc ≡ N (G3-тождество r = N·f_dc) — тривиально, не цитировать; информативно: r_v ≈ 24.9 (not DC-free), r_du ≈ 0.0048 (DC-suppressed); частичные excessы k=1..96 — столбцы T_none_K96/Tk_none_K96/T_bart_K96/Tk_bart_K96"
+    }
    },
    "du_unit": {
     "n_docs": 53,
     "excess_median": {
-     "T_none_full": -0.5023929429497754,
      "T_none_K96": -0.4967481370837159,
      "Tk_none_K96": -0.49898170954327076,
      "T_bart_K96": -0.48983097208927884,
      "Tk_bart_K96": -0.4919068205633103
     },
     "excess_mean": {
-     "T_none_full": -0.5037891391373551,
      "T_none_K96": -0.49290763158399453,
      "Tk_none_K96": -0.4934304742386096,
      "T_bart_K96": -0.4893112294475383,
      "Tk_bart_K96": -0.49156813113949993
     },
     "r_median": 0.004811008660178404,
-    "f_dc_median": 1.2561380313781734e-05
+    "f_dc_median": 1.2561380313781734e-05,
+    "identity_check_G1": {
+     "T_none_full_median": -0.5023929429497754,
+     "T_none_full_mean": -0.5037891391373551,
+     "identity": "T_none_full = (r−1)/2 − (N−1)·f_dc — Gram-тождество (G8): функция (r, N, f_dc), НЕ независимый excess по всем лагам (r7, C6; r6 — note в том же dict, r7 — вынесен в отдельный блок)",
+     "max_abs_sum_rho_full_minus_(r-1)/2": 1.3877787807814457e-15,
+     "n_docs": 53,
+     "headline": "заголовочный T0 — r per object: r_median, f_dc_median (в блоке t0_headline); r/f_dc ≡ N (G3-тождество r = N·f_dc) — тривиально, не цитировать; информативно: r_v ≈ 24.9 (not DC-free), r_du ≈ 0.0048 (DC-suppressed); частичные excessы k=1..96 — столбцы T_none_K96/Tk_none_K96/T_bart_K96/Tk_bart_K96"
+    }
    },
    "v_tangent": {
     "n_docs": 53,
     "excess_median": {
-     "T_none_full": -12.868956825537097,
      "T_none_K96": -0.8498010249775021,
      "Tk_none_K96": 0.021396143539154977,
      "T_bart_K96": -0.2974252784902771,
      "Tk_bart_K96": 0.01399125605634799
     },
     "excess_mean": {
-     "T_none_full": -13.20265274318846,
      "T_none_K96": -1.1318054838210057,
      "Tk_none_K96": 0.12090794498969726,
      "T_bart_K96": -0.3913750104824837,
      "Tk_bart_K96": 0.03642531460814357
     },
     "r_median": 24.90236364133829,
-    "f_dc_median": 0.0796657274386357
+    "f_dc_median": 0.0796657274386357,
+    "identity_check_G1": {
+     "T_none_full_median": -12.868956825537097,
+     "T_none_full_mean": -13.20265274318846,
+     "identity": "T_none_full = (r−1)/2 − (N−1)·f_dc — Gram-тождество (G8): функция (r, N, f_dc), НЕ независимый excess по всем лагам (r7, C6; r6 — note в том же dict, r7 — вынесен в отдельный блок)",
+     "max_abs_sum_rho_full_minus_(r-1)/2": 1.0658141036401503e-14,
+     "n_docs": 53,
+     "headline": "заголовочный T0 — r per object: r_median, f_dc_median (в блоке t0_headline); r/f_dc ≡ N (G3-тождество r = N·f_dc) — тривиально, не цитировать; информативно: r_v ≈ 24.9 (not DC-free), r_du ≈ 0.0048 (DC-suppressed); частичные excessы k=1..96 — столбцы T_none_K96/Tk_none_K96/T_bart_K96/Tk_bart_K96"
+    }
    }
   },
-  "t0_headline_note": "r5 (arch-review D5/D6): excess = Σ(ρ̂(k) − f_dc) per object × norm × window; T_none_full — полная сумма по всем лагам (точно, тождество G1/Gram: sum_rho_full = (r−1)/2); T_none_K96 / Tk_none_K96 / T_bart_K96 / Tk_bart_K96 — частичные по k=1..96 (объявлено). Тождество S(0) = 1 + 2Σρ̄ — только для unit-variance нормировки; для norm=T замыкается Gram-тождество 1 + 2Σρ̂ = r (G8), не unit-ACF; для T-k unit-variance-тождество не выполняется вовсе (D6). Per-doc — из store (cells) r6 (docs/AT0_1_review.md, #3): T_none_full = (r−1)/2 − (N−1)·f_dc — РАЗНОСТЬ двух больших слагаемых (Gram-тождество, G8: max |sum_rho_full − (r−1)/2| = 1.07e-14; пересчёт r6 — bit-eq медианы −12.868956825537097 по 53 докам nondegen), НЕ «excess по всем лагам»; для v_tangent (r_median ≈ 24.9, f_dc_median ≈ 0.08) ≈ −12.87 — знак ПРОТИВОПоложен band mean P4 (+0.00194), не «плато провалено»"
+  "t0_headline_note": "r5 (arch-review D5/D6): excess = Σ(ρ̂(k) − f_dc) per object × norm × window; T_none_full — полная сумма по всем лагам (точно, тождество G1/Gram: sum_rho_full = (r−1)/2); T_none_K96 / Tk_none_K96 / T_bart_K96 / Tk_bart_K96 — частичные по k=1..96 (объявлено). Тождество S(0) = 1 + 2Σρ̄ — только для unit-variance нормировки; для norm=T замыкается Gram-тождество 1 + 2Σρ̂ = r (G8), не unit-ACF; для T-k unit-variance-тождество не выполняется вовсе (D6). Per-doc — из store (cells) r6 (docs/AT0_1_review.md, #3): T_none_full = (r−1)/2 − (N−1)·f_dc — РАЗНОСТЬ двух больших слагаемых (Gram-тождество, G8: max |sum_rho_full − (r−1)/2| = 1.07e-14; пересчёт r6 — bit-eq медианы −12.868956825537097 по 53 докам nondegen), НЕ «excess по всем лагам»; для v_tangent (r_median ≈ 24.9, f_dc_median ≈ 0.08) ≈ −12.87 — знак ПРОТИВОПоложен band mean P4 (+0.00194), не «плато провалено» r7 (docs/AT0_1_review.md, C6): T_none_full вынесен из excess_median/excess_mean в identity_check_G1 (Gram-тождество, не независимый excess); заголовочный ответ T0 — r per object (r/f_dc ≡ N — G3-тождество, тривиально; r_v ≈ 24.9 — not DC-free; r_du ≈ 0.0048 — DC-suppressed)."
  },
  "store": {
   "path": "store/23281c64cc418ff1.json",
@@ -880,7 +1971,7 @@
  },
  "manifest": {
   "store_sha256": "23281c64cc418ff1fedad2a5013c4bf7c8b7dd7680ac8d4fa7cf746c62fd1732",
-  "claim_sha256": "b0f74312416285207ba99ae93ee75ecc446938b8b61ba82a19a04ac36b913994",
+  "claim_sha256": "82f44f0813f6adde047f11b97568f08ca19807fb41af145b2977f3fd450999c5",
   "written": true
  }
 }
