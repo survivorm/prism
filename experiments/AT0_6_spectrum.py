@@ -486,7 +486,7 @@ def run_g7_calibration(Bn=B, N=None):
         r_obs_arr = r_from_q(q_obs, P_GRID)
         r_obs = float(np.max(r_obs_arr[idx]))
         Rperm = np.array([r_from_q(Qp[b], P_GRID)[idx] for b in range(Bn)])
-        r_perm_max = Rperm.max(axis=0)
+        r_perm_max = Rperm.max(axis=1)   # max по p на КАЖДУЮ перестановку (r4 MAJOR-1: axis=0 был транспонирован)
         p_r = null_pvalue(r_obs, r_perm_max)
         hit_r = bool(p_r <= ALPHA)
         hits_r += hit_r
@@ -821,9 +821,12 @@ def main():
                                  "(tilt интегрированного ряда), не компонента динамики; H1 НЕ "
                                  f"интерпретируется (G9, C1)"}
         elif h1["f"] >= H1_SIG and not H1c:
-            verdict = {"status": "INCONCLUSIVE",
-                       "detail": f"H1 значима (f={h1['f']}/30, P={binom_sf(H1_SIG, 30, ALPHA):.3e}), "
-                                 f"но порог пре-рега {H1_FLOOR}/30 не достигнут; f_dh = {f_dh}"}
+            v4 = {"status": "INCONCLUSIVE",
+                  "detail": f"H1 значима (f={h1['f']}/30, P={binom_sf(H1_SIG, 30, ALPHA):.3e}), "
+                            f"но порог пре-рега {H1_FLOOR}/30 не достигнут; f_dh = {f_dh}"}
+            if f_dh <= G9_TILT_MAX:
+                v4["dh_silent"] = True   # r4 MINOR-4: tilt-like при суб-пороговом H1
+            verdict = v4
         elif H1c and not H2pc:
             verdict = {"status": "CONFIRMED",
                        "detail": f"узкая спектральная линия на петлевом периоде в h|L23 (f={h1['f']}/30), "
