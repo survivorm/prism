@@ -1,0 +1,10 @@
+{
+ "experiment": "AT0_2 T0.2",
+ "round": "round 1",
+ "date": "2026-11-13 (UTC+3)",
+ "claim_sha256": "c36adc838630ef27949c4fa3db2f2648f96cb47137b61214009ea56362baf799",
+ "store_sha256": "5b05537017013a4f7095db6028e74223062a126b0ee3be2216c18166953e38be",
+ "script_sha256": "7ccbd9ba2cb74378a51ccab94daeefd533210e272f0b57f44dd8b9fe79e871a9",
+ "note": "claim AT0_2_SHAPE.json (aggregates+gates+prereg); store = full per-doc null-детали; run_log = stdout-лог (tracked).",
+ "manifest_sha256": "d5af82023ed0a4e477c5666ea5d5a2f885473d7ebd6281f42971dcd5fc3c46ef"
+}

@@ -1,0 +1,3560 @@
+{
+ "experiment": "AT0_2 T0.2",
+ "round": "round 1",
+ "date": "2026-11-13 (UTC+3)",
+ "store": "store/5b05537017013a4f.json",
+ "store_sha256": "5b05537017013a4f7095db6028e74223062a126b0ee3be2216c18166953e38be",
+ "meta": {
+  "env": {
+   "python": "3.13.14",
+   "numpy": "2.5.2",
+   "threads": "6",
+   "seed_base": 2026,
+   "seed_stride": 1009,
+   "b_null": 20,
+   "b_fourier": 3,
+   "b_boot": 1000,
+   "seed_boot": 117,
+   "n_docs_run": 96
+  },
+  "field_sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
+  "data_sha256": {
+   "/data/prism_kernels/exp62/gen_layers_qwen.npz": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
+   "/home/survivor/work/prism/results/e64/tpu_v8/P1_own.npz": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198",
+   "/home/survivor/work/prism/results/e64/tpu_v8/P2_corpus.npz": "5f42a08442a5d3bcb8d7c4de5c9658340c0378a917a5e633b9b2aa589ceac125"
+  },
+  "gen_sha_ok": "64/64",
+  "decode_probe": {
+   "doc": "chat_0",
+   "n_toks": 384,
+   "lines": [
+    {
+     "chunk": "tok[0:40]",
+     "text": " theme version.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version"
+    },
+    {
+     "chunk": "tok[40:80]",
+     "text": " of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe"
+    },
+    {
+     "chunk": "tok[80:120]",
+     "text": " theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is"
+    }
+   ]
+  },
+  "script_sha256": "7ccbd9ba2cb74378a51ccab94daeefd533210e272f0b57f44dd8b9fe79e871a9",
+  "n_docs": 96,
+  "n_docs_verified": 80,
+  "confounds_note": "единственный конфунд: P2_corpus (16/96) not_testable (G16) — входит в headline-пул (96); verified-only пул (80) — aggregates_verified_only, правило решения — gates.G0_sources.note",
+  "layers": [
+   1,
+   5,
+   11,
+   17,
+   23
+  ],
+  "objects": [
+   "h_raw",
+   "du_unit",
+   "v_tangent"
+  ],
+  "smoke": false
+ },
+ "prereg": {
+  "bands": [
+   [
+    1,
+    1
+   ],
+   [
+    2,
+    2
+   ],
+   [
+    3,
+    8
+   ],
+   [
+    9,
+    32
+   ],
+   [
+    33,
+    96
+   ]
+  ],
+  "tail": "97..N-1 — отдельный скаляр, в вектор профиля не входит (K=96-обрезка объявлена)",
+  "normalization": "(r-1)/2 = sum_rho_full (полные лаги, G1); AR-null — своя сумма (ТЗ: Σ отдельно)",
+  "distance": "L1 по 5-вектору долей (осн.), L2 отчёт; p_doc = (#{D'_s ≥ D_center}+1)/(n+1)",
+  "seeds": "B=20 (iid/blk/AR), fourier B=3; seed = 2026 + doc_idx*1009 + s",
+  "nulls": {
+   "iid": "full independence",
+   "blk{2,4,8,16,32}": "локальность, без seam-exclusion",
+   "ar{1,2,4}": "линейный процесс (per-dim Yule-Walker, demeaned, burn 256)",
+   "fourier": "POSITIVE CONTROL (не null): phase randomization, zero-pad >= 2N-1"
+  },
+  "seam_excluded": "отдельный оценщик (within-block k<b), Σ с real НЕ СРАВНИВАТЬ",
+  "verdict": "H=«форма объясняется null»; D_real>CI_null верх→refuted; D_real<CI_null низ→confirmed_anomaly (real БЛИЖЕ к центру null, чем 97.5% null-сидов: p_doc=0.975, при null такое вероятно с вероятностью 2.5% — ФЛАГ «более типичен, чем типично», НЕ сигнал структуры); иначе confirmed; D_real<пол-ширины CI→not_testable (ΔMIN, §0.4); AR-null: интерпретация refuted как 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1)",
+  "expected_cells": 1440
+ },
+ "gates": {
+  "G0": {
+   "data_sha256": {
+    "/data/prism_kernels/exp62/gen_layers_qwen.npz": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
+    "/home/survivor/work/prism/results/e64/tpu_v8/P1_own.npz": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198",
+    "/home/survivor/work/prism/results/e64/tpu_v8/P2_corpus.npz": "5f42a08442a5d3bcb8d7c4de5c9658340c0378a917a5e633b9b2aa589ceac125"
+   },
+   "gen_sha_ok": "64/64",
+   "decode_probe_n_toks": 384
+  },
+  "G0_sources": {
+   "gen_layers": {
+    "status": "ok",
+    "gen_sha_ok": "64/64",
+    "decode_probe": {
+     "doc": "chat_0",
+     "n_toks": 384,
+     "lines": [
+      {
+       "chunk": "tok[0:40]",
+       "text": " theme version.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version"
+      },
+      {
+       "chunk": "tok[40:80]",
+       "text": " of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe"
+      },
+      {
+       "chunk": "tok[80:120]",
+       "text": " theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is"
+      }
+     ]
+    }
+   },
+   "P1_own": {
+    "status": "ok",
+    "toks_present": "16/16",
+    "decode_probe": {
+     "doc": "own_w0",
+     "n_toks": 384,
+     "lines": [
+      {
+       "chunk": "tok[0:40]",
+       "text": " 3-hour class on how to make delicious BBQ.\nThe class will be held at the Lonestar Smoke Rangers, 10000000000000"
+      },
+      {
+       "chunk": "tok[40:80]",
+       "text": "0000000000000000000000000000000000000000"
+      },
+      {
+       "chunk": "tok[80:120]",
+       "text": "0000000000000000000000000000000000000000"
+      }
+     ]
+    }
+   },
+   "P2_corpus": {
+    "status": "not_testable",
+    "toks_present": "0/16",
+    "reason": "нет токенов — декод-проба невыполнима в принципе (G16, ТЗ v1.2)"
+   },
+   "note": "P2_corpus (16/96 доков) — источник not_testable (G16); headline-вердикты включают доки corpus в общий пул (ТЗ-пул = 96); verified-only агрегат (80) — aggregates_verified_only; ЕСЛИ verdict'ы расходятся — решает verified-only. Перепредставленность: 16/16 nondeg (100%) при 55% общих (265/480)"
+  },
+  "G0a_hn_field": {
+   "state": {
+    "check": "unit-пин = регресс-гард: load_source пересчитывает u, hn из raw h, хранимое _hn-поле (баг продюсера) не читается",
+    "verifies": "только нормализацию (ревью 5, п. F): load_source — row-norm recompute, корректность hn доказана конструкцией (hn = ‖raw h‖)",
+    "max_unit_dev": 3.3306690738754696e-16,
+    "tol": 1e-09,
+    "edge": "вырожденная строка ‖h_row‖ < 1e-12 → fail (desired fail-loud, ревью 5, п. A)"
+   },
+   "gen_layers": {
+    "check": "unit-пин — проверка поля _u (единственное representation: raw h в gen npz отсутствует, recon U·hn vs raw h невозможна); scale-пин — однородность row-скал U·hn",
+    "verifies": "поле _u (нормализация) + однородность row-скал U·hn; перестановку/константный _hn не ловит (ревью 5, п. D)",
+    "max_unit_dev": 0.00024309611203077175,
+    "tol_unit": 0.005,
+    "max_scale_dev": 0.023126319629538504,
+    "tol_scale": 0.2,
+    "residual_risk": "scale-пин sdev≈CV²/2: ловит CV ≳ 0.63; слабее — недетектируемо от файла, как константный и пермутированный _hn (mean/rms/CV инвариантны к перестановке); замеренная разбросность hn 0.93–1.87 согласуется с истинными row-нормами"
+   },
+   "ok": true
+  },
+  "G1_field": {
+   "sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
+   "selfcheck": "ok"
+  },
+  "G2": {
+   "cells": 1440,
+   "expected": 1440,
+   "ok": true
+  },
+  "G7_store": {
+   "store_sha256": "5b05537017013a4f7095db6028e74223062a126b0ee3be2216c18166953e38be"
+  },
+  "G8_gram": {
+   "tol": 1e-10,
+   "bad": 0,
+   "ok": true
+  },
+  "G7_invariance": {
+   "tol": 1e-09,
+   "bad": 0,
+   "ok": true
+  },
+  "positive_control": {
+   "max_abs_d_rho96_circular": 4.440892098500626e-16,
+   "max_abs_dr_full": 2.3447910280083306e-13,
+   "max_abs_d_rho96_linear_wrap": 0.21090352494010034,
+   "tol_rho": 1e-06,
+   "tol_r": 0.0002,
+   "ok": true,
+   "note": "1e-6 — для кругового/спектрального ACF (сохранён конструкцией); линейный (обрезанный) ACF — wrap-around член, свойство суррогата"
+  }
+ },
+ "aggregates": {
+  "h_raw": {
+   "iid": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 1.5328148585379815,
+    "D_real_ci": [
+     1.4761628286453536,
+     1.5966102283853363
+    ],
+    "D_null_mean": 0.27433704205851933,
+    "D_null_ci": [
+     0.2570623555710755,
+     0.29345416765851506
+    ],
+    "frac_cells_p_lt_alpha": 0.997907949790795,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9882458980106427,
+     0.9996306157648388
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.06022369986999132,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.53e+00 > CI_null верх 2.93e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 1.4115443025506988,
+      "ci": [
+       1.3429666194356258,
+       1.5087820328531834
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk2": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 1.0429211171666284,
+    "D_real_ci": [
+     0.9826680910552273,
+     1.1113634508625592
+    ],
+    "D_null_mean": 0.20736268029819863,
+    "D_null_ci": [
+     0.19150568648005042,
+     0.2247615988242223
+    ],
+    "frac_cells_p_lt_alpha": 0.99581589958159,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9848739302463897,
+     0.9988518418745729
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.06434767990366591,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.04e+00 > CI_null верх 2.25e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.9390717801177004,
+      "ci": [
+       0.8547247464419144,
+       1.0707266574530845
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk4": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.6671372520648097,
+    "D_real_ci": [
+     0.6040356361236258,
+     0.7415781192396983
+    ],
+    "D_null_mean": 0.1502737635805213,
+    "D_null_ci": [
+     0.1371075314630823,
+     0.16275451132387045
+    ],
+    "frac_cells_p_lt_alpha": 0.9832635983263598,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9673256721365848,
+     0.9914956500572647
+    ],
+    "n_docs_unique_p_lt_alpha": 95,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.06877124155803627,
+    "verdict": "refuted",
+    "verdict_note": "D_real 6.67e-01 > CI_null верх 1.63e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.49969710263062384,
+      "ci": [
+       0.4671069239164293,
+       0.5374001741019692
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk8": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.47213295411425243,
+    "D_real_ci": [
+     0.39988759749560104,
+     0.553872367764453
+    ],
+    "D_null_mean": 0.12259994832593572,
+    "D_null_ci": [
+     0.11110003502422096,
+     0.13521682929867138
+    ],
+    "frac_cells_p_lt_alpha": 0.9163179916317992,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.8880516148358227,
+     0.9379459744134243
+    ],
+    "n_docs_unique_p_lt_alpha": 94,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.076992385134426,
+    "verdict": "refuted",
+    "verdict_note": "D_real 4.72e-01 > CI_null верх 1.35e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.2910595052053023,
+      "ci": [
+       0.25885929145753495,
+       0.32567800206605957
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk16": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.28586054909090636,
+    "D_real_ci": [
+     0.23877036901729953,
+     0.338854457527219
+    ],
+    "D_null_mean": 0.10454385788582621,
+    "D_null_ci": [
+     0.09255325718344115,
+     0.11642828805415702
+    ],
+    "frac_cells_p_lt_alpha": 0.6506276150627615,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.6068387047417335,
+     0.6920146943836221
+    ],
+    "n_docs_unique_p_lt_alpha": 82,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.05004204425495973,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.86e-01 > CI_null верх 1.16e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.1615968255535204,
+      "ci": [
+       0.13794113536176456,
+       0.18546203037472317
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk32": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.21718810399822017,
+    "D_real_ci": [
+     0.17288067715935385,
+     0.26724277416435127
+    ],
+    "D_null_mean": 0.09832749342391123,
+    "D_null_ci": [
+     0.08423415491910233,
+     0.11333394179622572
+    ],
+    "frac_cells_p_lt_alpha": 0.38284518828451886,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.34036690049945467,
+     0.42719156684749093
+    ],
+    "n_docs_unique_p_lt_alpha": 60,
+    "p_docs_median": 0.09523809523809523,
+    "delta_min_half_ci": 0.04718104850249871,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.17e-01 > CI_null верх 1.13e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.10876813647492574,
+      "ci": [
+       0.08685867398939638,
+       0.13365166691708158
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "ar1": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 1.897125812228633,
+    "D_real_ci": [
+     1.80399343501081,
+     1.9982495113256777
+    ],
+    "D_null_mean": 0.24000981611205904,
+    "D_null_ci": [
+     0.2065252176844581,
+     0.27777573280032597
+    ],
+    "frac_cells_p_lt_alpha": 0.9728033472803347,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9540289978696668,
+     0.9840386160515886
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.09712803815743387,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.90e+00 > CI_null верх 2.78e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 1.6589148811351961,
+      "ci": [
+       1.536116429547452,
+       1.8603089756599895
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.49568068338779514,
+    "sum_rho_null_mean": -0.25672393705332475,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.00010460251046025105,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.41363773248584546,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar2": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.9293960220553066,
+    "D_real_ci": [
+     0.8601184346365597,
+     1.0117281674653078
+    ],
+    "D_null_mean": 0.07439889587952775,
+    "D_null_ci": [
+     0.06949237599587954,
+     0.07969652195342121
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9920272554300003,
+     1.0
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07580486641437406,
+    "verdict": "refuted",
+    "verdict_note": "D_real 9.29e-01 > CI_null верх 7.97e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.7782574237112928,
+      "ci": [
+       0.7437231958479918,
+       0.8166090257491795
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.49568068338779514,
+    "sum_rho_null_mean": -0.35852660586456125,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.2577845748830148,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar4": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.5258131542316847,
+    "D_real_ci": [
+     0.4613793049775717,
+     0.6019426030940147
+    ],
+    "D_null_mean": 0.03917227517752544,
+    "D_null_ci": [
+     0.03747376717898066,
+     0.04106867186787396
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9920272554300003,
+     1.0
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07028164905822151,
+    "verdict": "refuted",
+    "verdict_note": "D_real 5.26e-01 > CI_null верх 4.11e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.37599256711734974,
+      "ci": [
+       0.33791646462808517,
+       0.43434127326816646
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.49568068338779514,
+    "sum_rho_null_mean": -0.4285754901438355,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.19136869207920887,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   }
+  },
+  "du_unit": {
+   "iid": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 1.5327864078077627,
+    "D_real_ci": [
+     1.47622743740357,
+     1.5964986123894298
+    ],
+    "D_null_mean": 0.2710474369985313,
+    "D_null_ci": [
+     0.25432328857635117,
+     0.29070474223138243
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9920272554300003,
+     1.0
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.06013558749292991,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.53e+00 > CI_null верх 2.91e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 1.4131640097125202,
+      "ci": [
+       1.3435881128697442,
+       1.5112601633574965
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk2": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 1.0476523323547768,
+    "D_real_ci": [
+     0.9869009878777636,
+     1.1159945647375002
+    ],
+    "D_null_mean": 0.20714476415536656,
+    "D_null_ci": [
+     0.19151382792088847,
+     0.22466658989332547
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9920272554300003,
+     1.0
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.06454678842986833,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.05e+00 > CI_null верх 2.25e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.9420344401582295,
+      "ci": [
+       0.8576429392998464,
+       1.0740187894519693
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk4": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.6723641561220468,
+    "D_real_ci": [
+     0.6087490495432928,
+     0.746318729503994
+    ],
+    "D_null_mean": 0.1504156572549099,
+    "D_null_ci": [
+     0.13696154450616235,
+     0.1629525492942813
+    ],
+    "frac_cells_p_lt_alpha": 0.9832635983263598,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9673256721365848,
+     0.9914956500572647
+    ],
+    "n_docs_unique_p_lt_alpha": 95,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.06878483998035062,
+    "verdict": "refuted",
+    "verdict_note": "D_real 6.72e-01 > CI_null верх 1.63e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.5025215855999179,
+      "ci": [
+       0.46898788859430507,
+       0.5407869929939136
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk8": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.47429194383928736,
+    "D_real_ci": [
+     0.40244953067034306,
+     0.5564714746392843
+    ],
+    "D_null_mean": 0.12238537334078677,
+    "D_null_ci": [
+     0.1110249463135803,
+     0.13461737287167766
+    ],
+    "frac_cells_p_lt_alpha": 0.9121338912133892,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.883357317901096,
+     0.9343387880391135
+    ],
+    "n_docs_unique_p_lt_alpha": 94,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.0770109719844706,
+    "verdict": "refuted",
+    "verdict_note": "D_real 4.74e-01 > CI_null верх 1.35e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.29184885542289263,
+      "ci": [
+       0.25799271225570286,
+       0.32722217538830645
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk16": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.2876979652877125,
+    "D_real_ci": [
+     0.24042313415721822,
+     0.34049779029952026
+    ],
+    "D_null_mean": 0.10452534513879234,
+    "D_null_ci": [
+     0.09274893253965572,
+     0.11616423398600817
+    ],
+    "frac_cells_p_lt_alpha": 0.6673640167364017,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.6239387602131036,
+     0.7081205721484027
+    ],
+    "n_docs_unique_p_lt_alpha": 81,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.05003732807115102,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.88e-01 > CI_null верх 1.16e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.1622455916922582,
+      "ci": [
+       0.13736727666008938,
+       0.1869678838950954
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk32": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.21919058443237915,
+    "D_real_ci": [
+     0.17472912202546703,
+     0.2691602805816577
+    ],
+    "D_null_mean": 0.0986431117879858,
+    "D_null_ci": [
+     0.08465615644998509,
+     0.11368491850780092
+    ],
+    "frac_cells_p_lt_alpha": 0.37447698744769875,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.33225080399118223,
+     0.418704696737688
+    ],
+    "n_docs_unique_p_lt_alpha": 60,
+    "p_docs_median": 0.09523809523809523,
+    "delta_min_half_ci": 0.04721557927809533,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.19e-01 > CI_null верх 1.14e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.10934273454476663,
+      "ci": [
+       0.08762781088769267,
+       0.1338929113879164
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "ar1": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 1.895693533083939,
+    "D_real_ci": [
+     1.8036975105846131,
+     1.9963628353035032
+    ],
+    "D_null_mean": 0.24026749631542255,
+    "D_null_ci": [
+     0.20718177077303707,
+     0.28093467770269254
+    ],
+    "frac_cells_p_lt_alpha": 0.9769874476987448,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9592664648318606,
+     0.9871026323984325
+    ],
+    "n_docs_unique_p_lt_alpha": 95,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.09633266235944504,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.90e+00 > CI_null верх 2.81e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 1.665896424647841,
+      "ci": [
+       1.5412573459615282,
+       1.869879666267915
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.4958290031797328,
+    "sum_rho_null_mean": -0.2557978311157938,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0002092050209205021,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.4149748795738719,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar2": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.9353551466896602,
+    "D_real_ci": [
+     0.8645459125351951,
+     1.019513472554828
+    ],
+    "D_null_mean": 0.07569529279559485,
+    "D_null_ci": [
+     0.07074160936703636,
+     0.0813634753597585
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9920272554300003,
+     1.0
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07748378000981648,
+    "verdict": "refuted",
+    "verdict_note": "D_real 9.35e-01 > CI_null верх 8.14e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.7813093966596383,
+      "ci": [
+       0.746666296217654,
+       0.819451472735229
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.4958290031797328,
+    "sum_rho_null_mean": -0.3579724473314421,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.2594108156453482,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar4": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.5287368943604869,
+    "D_real_ci": [
+     0.4636578387377961,
+     0.6049611714960925
+    ],
+    "D_null_mean": 0.03962464008203708,
+    "D_null_ci": [
+     0.03799696079447892,
+     0.04143779185596105
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9920272554300003,
+     1.0
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07065166637914821,
+    "verdict": "refuted",
+    "verdict_note": "D_real 5.29e-01 > CI_null верх 4.14e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.3777617559334817,
+      "ci": [
+       0.33844277817323853,
+       0.43529232453516403
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.4958290031797328,
+    "sum_rho_null_mean": -0.4284161873568777,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.1926228676059966,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   }
+  },
+  "v_tangent": {
+   "iid": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.3437121485844509,
+    "D_real_ci": [
+     0.09450353356238775,
+     0.6699654469044992
+    ],
+    "D_null_mean": 0.04320864326983443,
+    "D_null_ci": [
+     0.01317323894299713,
+     0.08570212128073837
+    ],
+    "frac_cells_p_lt_alpha": 0.99581589958159,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9848739302463897,
+     0.9988518418745729
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.28773095667105575,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.44e-01 > CI_null верх 8.57e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.05317472352251654,
+      "ci": [
+       0.042103253179923056,
+       0.0693211925466466
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk2": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.3099666025042777,
+    "D_real_ci": [
+     0.08203895308213505,
+     0.6069254043373123
+    ],
+    "D_null_mean": 0.049165395274879065,
+    "D_null_ci": [
+     0.012980638981696666,
+     0.09507475500012871
+    ],
+    "frac_cells_p_lt_alpha": 0.9937238493723849,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9817116979153548,
+     0.9978633325510888
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.26244322562758865,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.10e-01 > CI_null верх 9.51e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.0455108938248173,
+      "ci": [
+       0.03440670050667372,
+       0.06123836019746312
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk4": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.2608804505635001,
+    "D_real_ci": [
+     0.07044406652921151,
+     0.509606202434194
+    ],
+    "D_null_mean": 0.05596733648209202,
+    "D_null_ci": [
+     0.012142466013303243,
+     0.11241670282283493
+    ],
+    "frac_cells_p_lt_alpha": 0.9686192468619247,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9488737365165516,
+     0.9808923940956662
+    ],
+    "n_docs_unique_p_lt_alpha": 95,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.21958106795249122,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.61e-01 > CI_null верх 1.12e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03813244341771846,
+      "ci": [
+       0.027726551008387407,
+       0.0536026986053588
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk8": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.18979450568008494,
+    "D_real_ci": [
+     0.054832038311412534,
+     0.36393229203997524
+    ],
+    "D_null_mean": 0.04420431694559462,
+    "D_null_ci": [
+     0.01090561390451633,
+     0.08780614818287294
+    ],
+    "frac_cells_p_lt_alpha": 0.9121338912133892,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.883357317901096,
+     0.9343387880391135
+    ],
+    "n_docs_unique_p_lt_alpha": 95,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.15455012686428135,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.90e-01 > CI_null верх 8.78e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03401132916134565,
+      "ci": [
+       0.023754185514367344,
+       0.049161587074682045
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk16": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.134685316208263,
+    "D_real_ci": [
+     0.04159585156161447,
+     0.25770108833267574
+    ],
+    "D_null_mean": 0.047016463225023945,
+    "D_null_ci": [
+     0.01158298116905936,
+     0.09559710821766766
+    ],
+    "frac_cells_p_lt_alpha": 0.8305439330543933,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.794307478413915,
+     0.8615097030000601
+    ],
+    "n_docs_unique_p_lt_alpha": 95,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.10805261838553064,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.35e-01 > CI_null верх 9.56e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03096467794698193,
+      "ci": [
+       0.021392330413083853,
+       0.04509522190689169
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk32": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.12444608029556303,
+    "D_real_ci": [
+     0.03638444507958839,
+     0.23997550480659216
+    ],
+    "D_null_mean": 0.04592142428872486,
+    "D_null_ci": [
+     0.012139678725143948,
+     0.08851297604958047
+    ],
+    "frac_cells_p_lt_alpha": 0.6715481171548117,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.6282229435088786,
+     0.7121378721616654
+    ],
+    "n_docs_unique_p_lt_alpha": 78,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.10179552986350188,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.24e-01 > CI_null верх 8.85e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.026407075907877057,
+      "ci": [
+       0.016745427937057446,
+       0.0407953944833865
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "ar1": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.3361928299056461,
+    "D_real_ci": [
+     0.0826381684343028,
+     0.6685176718615937
+    ],
+    "D_null_mean": 0.004734083968701217,
+    "D_null_ci": [
+     0.003189966635406703,
+     0.006612287902837867
+    ],
+    "frac_cells_p_lt_alpha": 0.9937238493723849,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9817116979153548,
+     0.9978633325510888
+    ],
+    "n_docs_unique_p_lt_alpha": 96,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.29293975171364545,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.36e-01 > CI_null верх 6.61e-03",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.04230924650837777,
+      "ci": [
+       0.031306201041165466,
+       0.058173407178325545
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": 16.74039898365054,
+    "sum_rho_null_mean": 17.07476898660489,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.5893870561720723,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar2": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.28774639185858625,
+    "D_real_ci": [
+     0.06581292442616263,
+     0.5791311934331722
+    ],
+    "D_null_mean": 0.006049328357979434,
+    "D_null_ci": [
+     0.003141013044586882,
+     0.009951641671615942
+    ],
+    "frac_cells_p_lt_alpha": 0.9644351464435147,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9437860558174486,
+     0.9776785914857317
+    ],
+    "n_docs_unique_p_lt_alpha": 95,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.2566591345035048,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.88e-01 > CI_null верх 9.95e-03",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03241328557655412,
+      "ci": [
+       0.022594420302001796,
+       0.047120340536294325
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": 16.74039898365054,
+    "sum_rho_null_mean": 16.981407833603782,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.44815106425060525,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar4": {
+    "n_docs": 96,
+    "n_cells": 478,
+    "D_real_mean": 0.26846743379774574,
+    "D_real_ci": [
+     0.060513971998022296,
+     0.5418328017434811
+    ],
+    "D_null_mean": 0.008074216035102591,
+    "D_null_ci": [
+     0.0033242608160318006,
+     0.014213182877530234
+    ],
+    "frac_cells_p_lt_alpha": 0.9539748953974896,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9312987672835975,
+     0.9694121717469886
+    ],
+    "n_docs_unique_p_lt_alpha": 95,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.24065941487272943,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.68e-01 > CI_null верх 1.42e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03151705899188085,
+      "ci": [
+       0.021663048222413772,
+       0.04659362302416534
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": 16.74039898365054,
+    "sum_rho_null_mean": 16.965533221219026,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.41135515386560595,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   }
+  }
+ },
+ "aggregates_verified_only": {
+  "h_raw": {
+   "iid": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 1.521557004754189,
+    "D_real_ci": [
+     1.4618223426678836,
+     1.5991050153928046
+    ],
+    "D_null_mean": 0.2832643049367706,
+    "D_null_ci": [
+     0.2637264102668265,
+     0.30553422031818267
+    ],
+    "frac_cells_p_lt_alpha": 0.9974874371859297,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9859065840685981,
+     0.9995563446077763
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.0686413363624605,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.52e+00 > CI_null верх 3.06e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 1.4115443025506988,
+      "ci": [
+       1.3429666194356258,
+       1.5087820328531834
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk2": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 1.062842374960491,
+    "D_real_ci": [
+     0.9951772050942941,
+     1.1457550420053102
+    ],
+    "D_null_mean": 0.216426417300103,
+    "D_null_ci": [
+     0.19799688672036747,
+     0.23632980573550466
+    ],
+    "frac_cells_p_lt_alpha": 0.9974874371859297,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9859065840685981,
+     0.9995563446077763
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07528891845550806,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.06e+00 > CI_null верх 2.36e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.9390717801177004,
+      "ci": [
+       0.8547247464419144,
+       1.0707266574530845
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk4": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.6997612351118568,
+    "D_real_ci": [
+     0.6284329659581811,
+     0.7818780677037518
+    ],
+    "D_null_mean": 0.15779494223724294,
+    "D_null_ci": [
+     0.14376999020908135,
+     0.17234190971531052
+    ],
+    "frac_cells_p_lt_alpha": 0.9824120603015075,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9641454506815091,
+     0.9914549650046718
+    ],
+    "n_docs_unique_p_lt_alpha": 79,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07672255087278534,
+    "verdict": "refuted",
+    "verdict_note": "D_real 7.00e-01 > CI_null верх 1.72e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.49969710263062384,
+      "ci": [
+       0.4671069239164293,
+       0.5374001741019692
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk8": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.5129868267948552,
+    "D_real_ci": [
+     0.43622101637260097,
+     0.6058704597777751
+    ],
+    "D_null_mean": 0.12996302198623566,
+    "D_null_ci": [
+     0.11619324155806725,
+     0.14423596397332247
+    ],
+    "frac_cells_p_lt_alpha": 0.9195979899497487,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.8886992323218248,
+     0.9424740459052179
+    ],
+    "n_docs_unique_p_lt_alpha": 78,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.08482472170258706,
+    "verdict": "refuted",
+    "verdict_note": "D_real 5.13e-01 > CI_null верх 1.44e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.2910595052053023,
+      "ci": [
+       0.25885929145753495,
+       0.32567800206605957
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk16": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.3149123252195373,
+    "D_real_ci": [
+     0.2637651601431791,
+     0.37600498424651935
+    ],
+    "D_null_mean": 0.1131344199743464,
+    "D_null_ci": [
+     0.09971265147626054,
+     0.12599711743715739
+    ],
+    "frac_cells_p_lt_alpha": 0.6608040201005025,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.6129508830777168,
+     0.7055825888176769
+    ],
+    "n_docs_unique_p_lt_alpha": 68,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.056119912051670134,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.15e-01 > CI_null верх 1.26e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.1615968255535204,
+      "ci": [
+       0.13794113536176456,
+       0.18546203037472317
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk32": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.24604933614541089,
+    "D_real_ci": [
+     0.19574577260436143,
+     0.30428557897730063
+    ],
+    "D_null_mean": 0.1084960266957864,
+    "D_null_ci": [
+     0.09195935738603682,
+     0.12491649370232467
+    ],
+    "frac_cells_p_lt_alpha": 0.39949748743718594,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.3525588482507891,
+     0.44835773181458993
+    ],
+    "n_docs_unique_p_lt_alpha": 50,
+    "p_docs_median": 0.09523809523809523,
+    "delta_min_half_ci": 0.0542699031864696,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.46e-01 > CI_null верх 1.25e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.10876813647492574,
+      "ci": [
+       0.08685867398939638,
+       0.13365166691708158
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "ar1": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 1.9642513770361738,
+    "D_real_ci": [
+     1.8594492574552557,
+     2.081280474181022
+    ],
+    "D_null_mean": 0.25003045040974914,
+    "D_null_ci": [
+     0.2132110263570827,
+     0.29724397941591507
+    ],
+    "frac_cells_p_lt_alpha": 0.9698492462311558,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9480448992847018,
+     0.9826700889096515
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.11091560836288317,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.96e+00 > CI_null верх 2.97e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 1.6589148811351961,
+      "ci": [
+       1.536116429547452,
+       1.8603089756599895
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.49620727333252823,
+    "sum_rho_null_mean": -0.2536122763028148,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0001256281407035176,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.4396739582540875,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar2": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.9829373861409211,
+    "D_real_ci": [
+     0.911828280089209,
+     1.067586696211122
+    ],
+    "D_null_mean": 0.0741161405927709,
+    "D_null_ci": [
+     0.0690176687543584,
+     0.07979798202622378
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9904400141747395,
+     1.0000000000000002
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.0778792080609565,
+    "verdict": "refuted",
+    "verdict_note": "D_real 9.83e-01 > CI_null верх 7.98e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.7782574237112928,
+      "ci": [
+       0.7437231958479918,
+       0.8166090257491795
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.49620727333252823,
+    "sum_rho_null_mean": -0.35722387361309044,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.28154424733866296,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar4": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.5724488212227945,
+    "D_real_ci": [
+     0.5054546066571941,
+     0.6527194439530153
+    ],
+    "D_null_mean": 0.0381663876382576,
+    "D_null_ci": [
+     0.03627178033948266,
+     0.040129625639311814
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9904400141747395,
+     1.0000000000000002
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07363241864791059,
+    "verdict": "refuted",
+    "verdict_note": "D_real 5.72e-01 > CI_null верх 4.01e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.37599256711734974,
+      "ci": [
+       0.33791646462808517,
+       0.43434127326816646
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.49620727333252823,
+    "sum_rho_null_mean": -0.4287847503273062,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.21435372670875175,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   }
+  },
+  "du_unit": {
+   "iid": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 1.5216072702780281,
+    "D_real_ci": [
+     1.461814582724239,
+     1.5980615255778048
+    ],
+    "D_null_mean": 0.28021906124376034,
+    "D_null_ci": [
+     0.26045420827239757,
+     0.3025896035215746
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9904400141747395,
+     1.0000000000000002
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.06812347142678288,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.52e+00 > CI_null верх 3.03e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 1.4131640097125202,
+      "ci": [
+       1.3435881128697442,
+       1.5112601633574965
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk2": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 1.067483719930633,
+    "D_real_ci": [
+     1.0003689915294636,
+     1.149639026105531
+    ],
+    "D_null_mean": 0.21662828965099434,
+    "D_null_ci": [
+     0.19816234601704388,
+     0.23671608723621565
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9904400141747395,
+     1.0000000000000002
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07463501728803368,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.07e+00 > CI_null верх 2.37e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.9420344401582295,
+      "ci": [
+       0.8576429392998464,
+       1.0740187894519693
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk4": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.7054172570797291,
+    "D_real_ci": [
+     0.6352359674817211,
+     0.7870748595230569
+    ],
+    "D_null_mean": 0.1581701703357143,
+    "D_null_ci": [
+     0.14381855118821557,
+     0.1727711187966644
+    ],
+    "frac_cells_p_lt_alpha": 0.9824120603015075,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9641454506815091,
+     0.9914549650046718
+    ],
+    "n_docs_unique_p_lt_alpha": 79,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07591944602066791,
+    "verdict": "refuted",
+    "verdict_note": "D_real 7.05e-01 > CI_null верх 1.73e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.5025215855999179,
+      "ci": [
+       0.46898788859430507,
+       0.5407869929939136
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk8": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.5152632682954483,
+    "D_real_ci": [
+     0.4376622269193085,
+     0.6072742946002165
+    ],
+    "D_null_mean": 0.1298815566203057,
+    "D_null_ci": [
+     0.11638539020191711,
+     0.14403393481903184
+    ],
+    "frac_cells_p_lt_alpha": 0.9195979899497487,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.8886992323218248,
+     0.9424740459052179
+    ],
+    "n_docs_unique_p_lt_alpha": 78,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.08480603384045401,
+    "verdict": "refuted",
+    "verdict_note": "D_real 5.15e-01 > CI_null верх 1.44e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.29184885542289263,
+      "ci": [
+       0.25799271225570286,
+       0.32722217538830645
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk16": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.3169458615559993,
+    "D_real_ci": [
+     0.26616927905337306,
+     0.37829359066569174
+    ],
+    "D_null_mean": 0.11321996752970445,
+    "D_null_ci": [
+     0.09979817464533752,
+     0.1260151063497448
+    ],
+    "frac_cells_p_lt_alpha": 0.6633165829145728,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.6155227440762087,
+     0.7079878133175505
+    ],
+    "n_docs_unique_p_lt_alpha": 68,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.056062155806159336,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.17e-01 > CI_null верх 1.26e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.1622455916922582,
+      "ci": [
+       0.13736727666008938,
+       0.1869678838950954
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk32": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.24833391086112103,
+    "D_real_ci": [
+     0.19837369911507716,
+     0.3059341856783101
+    ],
+    "D_null_mean": 0.10887268190558382,
+    "D_null_ci": [
+     0.09232621381645616,
+     0.12502593787942407
+    ],
+    "frac_cells_p_lt_alpha": 0.4045226130653266,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.3574386942237586,
+     0.45343205683835136
+    ],
+    "n_docs_unique_p_lt_alpha": 52,
+    "p_docs_median": 0.09523809523809523,
+    "delta_min_half_ci": 0.05378024328161647,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.48e-01 > CI_null верх 1.25e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.10934273454476663,
+      "ci": [
+       0.08762781088769267,
+       0.1338929113879164
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "ar1": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 1.9645334104096377,
+    "D_real_ci": [
+     1.8609545415574726,
+     2.080818392740119
+    ],
+    "D_null_mean": 0.2505287476453952,
+    "D_null_ci": [
+     0.2132556178792491,
+     0.30040345956062825
+    ],
+    "frac_cells_p_lt_alpha": 0.9748743718592965,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9543729014102408,
+     0.9862962577808435
+    ],
+    "n_docs_unique_p_lt_alpha": 79,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.10993192559132314,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.96e+00 > CI_null верх 3.00e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 1.665896424647841,
+      "ci": [
+       1.5412573459615282,
+       1.869879666267915
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.4961717211155867,
+    "sum_rho_null_mean": -0.2523846929623826,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0002512562814070352,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.44126091997026495,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar2": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.9902362875971313,
+    "D_real_ci": [
+     0.9191123145460739,
+     1.0759769912343267
+    ],
+    "D_null_mean": 0.07566017390210185,
+    "D_null_ci": [
+     0.07033501630449727,
+     0.08157812924773818
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9904400141747395,
+     1.0000000000000002
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07843233834412638,
+    "verdict": "refuted",
+    "verdict_note": "D_real 9.90e-01 > CI_null верх 8.16e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.7813093966596383,
+      "ci": [
+       0.746666296217654,
+       0.819451472735229
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.4961717211155867,
+    "sum_rho_null_mean": -0.35634744454028144,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.28335165661750156,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar4": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.5761597616143959,
+    "D_real_ci": [
+     0.508520114241899,
+     0.6553703299666499
+    ],
+    "D_null_mean": 0.03866732944411673,
+    "D_null_ci": [
+     0.03680030527185707,
+     0.040571997785508386
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9904400141747395,
+     1.0000000000000002
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.07342510786237544,
+    "verdict": "refuted",
+    "verdict_note": "D_real 5.76e-01 > CI_null верх 4.06e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.3777617559334817,
+      "ci": [
+       0.33844277817323853,
+       0.43529232453516403
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": -0.4961717211155867,
+    "sum_rho_null_mean": -0.4283048570406828,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.21576821787665607,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   }
+  },
+  "v_tangent": {
+   "iid": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.39995935671098576,
+    "D_real_ci": [
+     0.09933281533022861,
+     0.8035348300013819
+    ],
+    "D_null_mean": 0.04906360709679868,
+    "D_null_ci": [
+     0.013125438740901016,
+     0.09763110622137701
+    ],
+    "frac_cells_p_lt_alpha": 0.9949748743718593,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9818649684244756,
+     0.998620874753533
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.35210100733557664,
+    "verdict": "refuted",
+    "verdict_note": "D_real 4.00e-01 > CI_null верх 9.76e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.05317472352251654,
+      "ci": [
+       0.042103253179923056,
+       0.0693211925466466
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk2": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.36345458133231484,
+    "D_real_ci": [
+     0.08865542002565695,
+     0.7327624022531439
+    ],
+    "D_null_mean": 0.05669278258246417,
+    "D_null_ci": [
+     0.013352410191128195,
+     0.11516200851782456
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9904400141747395,
+     1.0000000000000002
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.3220534911137435,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.63e-01 > CI_null верх 1.15e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.0455108938248173,
+      "ci": [
+       0.03440670050667372,
+       0.06123836019746312
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk4": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.3065405635809594,
+    "D_real_ci": [
+     0.07748049652341713,
+     0.609569383761282
+    ],
+    "D_null_mean": 0.06518202466247514,
+    "D_null_ci": [
+     0.012553366414625067,
+     0.13446145838492188
+    ],
+    "frac_cells_p_lt_alpha": 0.9874371859296482,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9709322046830401,
+     0.9946223819998719
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.2660444436189324,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.07e-01 > CI_null верх 1.34e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03813244341771846,
+      "ci": [
+       0.027726551008387407,
+       0.0536026986053588
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk8": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.22263010407071332,
+    "D_real_ci": [
+     0.05981961710290083,
+     0.43504930885605414
+    ],
+    "D_null_mean": 0.05107094936154046,
+    "D_null_ci": [
+     0.011042121281107865,
+     0.10353096682730449
+    ],
+    "frac_cells_p_lt_alpha": 0.9547738693467337,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9296486283293216,
+     0.9712038468748385
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.18761484587657665,
+    "verdict": "refuted",
+    "verdict_note": "D_real 2.23e-01 > CI_null верх 1.04e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03401132916134565,
+      "ci": [
+       0.023754185514367344,
+       0.049161587074682045
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk16": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.15748994923743315,
+    "D_real_ci": [
+     0.04426410459727997,
+     0.30928824823519835
+    ],
+    "D_null_mean": 0.054503296460723584,
+    "D_null_ci": [
+     0.011756689734886723,
+     0.11051328110660462
+    ],
+    "frac_cells_p_lt_alpha": 0.8793969849246231,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.8437220592226837,
+     0.9078178510305106
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.1325120718189592,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.57e-01 > CI_null верх 1.11e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03096467794698193,
+      "ci": [
+       0.021392330413083853,
+       0.04509522190689169
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "blk32": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.14628291101551,
+    "D_real_ci": [
+     0.03842344217819226,
+     0.28760284703163863
+    ],
+    "D_null_mean": 0.05328224908773849,
+    "D_null_ci": [
+     0.012684964325505307,
+     0.10739596201143176
+    ],
+    "frac_cells_p_lt_alpha": 0.7311557788944724,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.6855401590096818,
+     0.7723517068399466
+    ],
+    "n_docs_unique_p_lt_alpha": 69,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.12458970242672318,
+    "verdict": "refuted",
+    "verdict_note": "D_real 1.46e-01 > CI_null верх 1.07e-01",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.026407075907877057,
+      "ci": [
+       0.016745427937057446,
+       0.0407953944833865
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    }
+   },
+   "ar1": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.39604440194565144,
+    "D_real_ci": [
+     0.09057649285847617,
+     0.8082478117489021
+    ],
+    "D_null_mean": 0.004479452809427841,
+    "D_null_ci": [
+     0.002686091121554505,
+     0.006898619415897119
+    ],
+    "frac_cells_p_lt_alpha": 1.0,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9904400141747395,
+     1.0000000000000002
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.358835659445213,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.96e-01 > CI_null верх 6.90e-03",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.04230924650837777,
+      "ci": [
+       0.031306201041165466,
+       0.058173407178325545
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": 18.12333015894263,
+    "sum_rho_null_mean": 18.4651427530595,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.6476978768400606,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar2": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.3410139697780045,
+    "D_real_ci": [
+     0.07353024423515794,
+     0.703069570644234
+    ],
+    "D_null_mean": 0.0061458523920073895,
+    "D_null_ci": [
+     0.0025721810207846828,
+     0.010754419489179068
+    ],
+    "frac_cells_p_lt_alpha": 0.9874371859296482,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9709322046830401,
+     0.9946223819998719
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.31476966320453803,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.41e-01 > CI_null верх 1.08e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03241328557655412,
+      "ci": [
+       0.022594420302001796,
+       0.047120340536294325
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": 18.12333015894263,
+    "sum_rho_null_mean": 18.362312095758224,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.5003942649132058,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   },
+   "ar4": {
+    "n_docs": 80,
+    "n_cells": 398,
+    "D_real_mean": 0.3178408990879038,
+    "D_real_ci": [
+     0.06679337674817831,
+     0.6593154291654191
+    ],
+    "D_null_mean": 0.008570247568118888,
+    "D_null_ci": [
+     0.0027786614313340566,
+     0.01609549087757645
+    ],
+    "frac_cells_p_lt_alpha": 0.9773869346733668,
+    "frac_cells_p_lt_alpha_wilson": [
+     0.9575876223105517,
+     0.9880586223788981
+    ],
+    "n_docs_unique_p_lt_alpha": 80,
+    "p_docs_median": 0.047619047619047616,
+    "delta_min_half_ci": 0.2962610262086204,
+    "verdict": "refuted",
+    "verdict_note": "D_real 3.18e-01 > CI_null верх 1.61e-02",
+    "domains": {
+     "chat": {
+      "n": 80,
+      "n_nondeg": 55,
+      "n_docs": 16,
+      "n_docs_nondeg": 11,
+      "claim": "n_docs_nondeg=11<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "code": {
+      "n": 80,
+      "n_nondeg": 40,
+      "n_docs": 16,
+      "n_docs_nondeg": 8,
+      "claim": "n_docs_nondeg=8<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     },
+     "math": {
+      "n": 80,
+      "n_nondeg": 80,
+      "n_docs": 16,
+      "n_docs_nondeg": 16,
+      "D_real_mean": 0.03151705899188085,
+      "ci": [
+       0.021663048222413772,
+       0.04659362302416534
+      ],
+      "claim": "ok"
+     },
+     "wiki": {
+      "n": 80,
+      "n_nondeg": 5,
+      "n_docs": 16,
+      "n_docs_nondeg": 1,
+      "claim": "n_docs_nondeg=1<12 — без доменного утверждения (ТЗ §0.3: n — документы)"
+     }
+    },
+    "sum_rho_real_mean": 18.12333015894263,
+    "sum_rho_null_mean": 18.344900226017696,
+    "sign_mismatch": false,
+    "frac_cells_seed_sign_mismatch": 0.0,
+    "sign_check_ok": true,
+    "D_bands_L1_mean": 0.4569775235996768,
+    "D_bands_L1_status": "reportable only (нет null-распределения — p-value не вычисляется)",
+    "note": "AR: verdict — из D_center_l1 (профили sign-normalized через band_shares_vec: деление на (r−1)/2). Интерпретация 'про band-форму' валидна при sign_check_ok (per-cell seed sign-mismatch ≤ 0.1): при расхождении знаков refuted был бы sign-driven. Порог 0.1 — эмпирический (ревью 5, п. C): замеренный mean ≤ 0.01, при 0.5 знаки случайны и refuted стал бы полностью sign-driven; это граница валидности интерпретации, не тест. Механизм согласования знаков: AR-фит (Yule-Walker) наследует знаки ACF real — в этих данных frac ≥ 0.90 на клетку, mean 1.00. D_bands_L1 — reportable only"
+   }
+  }
+ },
+ "aggregate_levels_note": "frac_cells_p_lt_alpha — КЛЕТКИ (doc×layer×obj); n_docs_unique_p_lt_alpha — уникальные ДОКУМЕНТЫ; уровни разные — не сравнивать напрямую"
+}
