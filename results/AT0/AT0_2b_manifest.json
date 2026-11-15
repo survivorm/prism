@@ -1,0 +1,13 @@
+{
+ "experiment": "AT0_2b T0.2b",
+ "round": "round 2",
+ "date": "2026-11-15 (UTC+3)",
+ "claim_sha256": "014bf176246540aac4d8162fc799ce90f66824b32dfeb5c8bf3e292d45747ddf",
+ "claim_file_sha256": "014bf176246540aac4d8162fc799ce90f66824b32dfeb5c8bf3e292d45747ddf",
+ "store_sha256": "15ad06bdae5c14c599d9d275d800a5fc2240c96789519419fd2ff2eeccf65c6e",
+ "store_file_sha256": "f8615708d78b61a4de556ef88ac6f0ca4c31fc964da27869d06db9d204e0d883",
+ "script_sha256": "99ab651f0f575816445652f987f68ebea99753f2f5f526b326a3b88e9181b673",
+ "hash_convention": "v2 C7: store_sha256 = canonical payload hash (canonical JSON sort_keys, \u0431\u0435\u0437 self-\u043f\u043e\u043b\u044f, \u043f\u043e\u043b\u0435 None \u043f\u0440\u0438 \u0440\u0430\u0441\u0447\u0451\u0442\u0435); store_file_sha256/claim_file_sha256/manifest_file_sha256 = sha256 \u0424\u0410\u041a\u0422\u0418\u0427\u0415\u0421\u041a\u0418\u0425 \u0444\u0430\u0439\u043b\u043e\u0432 (manifest \u043d\u0435 \u043c\u043e\u0436\u0435\u0442 \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u044c \u0441\u0432\u043e\u0439 file_sha \u2014 \u0442\u043e\u043b\u044c\u043a\u043e store/claim). v2.1 MINOR-3: \u043a\u043b\u044e\u0447\u0438 data_sha256 = basenames \u0444\u0430\u0439\u043b\u043e\u0432 (location-invariant: \u043f\u0435\u0440\u0435\u043d\u043e\u0441 \u0440\u0435\u043f\u043e \u043d\u0435 \u043c\u0435\u043d\u044f\u0435\u0442 canonical store sha)",
+ "note": "claim AT0_2b_RA.json (gates+prereg+aggregates, v2: carrier/dominance verdicts, n_present, CI, p_fdc_dh); store = per-cell (rho96 R/A, cross k=1..K, p_fdc, p_fdc_dh, contrib, closure); run_log = stdout (tracked).",
+ "manifest_sha256": "2aa55ab5fad0b701fc26a53c4aab95824bd63ca3e2fdbdabf998039254864141"
+}

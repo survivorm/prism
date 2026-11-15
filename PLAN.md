@@ -818,11 +818,49 @@ acf_moments, f_dc, degen — AT0_2b = тонкий драйвер, ничего 
   contrib sum = 1, energy-гейт, NO_DH_DC-гейт); [ ] смоук; [ ] полный прогон (setsid nohup);
   [ ] аудит артефакта; [ ] ответка docs/AT0_2b_review_answers.md (принято/спорю/самокоррекция);
   [ ] ревью-проход 2 (петля до PASS); коммит — по команде юзера.
-- NEXT: [ ] коммит (явные пути) — по команде юзера.
+- NEXT: [x] коммит (явные пути) — 15.11 (см. ниже).
 - Границы: не менять field.py (пин), AT0_1/AT0_2/AT0_3/AT0_5 скрипты, данные (read-only);
   CPU ≤4 тредов; артефакты results/AT0/AT0_2b_*; не трогать файлы параллельной сессии.
   Правило 7: AT0_2_shape.py сейчас В ПРОГОНЕ — не редактировать (2b от него только импортирует
   a2.acf_full из файла на диске на момент запуска — зафиксировать: файл не менялся со старта).
+
+### AT0_2b — ЗАКРЫТ (15.11): pre-run r2+r2b PASS, полный прогон, данные
+
+- Pre-run-ревью-луп: r1 (exec-review, C1–C7+M1–M3) → r2 (docs/dynamic/AT0_2b_REVIEW_r2.md):
+  **PASS_WITH_MINORS, 0 MAJOR** (4 MINOR: carrier not_testable-клетки с причинами, CI в claim,
+  energy-gate, file_sha256). Ответка: docs/dynamic/AT0_2b_REVIEW_r2_answer.md.
+- Pre-run протокол v2 (docs/AT0_2b_prereg.md) — verdict-правила ДО прогона: carrier
+  (floor-gate по |Δh_null| + energy-gate), anti-correlation (n_absent=2, L1/L23, |r|>0.25);
+  claim + cell-list (18 клеток) + energy-threshold rationale. Fail-loud поймал v1-пин
+  (n_absent = 2, не 6: own_w0/own_w4 × L1) — исправлено ДО данных.
+- Полный прогон v2 (15.11, RC=0, gates ALL PASS): **Δh (full − null) не содержит DC-компоненту
+  ни в одном пуле/слое** (carrier не проходит floor-gate; floor = |Δh_null| ≈ 3e-17); угловая
+  составляющая ≈ 100% net displacement (L23: net 99.85% / 103.87%); P2 (corpus) ≠ P1 (own);
+  L11 — единственная явная анти-корреляция (−0.0465…−0.0012, L17/L23 loopy).
+- r2b (4 MINOR закрыты в скрипте, re-run RC=0, cells bit-eq с v2): addendum к r2 —
+  **VERDICT PASS** (предыдущий FAIL файла — чтение старой версии ревьюера; 956 численных
+  листьев bit-eq; 202/202 строк лога дословно). 1 NIT (manifest-note «run_log = stdout
+  (tracked)» — 1 строка field.py print вне logline()) — принят без реран, зафиксирован в
+  ответке §5.
+- Артефакты (закоммичены): results/AT0/AT0_2b_RA.json (claim, file sha 014bf176246540aa),
+  AT0_2b_manifest.json (a100dcf9), AT0_2b_run.log, store/15ad06bdae5c14c5.json (canonical
+  payload, 4.4M, file sha f8615708). v2 store (b7e90c93, superseded) — на диске, pин по sha
+  в r2b-ревью.
+
+### Инцидент: удалён untracked-каталог artifacts/ (15.11 ~16:40)
+
+- Между 16:35 и 16:45 внешним процессом удалён untracked-каталог `artifacts/` (старая рабочая
+  область: устаревшие pre-run-доки, старые claim'и, старые версии review-доков). Триаж:
+  rtk-history сессии — ни одного rm/mv/find-delete; cron'ов нет; kaggle_daemon не трогает;
+  машина используется (IDEA crash → hprof 3.4G, pi/pig-сессии, reboot в interactive-истории).
+  Причину однозначно не установить.
+- **Авторитетных данных потеряно НЕ БЫЛО**: все финальные артефакты в git или results/AT0/
+  (canonical store-claim'и AT0_1 закоммичены; AT0_2/AT0_3/AT0_4 — results/AT0/*; AT0_2b v2.1 —
+  results/AT0/ + store, sha совпадает с PASS-ревью). Утраченные файлы — superseded дубликаты.
+- Профилактика (правила на будущее): (1) артефакт (claim/manifest/log/store) коммитить
+  НЕМЕДЛЕННО после PASS-ревью — не держать untracked; (2) не оставлять untracked-каталоги
+  с «каноническим» именем (artifacts/) — риск ложной уверенности; (3) store >10MB — только
+  gz (правило репо), коммитить финальную версию.
 
 ## AT0_4 — exec-review r3 (C1–C6, R1–R3), агрегационный патч БЕЗ форвардов (14.11)
 
