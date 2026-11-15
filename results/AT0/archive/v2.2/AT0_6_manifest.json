@@ -1,0 +1,17 @@
+{
+ "at03_sha256": "8fe61affb13b443f85a07fe9e0420e6b4485ad745d11b54e76ea9d08e014870f",
+ "claim_path": "results/AT0/AT0_6_SPECTRUM.json",
+ "claim_sha256": "655594d0bbe43d8053f926d1c4ea65e13538a1f094f6db15fab0c2b0fb176af2",
+ "data_sha256": {
+  "cor": "5f42a08442a5d3bcb8d7c4de5c9658340c0378a917a5e633b9b2aa589ceac125",
+  "gen": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
+  "own": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198"
+ },
+ "date": "2026-11-15 (UTC+3)",
+ "experiment": "AT0_6 T0.6 (v2)",
+ "field_sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
+ "manifest_sha256": "d0b1624dc6e7b7924122eedfe922a0fbc4c8973a1b89aad9d26b7ab1a065e5cf",
+ "script_sha256": "c24cb6681e5eb26f6511fa177cbbc7a2b793333f7c5665357b70ac11ab1132bb",
+ "store_path": "results/AT0/store/767d623f7233b1f4.json",
+ "store_sha256": "767d623f7233b1f400b905b28673327d72bca8c0442b0aab1cebd478840aaf86"
+}

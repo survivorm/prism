@@ -1,0 +1,249 @@
+{
+ "date": "2026-11-15 (UTC+3)",
+ "experiment": "AT0_6 T0.6 (спектральная линия на петлевом периоде, matched-filter v2)",
+ "gates": {
+  "G0": {
+   "gen_sha_ok": "64/64",
+   "ok": true
+  },
+  "G1_field": {
+   "field_sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
+   "selfcheck": "OK"
+  },
+  "G1a_identity": {
+   "max_rel_dev": 2.4317747283411135e-15,
+   "ok": true,
+   "per_doc": {
+    "chat_0": 2.4317747283411135e-15,
+    "math_0": 1.9696667688986655e-15
+   }
+  },
+  "G1b_unit": {
+   "ar2_fit": {
+    "abs_err_inf": 0.0009068328412328297,
+    "phi_hat": [
+     0.5009068328412328,
+     -0.29983080116709465
+    ],
+    "phi_true": [
+     0.5,
+     -0.3
+    ]
+   },
+   "cos": {
+    "off_over_on": [
+     0.02627664409660148,
+     0.010977694015855398
+    ],
+    "q0_over_D": 66.47165711752508
+   },
+   "ok": true
+  },
+  "G2": {
+   "bad": [],
+   "n_docs": 96,
+   "ok": true,
+   "short_cells_note": "T′<96 (cor_w8, cor_w11): exact-null, только power-потеря при p > T′/2",
+   "t_prime_range": [
+    82,
+    383
+   ]
+  },
+  "G7_calibration": {
+   "gate": "k ≤ 3 из 20",
+   "k": 0,
+   "ok": true
+  },
+  "POSITIVE": {
+   "gate": "1/1 ≤ 0.05",
+   "ok": true,
+   "rows": [
+    {
+     "ok": true,
+     "p": 0.02,
+     "p0": 7,
+     "q_obs": 22710.865692672585
+    }
+   ]
+  },
+  "all_ok": true
+ },
+ "h3_summary": {
+  "smoke_only": true
+ },
+ "meta": {
+  "B": 199,
+  "T_prime": 383,
+  "at03_sha256": "8fe61affb13b443f85a07fe9e0420e6b4485ad745d11b54e76ea9d08e014870f",
+  "data_sha256": {
+   "cor": "5f42a08442a5d3bcb8d7c4de5c9658340c0378a917a5e633b9b2aa589ceac125",
+   "gen": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
+   "own": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198"
+  },
+  "decode_probe": {
+   "corpus_note": "not_testable G16",
+   "corpus_toks": 0,
+   "gen": {
+    "doc": "gen",
+    "lines": [
+     {
+      "chunk": "tok[0:40]",
+      "text": " theme version.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version"
+     },
+     {
+      "chunk": "tok[40:80]",
+      "text": " of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe"
+     },
+     {
+      "chunk": "tok[80:120]",
+      "text": " theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is currently active.\nThe theme version is the version of the theme that is"
+     }
+    ],
+    "n_toks": 384
+   },
+   "own": {
+    "doc": "own",
+    "lines": [
+     {
+      "chunk": "tok[0:40]",
+      "text": " 3-hour class on how to make delicious BBQ.\nThe class will be held at the Lonestar Smoke Rangers, 10000000000000"
+     },
+     {
+      "chunk": "tok[40:80]",
+      "text": "0000000000000000000000000000000000000000"
+     },
+     {
+      "chunk": "tok[80:120]",
+      "text": "0000000000000000000000000000000000000000"
+     }
+    ],
+    "n_toks": 384
+   }
+  },
+  "field_sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
+  "gen_sha_ok": "64/64",
+  "n_docs": 96,
+  "p_grid": [
+   3,
+   48
+  ],
+  "script_sha256": "0d2944056ef27f4fe8655a1d2debfda37099b3af44a08b6a076d6a935839fd2e",
+  "seed_convention": "2026 + doc_idx*1009 + s (sorted(96)); synth 777+k / 7770+k",
+  "smoke": true
+ },
+ "prereg": {
+  "g7": {
+   "false_fail_p": 0.015901526019763555,
+   "k_max": 3,
+   "n": 20
+  },
+  "h1": {
+   "alpha": 0.05,
+   "binom_p_floor": 2.3062217174839696e-12,
+   "binom_p_sig": 1.1615213968715432e-06,
+   "floor": 15,
+   "pool": "30 T0.3-detected, h_raw|L23, per-doc p_T0.3, perm-null на том же p",
+   "sig": 10
+  },
+  "h2": {
+   "alpha": 0.05,
+   "binom_p_floor": 0.04641626104099837,
+   "floor": 7,
+   "note": "P(Bin(66,0.05)≥6) = 0.112 — НЕ тест 5%, только порог пре-рега",
+   "pool": "66 без T0.3-p, grid-max Q, p∈3..48, perm-null max по сетке"
+  },
+  "h3": "descriptive: dh|L23 + h|L{5,11,17}, per-doc p_T0.3, без вердикта",
+  "positive": {
+   "a": 0.5,
+   "effect_size_source": "matched-filter замер: mean a/σ ≈ 0.55 по 30 detected (провенанс)",
+   "gate": "4/4 p ≤ 0.05",
+   "p0": [
+    7,
+    13,
+    17,
+    27
+   ],
+   "seed": 7770
+  },
+  "tz": "docs/TZ_add_0-3.md §1.5 T0.6 (v2)"
+ },
+ "round": "v2-r1",
+ "store": "store/92d67e33b4975894.json",
+ "store_sha256": "92d67e33b497589485a6c1e6544fffeed7696846620e9d6cd001923d2d91cca0",
+ "tests": {
+  "H1": {
+   "f": 1,
+   "n": 1,
+   "per_doc": [
+    {
+     "doc": "wiki_1",
+     "p": 0.005,
+     "q_obs": 31586.303966754815
+    }
+   ]
+  },
+  "H2": {
+   "g": 1,
+   "n": 1,
+   "per_doc": [
+    {
+     "doc": "chat_1",
+     "p": 0.005,
+     "p_at_max": 27,
+     "q_grid": {
+      "10": 122.15731109773171,
+      "11": 122.28731289675991,
+      "12": 336.0361907871915,
+      "13": 5423.155476261021,
+      "14": 1953.5227419174782,
+      "15": 287.9207862581719,
+      "16": 130.3135054679096,
+      "17": 116.11959520070704,
+      "18": 122.61142949678923,
+      "19": 164.26386078506113,
+      "20": 191.55648707305454,
+      "21": 305.2528231678498,
+      "22": 347.2650335182748,
+      "23": 482.2797066034088,
+      "24": 2429.3457158384417,
+      "25": 2414.9240300139672,
+      "26": 19253.496199246943,
+      "27": 21474.660718911167,
+      "28": 5233.93731010804,
+      "29": 1449.3313436314902,
+      "3": 2793.8156259851585,
+      "30": 1041.2335239824847,
+      "31": 395.4710302026055,
+      "32": 450.94667671603145,
+      "33": 341.831592604717,
+      "34": 333.3759954619617,
+      "35": 312.1700468292526,
+      "36": 199.74488376444097,
+      "37": 208.3415212808575,
+      "38": 258.159489840791,
+      "39": 207.69149015645004,
+      "4": 58.215142550615006,
+      "40": 149.50327995113244,
+      "41": 183.47049076339044,
+      "42": 245.02835549545685,
+      "43": 242.76179029346778,
+      "44": 193.05236512297574,
+      "45": 170.99748364331384,
+      "46": 204.8027032790194,
+      "47": 256.09907887463834,
+      "48": 276.8880683009857,
+      "5": 192.96570095557777,
+      "6": 101.45047155422418,
+      "7": 133.02390375192164,
+      "8": 233.97224710623905,
+      "9": 6616.601790126544
+     },
+     "q_max_obs": 21474.660718911167
+    }
+   ]
+  },
+  "verdict": {
+   "status": "SMOKE (без вердикта)"
+  }
+ }
+}

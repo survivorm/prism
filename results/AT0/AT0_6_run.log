@@ -1,0 +1,402 @@
+G1′ field.py sha bcc607c561f95e3e selfcheck OK
+G0: gen f142f297ec16209d own 783e16338cdcb652 cor 5f42a08442a5d3bc at03 8fe61affb13b443f (sha16-match=True); gen_sha_ok 64/64; corpus toks 0/16 (G16)
+замероз. вход T0.3: 30 доков с p (p∈7..32); H2-пул 66 доков (loopy-und 11, clean 53, remainder 2)
+G1a: identity max rel dev = 2.432e-15 (tol 1e-12) на ['chat_0', 'math_0'] (gemm vs einsum vs cos/sin)
+G1b: cos a=1 σ=1 p0=13 D=32: Q(p0)/D = 66.5 (≥50.0), off/on = 0.026/0.011 (≤0.2), R = 53.7 (≥5.0); AR2-fit φ̂ = (0.5009, -0.2999) vs (0.5, −0.3), |Δ|∞ = 0.0009 (tol 0.05)
+G2: 96 доков, T'∈[82,383] (per-doc T−1), per-dim var>0; per-doc p-сетка p ≤ min(48, ⌊T′/4⌋) (M1): cor_w8→20, cor_w11→23, gen→48; OK
+G7 iid k=0: Q_max = 1094.8 (p=0.465 —), R_max(int) = 1.094 (p=0.200 —)
+G7 iid k=1: Q_max = 1106.5 (p=0.235 —), R_max(int) = 1.097 (p=0.160 —)
+G7 iid k=2: Q_max = 1075.5 (p=0.885 —), R_max(int) = 1.066 (p=0.545 —)
+G7 iid k=3: Q_max = 1113.3 (p=0.150 —), R_max(int) = 1.075 (p=0.485 —)
+G7 iid k=4: Q_max = 1085.1 (p=0.700 —), R_max(int) = 1.074 (p=0.475 —)
+G7 iid k=5: Q_max = 1089.4 (p=0.660 —), R_max(int) = 1.080 (p=0.340 —)
+G7 iid k=6: Q_max = 1097.6 (p=0.425 —), R_max(int) = 1.052 (p=0.935 —)
+G7 iid k=7: Q_max = 1087.3 (p=0.720 —), R_max(int) = 1.054 (p=0.895 —)
+G7 iid k=8: Q_max = 1091.8 (p=0.585 —), R_max(int) = 1.086 (p=0.265 —)
+G7 iid k=9: Q_max = 1101.8 (p=0.310 —), R_max(int) = 1.075 (p=0.385 —)
+G7 iid k=10: Q_max = 1103.8 (p=0.300 —), R_max(int) = 1.102 (p=0.110 —)
+G7 iid k=11: Q_max = 1090.7 (p=0.570 —), R_max(int) = 1.092 (p=0.200 —)
+G7 iid k=12: Q_max = 1096.2 (p=0.420 —), R_max(int) = 1.058 (p=0.780 —)
+G7 iid k=13: Q_max = 1094.9 (p=0.525 —), R_max(int) = 1.105 (p=0.080 —)
+G7 iid k=14: Q_max = 1096.2 (p=0.450 —), R_max(int) = 1.071 (p=0.535 —)
+G7 iid k=15: Q_max = 1076.6 (p=0.895 —), R_max(int) = 1.047 (p=0.930 —)
+G7 iid k=16: Q_max = 1121.8 (p=0.105 —), R_max(int) = 1.086 (p=0.275 —)
+G7 iid k=17: Q_max = 1097.2 (p=0.455 —), R_max(int) = 1.071 (p=0.560 —)
+G7 iid k=18: Q_max = 1101.4 (p=0.345 —), R_max(int) = 1.102 (p=0.110 —)
+G7 iid k=19: Q_max = 1094.2 (p=0.570 —), R_max(int) = 1.051 (p=0.900 —)
+G7: k(Q) = 0/20, k(R) = 0/20 (гейт ≤ 3 each; P(k≥4|Bin(20,.05)) = 0.0159)
+POSITIVE p0=7: Q(p0) = 22710.9, R(p0) = 25.79, p = 0.0050 (OK)
+POSITIVE p0=13: Q(p0) = 22475.9, R(p0) = 20.38, p = 0.0050 (OK)
+POSITIVE p0=17: Q(p0) = 22580.4, R(p0) = 12.38, p = 0.0050 (OK)
+POSITIVE p0=27: Q(p0) = 22735.2, R(p0) = 2.56, p = 0.0050 (OK)
+GEYTY: G0=True G1a=True G1b=True G2=True G7=True POS=True → PASS
+GRID chat_0: T' = 383, n_p = 46 (p ≤ 48), Q_max = 30675.6
+GRID chat_1: T' = 383, n_p = 46 (p ≤ 48), Q_max = 21474.7
+GRID chat_10: T' = 383, n_p = 46 (p ≤ 48), Q_max = 23393.1
+GRID chat_11: T' = 383, n_p = 46 (p ≤ 48), Q_max = 7617.3
+GRID chat_12: T' = 383, n_p = 46 (p ≤ 48), Q_max = 5839.1
+GRID chat_13: T' = 383, n_p = 46 (p ≤ 48), Q_max = 2803.9
+GRID chat_14: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3748.5
+GRID chat_15: T' = 383, n_p = 46 (p ≤ 48), Q_max = 76466.7
+GRID chat_2: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3278.5
+GRID chat_3: T' = 383, n_p = 46 (p ≤ 48), Q_max = 27872.2
+GRID chat_4: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3321.9
+GRID chat_5: T' = 383, n_p = 46 (p ≤ 48), Q_max = 16564.1
+GRID chat_6: T' = 383, n_p = 46 (p ≤ 48), Q_max = 5358.9
+GRID chat_7: T' = 383, n_p = 46 (p ≤ 48), Q_max = 8456.3
+GRID chat_8: T' = 383, n_p = 46 (p ≤ 48), Q_max = 20033.0
+GRID chat_9: T' = 383, n_p = 46 (p ≤ 48), Q_max = 4414.5
+GRID code_0: T' = 383, n_p = 46 (p ≤ 48), Q_max = 49513.0
+GRID code_1: T' = 383, n_p = 46 (p ≤ 48), Q_max = 26573.5
+GRID code_10: T' = 383, n_p = 46 (p ≤ 48), Q_max = 12170.8
+GRID code_11: T' = 383, n_p = 46 (p ≤ 48), Q_max = 13552.7
+GRID code_12: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3155.7
+GRID code_13: T' = 383, n_p = 46 (p ≤ 48), Q_max = 75477.3
+GRID code_14: T' = 383, n_p = 46 (p ≤ 48), Q_max = 62856.9
+GRID code_15: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3219.7
+GRID code_2: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3842.8
+GRID code_3: T' = 383, n_p = 46 (p ≤ 48), Q_max = 23999.2
+GRID code_4: T' = 383, n_p = 46 (p ≤ 48), Q_max = 11008.3
+GRID code_5: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3349.6
+GRID code_6: T' = 383, n_p = 46 (p ≤ 48), Q_max = 24275.9
+GRID code_7: T' = 383, n_p = 46 (p ≤ 48), Q_max = 4915.4
+GRID code_8: T' = 383, n_p = 46 (p ≤ 48), Q_max = 32300.2
+GRID code_9: T' = 383, n_p = 46 (p ≤ 48), Q_max = 4280.1
+GRID cor_w0: T' = 162, n_p = 38 (p ≤ 40), Q_max = 3048.2
+GRID cor_w1: T' = 254, n_p = 46 (p ≤ 48), Q_max = 3099.6
+GRID cor_w10: T' = 254, n_p = 46 (p ≤ 48), Q_max = 4730.8
+GRID cor_w11: T' = 94, n_p = 21 (p ≤ 23), Q_max = 2106.7
+GRID cor_w12: T' = 254, n_p = 46 (p ≤ 48), Q_max = 2758.8
+GRID cor_w13: T' = 254, n_p = 46 (p ≤ 48), Q_max = 2766.6
+GRID cor_w14: T' = 254, n_p = 46 (p ≤ 48), Q_max = 3998.1
+GRID cor_w15: T' = 254, n_p = 46 (p ≤ 48), Q_max = 3379.4
+GRID cor_w2: T' = 252, n_p = 46 (p ≤ 48), Q_max = 2991.8
+GRID cor_w3: T' = 203, n_p = 46 (p ≤ 48), Q_max = 3490.1
+GRID cor_w4: T' = 130, n_p = 30 (p ≤ 32), Q_max = 2581.4
+GRID cor_w5: T' = 123, n_p = 28 (p ≤ 30), Q_max = 2209.0
+GRID cor_w6: T' = 124, n_p = 29 (p ≤ 31), Q_max = 2848.6
+GRID cor_w7: T' = 254, n_p = 46 (p ≤ 48), Q_max = 2878.4
+GRID cor_w8: T' = 82, n_p = 18 (p ≤ 20), Q_max = 1843.7
+GRID cor_w9: T' = 254, n_p = 46 (p ≤ 48), Q_max = 3430.5
+GRID math_0: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3129.7
+GRID math_1: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3875.9
+GRID math_10: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3151.5
+GRID math_11: T' = 383, n_p = 46 (p ≤ 48), Q_max = 4923.1
+GRID math_12: T' = 383, n_p = 46 (p ≤ 48), Q_max = 12456.0
+GRID math_13: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3021.5
+GRID math_14: T' = 383, n_p = 46 (p ≤ 48), Q_max = 36427.4
+GRID math_15: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3416.7
+GRID math_2: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3060.5
+GRID math_3: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3550.1
+GRID math_4: T' = 383, n_p = 46 (p ≤ 48), Q_max = 5531.3
+GRID math_5: T' = 383, n_p = 46 (p ≤ 48), Q_max = 4345.3
+GRID math_6: T' = 383, n_p = 46 (p ≤ 48), Q_max = 2800.5
+GRID math_7: T' = 383, n_p = 46 (p ≤ 48), Q_max = 3222.1
+GRID math_8: T' = 383, n_p = 46 (p ≤ 48), Q_max = 4762.0
+GRID math_9: T' = 383, n_p = 46 (p ≤ 48), Q_max = 4460.2
+GRID own_w0: T' = 383, n_p = 46 (p ≤ 48), Q_max = 6918.8
+GRID own_w1: T' = 383, n_p = 46 (p ≤ 48), Q_max = 30919.7
+GRID own_w10: T' = 383, n_p = 46 (p ≤ 48), Q_max = 39044.5
+GRID own_w11: T' = 383, n_p = 46 (p ≤ 48), Q_max = 33986.5
+GRID own_w12: T' = 383, n_p = 46 (p ≤ 48), Q_max = 9862.1
+GRID own_w13: T' = 383, n_p = 46 (p ≤ 48), Q_max = 7655.7
+GRID own_w14: T' = 383, n_p = 46 (p ≤ 48), Q_max = 28247.9
+GRID own_w15: T' = 383, n_p = 46 (p ≤ 48), Q_max = 39265.7
+GRID own_w2: T' = 383, n_p = 46 (p ≤ 48), Q_max = 25961.6
+GRID own_w3: T' = 383, n_p = 46 (p ≤ 48), Q_max = 22200.5
+GRID own_w4: T' = 383, n_p = 46 (p ≤ 48), Q_max = 6502.4
+GRID own_w5: T' = 383, n_p = 46 (p ≤ 48), Q_max = 22999.7
+GRID own_w6: T' = 383, n_p = 46 (p ≤ 48), Q_max = 26934.8
+GRID own_w7: T' = 383, n_p = 46 (p ≤ 48), Q_max = 32213.0
+GRID own_w8: T' = 383, n_p = 46 (p ≤ 48), Q_max = 41597.6
+GRID own_w9: T' = 383, n_p = 46 (p ≤ 48), Q_max = 31513.7
+GRID wiki_0: T' = 383, n_p = 46 (p ≤ 48), Q_max = 6813.2
+GRID wiki_1: T' = 383, n_p = 46 (p ≤ 48), Q_max = 31586.3
+GRID wiki_10: T' = 383, n_p = 46 (p ≤ 48), Q_max = 39253.9
+GRID wiki_11: T' = 383, n_p = 46 (p ≤ 48), Q_max = 34023.6
+GRID wiki_12: T' = 383, n_p = 46 (p ≤ 48), Q_max = 10117.0
+GRID wiki_13: T' = 383, n_p = 46 (p ≤ 48), Q_max = 8280.9
+GRID wiki_14: T' = 383, n_p = 46 (p ≤ 48), Q_max = 29127.2
+GRID wiki_15: T' = 383, n_p = 46 (p ≤ 48), Q_max = 40361.3
+GRID wiki_2: T' = 383, n_p = 46 (p ≤ 48), Q_max = 28164.0
+GRID wiki_3: T' = 383, n_p = 46 (p ≤ 48), Q_max = 23267.4
+GRID wiki_4: T' = 383, n_p = 46 (p ≤ 48), Q_max = 6003.4
+GRID wiki_5: T' = 383, n_p = 46 (p ≤ 48), Q_max = 23638.0
+GRID wiki_6: T' = 383, n_p = 46 (p ≤ 48), Q_max = 27570.4
+GRID wiki_7: T' = 383, n_p = 46 (p ≤ 48), Q_max = 33248.1
+GRID wiki_8: T' = 383, n_p = 46 (p ≤ 48), Q_max = 42207.9
+GRID wiki_9: T' = 383, n_p = 46 (p ≤ 48), Q_max = 32060.8
+H1 chat_0 p=15: R = 28.30, Q = 30675.6 (a/σ = 0.550), p = 0.0050
+H1 chat_10 p=27: R = 2.40, Q = 23393.1 (a/σ = 0.478), p = 0.0050
+H1 chat_15 p=8: R = 437.43, Q = 76466.7 (a/σ = 0.877), p = 0.0050
+H1 chat_3 p=20: R = 22.01, Q = 27872.2 (a/σ = 0.523), p = 0.0050
+H1 code_0 p=11: R = 106.39, Q = 49513.0 (a/σ = 0.703), p = 0.0050
+H1 code_1 p=24: R = 4.62, Q = 26573.5 (a/σ = 0.510), p = 0.0050
+H1 code_13 p=7: R = 643.62, Q = 75477.3 (a/σ = 0.871), p = 0.0050
+H1 code_14 p=9: R = 338.36, Q = 62856.9 (a/σ = 0.794), p = 0.0050
+H1 code_6 p=32: R = 1.54, Q = 19404.4 (a/σ = 0.433), p = 0.0050
+H1 code_8 p=15: R = 32.13, Q = 32300.2 (a/σ = 0.565), p = 0.0050
+H1 own_w1 p=19: R = 29.29, Q = 30919.7 (a/σ = 0.552), p = 0.0050
+H1 own_w10 p=15: R = 29.97, Q = 39044.5 (a/σ = 0.623), p = 0.0050
+H1 own_w11 p=17: R = 24.36, Q = 33986.5 (a/σ = 0.580), p = 0.0050
+H1 own_w14 p=18: R = 26.44, Q = 28247.9 (a/σ = 0.527), p = 0.0050
+H1 own_w15 p=17: R = 22.64, Q = 39265.7 (a/σ = 0.625), p = 0.0050
+H1 own_w5 p=13: R = 62.87, Q = 22999.7 (a/σ = 0.473), p = 0.0050
+H1 own_w6 p=31: R = 1.67, Q = 26934.8 (a/σ = 0.514), p = 0.0050
+H1 own_w7 p=16: R = 19.09, Q = 32213.0 (a/σ = 0.564), p = 0.0050
+H1 own_w8 p=14: R = 94.93, Q = 41597.6 (a/σ = 0.643), p = 0.0050
+H1 own_w9 p=18: R = 39.71, Q = 31513.7 (a/σ = 0.558), p = 0.0050
+H1 wiki_1 p=19: R = 35.67, Q = 31586.3 (a/σ = 0.558), p = 0.0050
+H1 wiki_10 p=15: R = 32.62, Q = 39253.9 (a/σ = 0.624), p = 0.0050
+H1 wiki_11 p=17: R = 27.43, Q = 34023.6 (a/σ = 0.580), p = 0.0050
+H1 wiki_14 p=18: R = 35.74, Q = 29127.2 (a/σ = 0.535), p = 0.0050
+H1 wiki_15 p=17: R = 27.75, Q = 40361.3 (a/σ = 0.633), p = 0.0050
+H1 wiki_5 p=13: R = 90.09, Q = 23638.0 (a/σ = 0.480), p = 0.0050
+H1 wiki_6 p=31: R = 1.65, Q = 27570.4 (a/σ = 0.520), p = 0.0050
+H1 wiki_7 p=16: R = 22.64, Q = 33248.1 (a/σ = 0.573), p = 0.0050
+H1 wiki_8 p=14: R = 104.24, Q = 42207.9 (a/σ = 0.648), p = 0.0050
+H1 wiki_9 p=18: R = 46.93, Q = 32060.8 (a/σ = 0.563), p = 0.0050
+G9 dh_L23 chat_0 p=15: R = 28.62, p = 0.0050
+G9 dh_L23 chat_10 p=27: R = 2.39, p = 0.0050
+G9 dh_L23 chat_15 p=8: R = 467.97, p = 0.0050
+G9 dh_L23 chat_3 p=20: R = 23.46, p = 0.0050
+G9 dh_L23 code_0 p=11: R = 120.07, p = 0.0050
+G9 dh_L23 code_1 p=24: R = 4.73, p = 0.0050
+G9 dh_L23 code_13 p=7: R = 726.91, p = 0.0050
+G9 dh_L23 code_14 p=9: R = 352.48, p = 0.0050
+G9 dh_L23 code_6 p=32: R = 1.53, p = 0.0050
+G9 dh_L23 code_8 p=15: R = 33.36, p = 0.0050
+G9 dh_L23 own_w1 p=19: R = 31.88, p = 0.0050
+G9 dh_L23 own_w10 p=15: R = 31.02, p = 0.0050
+G9 dh_L23 own_w11 p=17: R = 23.85, p = 0.0050
+G9 dh_L23 own_w14 p=18: R = 26.92, p = 0.0050
+G9 dh_L23 own_w15 p=17: R = 22.46, p = 0.0050
+G9 dh_L23 own_w5 p=13: R = 63.05, p = 0.0050
+G9 dh_L23 own_w6 p=31: R = 1.64, p = 0.0050
+G9 dh_L23 own_w7 p=16: R = 18.79, p = 0.0050
+G9 dh_L23 own_w8 p=14: R = 94.07, p = 0.0050
+G9 dh_L23 own_w9 p=18: R = 39.42, p = 0.0050
+G9 dh_L23 wiki_1 p=19: R = 39.49, p = 0.0050
+G9 dh_L23 wiki_10 p=15: R = 33.63, p = 0.0050
+G9 dh_L23 wiki_11 p=17: R = 26.86, p = 0.0050
+G9 dh_L23 wiki_14 p=18: R = 36.61, p = 0.0050
+G9 dh_L23 wiki_15 p=17: R = 27.49, p = 0.0050
+G9 dh_L23 wiki_5 p=13: R = 89.53, p = 0.0050
+G9 dh_L23 wiki_6 p=31: R = 1.63, p = 0.0050
+G9 dh_L23 wiki_7 p=16: R = 22.36, p = 0.0050
+G9 dh_L23 wiki_8 p=14: R = 106.63, p = 0.0050
+G9 dh_L23 wiki_9 p=18: R = 46.69, p = 0.0050
+H2p chat_1: R_max(P_set∩4..47) = 37.16 при p=9, p = 0.0050
+H2p chat_11: R_max(P_set∩4..47) = 3.42 при p=19, p = 0.0050
+H2p chat_12: R_max(P_set∩4..47) = 4.05 при p=17, p = 0.0050
+H2p chat_13: R_max(P_set∩4..47) = 1.28 при p=19, p = 0.6100
+H2p chat_14: R_max(P_set∩4..47) = 1.51 при p=13, p = 0.1150
+H2p chat_2: R_max(P_set∩4..47) = 1.37 при p=7, p = 0.1100
+H2p chat_4: R_max(P_set∩4..47) = 1.51 при p=15, p = 0.0200
+H2p chat_5: R_max(P_set∩4..47) = 8.29 при p=14, p = 0.0050
+H2p chat_6: R_max(P_set∩4..47) = 2.13 при p=19, p = 0.0050
+H2p chat_7: R_max(P_set∩4..47) = 2.15 при p=9, p = 0.0200
+H2p chat_8: R_max(P_set∩4..47) = 6.16 при p=14, p = 0.0050
+H2p code_11: R_max(P_set∩4..47) = 1.44 при p=11, p = 0.5400
+H2p code_12: R_max(P_set∩4..47) = 1.19 при p=9, p = 0.8950
+H2p code_15: R_max(P_set∩4..47) = 2.09 при p=13, p = 0.0050
+H2p code_2: R_max(P_set∩4..47) = 1.54 при p=8, p = 0.0450
+H2p code_4: R_max(P_set∩4..47) = 6.26 при p=11, p = 0.0050
+H2p code_5: R_max(P_set∩4..47) = 1.72 при p=16, p = 0.0050
+H2p code_7: R_max(P_set∩4..47) = 3.09 при p=11, p = 0.0050
+H2p code_9: R_max(P_set∩4..47) = 1.96 при p=7, p = 0.0050
+H2p cor_w0: R_max(P_set∩4..39) = 1.38 при p=9, p = 0.2200
+H2p cor_w1: R_max(P_set∩4..47) = 1.12 при p=16, p = 0.9600
+H2p cor_w10: R_max(P_set∩4..47) = 1.15 при p=24, p = 0.9700
+H2p cor_w11: R_max(P_set∩4..22) = 1.16 при p=15, p = 0.8300
+H2p cor_w12: R_max(P_set∩4..47) = 1.31 при p=19, p = 0.2650
+H2p cor_w13: R_max(P_set∩4..47) = 1.16 при p=14, p = 0.8850
+H2p cor_w14: R_max(P_set∩4..47) = 1.18 при p=15, p = 0.8650
+H2p cor_w15: R_max(P_set∩4..47) = 1.41 при p=14, p = 0.3200
+H2p cor_w2: R_max(P_set∩4..47) = 1.39 при p=8, p = 0.2300
+H2p cor_w3: R_max(P_set∩4..47) = 1.79 при p=11, p = 0.0100
+H2p cor_w4: R_max(P_set∩4..31) = 1.39 при p=13, p = 0.2300
+H2p cor_w5: R_max(P_set∩4..29) = 1.57 при p=9, p = 0.1150
+H2p cor_w6: R_max(P_set∩4..30) = 1.57 при p=7, p = 0.0450
+H2p cor_w7: R_max(P_set∩4..47) = 1.44 при p=13, p = 0.1750
+H2p cor_w8: R_max(P_set∩4..19) = 1.26 при p=7, p = 0.3400
+H2p cor_w9: R_max(P_set∩4..47) = 1.55 при p=11, p = 0.0400
+H2p math_0: R_max(P_set∩4..47) = 1.48 при p=9, p = 0.0850
+H2p math_1: R_max(P_set∩4..47) = 2.37 при p=19, p = 0.0050
+H2p math_10: R_max(P_set∩4..47) = 1.71 при p=20, p = 0.0050
+H2p math_11: R_max(P_set∩4..47) = 1.33 при p=8, p = 0.4550
+H2p math_12: R_max(P_set∩4..47) = 1.69 при p=14, p = 0.4150
+H2p math_13: R_max(P_set∩4..47) = 1.32 при p=11, p = 0.5500
+H2p math_14: R_max(P_set∩4..47) = 38.51 при p=8, p = 0.0050
+H2p math_15: R_max(P_set∩4..47) = 1.60 при p=7, p = 0.0700
+H2p math_2: R_max(P_set∩4..47) = 1.36 при p=24, p = 0.4550
+H2p math_3: R_max(P_set∩4..47) = 2.28 при p=11, p = 0.0050
+H2p math_4: R_max(P_set∩4..47) = 1.98 при p=11, p = 0.0050
+H2p math_5: R_max(P_set∩4..47) = 2.67 при p=8, p = 0.0050
+H2p math_6: R_max(P_set∩4..47) = 1.39 при p=8, p = 0.3750
+H2p math_7: R_max(P_set∩4..47) = 1.53 при p=14, p = 0.1250
+H2p math_8: R_max(P_set∩4..47) = 1.28 при p=11, p = 0.7550
+H2p math_9: R_max(P_set∩4..47) = 1.62 при p=7, p = 0.0300
+H2p own_w13: R_max(P_set∩4..47) = 1.50 при p=24, p = 0.4900
+H2p wiki_13: R_max(P_set∩4..47) = 1.50 при p=24, p = 0.5750
+H2 chat_1 (clean): Q_max = 21474.7 при p=27, p = 0.0050
+H2 chat_11 (clean): Q_max = 7617.3 при p=19, p = 0.0050
+H2 chat_12 (clean): Q_max = 5839.1 при p=38, p = 0.0050
+H2 chat_13 (clean): Q_max = 2803.9 при p=27, p = 0.0050
+H2 chat_14 (clean): Q_max = 3748.5 при p=37, p = 0.0050
+H2 chat_2 (clean): Q_max = 3278.5 при p=32, p = 0.0050
+H2 chat_4 (clean): Q_max = 3321.9 при p=35, p = 0.0050
+H2 chat_5 (clean): Q_max = 16564.1 при p=37, p = 0.0050
+H2 chat_6 (clean): Q_max = 5358.9 при p=38, p = 0.0050
+H2 chat_7 (clean): Q_max = 8456.3 при p=12, p = 0.0050
+H2 chat_8 (clean): Q_max = 20033.0 при p=28, p = 0.0050
+H2 chat_9 (loopy): Q_max = 4414.5 при p=43, p = 0.0050
+H2 code_10 (loopy): Q_max = 12170.8 при p=31, p = 0.0050
+H2 code_11 (clean): Q_max = 13552.7 при p=5, p = 0.0050
+H2 code_12 (clean): Q_max = 3155.7 при p=34, p = 0.0050
+H2 code_15 (clean): Q_max = 3219.7 при p=48, p = 0.0050
+H2 code_2 (clean): Q_max = 3842.8 при p=27, p = 0.0050
+H2 code_3 (loopy): Q_max = 23999.2 при p=31, p = 0.0050
+H2 code_4 (clean): Q_max = 11008.3 при p=38, p = 0.0050
+H2 code_5 (clean): Q_max = 3349.6 при p=37, p = 0.0050
+H2 code_7 (clean): Q_max = 4915.4 при p=35, p = 0.0050
+H2 code_9 (clean): Q_max = 4280.1 при p=24, p = 0.0050
+H2 cor_w0 (clean): Q_max = 3048.2 при p=40, p = 0.0050
+H2 cor_w1 (clean): Q_max = 3099.6 при p=43, p = 0.0050
+H2 cor_w10 (clean): Q_max = 4730.8 при p=30, p = 0.0050
+H2 cor_w11 (clean): Q_max = 2106.7 при p=15, p = 0.0050
+H2 cor_w12 (clean): Q_max = 2758.8 при p=36, p = 0.0050
+H2 cor_w13 (clean): Q_max = 2766.6 при p=24, p = 0.0050
+H2 cor_w14 (clean): Q_max = 3998.1 при p=37, p = 0.0050
+H2 cor_w15 (clean): Q_max = 3379.4 при p=48, p = 0.0050
+H2 cor_w2 (clean): Q_max = 2991.8 при p=34, p = 0.0050
+H2 cor_w3 (clean): Q_max = 3490.1 при p=17, p = 0.0050
+H2 cor_w4 (clean): Q_max = 2581.4 при p=32, p = 0.0050
+H2 cor_w5 (clean): Q_max = 2209.0 при p=9, p = 0.0050
+H2 cor_w6 (clean): Q_max = 2848.6 при p=26, p = 0.0050
+H2 cor_w7 (clean): Q_max = 2878.4 при p=31, p = 0.0050
+H2 cor_w8 (clean): Q_max = 1843.7 при p=18, p = 0.0050
+H2 cor_w9 (clean): Q_max = 3430.5 при p=31, p = 0.0050
+H2 math_0 (clean): Q_max = 3129.7 при p=48, p = 0.0050
+H2 math_1 (clean): Q_max = 3875.9 при p=19, p = 0.0050
+H2 math_10 (clean): Q_max = 3151.5 при p=25, p = 0.0050
+H2 math_11 (clean): Q_max = 4923.1 при p=33, p = 0.0050
+H2 math_12 (clean): Q_max = 12456.0 при p=5, p = 0.0050
+H2 math_13 (clean): Q_max = 3021.5 при p=41, p = 0.0050
+H2 math_14 (clean): Q_max = 36427.4 при p=4, p = 0.0050
+H2 math_15 (clean): Q_max = 3416.7 при p=30, p = 0.0050
+H2 math_2 (clean): Q_max = 3060.5 при p=22, p = 0.0050
+H2 math_3 (clean): Q_max = 3550.1 при p=46, p = 0.0050
+H2 math_4 (clean): Q_max = 5531.3 при p=30, p = 0.0050
+H2 math_5 (clean): Q_max = 4345.3 при p=43, p = 0.0050
+H2 math_6 (clean): Q_max = 2800.5 при p=16, p = 0.0050
+H2 math_7 (clean): Q_max = 3222.1 при p=22, p = 0.0050
+H2 math_8 (clean): Q_max = 4762.0 при p=45, p = 0.0050
+H2 math_9 (clean): Q_max = 4460.2 при p=36, p = 0.0050
+H2 own_w0 (remainder): Q_max = 6918.8 при p=46, p = 0.0050
+H2 own_w12 (loopy): Q_max = 9862.1 при p=31, p = 0.0050
+H2 own_w13 (clean): Q_max = 7655.7 при p=12, p = 0.0050
+H2 own_w2 (loopy): Q_max = 25961.6 при p=16, p = 0.0050
+H2 own_w3 (loopy): Q_max = 22200.5 при p=26, p = 0.0050
+H2 own_w4 (remainder): Q_max = 6502.4 при p=47, p = 0.0050
+H2 wiki_0 (loopy): Q_max = 6813.2 при p=46, p = 0.0050
+H2 wiki_12 (loopy): Q_max = 10117.0 при p=31, p = 0.0050
+H2 wiki_13 (clean): Q_max = 8280.9 при p=12, p = 0.0050
+H2 wiki_2 (loopy): Q_max = 28164.0 при p=16, p = 0.0050
+H2 wiki_3 (loopy): Q_max = 23267.4 при p=26, p = 0.0050
+H2 wiki_4 (loopy): Q_max = 6003.4 при p=48, p = 0.0050
+H3 h_L5 chat_0: Q = 32142.7, p = 0.0050
+H3 h_L11 chat_0: Q = 36483.0, p = 0.0050
+H3 h_L17 chat_0: Q = 33107.9, p = 0.0050
+H3 h_L5 chat_10: Q = 22510.5, p = 0.0050
+H3 h_L11 chat_10: Q = 30049.0, p = 0.0050
+H3 h_L17 chat_10: Q = 23461.3, p = 0.0050
+H3 h_L5 chat_15: Q = 67452.8, p = 0.0050
+H3 h_L11 chat_15: Q = 56162.5, p = 0.0050
+H3 h_L17 chat_15: Q = 65692.4, p = 0.0050
+H3 h_L5 chat_3: Q = 26720.3, p = 0.0050
+H3 h_L11 chat_3: Q = 29612.6, p = 0.0050
+H3 h_L17 chat_3: Q = 27414.5, p = 0.0050
+H3 h_L5 code_0: Q = 42582.2, p = 0.0050
+H3 h_L11 code_0: Q = 45837.2, p = 0.0050
+H3 h_L17 code_0: Q = 50325.7, p = 0.0050
+H3 h_L5 code_1: Q = 27773.0, p = 0.0050
+H3 h_L11 code_1: Q = 30832.4, p = 0.0050
+H3 h_L17 code_1: Q = 28964.6, p = 0.0050
+H3 h_L5 code_13: Q = 71121.4, p = 0.0050
+H3 h_L11 code_13: Q = 61678.1, p = 0.0050
+H3 h_L17 code_13: Q = 72484.4, p = 0.0050
+H3 h_L5 code_14: Q = 70001.2, p = 0.0050
+H3 h_L11 code_14: Q = 60049.0, p = 0.0050
+H3 h_L17 code_14: Q = 59809.4, p = 0.0050
+H3 h_L5 code_6: Q = 23171.8, p = 0.0050
+H3 h_L11 code_6: Q = 23869.9, p = 0.0050
+H3 h_L17 code_6: Q = 19338.8, p = 0.0050
+H3 h_L5 code_8: Q = 38579.0, p = 0.0050
+H3 h_L11 code_8: Q = 43313.2, p = 0.0050
+H3 h_L17 code_8: Q = 40125.4, p = 0.0050
+H3 h_L5 own_w1: Q = 35572.3, p = 0.0050
+H3 h_L11 own_w1: Q = 37379.8, p = 0.0050
+H3 h_L17 own_w1: Q = 32650.5, p = 0.0050
+H3 h_L5 own_w10: Q = 35523.8, p = 0.0050
+H3 h_L11 own_w10: Q = 50476.0, p = 0.0050
+H3 h_L17 own_w10: Q = 40102.4, p = 0.0050
+H3 h_L5 own_w11: Q = 29894.3, p = 0.0050
+H3 h_L11 own_w11: Q = 37160.5, p = 0.0050
+H3 h_L17 own_w11: Q = 36171.6, p = 0.0050
+H3 h_L5 own_w14: Q = 30730.0, p = 0.0050
+H3 h_L11 own_w14: Q = 34074.7, p = 0.0050
+H3 h_L17 own_w14: Q = 29819.1, p = 0.0050
+H3 h_L5 own_w15: Q = 42470.7, p = 0.0050
+H3 h_L11 own_w15: Q = 47702.9, p = 0.0050
+H3 h_L17 own_w15: Q = 44729.6, p = 0.0050
+H3 h_L5 own_w5: Q = 23800.9, p = 0.0050
+H3 h_L11 own_w5: Q = 37573.8, p = 0.0050
+H3 h_L17 own_w5: Q = 26166.7, p = 0.0050
+H3 h_L5 own_w6: Q = 30251.5, p = 0.0050
+H3 h_L11 own_w6: Q = 32637.5, p = 0.0050
+H3 h_L17 own_w6: Q = 25691.0, p = 0.0050
+H3 h_L5 own_w7: Q = 32813.7, p = 0.0050
+H3 h_L11 own_w7: Q = 35232.6, p = 0.0050
+H3 h_L17 own_w7: Q = 34107.0, p = 0.0050
+H3 h_L5 own_w8: Q = 39983.1, p = 0.0050
+H3 h_L11 own_w8: Q = 49397.1, p = 0.0050
+H3 h_L17 own_w8: Q = 49006.9, p = 0.0050
+H3 h_L5 own_w9: Q = 24683.8, p = 0.0050
+H3 h_L11 own_w9: Q = 35769.8, p = 0.0050
+H3 h_L17 own_w9: Q = 32367.4, p = 0.0050
+H3 h_L5 wiki_1: Q = 35572.3, p = 0.0050
+H3 h_L11 wiki_1: Q = 37379.7, p = 0.0050
+H3 h_L17 wiki_1: Q = 32650.6, p = 0.0050
+H3 h_L5 wiki_10: Q = 35524.0, p = 0.0050
+H3 h_L11 wiki_10: Q = 50475.9, p = 0.0050
+H3 h_L17 wiki_10: Q = 40102.4, p = 0.0050
+H3 h_L5 wiki_11: Q = 29894.4, p = 0.0050
+H3 h_L11 wiki_11: Q = 37160.5, p = 0.0050
+H3 h_L17 wiki_11: Q = 36171.6, p = 0.0050
+H3 h_L5 wiki_14: Q = 30729.8, p = 0.0050
+H3 h_L11 wiki_14: Q = 34075.0, p = 0.0050
+H3 h_L17 wiki_14: Q = 29819.2, p = 0.0050
+H3 h_L5 wiki_15: Q = 42470.7, p = 0.0050
+H3 h_L11 wiki_15: Q = 47702.9, p = 0.0050
+H3 h_L17 wiki_15: Q = 44729.7, p = 0.0050
+H3 h_L5 wiki_5: Q = 23801.1, p = 0.0050
+H3 h_L11 wiki_5: Q = 37574.0, p = 0.0050
+H3 h_L17 wiki_5: Q = 26166.8, p = 0.0050
+H3 h_L5 wiki_6: Q = 30251.5, p = 0.0050
+H3 h_L11 wiki_6: Q = 32637.6, p = 0.0050
+H3 h_L17 wiki_6: Q = 25691.0, p = 0.0050
+H3 h_L5 wiki_7: Q = 32813.7, p = 0.0050
+H3 h_L11 wiki_7: Q = 35232.6, p = 0.0050
+H3 h_L17 wiki_7: Q = 34106.8, p = 0.0050
+H3 h_L5 wiki_8: Q = 39983.1, p = 0.0050
+H3 h_L11 wiki_8: Q = 49397.1, p = 0.0050
+H3 h_L17 wiki_8: Q = 49006.9, p = 0.0050
+H3 h_L5 wiki_9: Q = 24683.8, p = 0.0050
+H3 h_L11 wiki_9: Q = 35769.8, p = 0.0050
+H3 h_L17 wiki_9: Q = 32367.5, p = 0.0050
+DESCRIPTIVE: Q/R-карты 96 доков; AR2 30 доков (r: min=0.009 max=0.167)
+VERDICT: NON-SPECIFIC (f=30/30, f_dh=30/30, g2=24/53, g_desc=66/66)
+store: results/AT0/store/e19f318d63a537a4.json (0.4 MB)
+claim: /home/survivor/work/prism/results/AT0/AT0_6_SPECTRUM.json sha 41c5e06193817827
+manifest: OK (self-hash по blob до вставки)

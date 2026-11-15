@@ -1,0 +1,18 @@
+G1′ field.py sha bcc607c561f95e3e selfcheck OK
+G0: gen f142f297ec16209d own 783e16338cdcb652 cor 5f42a08442a5d3bc at03 8fe61affb13b443f (sha16-match=True); gen_sha_ok 64/64; corpus toks 0/16 (G16)
+замероз. вход T0.3: 30 доков с p (p∈7..32); H2-пул 66 доков
+G1a: identity max rel dev = 2.432e-15 (tol 1e-12) на ['chat_0', 'math_0'] (gemm vs einsum vs cos/sin)
+G1b: cos a=1 σ=1 p0=13 D=32: Q(p0)/D = 66.5 (≥50.0), off/on = 0.026/0.011 (≤0.2); AR2-fit φ̂ = (0.5009, -0.2998) vs (0.5, −0.3), |Δ|∞ = 0.0009 (tol 0.05)
+G2: 96 доков, T'∈[82,383] (per-doc T−1), per-dim var>0: OK
+G7 iid k=0: Q_max = 1094.8, p = 0.4000 (—)
+G7 iid k=1: Q_max = 1106.5, p = 0.2800 (—)
+G7 iid k=2: Q_max = 1075.5, p = 0.9000 (—)
+G7 iid k=3: Q_max = 1113.3, p = 0.2200 (—)
+G7: k = 0/4 (гейт ≤ 3; P(k≥4|Bin(20,0.05)) = 0.0159)
+POSITIVE p0=7: Q = 22710.9, p = 0.0200 (OK)
+GEYTY: G0=True G1a=True G1b=True G2=True G7=True POS=True → PASS
+H1 wiki_1 p=19: Q = 31586.3 (null mean ~1024), p = 0.0050
+H2 chat_1: Q_max = 21474.7 при p=27, p = 0.0050
+store: results/AT0/store/92d67e33b4975894.json (0.0 MB)
+claim: /home/survivor/work/prism/results/AT0/AT0_6_SPECTRUM.json sha b33e84bc38cd1c72
+manifest: OK (self-hash по blob до вставки)

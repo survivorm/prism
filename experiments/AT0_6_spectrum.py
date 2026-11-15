@@ -527,7 +527,7 @@ def run_positive(p0s=None, Bn=B):
         Rperm = np.array([r_from_q(Qp[b], ps)[1] for b in range(Bn)])
         pval = null_pvalue(r_obs, Rperm)
         rows.append({"p0": p0, "q_obs_p0": float(q_obs[1]), "r_obs": float(r_obs),
-                     "p": float(pval), "ok": bool(pval <= ALPHA)})
+                     "p_val": float(pval), "ok": bool(pval <= ALPHA)})
         logline(f"POSITIVE p0={p0}: Q(p0) = {q_obs[1]:.1f}, R(p0) = {r_obs:.2f}, "
                 f"p = {pval:.4f} ({'OK' if pval <= ALPHA else 'FAIL'})")
     ok = sum(1 for r in rows if r["ok"])
@@ -554,12 +554,12 @@ def run_h1(docs, p_map, doc_names, Bn=B):
         pval = null_pvalue(r_obs, Rperm)
         T = x.shape[0]
         a_sigma = math.sqrt(max(4.0 * (float(q_obs[1]) / D_DIM - 1.0), 0.0) / T)
-        rows.append({"doc": nm, "p": p, "r_obs": r_obs, "q_obs_p": float(q_obs[1]),
-                     "a_sigma": float(a_sigma), "p": float(pval),
+        rows.append({"doc": nm, "p_t03": p, "r_obs": r_obs, "q_obs_p": float(q_obs[1]),
+                     "a_sigma": float(a_sigma), "p_val": float(pval),
                      "perm_q_sd": float(np.std(Qp[:, 1]))})   # M2: эмпирич. SD нуля
         logline(f"H1 {nm} p={p}: R = {r_obs:.2f}, Q = {q_obs[1]:.1f} (a/σ = {a_sigma:.3f}), "
                 f"p = {pval:.4f}")
-    f = sum(1 for r in rows if r["p"] <= ALPHA)
+    f = sum(1 for r in rows if r["p_val"] <= ALPHA)
     return {"rows": rows, "n": len(rows), "f": int(f),
             "note": "C4: p_T0.3 выбран на той же траектории через du — НЕ независимое переоткрытие"}
 
@@ -577,9 +577,9 @@ def run_g9(docs, p_map, doc_names, Bn=B):
         r_obs = float(r_from_q(q_obs, ps)[1])
         Rperm = np.array([r_from_q(Qp[b], ps)[1] for b in range(Bn)])
         pval = null_pvalue(r_obs, Rperm)
-        rows.append({"doc": nm, "p": p, "r_obs": float(r_obs), "p": float(pval)})
+        rows.append({"doc": nm, "p_t03": p, "r_obs": float(r_obs), "p_val": float(pval)})
         logline(f"G9 dh_L23 {nm} p={p}: R = {r_obs:.2f}, p = {pval:.4f}")
-    f = sum(1 for r in rows if r["p"] <= ALPHA)
+    f = sum(1 for r in rows if r["p_val"] <= ALPHA)
     return {"rows": rows, "n": len(rows), "f_dh": int(f)}
 
 
@@ -604,10 +604,10 @@ def run_h2p(docs, h2p_pool, doc_names, pset, grid, Bn=B):
         Rperm_max = np.array([np.max(r_from_q(Qp[b], P_GRID[:n_p])[idx]) for b in range(Bn)])
         pval = null_pvalue(r_obs, Rperm_max)
         rows.append({"doc": nm, "t_prime": T, "n_pset": len(ps), "r_max_obs": r_obs,
-                     "p_at_max": int(p_at), "p": float(pval)})
+                     "p_at_max": int(p_at), "p_val": float(pval)})
         logline(f"H2p {nm}: R_max(P_set∩{4}..{pmax - 1}) = {r_obs:.2f} при p={p_at}, "
                 f"p = {pval:.4f}")
-    g2 = sum(1 for r in rows if r["p"] <= ALPHA)
+    g2 = sum(1 for r in rows if r["p_val"] <= ALPHA)
     return {"rows": rows, "n": len(rows), "g2": int(g2),
             "pset": sorted(pset),
             "note": "matched-p на detected-наборе (C2: одна статистика, один нуль; C5: real-"
@@ -629,13 +629,13 @@ def run_h2_desc(docs, h2_pool, strata, doc_names, grid, Bn=B):
         n_ge = int(np.sum(np.max(Qp, axis=1) >= max_obs))
         pval = (n_ge + 1) / (Bn + 1)
         rows.append({"doc": nm, "stratum": strata[nm], "q_max_obs": max_obs,
-                     "p_at_max": p_at, "p": float(pval)})
+                     "p_at_max": p_at, "p_val": float(pval)})
         logline(f"H2 {nm} ({strata[nm]}): Q_max = {max_obs:.1f} при p={p_at}, p = {pval:.4f}")
     by_st = {}
     for r in rows:
         by_st.setdefault(r["stratum"], []).append(r)
-    g_by = {st: sum(1 for r in rs if r["p"] <= ALPHA) for st, rs in by_st.items()}
-    g_tot = sum(1 for r in rows if r["p"] <= ALPHA)
+    g_by = {st: sum(1 for r in rs if r["p_val"] <= ALPHA) for st, rs in by_st.items()}
+    g_tot = sum(1 for r in rows if r["p_val"] <= ALPHA)
     return {"rows": rows, "n": len(rows), "g_total": int(g_tot), "g_by_stratum": g_by,
             "n_by_stratum": {st: len(rs) for st, rs in by_st.items()},
             "note": "descriptive (C3): стратумная структура линий без T0.3-detected; "
@@ -657,11 +657,11 @@ def run_h3(docs, p_map, doc_names, Bn=B):
             S = X.transpose(0, 2, 1) @ b.conj()[:, None]
             Qp = np.sum(np.abs(S) ** 2 / (x.shape[0] * var_d[None, :, None]), axis=1).ravel()
             pval = null_pvalue(q_obs, Qp)
-            strata[key].append({"doc": nm, "p": int(p), "q_obs": q_obs, "p": float(pval)})
+            strata[key].append({"doc": nm, "p_t03": int(p), "q_obs": q_obs, "p_val": float(pval)})
             logline(f"H3 {key} {nm}: Q = {q_obs:.1f}, p = {pval:.4f}")
     out = {}
     for key, rows in strata.items():
-        out[key] = {"n": len(rows), "f": int(sum(1 for r in rows if r["p"] <= ALPHA)),
+        out[key] = {"n": len(rows), "f": int(sum(1 for r in rows if r["p_val"] <= ALPHA)),
                     "rows": rows}
     return out
 
@@ -716,11 +716,29 @@ def run_descriptive(docs, p_map, grid, h1_rows, Bn=B):
             "p_at_max_q": int(ps_grid[int(np.argmax(q))]),
             "r_max_interior": float(np.max(r_arr[interior_i])) if interior_i else None,
         }
+    bnn_summary = {}
+    p_med = {}
+    for nm in sorted(docs):
+        for p_str, v in bnn[nm].items():
+            p_med.setdefault(p_str, []).append(v)
+    bnn_med = {p: float(np.median(v)) for p, v in p_med.items()}
+    bnn_summary = {
+        "median_by_p": bnn_med,
+        "n_p_median_below_1": int(sum(1 for v in bnn_med.values() if v < 1.0)),
+        "n_p_median_above_1_1": int(sum(1 for v in bnn_med.values() if v > 1.1)),
+        "note": ("per-p медиана Q_obs/median_perm по 96 докам (r1-exec MINOR-2: «фон ниже null'а на "
+                 "большинстве p» НЕ подтверждено — фон >1.1 на 24/46 p, макс 1.72 при p=32; "
+                 "R-tilt-инвариантность — свойство статистики, не калибровка null'а)"),
+    }
     return {
         "spectral_map": spec_map,
         "r_map": r_map,
         "bnn_ratio": bnn,
-        "bnn_note": "Q_obs(p)/median_perm(Q(p)) — real-background/null по p (C5)",
+        "bnn_note": ("Q_obs(p)/median_perm(Q(p)) — real-background/null по p (C5); см. bnn_summary — "
+                     "фон НЕ плоский (bnn>1 на p≳11 — tilt в Q-маскале); R-тест tilt-инвариантен по "
+                     "построению, R-null на реальных данных калиброван косвенно (G7b — iid); "
+                     "H2′ g2 — верхняя граница доли clean с реальными узкими линиями"),
+        "bnn_summary": bnn_summary,   # (b) вычисленная сводка кривой (r1-exec MINOR-2),
         "ar2_fit": ar2,
         "ar2_norm": "r_k = c_k/(N-k) (M3)",
         "perm_q_sd_per_doc": {r["doc"]: r["perm_q_sd"] for r in h1_rows},   # (d) M2
