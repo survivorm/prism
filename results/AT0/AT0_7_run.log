@@ -1,0 +1,75 @@
+AT0_7 start 2026-11-15T23:05:51.431120 py=3.12.9 np=2.5.3 smoke=False
+trackio: run at07_loop_r1 init ok
+G1′ field.py sha bcc607c561f95e3e selfcheck OK
+пулы (контракт T0.3): loopy30 = 30, lu11 = 11, clean37 = 37, corpus16 = 16, rem2 = 2; дубли по токенам: 32 docs
+G1a: rep_frac(13) = 1.0 (exact 1.0); C = 0.0769451015 (11287/146689, dev 1.4e-17); RATIO = 12.996279 (≠13); maxrun = 370 (= T−p)
+G1b: Q(13)/32 = 66.5 (≥50; T0.6 G1b замер 66.5, seed 77700)
+G1d: iid токены (V=4096, seed 777, T=383): max_p RATIO = 1.0118 @p37 (≤1.1; замер 1.0118 @p37)
+G2: 96 доков; T'=T−1 + per-dim var>0 (L23) OK; n_tok: loopy 30/30 + H2-пул 39/39 + LU 11/11 = 80/80; corpus 16/16 без токенов (G0-a not_testable)
+G7 k=0: max_p RATIO = 1.012 @p37; Q_max = 1094.8, p = 0.4650
+G7 k=1: max_p RATIO = 1.017 @p37; Q_max = 1106.5, p = 0.2350
+G7 k=2: max_p RATIO = 1.027 @p47; Q_max = 1075.5, p = 0.8850
+G7 k=3: max_p RATIO = 1.054 @p46; Q_max = 1113.3, p = 0.1500
+G7 k=4: max_p RATIO = 1.034 @p46; Q_max = 1085.1, p = 0.7000
+G7 k=5: max_p RATIO = 0.955 @p13; Q_max = 1089.4, p = 0.6600
+G7 k=6: max_p RATIO = 1.013 @p47; Q_max = 1097.6, p = 0.4250
+G7 k=7: max_p RATIO = 1.980 @p26; Q_max = 1087.3, p = 0.7200
+G7 k=8: max_p RATIO = 1.959 @p29; Q_max = 1091.8, p = 0.5850
+G7 k=9: max_p RATIO = 1.000 @p33; Q_max = 1101.8, p = 0.3100
+G7 k=10: max_p RATIO = 0.985 @p39; Q_max = 1103.8, p = 0.3000
+G7 k=11: max_p RATIO = 1.026 @p45; Q_max = 1090.7, p = 0.5700
+G7 k=12: max_p RATIO = 0.966 @p19; Q_max = 1096.2, p = 0.4200
+G7 k=13: max_p RATIO = 1.044 @p46; Q_max = 1094.9, p = 0.5250
+G7 k=14: max_p RATIO = 1.029 @p41; Q_max = 1096.2, p = 0.4500
+G7 k=15: max_p RATIO = 1.051 @p45; Q_max = 1076.6, p = 0.8950
+G7 k=16: max_p RATIO = 1.056 @p45; Q_max = 1121.8, p = 0.1050
+G7 k=17: max_p RATIO = 0.952 @p27; Q_max = 1097.2, p = 0.4550
+G7 k=18: max_p RATIO = 1.040 @p48; Q_max = 1101.4, p = 0.3450
+G7 k=19: max_p RATIO = 1.002 @p32; Q_max = 1094.2, p = 0.5700
+G7: (a) count-гейт max_p RATIO ≥ 3: 0/20 (≤1); (b) Q-null k = 0/20 (≤3; B=199)
+POS1: rep_frac(13) = 1.0 (exact 1.0), Q/D (descr) = 64.6; POS2: max_p PPF = 0.0030 (<0.2), Q(13)/32 = 63.9 (≥50)
+GATES: G0=True G1a=True G1b=True G1d=True G2=True G7=True POS=True → PASS
+H1/H4 chat_0 p=15: rep_frac = 0.9946, maxrun = 367, Q = 30675.6, p_perm = 0.0050
+H1/H4 chat_10 p=27: rep_frac = 1.0000, maxrun = 357, Q = 23393.1, p_perm = 0.0050
+H1/H4 chat_15 p=8: rep_frac = 0.9947, maxrun = 374, Q = 76466.7, p_perm = 0.0050
+H1/H4 chat_3 p=20: rep_frac = 0.9698, maxrun = 353, Q = 27872.2, p_perm = 0.0050
+H1/H4 code_0 p=11: rep_frac = 0.9812, maxrun = 365, Q = 49513.0, p_perm = 0.0050
+H1/H4 code_1 p=24: rep_frac = 1.0000, maxrun = 360, Q = 26573.5, p_perm = 0.0050
+H1/H4 code_13 p=7: rep_frac = 1.0000, maxrun = 377, Q = 75477.3, p_perm = 0.0050
+H1/H4 code_14 p=9: rep_frac = 0.8880, maxrun = 8, Q = 62856.9, p_perm = 0.0050
+H1/H4 code_6 p=32: rep_frac = 1.0000, maxrun = 352, Q = 19404.4, p_perm = 0.0050
+H1/H4 code_8 p=15: rep_frac = 1.0000, maxrun = 369, Q = 32300.2, p_perm = 0.0050
+H1/H4 own_w1 p=19: rep_frac = 0.9479, maxrun = 346, Q = 30919.7, p_perm = 0.0050
+H1/H4 own_w10 p=15: rep_frac = 0.9783, maxrun = 361, Q = 39044.5, p_perm = 0.0050
+H1/H4 own_w11 p=17: rep_frac = 1.0000, maxrun = 367, Q = 33986.5, p_perm = 0.0050
+H1/H4 own_w14 p=18: rep_frac = 0.9945, maxrun = 364, Q = 28247.9, p_perm = 0.0050
+H1/H4 own_w15 p=17: rep_frac = 1.0000, maxrun = 367, Q = 39265.7, p_perm = 0.0050
+H1/H4 own_w5 p=13: rep_frac = 0.9865, maxrun = 366, Q = 22999.7, p_perm = 0.0050
+H1/H4 own_w6 p=31: rep_frac = 1.0000, maxrun = 353, Q = 26934.8, p_perm = 0.0050
+H1/H4 own_w7 p=16: rep_frac = 0.9755, maxrun = 359, Q = 32213.0, p_perm = 0.0050
+H1/H4 own_w8 p=14: rep_frac = 1.0000, maxrun = 370, Q = 41597.6, p_perm = 0.0050
+H1/H4 own_w9 p=18: rep_frac = 1.0000, maxrun = 366, Q = 31513.7, p_perm = 0.0050
+H1/H4 wiki_1 p=19: rep_frac = 0.9479, maxrun = 346, Q = 31586.3, p_perm = 0.0050
+H1/H4 wiki_10 p=15: rep_frac = 0.9783, maxrun = 361, Q = 39253.9, p_perm = 0.0050
+H1/H4 wiki_11 p=17: rep_frac = 1.0000, maxrun = 367, Q = 34023.6, p_perm = 0.0050
+H1/H4 wiki_14 p=18: rep_frac = 0.9945, maxrun = 364, Q = 29127.2, p_perm = 0.0050
+H1/H4 wiki_15 p=17: rep_frac = 1.0000, maxrun = 367, Q = 40361.3, p_perm = 0.0050
+H1/H4 wiki_5 p=13: rep_frac = 0.9865, maxrun = 366, Q = 23638.0, p_perm = 0.0050
+H1/H4 wiki_6 p=31: rep_frac = 1.0000, maxrun = 353, Q = 27570.4, p_perm = 0.0050
+H1/H4 wiki_7 p=16: rep_frac = 0.9755, maxrun = 359, Q = 33248.1, p_perm = 0.0050
+H1/H4 wiki_8 p=14: rep_frac = 1.0000, maxrun = 370, Q = 42207.9, p_perm = 0.0050
+H1/H4 wiki_9 p=18: rep_frac = 1.0000, maxrun = 366, Q = 32060.8, p_perm = 0.0050
+H1: f1 = 30/30 (PASS ≥ 28); min rep_frac = 0.8880 (r0: 0.888); r0_reproduced(1e-12) = True
+H4: Spearman(Q, maxrun) = 0.4947; Spearman(Q, rep_frac) = -0.0316
+H2 loopy_undetected: 6/11 (по докам) = 5/8 (по уникальным текстам): ['chat_9', 'code_3', 'own_w3', 'wiki_0', 'wiki_3', 'wiki_4']
+H2 clean37: 0/37 (по докам) = 0/36 (по уникальным текстам): []
+H2 remainder: 2/2 (по докам) = 2/2 (по уникальным текстам): ['own_w0', 'own_w4']
+H3: стабильный repeat = 38/80; доля loopy (T0.3-detected) среди стабильных = 30/38 = 0.7895
+H5: R loopy30 ∈ [2.885e-31, 3.660e-30] (r0: 2.5e-32..3.5e-30); R clean37 max = 7.378e-28 (r0: ~1e-28); Rtok loopy30 ∈ [1.161e-30, 2.227e-01] (вырожден при V≫T); identity R<1e-20: OK
+VERDICT: CONFIRMED (f1 = 30/30, r0_ok = True)
+store: results/AT0/store/82663436e02a5aa9.json (0.0 MB)
+claim: /home/survivor/work/prism/results/AT0/AT0_7_LOOP.json sha 015fce7f16c5c2bd
+manifest: OK (self-hash по blob до вставки)
+written: /home/survivor/work/prism/results/AT0/AT0_7_LOOP.json, /home/survivor/work/prism/results/AT0/AT0_7_manifest.json, /home/survivor/work/prism/results/AT0/AT0_7_run.log
+AT0_7 DONE
+RUN_RC=0
