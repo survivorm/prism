@@ -10,3 +10,39 @@ L1-TPU degraded (dev > 0.001): ['own_w0', 'own_w4']
   docs 48/96
   docs 64/96
   docs 80/96
+  docs 96/96
+G2: клеток 1440/1440 (absent L1-TPU 6 = 2 доков × 3) ok=True
+G8: gram bad 0; G7-inv bad 0
+G-seam (E2): within-block(blk-null) ≡ within-block(real): max_dev 1.95e-15 (≤ 1e-12) ok
+POSITIVE CONTROL: max|Δρ̂_circ(≤96)| = 4.441e-16 (≤ 1e-06), max|Δr_full| = 2.345e-13 (≤ 2e-04) ok=True; (отчёт) max|Δρ̂_lin| wrap = 2.109e-01
+pools: all_96 (sensitivity) / verified_only 80 (sensitivity) / primary verified∩nondeg 37 (исключено: corpus 16 + degen 43)
+h_raw iid: Δmean 1.2569 [1.205953124837351, 1.3128444291974068] (DELTA_MIN=0.05) D_real 1.5352 frac(p<α)=1.00 -> refuted
+h_raw blk2: Δmean 0.8299 [0.7778542304149418, 0.8898252116719598] (DELTA_MIN=0.05) D_real 1.0423 frac(p<α)=1.00 -> refuted
+h_raw blk4: Δmean 0.5129 [0.45506106105265826, 0.5813639568218336] (DELTA_MIN=0.05) D_real 0.6651 frac(p<α)=0.99 -> refuted
+h_raw blk8: Δmean 0.3428 [0.2814519880635205, 0.41453518148553425] (DELTA_MIN=0.05) D_real 0.4685 frac(p<α)=0.95 -> refuted
+h_raw blk16: Δmean 0.1790 [0.14111898513243487, 0.22297478715432026] (DELTA_MIN=0.05) D_real 0.2843 frac(p<α)=0.71 -> refuted
+h_raw blk32: Δmean 0.1182 [0.08357004240244038, 0.15905988674419674] (DELTA_MIN=0.05) D_real 0.2184 frac(p<α)=0.43 -> refuted
+h_raw ar1: Δmean 1.6482 [1.5695302924372032, 1.7377749430284803] (DELTA_MIN=0.05) D_real 1.9033 frac(p<α)=0.99 -> refuted
+h_raw ar2: Δmean 0.8538 [0.7870146489701795, 0.9334539617731012] (DELTA_MIN=0.05) D_real 0.9304 frac(p<α)=1.00 -> refuted
+h_raw ar4: Δmean 0.4855 [0.42120949034161637, 0.5616347518718311] (DELTA_MIN=0.05) D_real 0.5264 frac(p<α)=1.00 -> refuted
+du_unit iid: Δmean 1.2594 [1.2086092537234252, 1.3145543012239154] (DELTA_MIN=0.05) D_real 1.5346 frac(p<α)=1.00 -> refuted
+du_unit blk2: Δmean 0.8347 [0.7829160814179891, 0.8943097570161548] (DELTA_MIN=0.05) D_real 1.0466 frac(p<α)=1.00 -> refuted
+du_unit blk4: Δmean 0.5176 [0.4600005305968682, 0.586228494877132] (DELTA_MIN=0.05) D_real 0.6701 frac(p<α)=0.99 -> refuted
+du_unit blk8: Δmean 0.3455 [0.28523517776921037, 0.4163947602374965] (DELTA_MIN=0.05) D_real 0.4709 frac(p<α)=0.95 -> refuted
+du_unit blk16: Δmean 0.1808 [0.14258084445296285, 0.22458343414431783] (DELTA_MIN=0.05) D_real 0.2862 frac(p<α)=0.70 -> refuted
+du_unit blk32: Δmean 0.1197 [0.08478456179288456, 0.16058984360233197] (DELTA_MIN=0.05) D_real 0.2203 frac(p<α)=0.41 -> refuted
+du_unit ar1: Δmean 1.6431 [1.5642478850488903, 1.737593613909681] (DELTA_MIN=0.05) D_real 1.9020 frac(p<α)=0.99 -> refuted
+du_unit ar2: Δmean 0.8583 [0.7903317730979232, 0.9383951731823152] (DELTA_MIN=0.05) D_real 0.9365 frac(p<α)=1.00 -> refuted
+du_unit ar4: Δmean 0.4879 [0.4234774141038508, 0.5648236001475044] (DELTA_MIN=0.05) D_real 0.5293 frac(p<α)=1.00 -> refuted
+v_tangent iid: Δmean 0.3025 [0.08161496208908724, 0.5918752449376697] (DELTA_MIN=0.05) D_real 0.3437 frac(p<α)=1.00 -> refuted
+v_tangent blk2: Δmean 0.2541 [0.06793919985309306, 0.49670017077036743] (DELTA_MIN=0.05) D_real 0.3097 frac(p<α)=1.00 -> refuted
+v_tangent blk4: Δmean 0.2051 [0.05627652351213622, 0.398759987981827] (DELTA_MIN=0.05) D_real 0.2609 frac(p<α)=0.98 -> refuted
+v_tangent blk8: Δmean 0.1489 [0.04392973505776051, 0.2857354830466893] (DELTA_MIN=0.05) D_real 0.1931 frac(p<α)=0.93 -> refuted
+v_tangent blk16: Δmean 0.0922 [0.030435927683834324, 0.17318356659535986] (DELTA_MIN=0.05) D_real 0.1385 frac(p<α)=0.86 -> refuted
+v_tangent blk32: Δmean 0.0693 [0.02412760654344803, 0.12802679666207312] (DELTA_MIN=0.05) D_real 0.1231 frac(p<α)=0.70 -> refuted
+v_tangent ar1: Δmean 0.3311 [0.07918687708897967, 0.6614368926956655] (DELTA_MIN=0.05) D_real 0.3361 frac(p<α)=1.00 -> refuted
+v_tangent ar2: Δmean 0.2812 [0.06276568190556696, 0.5685195732687724] (DELTA_MIN=0.05) D_real 0.2876 frac(p<α)=0.96 -> refuted
+v_tangent ar4: Δmean 0.2597 [0.05720212396162808, 0.5267043658559961] (DELTA_MIN=0.05) D_real 0.2682 frac(p<α)=0.95 -> refuted
+store: /home/survivor/work/prism/results/AT0/store/f7cc011ef856a6dc.json (sha f7cc011ef856a6dc)
+written: /home/survivor/work/prism/results/AT0/AT0_2_SHAPE.json, /home/survivor/work/prism/results/AT0/AT0_2_manifest.json, /home/survivor/work/prism/results/AT0/AT0_2_run.log
+AT0_2 gates: ALL PASS

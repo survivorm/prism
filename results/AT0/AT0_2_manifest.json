@@ -1,10 +1,10 @@
 {
  "experiment": "AT0_2 T0.2",
- "round": "round 1",
- "date": "2026-11-13 (UTC+3)",
- "claim_sha256": "c36adc838630ef27949c4fa3db2f2648f96cb47137b61214009ea56362baf799",
- "store_sha256": "5b05537017013a4f7095db6028e74223062a126b0ee3be2216c18166953e38be",
- "script_sha256": "7ccbd9ba2cb74378a51ccab94daeefd533210e272f0b57f44dd8b9fe79e871a9",
+ "round": "round 2 (ревью r6: E1–E8, M1–M5)",
+ "date": "2026-11-14 (UTC+3)",
+ "claim_sha256": "b3cad772b3b3190f5f0c552c189e528d59676b2f8bd050e163580349eb2d83d7",
+ "store_sha256": "f7cc011ef856a6dc30dcb1727dbd2948f61ca7a0d96cec119549eedb9340db77",
+ "script_sha256": "e58b7d1911cb05c7701904c84e934f2b5fcf3d250cf5a8005626b180375bc868",
  "note": "claim AT0_2_SHAPE.json (aggregates+gates+prereg); store = full per-doc null-детали; run_log = stdout-лог (tracked).",
- "manifest_sha256": "d5af82023ed0a4e477c5666ea5d5a2f885473d7ebd6281f42971dcd5fc3c46ef"
+ "manifest_sha256": "51a0ae583760951f8f90c0b6006b9a78f28a071c01011aa6b973b146cd617777"
 }

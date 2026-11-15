@@ -364,7 +364,7 @@ Estimand: **ФОРМА профиля при фиксированной сумм
 | суррогат | что сохраняет | роль |
 |---|---|---|
 | iid-перестановка строк | маргинал; Σ — автоматически | null полной независимости (для формы) |
-| blk-shuffle **БЕЗ seam-exclusion**, b∈{2,4,8,16,32}, ≥5 сидов | локальную структуру ≤b; Σ — автоматически | null локальности |
+| blk-shuffle **БЕЗ seam-exclusion**, b∈{2,4,8,16,32}, ≥5 сидов | локальную структуру ≤b (damped within-block: w(k,b)=max(0,1−k/b)); Σ — автоматически | **damped/seamed null (НЕ null локальности)**: вердикт читается как «real differs from unmasked block-shuffle null (damped within-block, seamed)» — НЕ как «локальность ≤ b не объясняет»; locality-прибор — P3-ladder (seam-excluded, AT0_1) (r6, E2) |
 | AR(p), p∈{1,2,4}, matched по $\bar\rho(1)$ | лаг-1 (новая реализация ⇒ Σ отчитывать отдельно) | null «один линейный лаг» |
 | Fourier-суррогат пути | спектр | **positive control**: обязан воспроизвести ρ̂ до 1e-6 **И r точно** |
 
