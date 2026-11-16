@@ -232,7 +232,8 @@ def _p1_block(dips, p1s, docs, noise=None):
         out["delta_p1"] = dp1
         out["iqr"] = qp[2] - qp[0]
         out["mid_bin_widths"] = widths
-        out["resolvable"] = bool(dp1 < min(widths))
+        out["resolvable_extremes"] = bool(dp1 < (qp[2] - qp[0]))
+        out["resolvable_all_bins"] = bool(dp1 < min(widths))
     return out
 
 
@@ -267,7 +268,9 @@ def side_block(states, margins, p1s, layer_tag, window, local_margins=None, nois
             per_doc_bin[d][bi] = (float(np.median(dip[v][sel]))
                                   if sel.sum() >= 3 else None)
             if layer_tag == "L23" and sel.sum() and window is not None:
-                dmin = np.abs(m[v][sel][None, :] - np.array(q)[:, None]).min(axis=1)
+                # r5/B5: axis=0 — per-позиция; axis=1 считал «границ с хотя бы одной
+                # близкой позицией» (≤3 на группу), а не число позиций
+                dmin = np.abs(m[v][sel][None, :] - np.array(q)[:, None]).min(axis=0)
                 bnd_num += int((dmin < window).sum())
     # первичный Δ (min-n=3, по пре-регу)
     deltas = np.array(_deltas_from_bins(per_doc_bin, per_doc_n, 3), dtype=float)
@@ -303,7 +306,10 @@ def side_block(states, margins, p1s, layer_tag, window, local_margins=None, nois
         k_neg, n_dd = int(np.sum(arr < 0)), len(arr)
         p_one = (sum(comb(n_dd, i) for i in range(k_neg, n_dd + 1)) / 2 ** n_dd
                  if n_dd else None)
-        p_two = 2 * min(p_one, 1 - p_one) if p_one is not None else None
+        # r5/B1: двусторонний — общим sign_test_twosided (старая локальная формула
+        # 2·min(p_one, 1−p_one) была off-by-one на ветке меньшинства: P(X≤k−1)
+        # вместо P(X≤k) — занижала p в 6.6–7.1× на L17_gen)
+        p_two = sign_test_twosided(k_neg, n_dd) if n_dd else None
         iqr_docs = [float(np.quantile(margs[d][~np.isnan(dips[d])], 0.75)
                          - np.quantile(margs[d][~np.isnan(dips[d])], 0.25))
                     for d in ds]
@@ -415,6 +421,20 @@ def side_block(states, margins, p1s, layer_tag, window, local_margins=None, nois
                                                               and window is not None)
         else None,
         p1=_p1_block(dips, p1s, docs, noise=noise) if p1s is not None else None,
+        # r5/B4: единый критерий разрешения (TF и L17-local — один и тот же);
+        # r5/B3: noise — аналитический fp16 (не p95|mgw−saved| — это систематический
+        # масштаб, не шум)
+        resolution={
+            "margin_iqr": float(q[2] - q[0]),
+            "noise": (float(noise) if noise is not None else None),
+            "resolvable": (bool(noise < (q[2] - q[0])) if noise is not None else None),
+        },
+        resolution_local=(
+            {
+                "margin_iqr": float(q2[2] - q2[0]),
+                "noise": (float(noise) if noise is not None else None),
+                "resolvable": (bool(noise < (q2[2] - q2[0])) if noise is not None else None),
+            } if local is not None else None),
     )
     return out
 
@@ -555,6 +575,7 @@ def main():
     tstage(tr, time.time() - t0, "gen_s4")
     s4, s4_nw, fid, fid_nw, flip = {}, {}, {}, {}, {}
     mgw_all, mgn_all, mg_diff = [], [], []
+    argm_all, hn_all = [], []
     for d in DOCS:
         n = gen_states[d].shape[0]
         zw = logits_of(gen_states[d], E, wn, use_w=True)
@@ -569,7 +590,9 @@ def main():
         flip[d] = float((zw.argmax(axis=1)[:a] != zn.argmax(axis=1)[:a]).mean())
         mgw_all.append(mgw[:a])
         mgn_all.append(mgn[:a])
-        mg_diff.append(np.abs(mgw[:a] - gen_mg[d][:a]))  # остаток S4: эмпирическая ошибка margin (gen)
+        mg_diff.append(np.abs(mgw[:a] - gen_mg[d][:a]))  # остаток S4: расхождение margin (gen)
+        argm_all.append(zw.argmax(axis=1)[:a] == gen_tok[d][:a])
+        hn_all.append(np.linalg.norm(gen_states[d][:a].astype(np.float64), axis=1))
         if not SMOKE:
             if s4[d] is None or s4[d] < 0.95:
                 raise SystemExit(f"S4 FAIL: doc w{d} spearman {s4[d]} < 0.95")
@@ -584,22 +607,56 @@ def main():
         logline(f"S3b head-fidelity: OK (min {min(fid.values()):.4f}, "
                 f"mean {np.mean(list(fid.values())):.4f}) — ТЗ «gate 1.000» на этом кэхе")
     # окна bin_boundary_frac (р2) + r3/N5: имена по смыслу
-    win_gen = float(np.quantile(np.concatenate(mg_diff), 0.95))          # margin_noise_gen: p95|mgw − saved| (fp16-шум состояний)
-    win_tf = float(np.quantile(
-        np.concatenate([np.abs(tf_mg[d] - tf_mg_nw[d]) for d in DOCS]), 0.95))  # convention_spread_tf: систематический разброс w vs w², НЕ шум
+    # окна bin_boundary_frac (р2) + r3/N5: имена по смыслу; r5/B3: |mgw−saved| —
+    # НЕ fp16-шум состояний, а систематический масштаб (TPU forward vs локальный
+    # суррогат: ratio saved/surr med 1.31, p10/p90 1.23/1.43, тот же выбор/позиция).
+    # Шум — аналитический fp16: δz = √D·2⁻¹²·|E|med (округление нормированной
+    # компоненты), margin = разность двух логитов → 2·δz (арифметика ревью r5).
+    E_med_abs = float(np.median(np.abs(E)))
+    noise_gen = float(2.0 * np.sqrt(1024) * 2 ** -12 * E_med_abs)
+    noise_tf = float(2.0 * np.sqrt(1024) * 2 ** -12 * E_med_abs)
+    conv_spread_tf = float(np.quantile(
+        np.concatenate([np.abs(tf_mg[d] - tf_mg_nw[d]) for d in DOCS]), 0.95))
     hnorm = {s: float(np.median([float(np.median(np.linalg.norm(st[d].astype(np.float64), axis=1)))
                                  for d in DOCS]))
              for s, st in (("gen", gen_states), ("tf", tf_states))}
-    margin_windows = {
-        "margin_noise_gen": win_gen,
-        "convention_spread_tf": win_tf,
-        "h_norm": hnorm,
-        "tf_noise_estimate": win_gen,
-        "caveat": ("TF не имеет saved mg (D3): tf_noise_estimate — перенос gen-оценки "
-                   "p95|mgw-saved|; ‖h‖ gen/tf ≈ 12 (сравнимы)")
-    }
+    # r5/B3: диагностика разложения margin_diff (регрессия |Δ|↔saved, корреляции)
     mgw_cat = np.concatenate(mgw_all)
     mgn_cat = np.concatenate(mgn_all)
+    sav_cat = np.concatenate([gen_mg[d][:gen_states[d].shape[0] - 2] for d in DOCS])  # saved (TPU)
+    argm_cat = np.concatenate(argm_all)
+    hn_cat = np.concatenate(hn_all)
+    ratio = sav_cat / np.maximum(mgw_cat, 1e-9)
+    sdiff = mgw_cat - sav_cat
+    adiff = np.abs(sdiff)
+    slp, itc = np.polyfit(sav_cat, sdiff, 1)
+    margin_diff_diag = {
+        "ratio_saved_over_surr": {"median": float(np.median(ratio)),
+                                  "p10": float(np.quantile(ratio, 0.1)),
+                                  "p90": float(np.quantile(ratio, 0.9))},
+        "signed_fit": {"slope": float(slp), "intercept": float(itc)},
+        "frac_argmax_eq_tok": float(argm_cat.mean()),
+        "diff_at_argmax_match": {"median": float(np.median(adiff[argm_cat])),
+                                 "p90": float(np.quantile(adiff[argm_cat], 0.9))},
+        "corr_diff_mgw": float(np.corrcoef(adiff, mgw_cat)[0, 1]),
+        "corr_diff_hnorm": float(np.corrcoef(adiff, hn_cat)[0, 1]),
+        "diff_median_all": float(np.median(adiff)),
+        "diff_p95_all": float(np.quantile(adiff, 0.95)),
+    }
+    margin_windows = {
+        "margin_noise_fp16_gen": noise_gen,
+        "margin_noise_fp16_tf": noise_tf,
+        "E_med_abs": E_med_abs,
+        "convention_spread_tf": conv_spread_tf,
+        "h_norm": hnorm,
+        "margin_diff_w_saved_gen": {"median": float(np.median(np.concatenate(mg_diff))),
+                                    "p95": float(np.quantile(np.concatenate(mg_diff), 0.95))},
+        "margin_diff_diag": margin_diff_diag,
+        "caveat": ("r5/B3: |mgw−saved| (med 1.92) — систематический масштаб TPU forward "
+                   "vs локальный суррогат (ratio med 1.31, p10/p90 1.23/1.43), НЕ fp16-шум "
+                   "(аналитика ~4e-4). Окна bin_boundary_frac/dp1 — аналитический fp16; "
+                   "оговорка «TF низкорешиционный» снята (IQR 1.097/0.531 ≫ noise)")
+    }
     # r3/N4: headroom гейтов (дискриминатор — S4; S3b — вспомогательный, 0.98)
     gates_headroom = {
         "S3b": {"threshold": 0.98,
@@ -619,10 +676,10 @@ def main():
 
     # --- L23: обе стороны -------------------------------------------------------------
     tstage(tr, time.time() - t0, "dip_l23")
-    gen_block = side_block(gen_states, gen_mg, gen_p1, "L23", window=win_gen,
-                           noise=win_gen)
-    tf_block = side_block(tf_states, tf_mg, tf_p1, "L23", window=win_tf,
-                          noise=margin_windows["tf_noise_estimate"])
+    gen_block = side_block(gen_states, gen_mg, gen_p1, "L23", window=noise_gen,
+                           noise=noise_gen)
+    tf_block = side_block(tf_states, tf_mg, tf_p1, "L23", window=noise_tf,
+                          noise=noise_tf)
     # F4: порог = max(базовый, разброс агрегаций) — до вердикта, из данных блока
     spread_g = max(abs(a - b) for a, b in zip(gen_block["pooled_median"].values(), gen_block["monotonic"]))
     spread_t = max(abs(a - b) for a, b in zip(tf_block["pooled_median"].values(), tf_block["monotonic"]))
@@ -634,6 +691,16 @@ def main():
     vt, vt_sub = make_verdict(tf_block["delta_median_docs"], tf_block["ci95"], thresh_t)
     gen_block["verdict"], gen_block["verdict_sub"] = vg, vg_sub
     tf_block["verdict"], tf_block["verdict_sub"] = vt, vt_sub
+    # r5/F2: критический порог обращения вердикта (детерминирован: ci_high стабилен
+    # по B∈{1000,10000}×5 сидов); вердикт (a) требует ci_high < −T
+    for blk, th in ((gen_block, thresh_g), (tf_block, thresh_t)):
+        ch = float(blk["ci95"][1])
+        blk["flip_threshold"] = {
+            "ci_high": ch,
+            "thresh_used": th,
+            "flips_to_a_below": (abs(ch) if ch < 0 else None),
+            "prereg_overhead": (float(THRESH_BASE / abs(ch) - 1.0) if ch < 0 else None),
+        }
     logline(f"L23 gen: Δ {gen_block['delta_median_docs']:+.4f} CI {gen_block['ci95']} "
             f"(T={thresh_g:.4f}) verdict={vg}/{vg_sub}")
     logline(f"L23 tf : Δ {tf_block['delta_median_docs']:+.4f} CI {tf_block['ci95']} "
@@ -688,9 +755,9 @@ def main():
         z17 = logits_of(gen_states17[d], E, wn, use_w=True)
         l17_local_mg[d] = top1_top2(z17)[0]
     gen_block17 = side_block(gen_states17, gen_mg, gen_p1, "L17", window=None,
-                             local_margins=l17_local_mg, noise=win_gen)
+                             local_margins=l17_local_mg, noise=noise_gen)
     tf_block17 = side_block(tf_states17, tf_mg, tf_p1, "L17", window=None,
-                            noise=margin_windows["tf_noise_estimate"])
+                            noise=noise_tf)
     lm = gen_block17["local_margin"]
     if lm["delta_median_docs"] is not None:
         logline(f"N3 L17-local: Δ {lm['delta_median_docs']:+.4f} "
@@ -729,8 +796,6 @@ def main():
             "tf_gate_nw_max": max(tf_gate_nw.values()),
             "margin_median_w": float(np.median(mgw_cat)),
             "margin_median_nw": float(np.median(mgn_cat)),
-            "margin_diff_w_saved_gen": {"median": float(np.median(np.concatenate(mg_diff))),
-                                        "p95": win_gen},
         },
         "margin_windows": margin_windows,
         "gates_headroom": gates_headroom,
