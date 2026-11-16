@@ -1865,9 +1865,9 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
   клеток); r — confirmed med 0.016; f_DC mirror-confirmed («не независимый сигнал», P3 по G3);
   random order-invariant 6/6 (null median, per-doc exceptions own_w0 2/6, own_w4 6/6 0.119–0.131);
   0 token-statistics flags.
-- **Сохранено:** `docs/AT0_4_prereg.md` (TZ v3.1), `docs/AT0_4_TZ_REVIEW.md` + `_r2.md`,
-  `docs/AT0_4_EXEC_REVIEW.md` + `_r2.md`, ответки r3–r6. **Прим. 16.11:** параллельная сессия
-  работает над AT0_4-ревью (dirty) — чистка промежуточных раундов отложена до её коммита.
+- **Сохранено:** `docs/AT0_4_prereg.md` (TZ v3.1), `docs/AT0_4_EXEC_REVIEW.md` + ответки r4–r6.
+  **Прим. 16.11:** промежуточные раунды (TZ_REVIEW r1/r2, EXEC_REVIEW_r2, промты, ответки r3)
+  удалены по 2-дн. docs-hygiene-правилу (содержимое — в git-истории; вердикты — в карточке).
   Артефакты: `results/AT0/AT0_4_MIX.json` + store f1cc7265dd40c874.
 
 ## AT0_5 — T0.5 «Генеративная проверка (disk-only)»

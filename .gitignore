@@ -86,3 +86,4 @@ kaggle_daemon.log
 
 # trackio (AGENTS.md / TZ_trackio): локальная БД, регенерируемый кэш от логов
 .trackio/
+.pig/
