@@ -38,14 +38,19 @@ AT8_1_THRESHOLD_v2.json (машина v2 = V2_SOLITON_CANDIDATE) — остаю�
   5. S9 (F4): декларация v2 переносится без изменений.
   6. Raw-отчёт (F5 + §6): dip(0), dip(1), Δ = dip(1)−dip(0), min/max dip (с λ; tie — меньший λ,
      множество аргминимума/аргмаксимума отчётно) в сырых единицах; полные per-seed dip-кривые
-     (3×11) + per-seed cond1/λ*/C2 (медиана по 6 докам)/C3 (медиана holdout nll); per-seed C1
-     нечислится (в store нет per-seed loopy — только seed-avg в claim v1) — в note.
+     (3×11) + per-seed cond1/λ*/C1/C2 (медиана по 6 докам)/C3 (медиана holdout nll);
+     per-seed C1 = gen.loopy(λ*_seed) > 0 (per-seed loopy в store: cells[s{sd}_lam{λ}].gen.loopy;
+     v3.1 — фикс ложного note v3 «per-seed loopy в store отсутствует», внешнее ревью
+     артефакта docs/AT8_1_artifact_r3_review.md MINOR-1).
   7. Порядок вердикта: V3 > V2 > V1 > V0. V1 структурно недостижим (dip немонотонен,
      v1-артефакт) — reachability-декларация. F2-описательный и F6-sensitivity — наследие v2.
 
 Детерминизм: без RNG, без перепрогона (пере-агрегация committed store).
-Запись: results/AT8/AT8_1_THRESHOLD_v3.json + results/AT8/AT8_1_v3_manifest.json +
-results/AT8/AT8_1_v3_run.log. Store не трогается.
+v3.1 (16.11, внешний ревью-цикл): исправленный перепуск той же машины v3 — добавлен
+per-seed C1 (TZ п.6) + фикс ложного per-seed note; артефакт v3 (c4fcb1ef…) остаётся
+артефактом прогона v3 (не переписывается).
+Запись: results/AT8/AT8_1_THRESHOLD_v3.1.json + results/AT8/AT8_1_v3.1_manifest.json +
+logs/AT8/AT8_1_v3_1_run.log (RUN_LOG — в logs/, конвенция v2/v3). Store не трогается.
 """
 
 import hashlib
@@ -91,9 +96,9 @@ ART = os.path.join(_ROOT, "results", "AT8", "AT8_1_THRESHOLD.json")
 STORE = os.path.join(_ROOT, "results", "AT8", "store", "018c3dac90eb1bba.json")
 MANIFEST = os.path.join(_ROOT, "results", "AT8", "AT8_1_manifest.json")
 OUT_DIR = os.path.join(_ROOT, "results", "AT8")
-CLAIM = os.path.join(OUT_DIR, "AT8_1_THRESHOLD_v3.json")
-OUT_MANIFEST = os.path.join(OUT_DIR, "AT8_1_v3_manifest.json")
-RUN_LOG = os.path.join(OUT_DIR, "AT8_1_v3_run.log")
+CLAIM = os.path.join(OUT_DIR, "AT8_1_THRESHOLD_v3.1.json")
+OUT_MANIFEST = os.path.join(OUT_DIR, "AT8_1_v3.1_manifest.json")
+RUN_LOG = os.path.join(_ROOT, "logs", "AT8", "AT8_1_v3_1_run.log")  # конвенция v2/v3 (ревью MINOR-3)
 
 
 def sha256_file(path):
@@ -280,19 +285,22 @@ def main():
                   for lam in LAM11}
         lmin_s = min(LAM11, key=lambda l: (ds[l], LAM11_IDX[l]))
         cond1_s = ds[lmin_s] < ds[1.0]
+        loopy_s = {lam: float(cells[f"s{sd}_lam{lam:.2f}"]["gen"]["loopy"]) for lam in LAM11}
+        c1_s = bool(loopy_s[lmin_s] > 0.0)
         c2_s = er_s[lmin_s] < min(er_s[0.0], er_s[1.0])
         c3_s = nllh_s[lmin_s] > max(nllh_s[0.0], nllh_s[1.0])
         raw_report["per_seed"][f"s{sd}"] = {
             "dip_curve": {f"{lam:.2f}": round(ds[lam], 6) for lam in LAM11},
             "dip_1": ds[1.0], "min_dip": ds[lmin_s], "lam_star": lmin_s,
             "cond1_min_lt_dip1": bool(cond1_s),
+            "c1_loopy": {"loopy_at_lstar": loopy_s[lmin_s], "c1": bool(c1_s)},
             "c2_eff_rank": {"er_star": er_s[lmin_s], "er_0": er_s[0.0], "er_1": er_s[1.0],
                             "c2": bool(c2_s)},
             "c3_nll_holdout": {"nll_star": nllh_s[lmin_s],
                                "endpoints": [nllh_s[0.0], nllh_s[1.0]], "c3": bool(c3_s)},
-            "note": "per-seed C2 — медиана по 6 докам (seedavg-конвенция); per-seed loopy в store "
-                    "отсутствует (только seed-avg в claim v1) — C1 нечислится per-seed (в note); "
-                    "verdict по seed-avg (пре-рег); per-seed — отчётное",
+            "note": "per-seed C1 = gen.loopy(λ*_seed) > 0 (per-seed loopy из store: "
+                    "cells[s{sd}_lam{λ}].gen.loopy); per-seed C2 — медиана по 6 докам "
+                    "(seedavg-конвенция); verdict по seed-avg (пре-рег); per-seed — отчётное",
         }
     logline(f"raw-отчёт: dip(0)={d0:+.5f} dip(1)={d1:+.5f} Δ={d1 - d0:+.5f} "
             f"min={dip_raw[lmin]:+.5f}@{lmin} max={dip_raw[lmax]:+.5f}@{lmax}")
@@ -306,6 +314,9 @@ def main():
     c2 = bool(er_raw[lmin] < min(er_raw[0.0], er_raw[1.0]))
     c3 = bool(nllh_raw[lmin] > max(nllh_raw[0.0], nllh_raw[1.0]))
     v3_fired = bool(cond1 and (c1 or c2 or c3))
+    c1_ps = {f"s{sd}": raw_report["per_seed"][f"s{sd}"]["c1_loopy"]["c1"] for sd in SEEDS}
+    logline(f"per-seed C1 (gen.loopy(λ*_seed)): {c1_ps} — verdict по seed-avg "
+            f"(C1={c1}, loopy(λ*)={loopy_raw[lmin]:.3f}) не тронут")
     mx_dip = max(u_dip.values())
     argmax_dip = min(lam for lam in LAM11 if u_dip[lam] == mx_dip)
     v3 = {
@@ -526,27 +537,61 @@ def main():
     }
     logline(f"VERDICT: {outcome} (pre-reg ожидание: {expectation}, match={match})")
 
+    # ---- v3.1 selfcheck-дополнения: no_nan, v1/v2-интактность, per-seed loopy == seed-avg
+    def _count_nonfinite(obj):
+        if isinstance(obj, float):
+            return 0 if np.isfinite(obj) else 1
+        if isinstance(obj, dict):
+            return sum(_count_nonfinite(v) for v in obj.values())
+        if isinstance(obj, list):
+            return sum(_count_nonfinite(v) for v in obj)
+        return 0
+
+    v2_claim_path = os.path.join(OUT_DIR, "AT8_1_THRESHOLD_v2.json")
+    v2_man = json.load(open(os.path.join(OUT_DIR, "AT8_1_v2_manifest.json")))
+    v2_intact = sha256_file(v2_claim_path) == v2_man["claim_file_sha256"]
+    loopy_ps = {lam: float(np.mean([cells[f"s{sd}_lam{lam:.2f}"]["gen"]["loopy"]
+                                    for sd in SEEDS])) for lam in LAM11}
+    loopy_dev = max(abs(loopy_ps[lam] - float(loopy_raw[lam])) for lam in LAM11)
+    assert loopy_dev <= 1e-6, \
+        f"per-seed gen.loopy seed-avg != claim v1 loopy curve: dev={loopy_dev:.2e}"
+    logline(f"v3.1 selfcheck: no_nan / v2-intact / per-seed gen.loopy seed-avg == "
+            f"claim v1 loopy (dev={loopy_dev:.2e})")
+
     # ---- Запись (claim + manifest + run.log)
     claim = {
         "experiment": "AT8_1 T8.1 — машина v3 (T8.1-r3) disk-only reanalysis",
-        "revision": "v3 (раунд 2 ревью, docs/AT8_1_review.md)",
+        "revision": "v3.1 (v3 + per-seed C1 по TZ п.6; фикс ложного note v3 — внешнее ревью "
+                    "артефакта docs/AT8_1_artifact_r3_review.md MINOR-1)",
         "date": datetime.now(timezone.utc).isoformat(),
         "review_sha256": "56edfeba2028e03732a8544f163306ef29f9ce0b6ce2412b1226e7d01da92e9e",
         "input": {"claim_v1_file_sha256": art_sha, "store_file_sha256": store_sha,
                   "manifest_file_sha256": sha256_file(MANIFEST)},
-        "machine": "v3 (TZ_add_4-8.md §T8.1 «Машина v3 (T8.1-r3)»; ревью §5 патч 1–5 + §6)",
-        "selfcheck": {"recompute_dev": dev, "u_dip_dev": dev_u},
+        "machine": "v3.1 (TZ_add_4-8.md §T8.1 «Машина v3 (T8.1-r3)» + per-seed C1; "
+                   "логика вердикта = v3 дословно)",
+        "selfcheck": {"recompute_dev": dev, "u_dip_dev": dev_u,
+                      "per_seed_loopy_vs_claim_dev": loopy_dev,
+                      "v1_intact": bool(art_sha == man["claim_file_sha256"]),
+                      "v2_intact": v2_intact},
         "verdict": verdict,
         "note": "перепуск прогона не нужен: пере-агрегация committed store; store не трогается; "
-                "артефакты v1 (V0_NOT_RESOLVED) и v2 (V2_SOLITON_CANDIDATE) не переписываются",
+                "артефакты v1 (V0_NOT_RESOLVED) и v2 (V2_SOLITON_CANDIDATE) не переписываются. "
+                "v3.1: исправленный перепуск после внешнего ревью артефакта — добавлен per-seed "
+                "C1 (gen.loopy из store; v3-note «per-seed loopy в store отсутствует» было ложью) "
+                "+ selfcheck no_nan/v1_v2-intact; вердикт не меняется (V3_PATHOLOGY, C1 FALSE×3 "
+                "per-seed совпадает с seed-avg C1=FALSE); артефакт v3 (c4fcb1ef…) остаётся "
+                "артефактом прогона v3",
     }
+    n_nonfinite = _count_nonfinite(claim)
+    assert n_nonfinite == 0, f"non-finite floats in claim: {n_nonfinite}"
+    claim["selfcheck"]["no_nan_nonfinite_count"] = n_nonfinite
     payload = sanitize(claim)
     with open(CLAIM, "w") as f:
         json.dump(payload, f, ensure_ascii=False, indent=1, sort_keys=True)
     claim_sha = sha256_file(CLAIM)
 
     man2 = {
-        "experiment": "AT8_1 T8.1 — машина v3 (T8.1-r3)",
+        "experiment": "AT8_1 T8.1 — машина v3.1 (T8.1-r3, per-seed C1 фикс)",
         "date": claim["date"],
         "claim_file_sha256": claim_sha,
         "store_file_sha256": store_sha,  # вход, не выход (не трогается)

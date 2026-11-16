@@ -1,0 +1,610 @@
+{
+ "date": "2026-11-16T19:39:10.896096+00:00",
+ "experiment": "AT8_1 T8.1 — машина v3 (T8.1-r3) disk-only reanalysis",
+ "input": {
+  "claim_v1_file_sha256": "b2923d74324e9180407f143a83fcffeaba22634ffe212cf723f86456457699a0",
+  "manifest_file_sha256": "15996723567030b9ed51467ea692d83211f122471aa31dbf36af2688773301fe",
+  "store_file_sha256": "28a0c28d94d982398492e19dbe733b984253173c49b0e55de3de1430a53e618d"
+ },
+ "machine": "v3.1 (TZ_add_4-8.md §T8.1 «Машина v3 (T8.1-r3)» + per-seed C1; логика вердикта = v3 дословно)",
+ "note": "перепуск прогона не нужен: пере-агрегация committed store; store не трогается; артефакты v1 (V0_NOT_RESOLVED) и v2 (V2_SOLITON_CANDIDATE) не переписываются. v3.1: исправленный перепуск после внешнего ревью артефакта — добавлен per-seed C1 (gen.loopy из store; v3-note «per-seed loopy в store отсутствует» было ложью) + selfcheck no_nan/v1_v2-intact; вердикт не меняется (V3_PATHOLOGY, C1 FALSE×3 per-seed совпадает с seed-avg C1=FALSE); артефакт v3 (c4fcb1ef…) остаётся артефактом прогона v3",
+ "review_sha256": "56edfeba2028e03732a8544f163306ef29f9ce0b6ce2412b1226e7d01da92e9e",
+ "revision": "v3.1 (v3 + per-seed C1 по TZ п.6; фикс ложного note v3 — внешнее ревью артефакта docs/AT8_1_artifact_r3_review.md MINOR-1)",
+ "selfcheck": {
+  "no_nan_nonfinite_count": 0,
+  "per_seed_loopy_vs_claim_dev": 0.0,
+  "recompute_dev": {
+   "dip": 0.0,
+   "eff_rank": 0.0,
+   "nll_holdout": 0.0
+  },
+  "u_dip_dev": 0.0,
+  "v1_intact": true,
+  "v2_intact": true
+ },
+ "verdict": {
+  "details": {
+   "f2_descriptive": {
+    "dip": {
+     "argmax_lam": 0.55,
+     "max_u": 1.7080466888387433,
+     "overshoot": true
+    },
+    "eff_rank": {
+     "argmax_lam": 0.85,
+     "max_u": 2.973032389018403,
+     "overshoot": true
+    },
+    "hump": {
+     "argmax_lam": 0.85,
+     "max_u": 2.077872116740102,
+     "overshoot": true
+    },
+    "loopy": {
+     "argmax_lam": 1.0,
+     "max_u": 1.0,
+     "overshoot": false
+    },
+    "margin": {
+     "argmax_lam": 1.0,
+     "max_u": 1.0,
+     "overshoot": false
+    },
+    "nll_holdout": {
+     "argmax_lam": 1.0,
+     "max_u": 1.0,
+     "overshoot": false
+    },
+    "plateau": {
+     "argmax_lam": 0.85,
+     "max_u": 1.5658616968477643,
+     "overshoot": true
+    },
+    "pr_sigma": {
+     "argmax_lam": 0.55,
+     "max_u": 36.16481421959373,
+     "overshoot": true
+    },
+    "rep16": {
+     "argmax_lam": 1.0,
+     "max_u": 1.0,
+     "overshoot": false
+    }
+   },
+   "families_v3": {
+    "families": {
+     "field": {
+      "excluded": [],
+      "informative": [
+       "dip",
+       "hump",
+       "plateau"
+      ],
+      "intra_consistent_v1": false,
+      "members": [
+       "dip",
+       "hump",
+       "plateau"
+      ],
+      "status": "inconsistent"
+     },
+     "leaf": {
+      "excluded": [],
+      "informative": [
+       "pr_sigma",
+       "eff_rank"
+      ],
+      "intra_consistent_v1": false,
+      "members": [
+       "pr_sigma",
+       "eff_rank"
+      ],
+      "status": "inconsistent"
+     },
+     "mode": {
+      "excluded": [
+       "rep16"
+      ],
+      "informative": [
+       "loopy"
+      ],
+      "intra_consistent_v1": false,
+      "members": [
+       "rep16",
+       "loopy"
+      ],
+      "status": "vacuous"
+     }
+    },
+    "note": "2 измеримых семейства inconsistent, 1 vacuous ⇒ нет единого координированного порога (mode: rep16 no_transition — raw(0) = 0.8824 > 0, F4-правило; остаётся loopy@0.85 — D7′)"
+   },
+   "per_seed_field": {
+    "l3_cells": [
+     [
+      0.6,
+      0.65
+     ],
+     [
+      0.65,
+      0.7
+     ],
+     [
+      0.6,
+      0.65
+     ]
+    ],
+    "per_seed": {
+     "s11": {
+      "L1": [
+       0.2,
+       0.4
+      ],
+      "L3": [
+       0.6,
+       0.65
+      ],
+      "L3_tie_cells": [
+       [
+        0.6,
+        0.65
+       ]
+      ]
+     },
+     "s12": {
+      "L1": [
+       0.4,
+       0.5
+      ],
+      "L3": [
+       0.65,
+       0.7
+      ],
+      "L3_tie_cells": [
+       [
+        0.65,
+        0.7
+       ]
+      ]
+     },
+     "s13": {
+      "L1": [
+       0.2,
+       0.4
+      ],
+      "L3": [
+       0.6,
+       0.65
+      ],
+      "L3_tie_cells": [
+       [
+        0.6,
+        0.65
+       ]
+      ]
+     }
+    },
+    "rule": "span = (max − min) индексов per-seed L3-клеток (левые узлы) в шагах сетки; span > 1 ⇒ полевой интервал unresolved (F2)",
+    "span_steps": 1,
+    "unresolved": false
+   },
+   "raw_report": {
+    "delta_dip1_minus_dip0": 0.048018192752839195,
+    "dip_0": -0.22183466321368314,
+    "dip_1": -0.17381647046084395,
+    "dip_seedavg": {
+     "0.00": -0.221835,
+     "0.20": -0.269922,
+     "0.40": -0.194157,
+     "0.50": -0.147541,
+     "0.55": -0.139817,
+     "0.60": -0.157432,
+     "0.65": -0.258209,
+     "0.70": -0.30524,
+     "0.75": -0.286111,
+     "0.85": -0.276093,
+     "1.00": -0.173816
+    },
+    "max_dip": {
+     "argmax_set": [
+      0.55
+     ],
+     "lam": 0.55,
+     "value": -0.1398173480781756
+    },
+    "min_dip": {
+     "argmin_set": [
+      0.7
+     ],
+     "lam": 0.7,
+     "value": -0.3052401224752934
+    },
+    "per_seed": {
+     "s11": {
+      "c1_loopy": {
+       "c1": false,
+       "loopy_at_lstar": 0.0
+      },
+      "c2_eff_rank": {
+       "c2": true,
+       "er_0": 18.418252426015723,
+       "er_1": 13.199398101625583,
+       "er_star": 5.8585802673054
+      },
+      "c3_nll_holdout": {
+       "c3": false,
+       "endpoints": [
+        12.628140449523926,
+        2.7474536895751953
+       ],
+       "nll_star": 9.360464096069336
+      },
+      "cond1_min_lt_dip1": true,
+      "dip_1": -0.17381647046084397,
+      "dip_curve": {
+       "0.00": -0.213784,
+       "0.20": -0.263267,
+       "0.40": -0.191913,
+       "0.50": -0.153805,
+       "0.55": -0.144479,
+       "0.60": -0.147229,
+       "0.65": -0.270162,
+       "0.70": -0.30806,
+       "0.75": -0.2966,
+       "0.85": -0.30584,
+       "1.00": -0.173816
+      },
+      "lam_star": 0.7,
+      "min_dip": -0.30806002664274124,
+      "note": "per-seed C1 = gen.loopy(λ*_seed) > 0 (per-seed loopy из store: cells[s{sd}_lam{λ}].gen.loopy); per-seed C2 — медиана по 6 докам (seedavg-конвенция); verdict по seed-avg (пре-рег); per-seed — отчётное"
+     },
+     "s12": {
+      "c1_loopy": {
+       "c1": false,
+       "loopy_at_lstar": 0.0
+      },
+      "c2_eff_rank": {
+       "c2": true,
+       "er_0": 17.091295552245064,
+       "er_1": 13.199398101625583,
+       "er_star": 6.456461673092759
+      },
+      "c3_nll_holdout": {
+       "c3": false,
+       "endpoints": [
+        12.853936195373535,
+        2.7474536895751953
+       ],
+       "nll_star": 9.809355735778809
+      },
+      "cond1_min_lt_dip1": true,
+      "dip_1": -0.17381647046084397,
+      "dip_curve": {
+       "0.00": -0.223323,
+       "0.20": -0.272905,
+       "0.40": -0.199372,
+       "0.50": -0.139444,
+       "0.55": -0.12373,
+       "0.60": -0.118966,
+       "0.65": -0.199618,
+       "0.70": -0.305851,
+       "0.75": -0.266144,
+       "0.85": -0.242289,
+       "1.00": -0.173816
+      },
+      "lam_star": 0.7,
+      "min_dip": -0.3058510816118246,
+      "note": "per-seed C1 = gen.loopy(λ*_seed) > 0 (per-seed loopy из store: cells[s{sd}_lam{λ}].gen.loopy); per-seed C2 — медиана по 6 докам (seedavg-конвенция); verdict по seed-avg (пре-рег); per-seed — отчётное"
+     },
+     "s13": {
+      "c1_loopy": {
+       "c1": false,
+       "loopy_at_lstar": 0.0
+      },
+      "c2_eff_rank": {
+       "c2": true,
+       "er_0": 17.182391690286394,
+       "er_1": 13.199398101625583,
+       "er_star": 7.4885727985378505
+      },
+      "c3_nll_holdout": {
+       "c3": false,
+       "endpoints": [
+        12.804640293121338,
+        2.7474536895751953
+       ],
+       "nll_star": 10.616017818450928
+      },
+      "cond1_min_lt_dip1": true,
+      "dip_1": -0.17381647046084397,
+      "dip_curve": {
+       "0.00": -0.228397,
+       "0.20": -0.273593,
+       "0.40": -0.191188,
+       "0.50": -0.149375,
+       "0.55": -0.151243,
+       "0.60": -0.206103,
+       "0.65": -0.304847,
+       "0.70": -0.301809,
+       "0.75": -0.295591,
+       "0.85": -0.280149,
+       "1.00": -0.173816
+      },
+      "lam_star": 0.65,
+      "min_dip": -0.3048474685168706,
+      "note": "per-seed C1 = gen.loopy(λ*_seed) > 0 (per-seed loopy из store: cells[s{sd}_lam{λ}].gen.loopy); per-seed C2 — медиана по 6 докам (seedavg-конвенция); verdict по seed-avg (пре-рег); per-seed — отчётное"
+     }
+    },
+    "sign_note": "Δ > 0: dip(1) ВЫШЕ dip(0) (меньше коллапса на обученном конце); отрицательный overshoot = min dip ГЛУБЖЕ dip(1)"
+   },
+   "reachability": {
+    "V0_NOT_RESOLVED": {
+     "reachable": true,
+     "why": "fallback, если V3/V2 не сработали"
+    },
+    "V1_GENERIC_COMPETENCE": {
+     "reachable": false,
+     "why": "dip немонотонен (v1-артефакт: non_monotone_excluded, ρ = -0.30000000000000004) → λ_c^dip не существует → coin_all (все DISC_OTHERS сравнимы + coincide с dip) недостижим на этом дизайне"
+    },
+    "V2_SOLITON_CANDIDATE": {
+     "reachable": false,
+     "why": "статусы локаторов {'L1': 'separated', 'L2': 'not_separated', 'L3': 'separated'} → verdict_differs_between_locators"
+    },
+    "V3_PATHOLOGY": {
+     "reachable": true,
+     "why": "cond1=True, C1=False, C2=True, C3=False (λ*=0.7: dip -0.30524, er 6.39, loopy 0.000, nll 9.747)"
+    }
+   },
+   "s9": {
+    "cap_mismatch": "пре-рег §6.6 «кап ≤ 6 точек» vs код BIS_CAP = 12 — зафиксировано; capped=false (не сработало)",
+    "capped": false,
+    "declaration": "один раунд бисекции (точка 0.8); ширина 0.05 = ½ зазора сетки; «≤ 0.02» на этой сетке недостижимо — декларатив, не гейт (перенос декларации v2, патч 5)",
+    "points": [
+     0.8,
+     0.8
+    ],
+    "widths": {
+     "margin": 0.04999999999999993,
+     "nll_holdout": 0.04999999999999993
+    }
+   },
+   "sensitivity_F6": {
+    "max_speed_interval": [
+     0.6,
+     0.65
+    ],
+    "note": "dip-сигнатура на не-луповом подмножестве (наследие v2 F6, report-only)",
+    "raw_seedavg": {
+     "0.00": -0.206599,
+     "0.20": -0.26604,
+     "0.40": -0.194275,
+     "0.50": -0.147676,
+     "0.55": -0.146151,
+     "0.60": -0.181454,
+     "0.65": -0.28528,
+     "0.70": -0.306797,
+     "0.75": -0.291749,
+     "0.85": -0.274449,
+     "1.00": -0.173816
+    },
+    "subset": [
+     "wiki_2",
+     "wiki_3"
+    ],
+    "u_peak": 1.8438879509686172,
+    "u_peak_lam": 0.55,
+    "u_seedavg": {
+     "0.000": 0.0,
+     "0.200": -1.813162,
+     "0.400": 0.375926,
+     "0.500": 1.79739,
+     "0.550": 1.843888,
+     "0.600": 0.767013,
+     "0.650": -2.400047,
+     "0.700": -3.056422,
+     "0.750": -2.597381,
+     "0.850": -2.069665,
+     "1.000": 1.0
+    },
+    "u_trough": -3.0564215475765146,
+    "u_trough_lam": 0.7
+   },
+   "two_event_summary": {
+    "competence_rise": "0.85 (nll_holdout ∧ margin resolved, v1-артефакт)",
+    "field_event": "отрицательный overshoot dip: min -0.3052@0.7 (глубже обученного dip(1)=-0.1738) с rank-collapse eff_rank 6.39 < trained 13.20",
+    "mode_on": "0.85 (loopy first raw > 0; rep16 no_transition — raw(0) > 0)"
+   },
+   "v1": {
+    "reachable": false,
+    "reason": "dip немонотонен (v1-артефакт: non_monotone_excluded, ρ = -0.30000000000000004) → λ_c^dip не существует → coin_all (все DISC_OTHERS сравнимы + coincide с dip) недостижим на этом дизайне"
+   },
+   "v2": {
+    "fired": false,
+    "locator_table": {
+     "dip": {
+      "L1": [
+       0.2,
+       0.4
+      ],
+      "L2": [
+       0.6,
+       0.65
+      ],
+      "L3": [
+       0.6,
+       0.65
+      ],
+      "L3_tie_cells": [
+       [
+        0.6,
+        0.65
+       ]
+      ]
+     },
+     "margin": {
+      "L1": [
+       0.75,
+       0.85
+      ],
+      "L2": [
+       0.6,
+       0.65
+      ],
+      "L3": [
+       0.85,
+       1.0
+      ],
+      "L3_tie_cells": [
+       [
+        0.85,
+        1.0
+       ]
+      ]
+     },
+     "nll_holdout": {
+      "L1": [
+       0.75,
+       0.85
+      ],
+      "L2": [
+       0.6,
+       0.65
+      ],
+      "L3": [
+       0.85,
+       1.0
+      ],
+      "L3_tie_cells": [
+       [
+        0.85,
+        1.0
+       ]
+      ]
+     }
+    },
+    "overall_status": "verdict_differs_between_locators",
+    "per_locator": {
+     "L1": {
+      "dip_interval": [
+       0.2,
+       0.4
+      ],
+      "per_competence": {
+       "margin": {
+        "competence_interval": [
+         0.75,
+         0.85
+        ],
+        "gap": 6,
+        "separated": true
+       },
+       "nll_holdout": {
+        "competence_interval": [
+         0.75,
+         0.85
+        ],
+        "gap": 6,
+        "separated": true
+       }
+      },
+      "status": "separated"
+     },
+     "L2": {
+      "dip_interval": [
+       0.6,
+       0.65
+      ],
+      "per_competence": {
+       "margin": {
+        "competence_interval": [
+         0.6,
+         0.65
+        ],
+        "gap": 0,
+        "separated": false
+       },
+       "nll_holdout": {
+        "competence_interval": [
+         0.6,
+         0.65
+        ],
+        "gap": 0,
+        "separated": false
+       }
+      },
+      "status": "not_separated"
+     },
+     "L3": {
+      "dip_interval": [
+       0.6,
+       0.65
+      ],
+      "per_competence": {
+       "margin": {
+        "competence_interval": [
+         0.85,
+         1.0
+        ],
+        "gap": 3,
+        "separated": true
+       },
+       "nll_holdout": {
+        "competence_interval": [
+         0.85,
+         1.0
+        ],
+        "gap": 3,
+        "separated": true
+       }
+      },
+      "status": "separated"
+     }
+    },
+    "statuses": {
+     "L1": "separated",
+     "L2": "not_separated",
+     "L3": "separated"
+    }
+   },
+   "v3": {
+    "cond1_min_lt_dip1": true,
+    "corroboration": {
+     "C1_loopy": {
+      "c1": false,
+      "value_at_lstar": 0.0
+     },
+     "C2_eff_rank": {
+      "c2": true,
+      "endpoints": [
+       17.563979889515725,
+       13.199398101625583
+      ],
+      "value_at_lstar": 6.393994571310583
+     },
+     "C3_nll_holdout": {
+      "c3": false,
+      "endpoints": [
+       12.7622389793396,
+       2.7474536895751953
+      ],
+      "value_at_lstar": 9.74704615275065
+     }
+    },
+    "descriptive_max_u": {
+     "argmax_lam": 0.55,
+     "max_u_dip": 1.7080466888387433,
+     "note": "описательная величина (ревью O2: max_u — не детектор)"
+    },
+    "dip_1": -0.17381647046084395,
+    "fired": true,
+    "lam_star": 0.7,
+    "min_dip": -0.3052401224752934,
+    "rule": "cond1 = min_λ dip_seedavg < dip_seedavg(1.0); корроборация в λ*-клетке: C1 ∨ C2 ∨ C3; hinge-условие v2 убрано (O2-алгебра: hinge-отношение = |u−1|, эталонную подпись E-71 не ловило)"
+   }
+  },
+  "expectation_match": true,
+  "outcome": "V3_PATHOLOGY",
+  "prereg_expectation": "V3_PATHOLOGY",
+  "rule": "cond1 = min_λ dip_seedavg < dip_seedavg(1.0); корроборация в λ*-клетке: C1 ∨ C2 ∨ C3; hinge-условие v2 убрано (O2-алгебра: hinge-отношение = |u−1|, эталонную подпись E-71 не ловило)",
+  "v2_divergence_note": "вердикт v2 (V2_SOLITON_CANDIDATE) — артефакт v2-машины, не переписывается; причины смены: (a) знаковый V3-детектор (O2) срабатывает на тех же данных; (b) V2 при трёх локаторах — расхождение между локаторами (F1)"
+ }
+}

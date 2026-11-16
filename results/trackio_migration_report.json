@@ -3,51 +3,38 @@
  "tz_version": "v1.10",
  "rc": 0,
  "errors": [],
- "warnings": [
-  "HF merge: все run'ы уже в DB репо — строки не скопированы"
- ],
+ "warnings": [],
  "runs": [
   {
-   "name": "at8_1_v3",
-   "log": "logs/AT8/AT8_1_v3_run.log",
+   "name": "at8_1_v3_1",
+   "log": "logs/AT8/AT8_1_v3_1_run.log",
    "device": "CPU",
    "duration_s": null,
    "duration_marker_s": null,
-   "n_lines": 14,
+   "n_lines": 16,
    "empty_metrics": true,
    "run_failed": false,
    "n_metrics": 1
   },
   {
-   "name": "at8_2_recovery_r2_partial",
-   "log": "logs/AT8/AT8_2_run.log",
+   "name": "at2b_diag",
+   "log": "results/AT2b_diag/AT2b_diag_run.log",
    "device": "CPU",
    "duration_s": null,
    "duration_marker_s": null,
-   "n_lines": 1,
-   "empty_metrics": true,
-   "run_failed": false,
-   "n_metrics": 1
-  },
-  {
-   "name": "at8_2_v2",
-   "log": "logs/AT8/AT8_2_v2_run.log",
-   "device": "CPU",
-   "duration_s": null,
-   "duration_marker_s": null,
-   "n_lines": 10,
+   "n_lines": 34,
    "empty_metrics": true,
    "run_failed": false,
    "n_metrics": 1
   }
  ],
  "registry": {
-  "find_count": 148,
-  "registry_runs": 132,
-  "registry_uniq_log_files": 130,
+  "find_count": 150,
+  "registry_runs": 134,
+  "registry_uniq_log_files": 132,
   "md5_dupes": 5,
   "excluded": 13,
-  "sum_check": 148,
+  "sum_check": 150,
   "xet_logs": [
    "kaggle_kernel/kernel-exp17-2nd-canary/out/.hf_cache/xet/logs/xet_20260910T133653232+0000_7.log",
    "kaggle_kernel/kernel-exp19-tpu/.hf_cache/xet/logs/xet_20260910T041848936+0000_7.log"
@@ -89,6 +76,7 @@
   "logs/AT3_run.log": "fb40a9ad127f43778063405d5c5e65f9",
   "logs/AT8/AT8_1_run.log": "b46f0ff91028ceb96331827475d398f9",
   "logs/AT8/AT8_1_v2_run.log": "278048286538c8365693d08d2358e753",
+  "logs/AT8/AT8_1_v3_1_run.log": "8bd7b17fcdde93dff52f0118035561cc",
   "logs/AT8/AT8_1_v3_run.log": "e2a2ac4bc3eceb6fdfbd915e6376efb3",
   "logs/AT8/AT8_2_run.log": "51af815056d877923fdf61024404c98f",
   "logs/AT8/AT8_2_v2_run.log": "28b39c17338f221d7e1bb085b4e971c1",
@@ -200,8 +188,9 @@
   "logs/stage0.log": "5b861525c7927af049ff292bf858a82f",
   "logs/tail_round.log": "04bb79aa7ea88c58b2e7252cee655595",
   "results/AT2b/AT2b_run.log": "4f6754bd73deacf8cafa7773b8bec739",
+  "results/AT2b_diag/AT2b_diag_run.log": "7157ed9292c8fc4af96e9b6648176835",
   "results/AT2b_smoke/AT2b_smoke_run.log": "30508fd9952459b11d879bda11ffa4c5",
-  "results/AT3_run.log": "b94d5f7cb1f54d14d45bbe2dc0e6c602"
+  "results/AT3_run.log": "80e2eb54df538b685bf41b858cfa06ca"
  },
  "quiescence": {
   "writers": {},
@@ -330,6 +319,9 @@
   "at3_r1",
   "at3_r4",
   "at8_1_v2",
+  "at8_1_v3",
+  "at8_2_recovery_r2_partial",
+  "at8_2_v2",
   "at2b_smoke",
   "at2b",
   "chain_e45b",
@@ -340,9 +332,16 @@
  ],
  "hf_merge": {
   "hf_source_db": "/home/survivor/.cache/huggingface/trackio/prism.db",
-  "backup": "/tmp/recovered/hf_trackio_prism_backup_20261116_221409.db",
-  "runs_migrated": [],
-  "rows": {},
+  "backup": "/tmp/recovered/hf_trackio_prism_backup_20261116_231444.db",
+  "runs_migrated": [
+   "at3_margin_r5",
+   "at3_margin_r5"
+  ],
+  "rows": {
+   "configs": 2,
+   "metrics": 26,
+   "system_metrics": 112
+  },
   "skipped_existing": [
    "at05_selftest_tmp",
    "at0_9_t21_r1",
@@ -358,6 +357,6 @@
  },
  "md5_mismatch": [],
  "raw_hits": {},
- "n_runs": 3,
- "n_metrics_total": 3
+ "n_runs": 2,
+ "n_metrics_total": 2
 }

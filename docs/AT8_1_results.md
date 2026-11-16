@@ -127,6 +127,22 @@ nll_holdout и margin сходятся в λ_c ≈ 0.85 (интервал [0.75,
 декларирован).
 
 Артефакты: `results/AT8/AT8_1_THRESHOLD_v3.json` (claim, file sha `c4fcb1ef5ad0d22f`),
-`results/AT8/AT8_1_v3_manifest.json`, `results/AT8/AT8_1_v3_run.log` (маркер
-`AT8_1_R3_DONE verdict=V3_PATHOLOGY match=True`, wall 0.0 s, RUN_RC=0). Selfcheck:
-пересчёт dip/eff_rank/nll_holdout из store == артефакту (dev 0.0).
+`results/AT8/AT8_1_v3_manifest.json`, лог `logs/AT8/AT8_1_v3_run.log` (маркер
+`AT8_1_R3_DONE verdict=V3_PATHOLOGY match=True`, wall 0.0 s, RUN_RC=0; перенесён из
+results/ в logs/ по конвенции v2 — 5d6d0c3). Selfcheck: пересчёт dip/eff_rank/nll_holdout
+из store == артефакту (dev 0.0).
+
+**Внешнее ревью артефакта v3 (`docs/AT8_1_artifact_r3_review.md`, 16.11): PASS** (два
+прохода: REVISE[MAJOR провенанс] + PASS; MAJOR закрыт коммитом 7d26167 — исполнявшийся
+скрипт dirname×3 + артефакты + лог в git; 3 MINOR + 6 NIT — ответка
+`docs/AT8_1_artifact_r3_answer.md`). Суть MINOR-1: per-seed C1 не отчитан и note «per-seed
+loopy в store отсутствует» — **ложь** (store содержит `cells[s{sd}_lam{λ}].gen.loopy`).
+
+**v3.1 (исправленный перепуск, 16.11 19:39 UTC):** +per-seed C1 по TZ п.6 (s11/s12/s13:
+λ* = 0.70/0.70/0.65, loopy = 0/0/0 → C1 = FALSE×3 — совпадает с seed-avg C1=FALSE;
+вердикт не меняется: V3_PATHOLOGY, match=True) + фикс note + selfcheck
+(no_nan_nonfinite_count=0, per_seed_loopy_vs_claim_dev=0.0, v1/v2_intact=True).
+Артефакт: `results/AT8/AT8_1_THRESHOLD_v3.1.json` (sha `b10c0f5051dd734a`),
+`results/AT8/AT8_1_v3.1_manifest.json`, лог `logs/AT8/AT8_1_v3_1_run.log` (wall 0.2 s,
+RUN_RC=0). Дельта v3→v3.1 = только заявленные пункты; все остальные числа побитово = v3.
+Артефакт v3 остаётся артефактом прогона v3 (заморожен).

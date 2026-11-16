@@ -1,0 +1,9 @@
+{
+ "claim_file_sha256": "b10c0f5051dd734acf38fa897c7a9d1976d06b85351e78d73d0c6e21bcf8ccf2",
+ "date": "2026-11-16T19:39:10.896096+00:00",
+ "experiment": "AT8_1 T8.1 — машина v3.1 (T8.1-r3, per-seed C1 фикс)",
+ "hash_convention": "AT0_2b-v2 C7 (file sha256 фактических файлов)",
+ "note": "disk-only reanalysis из committed store (sha-верификация в claim.input); без RNG, без перепрогона.",
+ "script_sha256": "dba84ddacead12cb51cbd1991175bac78381593112ef063a41c1450b9ab68dc5",
+ "store_file_sha256": "28a0c28d94d982398492e19dbe733b984253173c49b0e55de3de1430a53e618d"
+}

@@ -1920,14 +1920,21 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
   все пункты верифицированы, Kaggle с правками не запускался, hinge(0.7) досчитан локально
   из store) и **`docs/AT8_1_review_r3_answer.md` (раунд 2: F1–F5 закрыты машиной v3;
   A1–A8 — point-by-point по AT8_2)**; TZ-ревью v3 `docs/dynamic/AT8_1_r3_TZ_review.md`
-  (PASS, 0 MAJOR, 5 MINOR + 6 NIT — применены до запуска). Коммиты: 3805b5d (v1) /
-  d83c46f (r2-exec) / 790a375 (TZ+код v3, фиксация до запуска). Артефакты: `results/AT8/AT8_1_THRESHOLD.json`
+  (PASS, 0 MAJOR, 5 MINOR + 6 NIT — применены до запуска); **внешнее ревью артефакта v3
+  `docs/AT8_1_artifact_r3_review.md` (PASS: P1–P6, dev=0.0; MAJOR провенанс — закрыт 7d26167,
+  3 MINOR — ответка `docs/AT8_1_artifact_r3_answer.md`) + дельта-ревью v3.1
+  `docs/AT8_1_artifact_v3_1_review.md`**. Коммиты: 3805b5d (v1) /
+  d83c46f (r2-exec) / 790a375 (TZ+код v3, фиксация до запуска) / 7d26167 (исполнявшийся
+  скрипт v3 + артефакты + лог — MAJOR провенанса). Артефакты: `results/AT8/AT8_1_THRESHOLD.json`
   (v1), `results/AT8/AT8_1_THRESHOLD_v2.json` (claim sha bb507dac…), **`results/AT8/AT8_1_THRESHOLD_v3.json`
-  (claim sha c4fcb1ef…, manifest `AT8_1_v3_manifest.json`, run.log `AT8_1_v3_run.log`,
-  маркер AT8_1_R3_DONE, wall 0.0 s)**, `results/AT8/AT8_1_v2_manifest.json`
+  (claim sha c4fcb1ef…, manifest `AT8_1_v3_manifest.json`, лог `logs/AT8/AT8_1_v3_run.log`,
+  маркер AT8_1_R3_DONE, wall 0.0 s — заморожен)**, **`results/AT8/AT8_1_THRESHOLD_v3.1.json`
+  (v3.1: пер-seed C1 по TZ п.6 + фикс ложного note; sha b10c0f50…, manifest
+  `AT8_1_v3.1_manifest.json`, лог `logs/AT8/AT8_1_v3_1_run.log`, wall 0.2 s; вердикт = v3:
+  V3_PATHOLOGY)**, `results/AT8/AT8_1_v2_manifest.json`
   (self-sha 548eec26…), store `results/AT8/store/018c3dac90eb1bba.json` (28a0c28d…, committed,
   не тронут); логи: `logs/AT8/AT8_1_run.log` (v1, Kaggle T4), `logs/AT8/AT8_1_v2_run.log` (v2, local,
-  wall 0.0s, маркер AT0_8_R2_DONE). Код v3: `experiments/at8/AT8_1_r3_reanalysis.py`.
+  wall 0.0s, маркер AT0_8_R2_DONE). Код v3/v3.1: `experiments/at8/AT8_1_r3_reanalysis.py`.
   Замечание: v2-скрипт `AT8_1_r2_reanalysis.py` после реорганизации в `experiments/at8/`
   содержит _ROOT-баг (dirname×2; валиден был для старого пути) — артефакты заморожены,
   перепуск не нужен (зафиксировано в r3-answer §5).

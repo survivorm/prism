@@ -1,6 +1,6 @@
 # ТЗ: миграция всех экспериментов prism в trackio
 
-**Статус:** v1.10 (аддендум 16.11: AT8_1 v3 + AT8_2-логи в реестр — §9.6) + v1.9 (аддендум 16.11: завершение миграции — §9) + v1.8 (patch по TZ-ревью round 4, docs/dynamic/trackio_migration_TZ_review_r4.md:
+**Статус:** v1.11 (аддендум 16.11: AT8_1 v3.1 в реестр — §9.7) + v1.10 (аддендум 16.11: AT8_1 v3 + AT8_2-логи в реестр — §9.6) + v1.9 (аддендум 16.11: завершение миграции — §9) + v1.8 (patch по TZ-ревью round 4, docs/dynamic/trackio_migration_TZ_review_r4.md:
 N16 at16 пер-файловая атрибуция (ceil 47 / ceil3 71 / ceil4 144), N17 §3.3 «1 md5-дубль»→2
 (3 T4 + 2 CPU/AT0 = 5 ✓), N18 §7.5 empty_metrics + e18_logit_kd_tpu (11 T4 + e27b_early = 12;
 step_idx — прогресс-маркер, не экспериментальная метрика). v1.7 — round 3:
@@ -518,4 +518,27 @@ live-trackio (как v2): запись в trackio — backfill из лога ч�
   (= 130 уник. регистровых + 5 дублей + 13 исключённых).
 - Прогон: `--append` (live-записи в DB сохраняются); ожидаемый итог: +3 миграционных run'а.
   Тест-прогон на копиях DB (TRACKIO_DIR/HF_DIR=/tmp/...): RC=0, 0 ошибок.
+
+### 9.7. Аддендум v1.11 (16.11): AT8_1 v3.1 + AT2b diag в реестр
+
+Исправленный перепуск машины v3 (`at8_1_r3_1`, 16.11 19:39 UTC, disk-only, wall 0.2s,
+V3_PATHOLOGY) — по внешнему ревью артефакта v3 (`docs/AT8_1_artifact_r3_review.md`, PASS:
+MINOR-1 «per-seed C1 не отчитан, note «per-seed loopy в store отсутствует» — ложь»). Скрипт
+без live-trackio (прецедент v2/v3) — запись через backfill из лога.
+
+- Лог: `logs/AT8/AT8_1_v3_1_run.log` (скрипт v3.1 пишет сразу в `logs/AT8/` — конвенция
+  закреплена в коде, отклонение MINOR-3 v3-ревью устранено).
+- Новые run'ы (2):
+  - `at8_1_v3_1` → `logs/AT8/AT8_1_v3_1_run.log` (CPU, disk-only, wall 0.2s,
+    16.11 19:39 UTC, V3_PATHOLOGY, match=True);
+  - `at2b_diag` → `results/AT2b_diag/AT2b_diag_run.log` (AT2b C2/C1-диагностика, ат2b-сессия,
+    16.11 22:54–23:00, wall 378.7s, DONE; live-trackio run'ы `at2b_diag_c2c1_r{1,2,3}` в DB —
+    не дублируются; лог-файл один, переписывается каждым прогоном — r1/r2-логи на диске
+    не выжили, паттерн at3_r4).
+- Счётчики: `TZ_EXPECTED_HITS`/`RUN_FAILED_EXPECTED`/`MD5_DUPES` — без изменений;
+  `EMPTY_METRICS_EXPECTED`: +2 = 105 имён.
+- Арифметика `check_registry`: find_count=150, sum_check=150, registry_runs=134
+  (= 132 уник. регистровых + 5 дублей + 13 исключённых).
+- Прогон: `--append`; ожидаемый итог: +2 миграционных run'а. Тест-прогон на копии DB:
+  RC=0, 0 ошибок.
 

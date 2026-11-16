@@ -982,8 +982,12 @@ nll/margin [0.85,1.00]) ⇒ расхождение между локаторам
 (не переписывается); v3-вердикт — вердикт исправленной по раунду-2 ревью машины. Причины смены:
 (a) знаковый V3-детектор (O2) срабатывает на тех же данных; (b) V2 при трёх локаторах not_resolved.
 Цена: disk-only, < 1 мин CPU (скрипт не пишет live-trackio, по прецеденту v2; run'ы в trackio —
-backfill из логов через trackio_migration v1.10: at8_1_v3 / at8_2_v2 / at8_2_recovery_r2_partial). Запись: results/AT8/AT8_1_THRESHOLD_v3.json + AT8_1_v3_manifest.json +
-AT8_1_v3_run.log (→ logs/AT8/). Store не трогается. Детерминизм: без RNG; sha входов в manifest.
+backfill из логов через trackio_migration: v1.10 — at8_1_v3 / at8_2_v2 / at8_2_recovery_r2_partial,
+v1.11 — at8_1_v3_1). Запись: results/AT8/AT8_1_THRESHOLD_v3.json + AT8_1_v3_manifest.json +
+AT8_1_v3_run.log (→ logs/AT8/); v3.1 (исправленный перепуск по внешнему ревью артефакта: per-seed
+C1 по TZ п.6, фикс ложного note) — results/AT8/AT8_1_THRESHOLD_v3.1.json + AT8_1_v3.1_manifest.json +
+logs/AT8/AT8_1_v3_1_run.log (вердикт не меняется: V3_PATHOLOGY). Store не трогается. Детерминизм:
+без RNG; sha входов в manifest.
 
 ### T8.2 — Оконное восстановление + доза (CPU)
 
