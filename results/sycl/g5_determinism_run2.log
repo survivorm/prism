@@ -1,0 +1,41 @@
+backend: sycl
+устройство: {'src_rev': 'v17-20261117-waitfix', 'name': 'Intel(R) Iris(R) Xe Graphics', 'backend': 'unavailable-in-this-sycl', 'driver': '1.17.39758', 'device_type': 'g', 'max_workgroup_size': 512, 'global_mem_bytes': 62592126976, 'local_mem_bytes': 65536, 'has_fp16': True, 'has_bf16': False, 'has_subgroups': False, 'sub_group_size': 0, 'barrier_form': 'memory_scope (D: group_barrier(g, memory_scope::work_group))'}
+[384x1024] vpath      maxdiff=8.935e-08 dropped=0
+    vpath V: nan=0 inf=0 из 392192 | finite[-0.152022, 0.156499] | первые: [-0.04292  0.00818  0.04461 -0.00159]
+    vpath keep: оставлено 383 из 383 (эталон оставил 383, отброшено 0)
+[384x1024] dcurve mean rel=7.305e-07
+    dcurve mean: nan=0 inf=0 из 96 | finite[-0.00363043, 0.00319253] | первые: [ 0.00162  0.00167 -0.00114 -0.00093]
+[384x1024] dcurve med  rel=4.161e-06
+    dcurve med: nan=0 inf=0 из 96 | finite[-0.00595202, 0.00625375] | первые: [0.00156 0.00321 0.0005  0.00044]
+[384x1024] acf c rel=4.864e-07 c0 rel=1.491e-08 r rel=5.487e-08 gram_resid Δ=7.984e-08
+[384x1024] G1(ref)=0.000e+00 G3(ref)=0.000e+00
+[384x1024] G1(устройство)=7.984e-08 G3(устройство)=5.123e-08 (допуск шума fp32 = 9.33e-06)
+[384x1024] ra closure Δ/scale=1.420e-16 cross=8.899e-16 (ref 3.979e-13/2.498e-16)
+[96x128] vpath      maxdiff=5.898e-08 dropped=0
+    vpath V: nan=0 inf=0 из 12160 | finite[-0.295371, 0.321677] | первые: [-0.04035  0.05009 -0.19141 -0.14777]
+    vpath keep: оставлено 95 из 95 (эталон оставил 95, отброшено 0)
+[96x128] dcurve mean rel=3.023e-07
+    dcurve mean: nan=0 inf=0 из 95 | finite[-0.0772387, 0.0955299] | первые: [ 0.00412 -0.00296  0.00364  0.00594]
+[96x128] dcurve med  rel=5.830e-07
+    dcurve med: nan=0 inf=0 из 95 | finite[-0.0834195, 0.087437] | первые: [ 0.0109  -0.00521 -0.00052  0.01865]
+[96x128] acf c rel=1.963e-07 c0 rel=2.445e-08 r rel=4.334e-08 gram_resid Δ=3.791e-08
+[96x128] G1(ref)=0.000e+00 G3(ref)=2.220e-16
+[96x128] G1(устройство)=5.100e-08 G3(устройство)=5.831e-08 (допуск шума fp32 = 4.65e-06)
+[96x128] ra closure Δ/scale=1.444e-16 cross=3.192e-16 (ref 1.705e-13/2.082e-16)
+[64x32] vpath      maxdiff=1.138e-07 dropped=0
+    vpath V: nan=0 inf=0 из 2016 | finite[-0.499605, 0.591797] | первые: [-0.15982  0.05295  0.12695 -0.05314]
+    vpath keep: оставлено 63 из 63 (эталон оставил 63, отброшено 0)
+[64x32] dcurve mean rel=2.008e-07
+    dcurve mean: nan=0 inf=0 из 63 | finite[-0.0966612, 0.10658] | первые: [-0.00247 -0.04129 -0.00737 -0.01849]
+[64x32] dcurve med  rel=2.887e-07
+    dcurve med: nan=0 inf=0 из 63 | finite[-0.0981254, 0.0892413] | первые: [-0.02947 -0.02453 -0.00464 -0.02276]
+[64x32] acf c rel=1.333e-07 c0 rel=1.830e-08 r rel=9.523e-08 gram_resid Δ=8.686e-08
+[64x32] G1(ref)=2.220e-16 G3(ref)=0.000e+00
+[64x32] G1(устройство)=8.826e-08 G3(устройство)=9.677e-08 (допуск шума fp32 = 3.78e-06)
+[64x32] ra closure Δ/scale=2.851e-16 cross=2.776e-16 (ref 8.527e-14/2.359e-16)
+[fp16] dcurve mean rel=3.080e-07
+[null] band  rel=5.273e-08 (band/e3/e4 ~ -2.371e-03)
+[null] e3    rel=2.206e-07 (band/e3/e4 ~ -6.851e-04)
+[null] e4    rel=2.571e-07 (band/e3/e4 ~ -1.225e-02)
+
+ИТОГ: ПАРИТЕТ OK

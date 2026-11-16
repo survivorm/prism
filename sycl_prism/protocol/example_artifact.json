@@ -1,0 +1,18 @@
+{
+  "_comment": "ЭТАЛОННЫЙ ШАБЛОН артефакта по протоколу v1.0 (prism-gpu-transfer). Копируйте поля в свой артефакт.",
+  "protocol_version": "1.0",
+  "backend": "torch_xpu",
+  "device": "Intel(R) Iris(R) Xe Graphics (Alder Lake-UP3 GT2)",
+  "gemm_dtype": "fp32",
+  "reduce_dtype": "fp64",
+  "control_passed": true,
+  "parity_max_abs": 3.1e-06,
+  "speedup_vs_cpu": 3.4,
+  "target_shape": {"N": 4096, "D": 1024, "V": 248320, "K": 128, "T": 384},
+  "systematic_note": "сводки по словарю — fp64 на CPU; GEMM — fp32 на iGPU (TF32 не используется)",
+  "per_doc_exceptions": ["own_w0", "own_w4"],
+  "stages": {
+    "base_pre": {"device": "gpu_ok", "controls": {"E45c_analytic": {"max_kl": 8.7e-07, "max_tv": 6.2e-07, "flip": 0}}},
+    "dense_metrics": {"device": "gpu_ok", "controls": {"E45c_analytic": {"max_kl": 1.1e-06, "max_tv": 9.4e-07, "flip": 0}}}
+  }
+}

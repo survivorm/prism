@@ -1,0 +1,8 @@
+# sycl_prism/.gitignore — артефакты сборки и окружения (см. TZ_sycl_workstate §3.6)
+build/
+.venv-xpu/
+__pycache__/
+*.pyc
+*.o
+CMakeFiles/
+*.so

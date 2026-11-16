@@ -1,0 +1,118 @@
+{
+  "artifact_kind": "bringup",
+  "tz": "docs/TZ_sycl_workstate.md",
+  "note": "bring-up, НЕ транспортный артефакт: protocol/check_artifact.py неприменим (нет speedup_vs_cpu/gemm_dtype/reduce_dtype); trackio-запись не создаётся (AGENTS.md: bring-up, не эксперимент)",
+  "date_utc": "2026-11-16T22:35:17+00:00",
+  "loadavg": {
+    "at_run": 6.48,
+    "at_probe": 6.34
+  },
+  "device": {
+    "src_rev": "v17-20261117-waitfix",
+    "name": "Intel(R) Iris(R) Xe Graphics",
+    "backend": "unavailable-in-this-sycl",
+    "driver": "1.17.39758",
+    "device_type": "g",
+    "max_workgroup_size": 512,
+    "global_mem_bytes": 62592126976,
+    "local_mem_bytes": 65536,
+    "has_fp16": true,
+    "has_bf16": false,
+    "has_subgroups": false,
+    "sub_group_size": 0,
+    "barrier_form": "memory_scope (D: group_barrier(g, memory_scope::work_group))"
+  },
+  "sycl_ls": [
+    "[level_zero:gpu][level_zero:0] Intel(R) oneAPI Unified Runtime over Level-Zero, Intel(R) Iris(R) Xe Graphics 12.3.0 [1.17.39758]",
+    "[opencl:gpu][opencl:0] Intel(R) OpenCL Graphics (integrated), Intel(R) Iris(R) Xe Graphics OpenCL 3.0 NEO  [26.35.39758]"
+  ],
+  "sycl_ls_file": "results/sycl/sycl_ls.txt",
+  "probe": {
+    "verdict": "DEVICE_OK",
+    "tiled_fp32_gflops": 58.8,
+    "loadavg_at_probe": 6.34
+  },
+  "parity": {
+    "forms": [
+      {
+        "vpath_maxdiff": 1.138e-07,
+        "vpath_dropped": 0,
+        "dcurve_mean_rel": 2.008e-07,
+        "dcurve_med_rel": 2.887e-07,
+        "acf_c_rel": 1.333e-07,
+        "acf_c0_rel": 1.83e-08,
+        "acf_r_rel": 9.523e-08,
+        "acf_gram_resid_delta": 8.686e-08,
+        "G1_ref": 2.22e-16,
+        "G3_ref": 0.0,
+        "G1_device": 8.826e-08,
+        "G3_device": 9.677e-08,
+        "ra_closure_rel": 2.851e-16,
+        "ra_cross": 2.776e-16,
+        "T": 64,
+        "D": 32
+      },
+      {
+        "vpath_maxdiff": 5.898e-08,
+        "vpath_dropped": 0,
+        "dcurve_mean_rel": 3.023e-07,
+        "dcurve_med_rel": 5.83e-07,
+        "acf_c_rel": 1.963e-07,
+        "acf_c0_rel": 2.445e-08,
+        "acf_r_rel": 4.334e-08,
+        "acf_gram_resid_delta": 3.791e-08,
+        "G1_ref": 0.0,
+        "G3_ref": 2.22e-16,
+        "G1_device": 5.1e-08,
+        "G3_device": 5.831e-08,
+        "ra_closure_rel": 1.444e-16,
+        "ra_cross": 3.192e-16,
+        "T": 96,
+        "D": 128
+      },
+      {
+        "vpath_maxdiff": 8.935e-08,
+        "vpath_dropped": 0,
+        "dcurve_mean_rel": 7.305e-07,
+        "dcurve_med_rel": 4.161e-06,
+        "acf_c_rel": 4.864e-07,
+        "acf_c0_rel": 1.491e-08,
+        "acf_r_rel": 5.487e-08,
+        "acf_gram_resid_delta": 7.984e-08,
+        "G1_ref": 0.0,
+        "G3_ref": 0.0,
+        "G1_device": 7.984e-08,
+        "G3_device": 5.123e-08,
+        "ra_closure_rel": 1.42e-16,
+        "ra_cross": 8.899e-16,
+        "T": 384,
+        "D": 1024
+      }
+    ],
+    "fp16": {
+      "dcurve_mean_rel": 3.08e-07
+    },
+    "null": {
+      "e4": 2.571e-07,
+      "band": 5.273e-08,
+      "e3": 2.206e-07
+    },
+    "total": "ПАРИТЕТ OK"
+  },
+  "steps_in_log": [
+    "0. ОКРУЖЕНИЕ",
+    "1. ТЕСТЫ (pytest)",
+    "1a. СИНТАКСИЧЕСКИЙ ГЕЙТ (шим SYCL API + сверка C ABI)",
+    "1b. МИНИМАЛЬНЫЙ SYCL-ЗОНД (решающий вопрос: видно ли карту моему коду?)",
+    "1c. ФОРМЫ БАРЬЕРА НА ЭТОМ КОМПИЛЯТОРЕ (какой sycl::group_barrier доступен)",
+    "1c-3. ПОИСК ЯДРА ПО ИМЕНИ (решает вопрос «No kernel named»)",
+    "1d. МИНИМАЛЬНЫЙ ВОСПРОИЗВОДИТЕЛЬ: локальная память и барьер (на УСТРОЙСТВЕ)",
+    "2. СБОРКА SYCL-БИБЛИОТЕКИ",
+    "2b. РЕВИЗИЯ СОБРАННОЙ БИБЛИОТЕКИ (защита от «собралась старая копия»)",
+    "3. ПАРИТЕТ ПРИБОРА (numpy-эталон ↔ SYCL)",
+    "4. БЕНЧМАРКИ ПРИБОРА (numpy-база) — ПО УМОЛЧАНИЮ ПРОПУЩЕНЫ",
+    "5. ЗОНД XPU (torch.xpu) — ПО УМОЛЧАНИЮ ПРОПУЩЕН"
+  ],
+  "log": "/tmp/sycl_all.log",
+  "probe_stdout": "results/sycl/probe_sycl_min_stdout.txt"
+}

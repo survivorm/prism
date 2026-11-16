@@ -1,0 +1,30 @@
+sycl_env.sh: PATH += /opt/intel/oneapi/2026.0/bin
+sycl_env.sh: LD_LIBRARY_PATH += /opt/intel/oneapi/umf/1.1/lib
+sycl_env.sh: LD_PRELOAD = /usr/lib/libstdc++.so.6
+sycl_env.sh: OK: GPU устройств видно: 2
+probe rev: v16-20261116-barrierprobe
+SYCL devices найдено: 2
+device 0: Intel(R) Iris(R) Xe Graphics | type=gpu | fp64=нет
+device 1: Intel(R) Iris(R) Xe Graphics | type=gpu | fp64=нет
+ВНИМАНИЕ: GPU перечислена 2 раз (вероятно, разные бэкенды для одной карты) — прибор берёт первую.
+   (контроль суммы fp32: 589.546852)
+fp32 GEMM (НАИВНОЕ): min 35.2 | медиана 37.2 | max 58.7 GFLOP/s   (разброс x1.7)
+   (контроль суммы fp32, тайлованное: 589.546852)
+fp32 GEMM (ТАЙЛОВАННОЕ 16x16): min 58.8 | медиана 61.5 | max 65.8 GFLOP/s   (разброс x1.1)
+fp64 на устройстве НЕ ПОДДЕРЖИВАЕТСЯ (aspect::fp64 = нет) — замер пропущен.
+  => Это не дефект: на Iris Xe fp64 отсутствует как аспект.
+  => Следствие для прибора: ВСЕ fp64-величины (closure G6, комбинация частичных lse) считаются НА ХОСТЕ в fp64; устройство работает в fp32.
+разрыв наивное/тайлованное: x1.7
+fp64-редукция пропущена (аспекта fp64 нет) — на хосте.
+
+--- РЕЗЮМЕ (сразу после измерений) ---
+CPU-база (dense_metrics, 1 поток): 28 GFLOP/s
+iGPU, тайлованное fp32:            58.8 GFLOP/s  (x2.1 к CPU)
+ВЕРДИКТ: DEVICE_OK — fp32-путь окупается (>=50 GFLOP/s).
+
+--- РЕШЕНИЕ ---
+загрузка машины (loadavg, 1 мин): 6.34  <-- ВЫСОКАЯ: замер идёт под нагрузкой, значение — НИЖНЯЯ ОЦЕНКА возможностей карты
+CPU-база (dense_metrics, 1 поток): 28 GFLOP/s
+iGPU, тайлованное fp32:            58.8 GFLOP/s  (x2.1 к CPU)
+ВЕРДИКТ: DEVICE_OK — fp32-путь окупается (>=50 GFLOP/s).
+Дальше: сборка прибора и паритет с numpy (run_local.sh, шаги 2-3).
