@@ -1,0 +1,15 @@
+AT3 (T3.1) start 2026-11-16T15:47:38.598521 py=3.12.9 smoke=False rev=r2
+trackio: run at3_margin_r2 init ok
+S1 sha-гейт: 8/8 OK (+ AT0_4_MIX.json — источник дегенеративного фильтра)
+load: E (248320, 1024), wn min -0.777, tf_ids lens [164, 256, 254, 205]...
+S2 tf L23 dip_V,med median-of-docs = -0.167138
+S2 gen L23 dip_V,med median-of-docs = -0.111091
+S2 anchor-гейт: OK (tf -0.16714±0.001, gen -0.1111±0.002)
+S3 TF-next-token-gate: OK (w: min 0.2771, max 0.5294)
+S4 alignment: OK (min 0.9587)
+S3b head-fidelity: OK (min 0.9895, mean 0.9957) — ТЗ «gate 1.000» на этом кэхе
+L23 gen: Δ -0.0399 CI [-0.06760937106456341, -0.015349141253656856] (T=0.0200) verdict=b_non_boundary/insufficient_power
+L23 tf : Δ -0.0031 CI [-0.03318640447784877, 0.01511448372314908] (T=0.0200) verdict=b_non_boundary/weak
+S5 bin-size: OK (gen [1337, 1337, 1337, 1337], tf [724, 724, 724, 724])
+F1 deg-filter: docs [0, 4] исключены из агрегатов; отброшено позиций (L23): gen 764, tf 290
+AT3 (T3.1) DONE wall=352.5s verdicts: tf=b_non_boundary/weak gen=b_non_boundary/insufficient_power

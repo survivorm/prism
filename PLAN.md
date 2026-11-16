@@ -1468,10 +1468,43 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
   - [x] S5: смоук 14.7 с ОК (2 дока, verdicts считаются) + полный прогон
     (setsid nohup 13:25, PID 3496320, /tmp/at3_full.out, RAM 27G).
   - [x] S6: отчёт docs/AT3_results.md + sha артефактов + trackio at3_margin_r1
-    (2 crash-записи + 1 ok). ИТОГ: TF = (b) weak (дип плоский, Δ +0.0085 CI
-    [−0.029,+0.031]), генерация = (b) insufficient_power (Δ −0.0409, CI целиком
-    < 0 но не ниже −0.02). L17-gen — монотонный ОБРАТНЫЙ тренд (описательно,
-    для отдельного пре-рега). Boundary-версия ТЗ не подтверждена.
+    (2 crash-записи + 1 ok). ИТОГ r1: TF = (b) weak, генерация = (b)
+    insufficient_power (Δ −0.0409). L17-gen — монотонный ОБРАТНЫЙ тренд (описательно).
+  - [ ] РЕВИЗИЯ r2 (ревью user в docs/AT3_review_r1.md, 16.11):
+    F1 ⚠: doc0/doc4 = период-1 лупы (AT0_4: max_share 0.9297/0.9401, min_period_90pct=1
+    — проверено в results/AT0/AT0_4_MIX.json token_provenance), dip +0.53/+0.60 сидят
+    в pooled/monotonic → фильтр DOCS_effective = 16\{0,4} для ВСЕХ агрегатов.
+    F2: хэд. ТЗ §3.4.7/§4.6/§4.7: точный хэд = rms(h)@Eᵀ БЕЗ norm.weight (1.000/0.971).
+    Пробы: TF-состояние предсказывает ids[j+1] (unbiased 0.003≈chance — мой S3-shift
+    ПРАВИЛЕН, ТЗ-индексация row_t→tok[t] = "ток, предсказанный из row_t"); «gate 1.000»
+    = self-consistency хэда (argmax z == свой токен), проверяется на gen через saved tok.
+    Ждём зонд: S4' (nw margin vs saved mg), fidelity w/nw vs tok, flip-rate.
+    → переключить margin на точный хэд (без w), TF-блок пересобрать, D1 закрыть
+    дизамбигуацией (fidelity vs accuracy — разные гейты).
+    F3: проза «слабее порога» — неверно: |Δ|=0.041 = 2.05×THRESH, CI шире порога.
+    СПОР: счёт 10/14 (у меня и в ревью) — в JSON 12/14 отрицательных → sign-test
+    two-sided p = 0.0129 (направление установлено по знаку).
+    F4: СПОР: таблица «TF L23» в ревью — pooled-колонка это L17_tf, mono-колонка L23_tf
+    (смешаны слои). Реальный spread L23 TF = 0.0009–0.0045; реальный spread L23 gen
+    = 0.0297 (Q2) > THRESH — принимает только gen-часть; политика THRESH_r3 = max(0.02, spread).
+    F5: per_doc_bin_n + min-n sensitivity {3,20,50} — принять.
+    F6: tf_p1 передать в side_block, dip по p1-квантилям на обеих сторонах — принять
+    (range-конфаунд L17: gen p1 0.996+ vs tf 0.09–0.33).
+    F7: ±1 margin-shift sensitivity — принять (дискриминатор механизма).
+    Мелкое: bin_boundary_frac из эмпирической ошибки margin; b_suffix_map — переименовать
+    (не утверждать суффикс-карту); sign-test в отчёт.
+    Порядок: зонд хэда (657 с: точный хэд = С w для pre-norm, nw хуже — S4 0.8974;
+    TF state[j] предсказывает ids[j+1] — мой S3-shift правилен) → правка AT3.py →
+    пре-рег r3 → перепуск → отчёт r2 + ответы (спор: F2-fix фальсифицирован
+    числами, F3 счёт 12/14 не 10/14 → p=0.0129, F4 таблица TF смешала слои) → коммит.
+    [x] РЕВИЗИЯ r2 ЗАКРЫТА: прогон 352.5 с (trackio at3_margin_r2: run-1 с багом
+    zip(dict,list) в spread — T=3.15, run-2 валидный), S6 recheck OK, 6 гейтов.
+    ИТОГ: TF = (b) weak (плоско), gen = (b) insufficient_power (Δ −0.0399 = 2×T,
+    CI [−0.0676,−0.0154] целиком < 0, sign 12/14 p=0.0129, spread 0.0085, min-n
+    робастен). F7: эффект на mg[j] (приход), не mg[j+1] (решение) — отражение у
+    границы не подтверждено. F6: range-конфаунд исключён (4 разные dip(p1)-кривые).
+    L17-gen: обратный тренд сохранился (Δ +0.0412, CI [+0.0355,+0.0717]).
+    D1 закрыт (gate 1.000 = self-consistency точного pre-norm хэда, 0.9958).
 - Общие модули (указание user 16.11): AT3.py — на prism/explog.py (ExpLog, drop-in
   для logline) и prism/nulls_and_stats.py (paired_bootstrap, spearman, permutation_test)
   — НЕ копировать логику в скрипт (рефакторинг 484943b).
