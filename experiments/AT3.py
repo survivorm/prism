@@ -167,7 +167,7 @@ def dip_positions(H):
     dip = np.full(T - 2, np.nan)
     m = ok[:-1] & ok[1:]
     dip[m] = cos1[m]
-    return dip, ok
+    return dip, ok, nv
 
 
 def dip_canon_doc(H):
@@ -192,41 +192,65 @@ def _deltas_from_bins(per_doc_bin, per_doc_n, min_n):
     return out
 
 
-def _p1_block(dips, p1s, docs):
-    """Dip по p1-квантилям (F6: p1 — единственная ограниченная сопоставимая ось)."""
+def _p1_block(dips, p1s, docs, noise=None):
+    """Dip по p1-квантилям (F6: p1 — единственная ограниченная сопоставимая ось;
+    r3/N2: Δ + paired CI + n + resolvability: δp1 = p1_med(1−p1_med)·δz,
+    ось неразрешима, если δp1 ≥ мин. ширина средних бинов)."""
     allp = np.concatenate([p1s[d][:dips[d].shape[0]][~np.isnan(dips[d])] for d in docs])
     qp = [float(np.quantile(allp, x)) for x in (0.25, 0.50, 0.75)]
-    per = {}
+    per, per_n = {}, {}
     for d in docs:
         dip = dips[d]
         p = p1s[d][:dip.shape[0]]
         v = ~np.isnan(dip)
         bb = _bin_of(p[v], qp)
-        per[d] = {}
+        per[d], per_n[d] = {}, {}
         for bi in range(4):
             sel = bb == bi
+            per_n[d][bi] = int(sel.sum())
             per[d][bi] = (float(np.median(dip[v][sel])) if sel.sum() >= 3 else None)
-    return {
+    deltas = [per[d][0] - per[d][3] for d in docs
+              if per[d][0] is not None and per[d][3] is not None
+              and per_n[d][0] >= 3 and per_n[d][3] >= 3]
+    out = {
         "quartiles": qp,
         "per_doc_median_docs": {
             bi: float(np.median([per[d][bi] for d in docs if per[d][bi] is not None]))
             for bi in range(4)},
+        "per_doc_n": {str(d): per_n[d] for d in docs},
+        "delta_per_doc": [float(x) for x in deltas],
+        "n_docs_delta": int(len(deltas)),
     }
+    if len(deltas) >= 4:
+        boot = paired_bootstrap(np.array(deltas, dtype=float), np.median, B=B_BOOT, seed=SEED)
+        out["delta_median_docs"] = float(np.median(deltas))
+        out["ci95"] = [float(boot["ci_low"]), float(boot["ci_high"])]
+    if noise is not None:
+        widths = [qp[1] - qp[0], qp[2] - qp[1]]
+        p1_med = float(np.median(allp))
+        dp1 = p1_med * (1.0 - p1_med) * noise
+        out["delta_p1"] = dp1
+        out["iqr"] = qp[2] - qp[0]
+        out["mid_bin_widths"] = widths
+        out["resolvable"] = bool(dp1 < min(widths))
+    return out
 
 
-def side_block(states, margins, p1s, layer_tag, window):
+def side_block(states, margins, p1s, layer_tag, window, local_margins=None, noise=None):
     """Блок стороны+слоя, агрегаты по DOCS_EFF (без вердикта; вердикт — в main
     с threshold_used = max(THRESH_BASE, разброс агрегаций) — F3/F4).
     margin[j] — margin токена, потребляемого переходом state[j]→state[j+1]
     (Vo[j] ↔ margin[j]; scope §2, ТЗ-несмещённое row_t→tok[t]).
     L17: те же margin (финальный readout — L23), другой слой dip; вердиктов нет.
-    """
+    r3: N1 (min-n с n_docs/docs), N2 (p1: Δ+CI+n+resolvability), N3
+    (local_margins — L17-local readout), N6 (ok-rate/‖Vo‖ по бинам)."""
     docs = DOCS_EFF
-    dips, margs = {}, {}
+    dips, margs, nvs = {}, {}, {}
     for d in docs:
-        dip, _ok = dip_positions(states[d])
+        dip, _ok, nv = dip_positions(states[d])
         dips[d] = dip
         margs[d] = margins[d][:dip.shape[0]]
+        nvs[d] = nv
     allm = np.concatenate([margs[d][~np.isnan(dips[d])] for d in docs])
     q = [float(np.quantile(allm, x)) for x in (0.25, 0.50, 0.75)]
     per_doc_bin, per_doc_n, sizes, bnd_num, n_valid = {}, {}, [0, 0, 0, 0], 0, 0
@@ -257,11 +281,20 @@ def side_block(states, margins, p1s, layer_tag, window):
             [dips[d][~np.isnan(dips[d])][_bin_of(margs[d][~np.isnan(dips[d])], q) == bi]
              for d in docs])
         pooled[bi] = float(np.median(vals))
-    # F5: min-n sensitivity
+    # F5: min-n sensitivity (r3/N1: с n_docs и списком доков)
     min_n_sens = {}
     for mn in (3, 20, 50):
-        dd = _deltas_from_bins(per_doc_bin, per_doc_n, mn)
-        min_n_sens[mn] = (float(np.median(dd)) if len(dd) >= 3 else None)
+        dd, ds = [], []
+        for d in per_doc_bin:
+            if (per_doc_n[d][0] >= mn and per_doc_n[d][3] >= mn
+                    and per_doc_bin[d][0] is not None and per_doc_bin[d][3] is not None):
+                dd.append(per_doc_bin[d][0] - per_doc_bin[d][3])
+                ds.append(d)
+        min_n_sens[mn] = {
+            "delta": (float(np.median(dd)) if len(dd) >= 3 else None),
+            "n_docs": int(len(dd)),
+            "docs": ds,
+        }
     # F7: ±1 margin-shift (dip[j] ↔ mg[j+1]: условие на решении в точке поворота)
     mshift = {d: margins[d][1:dips[d].shape[0] + 1] for d in docs}
     allms = np.concatenate([mshift[d][~np.isnan(dips[d])] for d in docs])
@@ -279,6 +312,56 @@ def side_block(states, margins, p1s, layer_tag, window):
     dshift = np.array(_deltas_from_bins(pbin_s, pn_s, 3), dtype=float)
     boot_s = (paired_bootstrap(dshift, np.median, B=B_BOOT, seed=SEED)
               if len(dshift) >= 4 else None)
+    # r3/N6: ok-pair-rate и ‖Vo‖-квантили по margin-бинам (канал селекции)
+    ok_pair_rate, nv_quantiles = {}, {}
+    for bi in range(4):
+        tot = sum(int((_bin_of(margs[d], q) == bi).sum()) for d in docs)
+        valid = sum(per_doc_n[d][bi] for d in docs)
+        nvb = []
+        for d in docs:
+            b = _bin_of(margs[d], q)
+            vv = (b == bi) & (~np.isnan(dips[d]))
+            idx = np.where(vv)[0]
+            if idx.size:
+                nvb.extend(nvs[d][idx].tolist())
+                nvb.extend(nvs[d][idx + 1].tolist())
+        ok_pair_rate[bi] = valid / max(1, tot)
+        nv_quantiles[bi] = ([float(np.quantile(nvb, x)) for x in (0.10, 0.50, 0.90)]
+                            if nvb else None)
+    # r3/N3: L17-local readout (отдельное условие: локальная уверенность, не политика)
+    local = None
+    if local_margins is not None:
+        lm = {d: local_margins[d][:dips[d].shape[0]] for d in docs}
+        allm2 = np.concatenate([lm[d][~np.isnan(dips[d])] for d in docs])
+        q2 = [float(np.quantile(allm2, x)) for x in (0.25, 0.50, 0.75)]
+        lbin, ln2 = {}, {}
+        for d in docs:
+            dip = dips[d]
+            v = ~np.isnan(dip)
+            b = _bin_of(lm[d][v], q2)
+            lbin[d], ln2[d] = {}, {}
+            for bi in range(4):
+                sel = b == bi
+                ln2[d][bi] = int(sel.sum())
+                lbin[d][bi] = (float(np.median(dip[v][sel])) if sel.sum() >= 3 else None)
+        dd2 = [lbin[d][0] - lbin[d][3] for d in docs
+               if lbin[d][0] is not None and lbin[d][3] is not None
+               and ln2[d][0] >= 3 and ln2[d][3] >= 3]
+        boot2 = (paired_bootstrap(np.array(dd2, dtype=float), np.median, B=B_BOOT, seed=SEED)
+                 if len(dd2) >= 4 else None)
+        corr_lf = [float(np.corrcoef(lm[d][~np.isnan(dips[d])],
+                                     margs[d][~np.isnan(dips[d])])[0, 1]) for d in docs]
+        local = {
+            "margin_quartiles": q2,
+            "per_doc_bin_median": {str(d): lbin[d] for d in docs},
+            "per_doc_bin_n": {str(d): ln2[d] for d in docs},
+            "delta_median_docs": (float(np.median(dd2)) if len(dd2) else None),
+            "ci95": ([float(boot2["ci_low"]), float(boot2["ci_high"])]
+                     if boot2 is not None else None),
+            "n_docs_delta": int(len(dd2)),
+            "corr_local_final": {"per_doc": {str(d): c for d, c in zip(docs, corr_lf)},
+                                 "median": float(np.median(corr_lf))},
+        }
     out = dict(
         layer=layer_tag,
         docs=docs,
@@ -296,6 +379,9 @@ def side_block(states, margins, p1s, layer_tag, window):
                                     if per_doc_bin[d][bi] is not None]))
                    for bi in range(4)],
         min_n_sensitivity={str(k): v for k, v in min_n_sens.items()},
+        ok_pair_rate={str(k): float(v) for k, v in ok_pair_rate.items()},
+        nv_quantiles={str(k): v for k, v in nv_quantiles.items()},
+        local_margin=local,
         shift_sensitivity={
             "margin_quartiles": qs,
             "delta_median_docs": (float(np.median(dshift)) if len(dshift) else None),
@@ -305,7 +391,7 @@ def side_block(states, margins, p1s, layer_tag, window):
         bin_boundary_frac=(bnd_num / max(1, sum(sizes))) if (layer_tag == "L23"
                                                               and window is not None)
         else None,
-        p1=_p1_block(dips, p1s, docs) if p1s is not None else None,
+        p1=_p1_block(dips, p1s, docs, noise=noise) if p1s is not None else None,
     )
     return out
 
@@ -398,14 +484,24 @@ def main():
     tstage(tr, time.time() - t0, "anchors")
     anchors = {}
     for side, st in (("tf", tf_states), ("gen", gen_states)):
-        vals = [dip_canon_doc(st[d])[0] for d in DOCS]
-        anchors[side] = float(np.median(vals))
-        logline(f"S2 {side} L23 dip_V,med median-of-docs = {anchors[side]:.6f}")
+        vals, drps = [], {}
+        for d in DOCS:
+            v, dr = dip_canon_doc(st[d])
+            vals.append(v)
+            drps[d] = dr
+        anchors[side] = {"median_of_docs": float(np.median(vals)),
+                         "per_doc_dropped": {str(d): drps[d] for d in DOCS},
+                         "max_dropped": int(max(drps.values()))}
+        logline(f"S2 {side} L23 dip_V,med median-of-docs = {anchors[side]['median_of_docs']:.6f}"
+                f" (dropped: max {anchors[side]['max_dropped']})")
+        if anchors[side]["max_dropped"] > 0:
+            logline(f"S2 WARNING {side}: dropped > 0 — якорь (vpath) и наука (dip_positions) "
+                    f"на разных наборах пар")
     if not SMOKE:
-        if not (-0.16714 - 0.001 <= anchors["tf"] <= -0.16714 + 0.001):
-            raise SystemExit(f"S2 FAIL: tf anchor {anchors['tf']} вне [-0.16814, -0.16614]")
-        if not (-0.1111 - 0.002 <= anchors["gen"] <= -0.1111 + 0.002):
-            raise SystemExit(f"S2 FAIL: gen anchor {anchors['gen']} вне [-0.1131, -0.1091]")
+        if not (-0.16714 - 0.001 <= anchors["tf"]["median_of_docs"] <= -0.16714 + 0.001):
+            raise SystemExit(f"S2 FAIL: tf anchor {anchors['tf']['median_of_docs']} вне [-0.16814, -0.16614]")
+        if not (-0.1111 - 0.002 <= anchors["gen"]["median_of_docs"] <= -0.1111 + 0.002):
+            raise SystemExit(f"S2 FAIL: gen anchor {anchors['gen']['median_of_docs']} вне [-0.1131, -0.1091]")
         gates["S2_anchors"] = True
         logline("S2 anchor-гейт: OK (tf -0.16714±0.001, gen -0.1111±0.002)")
 
@@ -464,18 +560,46 @@ def main():
         logline(f"S4 alignment: OK (min {min(s4.values()):.4f})")
         logline(f"S3b head-fidelity: OK (min {min(fid.values()):.4f}, "
                 f"mean {np.mean(list(fid.values())):.4f}) — ТЗ «gate 1.000» на этом кэхе")
-    # окна bin_boundary_frac (мелкое): gen — п95 остатка S4 (эмпирическая ошибка margin);
-    # tf — п95 |margin_w − margin_nw| (верхняя граница: конвенция + fp16-шум)
-    win_gen = float(np.quantile(np.concatenate(mg_diff), 0.95))
+    # окна bin_boundary_frac (р2) + r3/N5: имена по смыслу
+    win_gen = float(np.quantile(np.concatenate(mg_diff), 0.95))          # margin_noise_gen: p95|mgw − saved| (fp16-шум состояний)
     win_tf = float(np.quantile(
-        np.concatenate([np.abs(tf_mg[d] - tf_mg_nw[d]) for d in DOCS]), 0.95))
+        np.concatenate([np.abs(tf_mg[d] - tf_mg_nw[d]) for d in DOCS]), 0.95))  # convention_spread_tf: систематический разброс w vs w², НЕ шум
+    hnorm = {s: float(np.median([float(np.median(np.linalg.norm(st[d].astype(np.float64), axis=1)))
+                                 for d in DOCS]))
+             for s, st in (("gen", gen_states), ("tf", tf_states))}
+    margin_windows = {
+        "margin_noise_gen": win_gen,
+        "convention_spread_tf": win_tf,
+        "h_norm": hnorm,
+        "tf_noise_estimate": win_gen,
+        "caveat": ("TF не имеет saved mg (D3): tf_noise_estimate — перенос gen-оценки "
+                   "p95|mgw-saved|; ‖h‖ gen/tf ≈ 12 (сравнимы)")
+    }
     mgw_cat = np.concatenate(mgw_all)
     mgn_cat = np.concatenate(mgn_all)
+    # r3/N4: headroom гейтов (дискриминатор — S4; S3b — вспомогательный, 0.98)
+    gates_headroom = {
+        "S3b": {"threshold": 0.98,
+                "exact_min": float(min(fid.values())),
+                "no_w_min": float(min(fid_nw.values())),
+                "headroom_exact": float(min(fid.values()) - 0.98),
+                "headroom_no_w": float(min(fid_nw.values()) - 0.98)},
+        "S4": {"threshold": 0.95,
+               "exact_min": float(min(v for v in s4.values() if v is not None)),
+               "no_w_min": float(min(v for v in s4_nw.values() if v is not None)),
+               "headroom_exact": float(min(v for v in s4.values() if v is not None) - 0.95),
+               "headroom_no_w": float(min(v for v in s4_nw.values() if v is not None) - 0.95)},
+        "discriminator": ("S4 (разрыв exact−no_w ≈ 0.18 ≈ 22× разрыва S3b ≈ 0.021); S3b "
+                          "вспомогательный, порог 0.98; предложение «0.99» отклонено — "
+                          "exact min 0.9895 < 0.99 (провал на 0.0005)"),
+    }
 
     # --- L23: обе стороны -------------------------------------------------------------
     tstage(tr, time.time() - t0, "dip_l23")
-    gen_block = side_block(gen_states, gen_mg, gen_p1, "L23", window=win_gen)
-    tf_block = side_block(tf_states, tf_mg, tf_p1, "L23", window=win_tf)
+    gen_block = side_block(gen_states, gen_mg, gen_p1, "L23", window=win_gen,
+                           noise=win_gen)
+    tf_block = side_block(tf_states, tf_mg, tf_p1, "L23", window=win_tf,
+                          noise=margin_windows["tf_noise_estimate"])
     # F4: порог = max(базовый, разброс агрегаций) — до вердикта, из данных блока
     spread_g = max(abs(a - b) for a, b in zip(gen_block["pooled_median"].values(), gen_block["monotonic"]))
     spread_t = max(abs(a - b) for a, b in zip(tf_block["pooled_median"].values(), tf_block["monotonic"]))
@@ -510,15 +634,44 @@ def main():
         nd = 0
         for d in sorted(DEGENERATE_DOCS):
             if d in st:
-                dip, _ = dip_positions(st[d])
+                dip, _ok, _nv = dip_positions(st[d])
                 nd += int((~np.isnan(dip)).sum())
         n_dropped[side] = nd
     logline(f"F1 deg-filter: docs {sorted(DEGENERATE_DOCS)} исключены из агрегатов; "
             f"отброшено позиций (L23): gen {n_dropped['gen']}, tf {n_dropped['tf']}")
 
+    # --- r3/N7: corr(mg[j], mg[j+1]) (L23, обе стороны) ---------------------------------
+    def _mg_lag1_corr(st, mgs):
+        per = {}
+        for d in DOCS_EFF:
+            dip, _ok, _nv = dip_positions(st[d])
+            v = ~np.isnan(dip)
+            x = mgs[d][:dip.shape[0]][v]
+            y = mgs[d][1:dip.shape[0] + 1][v]
+            per[d] = float(np.corrcoef(x, y)[0, 1])
+        return {"per_doc": {str(d): c for d, c in per.items()},
+                "median": float(np.median(list(per.values())))}
+    lag1 = {"gen": _mg_lag1_corr(gen_states, gen_mg),
+            "tf": _mg_lag1_corr(tf_states, {d: tf_mg[d] for d in DOCS_EFF})}
+    logline(f"N7 corr(mg[j],mg[j+1]) L23: gen {lag1['gen']['median']:.4f}, "
+            f"tf {lag1['tf']['median']:.4f}")
+    gen_block["mg_lag1_corr"] = lag1["gen"]
+    tf_block["mg_lag1_corr"] = lag1["tf"]
+
     tstage(tr, time.time() - t0, "dip_l17")
-    gen_block17 = side_block(gen_states17, gen_mg, gen_p1, "L17", window=None)
-    tf_block17 = side_block(tf_states17, tf_mg, tf_p1, "L17", window=None)
+    # r3/N3: L17-local readout (h_L17/rms)·w·Eᵀ — локальная уверенность (один matmul/док)
+    l17_local_mg = {}
+    for d in DOCS:
+        z17 = logits_of(gen_states17[d], E, wn, use_w=True)
+        l17_local_mg[d] = top1_top2(z17)[0]
+    gen_block17 = side_block(gen_states17, gen_mg, gen_p1, "L17", window=None,
+                             local_margins=l17_local_mg, noise=win_gen)
+    tf_block17 = side_block(tf_states17, tf_mg, tf_p1, "L17", window=None,
+                            noise=margin_windows["tf_noise_estimate"])
+    lm = gen_block17["local_margin"]
+    if lm["delta_median_docs"] is not None:
+        logline(f"N3 L17-local: Δ {lm['delta_median_docs']:+.4f} "
+                f"CI {lm['ci95']} (corr local/final {lm['corr_local_final']['median']:.4f})")
 
     # --- F3: sign-test (gen L23) ----------------------------------------------------------
     tstage(tr, time.time() - t0, "sign_test")
@@ -556,7 +709,8 @@ def main():
             "margin_diff_w_saved_gen": {"median": float(np.median(np.concatenate(mg_diff))),
                                         "p95": win_gen},
         },
-        "boundary_window": {"gen": win_gen, "tf": win_tf},
+        "margin_windows": margin_windows,
+        "gates_headroom": gates_headroom,
         "L23_gen": gen_block,
         "L23_tf": tf_block,
         "L17_gen": gen_block17,

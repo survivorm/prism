@@ -116,3 +116,32 @@
 7. **окна bin_boundary_frac из данных (мелкое):** gen — p95|recomputed − saved|;
    tf — p95|margin_w − margin_nw|.
 8. **sign-test** (gen L23) в артефакте и отчёте.
+
+## 7. Правка r3-прогона (интерпретационное ревью, 16.11; ответы —
+   docs/AT3_review_answers_r1.md §6)
+
+Записано ДО перепуска r3 (disk-only; dip/бининг/вердикты не меняются, только
+поля артефакта + один новый matmul на док):
+
+1. **N1:** `min_n_sensitivity[mn] = {delta, n_docs, docs}`.
+2. **N2:** p1-блок → Δ + paired CI + n; δp1 = p1_med(1−p1_med)·noise (gen: noise =
+   p95|mgw − saved|; tf: перенос gen-оценки с оговоркой); флаг `resolvable`
+   (δp1 < мин. ширина средних бинов); неразрешимые оси — описательные.
+3. **N3:** L17-local readout `(h_L17/rms)·w·Eᵀ` → L17-маржа; dip L17-gen по
+   L17-марже (квартили + Δ + CI); corr(L17-local, final).
+4. **N4:** headroom гейтов S3b/S4 (exact vs no-w min, threshold) в артефакт;
+   **дискриминатор — S4** (разрыв 0.182), S3b — вспомогательный, порог 0.98
+   (предложение ревью «0.99» отклонено: exact min 0.9895 < 0.99).
+5. **N5:** `boundary_window` → `margin_windows`: `margin_noise_gen`,
+   `convention_spread_tf`, `h_norm` по сторонам, `tf_noise_estimate` (перенос
+   gen, оговорка).
+6. **N6:** ok-pair-rate и ‖Vo‖-квантили (p10/p50/p90) по margin-бинам.
+7. **N7:** corr(mg[j], mg[j+1]) per side (per-doc + медиана), L23.
+8. **N8:** dropped per doc в S2-якорях; hard-assert нет (якорь — канон vpath);
+   max dropped > 0 → warning.
+9. **Отчёт:** строка чтения F7-асимметрии — как результат, не sensitivity
+   («коррекция после неуверенного шага», T1-флэвор; корреляция + конфаунд
+   сложности контента).
+
+Не меняется: S1–S5, S3b=0.98, primary Δ (min-n=3), threshold_used = max(0.02,
+spread), DOCS_EFF, партиция (a)/(b)/(c).
