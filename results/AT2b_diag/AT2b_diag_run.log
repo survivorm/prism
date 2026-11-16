@@ -1,0 +1,34 @@
+[22:54:09] AT2b C2/C1 diagnostic start 2026-11-16T22:54:09.974755 py=3.12.9 torch=2.14.1+cu130
+[22:54:11] trackio: run at2b_diag_c2c1_r3 init ok
+[22:54:14] E loaded: (248320, 1024)
+[22:54:41] z_U128: (32, 128, 128) f32 (mean 7.2321, std 4.2123)
+[22:54:49] V1 S3: {'hi_mean': 0.3813777565956116, 'hi_top1': 0.49040353298187256, 'lo_mean': 0.01370263658463955, 'lo_top1': 0.01722440868616104} (ожид {'hi_mean': 0.381, 'hi_top1': 0.49, 'lo_mean': 0.014, 'lo_top1': 0.017}) -> OK
+[22:55:15] subspaces L6: eigh done
+[22:55:38] subspaces L12: eigh done
+[22:56:02] subspaces L18: eigh done
+[22:56:27] subspaces L22: eigh done
+[22:56:27] d_eff rematching: max/min = 2.13 > 1.2 -> r = 7
+[22:56:27] V4 r_final = 7 (ожид 7) -> OK
+[22:57:04] subspaces L6: bases+projections done
+[22:57:53] subspaces L12: bases+projections done
+[22:58:33] subspaces L18: bases+projections done
+[22:59:06] subspaces L22: bases+projections done
+[22:59:06] C1a Eckart-Young: min top/weak energy ratio = 3899.6361 over 16384 (l,d,t)
+[22:59:19] ridge L6 done (RAW+CD, all k)
+[22:59:28] ridge L12 done (RAW+CD, all k)
+[22:59:41] ridge L18 done (RAW+CD, all k)
+[22:59:55] ridge L22 done (RAW+CD, all k)
+[22:59:55] V2: сверка RAW с пер_pos_cos артефакта (860000)...
+[22:59:58] V2 RAW vs artifact: max|diff| = 0.000e+00, n>1e-6 = 0 -> OK
+[22:59:58] V3 RAW control CI vs artifact: {"6": 0.0, "12": 0.0, "18": 0.0, "22": 0.0} -> OK
+[22:59:58] control RAW ok=False CD ok=False
+[22:59:59] C1b L6: local per-(l,t) diff mean=-0.0147 frac(t top>weak)=0.49
+[23:00:00] C1b L12: local per-(l,t) diff mean=-0.0591 frac(t top>weak)=0.34
+[23:00:01] C1b L18: local per-(l,t) diff mean=+0.1498 frac(t top>weak)=0.80
+[23:00:02] C1b L22: local per-(l,t) diff mean=+0.2472 frac(t top>weak)=0.95
+[23:00:12] C1c L6: stationary top/weak med = +0.7082/+0.4001, CI diff = [0.27130855793557396, 0.31440423884281526]
+[23:00:16] C1c L12: stationary top/weak med = +0.7341/+0.5238, CI diff = [0.20970514751943972, 0.2651264985461837]
+[23:00:19] C1c L18: stationary top/weak med = +0.7855/+0.4436, CI diff = [0.3017648574350732, 0.3866173695844338]
+[23:00:28] C1c L22: stationary top/weak med = +0.8249/+0.5030, CI diff = [0.3398584447392122, 0.3841862938470581]
+[23:00:28] artifact written: /home/survivor/work/prism/results/AT2b_diag/AT2b_diag.json (16010 B)
+[23:00:28] DONE wall=378.7s control RAW ok=False CD ok=False

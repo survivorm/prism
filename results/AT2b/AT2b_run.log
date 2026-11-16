@@ -1,0 +1,25 @@
+[17:55:37] AT2b (T2.1b) start 2026-11-16T17:55:37.803037 py=3.12.9 torch=2.14.1+cu130 smoke=False
+[17:55:38] trackio: run at2b_t21b_r1 init ok
+[17:55:57] S1 sha-гейт: 7/7 OK
+[17:56:01] load L6: H (32, 128, 1024) JR (32, 128, 128, 1024)
+[17:56:04] load L12: H (32, 128, 1024) JR (32, 128, 128, 1024)
+[17:56:08] load L18: H (32, 128, 1024) JR (32, 128, 128, 1024)
+[17:56:11] load L22: H (32, 128, 1024) JR (32, 128, 128, 1024)
+[17:56:15] E loaded: (248320, 1024)
+[17:56:45] S2 z-маршрут: mean KL (2 дока) = 1.885e-08 all32 = 5.229e-09 OK
+[17:56:49] S3 ориентация (exploratory): hi 0.381/0.490 (ожид >0.1) lo 0.014/0.017 (ожид <0.05) OK
+[17:56:50] S4 lk4: total 90/4096 per-домен { wiki 8, math 41, code 36, chat 5 } OK
+[17:58:11] d_eff rematching: max/min = 2.13 > 1.2 -> r = 7
+[18:02:34] подпространства: r_final=7 (rematched=True); top/weak per (l,t), pca per (l,doc), true-Haar/uniform глобальные, +_dc варианты, ker-J выборка
+[18:02:38] S5 eig-закрытость: True
+[18:02:45] readout L6 done
+[18:02:51] readout L12 done
+[18:02:57] readout L18 done
+[18:03:02] readout L22 done
+[18:03:04] readout L23 done
+[18:03:05] S6 P-zero (веса): True
+[18:03:05] S6b R2-floor (TSS_c > 0, R2_c = 0): True
+[18:03:11] VERDICT: SUBSPACE_CONTROL_FAIL (k>=1 отчитаны, но не интерпретируются как ответ на T2)
+[18:03:11] VERDICT: SUBSPACE_CONTROL_FAIL (control_ok=False)
+[18:03:13] S7 exact-set: len(per_pos)=860000 S7_expected=860000 set-eq=True -> True
+[18:03:18] артефакт: /home/survivor/work/prism/results/AT2b/AT2b.json (38876 KB)
