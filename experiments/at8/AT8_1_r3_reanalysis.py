@@ -58,7 +58,7 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # репо (experiments/at8/…)
 
 def _load_p(name, rel):
     _sp = importlib.util.spec_from_file_location(name, os.path.join(_ROOT, "prism", rel))

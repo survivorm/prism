@@ -981,8 +981,9 @@ nll/margin [0.85,1.00]) ⇒ расхождение между локаторам
 **Расхождение с v2 зафиксировано:** вердикт v2 (V2_SOLITON_CANDIDATE) остаётся артефактом v2-машины
 (не переписывается); v3-вердикт — вердикт исправленной по раунду-2 ревью машины. Причины смены:
 (a) знаковый V3-детектор (O2) срабатывает на тех же данных; (b) V2 при трёх локаторах not_resolved.
-Цена: disk-only, < 1 мин CPU (reanalysis committed store — trackio не используется, по прецеденту v2). Запись: results/AT8/AT8_1_THRESHOLD_v3.json + AT8_1_v3_manifest.json +
-AT8_1_v3_run.log. Store не трогается. Детерминизм: без RNG; sha входов в manifest.
+Цена: disk-only, < 1 мин CPU (скрипт не пишет live-trackio, по прецеденту v2; run'ы в trackio —
+backfill из логов через trackio_migration v1.10: at8_1_v3 / at8_2_v2 / at8_2_recovery_r2_partial). Запись: results/AT8/AT8_1_THRESHOLD_v3.json + AT8_1_v3_manifest.json +
+AT8_1_v3_run.log (→ logs/AT8/). Store не трогается. Детерминизм: без RNG; sha входов в manifest.
 
 ### T8.2 — Оконное восстановление + доза (CPU)
 
