@@ -7,7 +7,7 @@
 - Ревью r1: `docs/AT3_review_r1.md` (SELF_REVIEW_FALLBACK; sha256 `659d68e982baaca57ea5edb6d0ee5bdbd47aaad630bf2a394b7a5158ed1e955c`)
 - Scope: `docs/dynamic/orch/AT3_scope.md` (SUPERVISOR_FALLBACK; sha256 `caac4d57b190694a04a71e6536eb637bd24305f06c94327022b417b4ee8cf342`)
 - Артефакт: `results/AT3/AT3.json` (gitignored; sha256 `3f090ff0744aaf1d378e9bddd9f639007a47c7b5f5e6c7df1a3ebad709180095`)
-- Лог: `results/AT3_run.log` (sha256 `f3959e5bd09f53711b26f2ffcde199ebc3d3d3b3d0e494ed81c835b63a65b646`)
+- Лог: `logs/AT3_run.log` (sha256 `f3959e5bd09f53711b26f2ffcde199ebc3d3d3b3d0e494ed81c835b63a65b646`)
 - Trackio: run `at3_margin_r1` (project prism, group AT3): 2 crash-записи (баги S4-unpack и
   zero-size dmin, оба пойманы до вердикта, fin-точки status=crash записаны) + 1 ok-run
   (старт/финиш + 8 stage-точек, status ok).

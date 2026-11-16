@@ -583,7 +583,7 @@ kaggle_kernel/);
   сверх DC+MA(1); у Δh/Δu — только анти-горб, плато ниже разрешения. §1.7: телескоп все
   (doc,L), field._selfcheck ok, рамка (med θ 55.2°, dip_V−dip_du +0.258); G0-a: L23
   meta-vs-recomputed max dev 2.08e-4 (own_w4)/5.5e-5 (P2) — совпало с независимым замером
-  ревьюера; env: python 3.13.14/numpy 2.5.2/4 тр.; run-лог results/AT0/AT0_1_run.log (tracked).
+  ревьюера; env: python 3.13.14/numpy 2.5.2/4 тр.; run-лог logs/AT0/AT0_1_run.log (tracked).
   Round-1 .gz/hash-реестр/осиротевшие блобы удалены (MAJOR-4; паралл. сессия тоже чистила).
   MAJOR-3 (git-пины): заблокирован командой юзера «не коммитить без команды» — числа AT0_1
   не цитируются до коммита (согласовано с ревьюером r2).
@@ -1050,7 +1050,7 @@ p_anti = (#{null ≤ obs}+1)/(B+1) descriptive; M3 — ratio CI только п�
 - NEXT: [ ] ревью-проход 2; [ ] коммит (явные пути: PLAN.md, experiments/at0/AT0_4_mix.py,
   experiments/AT0_4_rebuild_r4.py, docs/AT0_4_EXEC_REVIEW_r4_answers.md,
   docs/AT0_4_EXEC_REVIEW.md, results/AT0/AT0_4_MIX.json, results/AT0/AT0_4_manifest.json,
-  results/AT0/AT0_4_rebuild_r4.log, results/AT0/store/e852a4bd88c92649.json +
+  logs/AT0/AT0_4_rebuild_r4.log, results/AT0/store/e852a4bd88c92649.json +
   УДАЛИТЬ results/AT0/store/4c0a1db2e7984621.json после коммита) — по команде юзера.
   В ПАУЗЕ: AT0_2b r1-фиксы (C1–C7, M1–M3, пререг v2, полный прогон) — после AT0_4 r4.
 - Границы: не менять field.py (пин), данные (read-only), AT0_1/AT0_2/AT0_3/AT0_5; CPU ≤4;
@@ -1125,8 +1125,8 @@ meta.aggregation_script_sha256; (7) M6: decode_backend/бит-идентично
 - DOING: [ ] коммит — ПО КОМАНДЕ (мастер-список, явные пути: PLAN.md, experiments/at0/AT0_4_mix.py,
   experiments/at0/AT0_4_rebuild_r5.py, experiments/AT0_4_rebuild_r6.py, experiments/trackio_migration.py,
   docs/AT0_4_EXEC_REVIEW.md, docs/AT0_4_EXEC_REVIEW_r5_answers.md, docs/AT0_4_EXEC_REVIEW_r6_answers.md,
-  results/AT0/AT0_4_MIX.json, results/AT0/AT0_4_manifest.json, results/AT0/AT0_4_rebuild_r5.log,
-  results/AT0/AT0_4_rebuild_r6.log, results/AT0/store/205a5965cf963eff.json;
+  results/AT0/AT0_4_MIX.json, results/AT0/AT0_4_manifest.json, logs/AT0/AT0_4_rebuild_r5.log,
+  logs/AT0/AT0_4_rebuild_r6.log, results/AT0/store/205a5965cf963eff.json;
   УДАЛИТЬ: results/AT0/store/{4c0a1db2e7984621,e852a4bd88c92649,ab8ec0ed2df2f8c7}.json — retired)
   [ ] trackio_migration --fresh — ПОСЛЕ quiescence параллельной сессии (она пишет в ту же БД)
 - Границы (не менять): pretest_results (ни один вердикт); per_doc/gates/profiles/
@@ -1369,7 +1369,7 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
   [x] docs/AT0_8_results.md (прогон, вердикт, таблица вторичных, сравнение со смоком).
   [ ] NEXT: trackio-backfill (AGENTS: Kaggle-прогоны — бэкилл migration-скриптом после pull)
     — ОТЛОЖЕНО: параллельная сессия активна (общая .trackio БД, quiescence ТЗ §5.1, урок
-    trackio из AT0_4-блока). Реестр: +at0_8 (results/AT0_8_run.log, «[OK] AT0_8_threshold 841s»)
+    trackio из AT0_4-блока). Реестр: +at0_8 (logs/AT0_8_run.log, «[OK] AT0_8_threshold 841s»)
     + строка at0_4_rebuild_r6 параллельной сессии — перепуск с обновлённой арифметикой
     (115/130 → 117/132) после quiescence.
 - Границы: не менять e64_gpu.py/field.py/AT0_1..AT0_6; данные read-only (пины, /data);
@@ -1389,7 +1389,7 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
   weak-J выигрывает на k≥2 сверх PCA/Haar при matched d_eff и над lk4; иначе (b)/(c),
   T2 понижается.
 - Нумерация: AT2 (правило user 16.11: блок T{N} → AT{N}; прежнее AT0_9 переименовано
-  16.11, git mv + refs, артефакт results/AT2/AT2.json, лог results/AT2_run.log,
+  16.11, git mv + refs, артефакт results/AT2/AT2.json, лог logs/AT2_run.log,
   trackio legacy at0_9_t21_r1).
 - Петля (1 воркер = 1 шаг, :low thinking, доказательство = маркер + файл на диске):
   [x] S0: смоук headless-пайплайна (jobs smoke-070937: T21_SMOKE_DONE + файл + RC=0,
@@ -1428,7 +1428,7 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
   ≤0.2 % floor). T2-гипотеза scratchpad НЕ подтверждена disk-only readout'ом; T2 понижён
   (пре-рег «иначе (b)/(c)»). Следующий шаг: T2.1b — центрированная метрика (отдельный пре-рег,
   ~5 мин disk-only), НЕ перепуск. Артефакт: results/AT0/AT0_9_T2_1.json (11.8 MB, gitignored
-  results/*.json — sha в отчёте), trackio at0_9_t21_r1 (legacy), лог results/AT2_run.log.
+  results/*.json — sha в отчёте), trackio at0_9_t21_r1 (legacy), лог logs/AT2_run.log.
 - Границы: PLAN.md — только дописывать блок; файлы параллельной сессии (AGENTS.md,
   AT0_2b*, docs/dynamic/0_E94*, 0_УТРО*) не трогать; кэш/пины /data — read-only;
   venv не чинить; коммит — только по команде, явные пути; файлы воркеров — через

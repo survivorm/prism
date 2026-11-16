@@ -60,8 +60,8 @@ G. **Замкнутость.** Вердикты (a)/(b)/(c) покрывают �
    (например, Δ = −0.05, CI [−0.07, −0.01] — целиком НЕ ниже −0.02, верх
    −0.01 < 0: какой вердикт)?
 H. **Формат.** Trackio-имя at3_margin_r1, артефакт results/AT3/AT3.json,
-   лог results/AT3_run.log — согласовано с серией (AT2: results/AT2/AT2.json,
-   results/AT2_run.log)? prism/explog.py + prism/nulls_and_stats.py — указаны?
+   лог logs/AT3_run.log — согласовано с серией (AT2: results/AT2/AT2.json,
+   logs/AT2_run.log)? prism/explog.py + prism/nulls_and_stats.py — указаны?
 
 ## Формат вывода
 По пунктам A–H: ОК / ПРОБЛЕМА (факт + строка файла) + рекомендация (конкретная

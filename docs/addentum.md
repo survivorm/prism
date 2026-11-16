@@ -1162,16 +1162,16 @@ Y=f(X_{\text{visible}},Z_{\text{invisible}}).
 | Факт | Артефакт | Статус |
 |---|---|---|
 | E-45f (правки вдоль невидимого) | results/exp45f_gauge_decomp.json | артефакт; невидимость — **текущему токену на L23**, о будущем не свидетельствует |
-| E-46 (leaf ≠ carrier) | results/exp46_verdicts.log, exp46_frame_as_memory.log | артефакт (log) |
+| E-46 (leaf ≠ carrier) | logs/exp46_verdicts.log, exp46_frame_as_memory.log | артефакт (log) |
 | E-65b (схема важнее нормы) | Kaggle (r52d_*), не в репозитории | проза + внешний артефакт |
 | E-69c (ритм восстановлен) | results/e69c/lora_r16.pt (только веса) | проза (вердикт) |
 | E-68 (CoT/harness Goodhart) | нет в репозитории | проза |
 | P1 (own −0.111) | results/e64/tpu/P1_own.npz + meta | артефакт |
 | P2 (corpus −0.167) | results/e64/tpu/P2_corpus.npz + meta | артефакт |
-| P4 / D-1 (cross-layer профиль) | results/e64/tpu_v8/prism-e64-gpu.log (Kaggle-TPU) | внешний артефакт |
+| P4 / D-1 (cross-layer профиль) | logs/e64/tpu_v8/prism-e64-gpu.log (Kaggle-TPU) | внешний артефакт |
 | A5 (smooth × resid cross-term) | нет в репозитории | проза |
 | R-null (dip random 4e-6) | e64-gpu (Kaggle TPU) | внешний артефакт |
-| T-инвариантность (e64-gpu) | results/e64/tpu_v8/prism-e64-gpu.log | артефакт |
+| T-инвариантность (e64-gpu) | logs/e64/tpu_v8/prism-e64-gpu.log | артефакт |
 | Лестница v2b | results/e90/LADDER_V2.json | артефакт |
 | REPLAY 16/16 (детерминизм) | results/e81/REPLAY.json | артефакт |
 | e83 K(1)=0.958 | results/e83/KERNEL_BASELINE.json | артефакт |

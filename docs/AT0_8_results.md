@@ -13,7 +13,7 @@
 - Артефакты: `results/AT0_8_THRESHOLD.json` (claim, file sha
   `b2923d74324e9180`), `results/AT0_8_manifest.json` (self-sha
   `74571c823aa5aa8b`), `results/store/018c3dac90eb1bba.json`
-  (canonical sha `018c3dac90eb1bba`), `results/AT0_8_run.log` (tracked).
+  (canonical sha `018c3dac90eb1bba`), `logs/AT0_8_run.log` (tracked).
   Все sha перепроверены локально по конвенции AT0_2b-v2 C7 (canonical
   = json.dumps sort_keys, self-поле = None).
 
@@ -74,5 +74,5 @@ nll_holdout и margin сходятся в λ_c ≈ 0.85 (интервал [0.75,
 λ ≈ 0.60–0.65; компетентность растёт к λ = 0.85; mode (loopy) включается на 0.85–1.0.
 
 Артефакты (gitignored `results/*.json`, на диске): `results/AT0_8_THRESHOLD_v2.json`
-(claim, file sha `bb507dac4d696981`), `results/AT0_8_v2_manifest.json` (self-sha `548eec26f37a5d19`), `results/AT0_8_v2_run.log` (tracked; маркер
+(claim, file sha `bb507dac4d696981`), `results/AT0_8_v2_manifest.json` (self-sha `548eec26f37a5d19`), `logs/AT0_8_v2_run.log` (tracked; маркер
 `AT0_8_R2_DONE verdict=V2_SOLITON_CANDIDATE match=True`).

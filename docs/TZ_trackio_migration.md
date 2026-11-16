@@ -50,41 +50,41 @@ AGENTS): если инвентарь изменился (новые .log) — п
 | 1 | e17_lora_distill | prism-exp17-lora-distill.log | макс `time` JSON |
 | 2 | e16_4_3_v23_fd_check | prism-exp16-4-3-v23-single-pair-fd-check.log | макс `time` |
 | 3 | e32r3_layer_profile | prism-exp32r3-layer-profile.log | макс `time` |
-| 4 | e50v3_loop_curvature | results/e50v3_out/prism-exp50v3-loop-curvature-qwen.log | макс `time` (12210.66; маркер `DONE 12192.1s` → duration_marker_s) |
+| 4 | e50v3_loop_curvature | logs/e50v3_out/prism-exp50v3-loop-curvature-qwen.log | макс `time` (12210.66; маркер `DONE 12192.1s` → duration_marker_s) |
 | 5 | e52k_scale_curve_ptq | logs/e52k_v7/prism-exp52k-scale-curve-real-ptq.log | макс `time` (голова лога обрезана Kaggle — пометить) |
 | 6 | e27_noise_floor | kaggle_kernel/kernel-exp27/out/prism-exp27-noise-floor.log | макс `time` |
 | 7 | e27_noise_floor_v9 | _auto_chain/exp27_v9/prism-exp27-noise-floor.log | макс `time` |
 | 8 | e27b_dense_profile | kaggle_kernel/prism-exp27b-dense-profile.log | макс `time` |
-| 9 | e39m_flat_ptq | results/exp39m/run.log | макс `time` |
+| 9 | e39m_flat_ptq | logs/exp39m/run.log | макс `time` |
 | 10 | e16_readout_pull | prism-readout-pull.log | макс `time` (4600.17; маркер `[OK] … 4360s` → duration_marker_s) |
 | 11 | e16_stage0_targets | prism-exp16-stage0-targets.log | макс `time` (3535.15; маркер `Total time: 3318s` → duration_marker_s; канон дублей §3.5) |
 | 12 | e4_k_sensitivity | prism-exp4-k-sensitivity.log | макс `time` |
 | 13 | e19_destruction_tpu | kaggle_kernel/kernel-exp19-tpu/prism-exp19-destruction-tpu.log | макс `time` |
 | 14 | e18_logit_kd | prism-exp18-logit-kd.log | макс `time` |
 | 15 | e11c_defrag_bridge | prism-exp11c-defrag-bridge.log | макс `time` (1760.14; маркер `[OK] … 1545s` → duration_marker_s) |
-| 16 | e64_tpu_v8 | results/e64/tpu_v8/prism-e64-gpu.log | макс `time` |
+| 16 | e64_tpu_v8 | logs/e64/tpu_v8/prism-e64-gpu.log | макс `time` |
 | 17 | e19_destruction_early | prism-exp19-destruction-tpu.log | макс `time` |
-| 18 | e16_stage0_targets_short | results/prism-exp16-stage0-targets.log | макс `time` |
+| 18 | e16_stage0_targets_short | logs/prism-exp16-stage0-targets_short.log | макс `time` |
 | 19 | e10b_gauge_bridge | prism-exp10b-gauge-bridge.log | макс `time` |
 | 20 | e01_coherence | prism-exp01-coherence.log | макс `time` (канон дублей §3.5) |
 | 21 | e18_logit_kd_tpu | kaggle_kernel/prism-exp18-logit-kd-tpu.log | макс `time` |
-| 22 | at16_ceiling_ceil4 | results/ceil4_out/prism-at16-ceiling.log | макс `time` |
-| 23 | at16_ceiling | results/ceil_out/prism-at16-ceiling.log | макс `time` |
-| 24 | e16_greedy_proto | results/proto_out/prism-greedy-proto.log | макс `time` |
-| 25 | rleaf_random | results/rleaf_out/prism-r-leaf-random.log | макс `time` |
-| 26 | at16_ceiling_ceil3 | results/ceil3_out/prism-at16-ceiling.log | макс `time` |
+| 22 | at16_ceiling_ceil4 | logs/ceil4_out/prism-at16-ceiling.log | макс `time` |
+| 23 | at16_ceiling | logs/ceil_out/prism-at16-ceiling.log | макс `time` |
+| 24 | e16_greedy_proto | logs/proto_out/prism-greedy-proto.log | макс `time` |
+| 25 | rleaf_random | logs/rleaf_out/prism-r-leaf-random.log | макс `time` |
+| 26 | at16_ceiling_ceil3 | logs/ceil3_out/prism-at16-ceiling.log | макс `time` |
 | 27 | e32r3_1_tail_recompute | kaggle_kernel/kernel-exp32r3/output_v7/prism-exp32r31-tail-recompute.log | макс `time` |
-| 28 | e64_b4_temperature_pool | results/e64/kag_out/prism-b4-temperature-pool.log | макс `time` |
+| 28 | e64_b4_temperature_pool | logs/e64/kag_out/prism-b4-temperature-pool.log | макс `time` |
 | 29 | e2_heatmap | prism-exp2-heatmap.log | макс `time` |
 | 30 | e6_l18_snr | prism-exp6-l18-snr.log | макс `time` |
 | 31 | e19_destruction_short | prism-exp19-destruction.log | макс `time` |
 | 32 | e38d_holonomy | prism-exp38d-holonomy-spectrum.log | макс `time` |
 | 33 | e16_readout_pull_tpu | prism-exp16-readout-pull-tpu.log | макс `time` |
-| 34 | e64_gpu_old | results/e64gpu_out_old/prism-e64-gpu.log | макс `time` |
+| 34 | e64_gpu_old | logs/e64gpu_out_old/prism-e64-gpu.log | макс `time` |
 | 35 | e16_readout_pull_tpu2 | prism-readout-pull-tpu.log | макс `time` |
 | 36 | e17_2nd_canary_tpu | kaggle_kernel/kernel-exp17-2nd-canary/out/prism-exp17-2nd-order-canary-tpu.log | макс `time` |
-| 37 | lfm3_textgen | results/lfm3gen_out/prism-lfm3-textgen.log | макс `time` |
-| 38 | probe_input | results/probe_out/prism-probe-input.log | макс `time` |
+| 37 | lfm3_textgen | logs/lfm3gen_out/prism-lfm3-textgen.log | макс `time` |
+| 38 | probe_input | logs/probe_out/prism-probe-input.log | макс `time` |
 
 **Правило duration для T4:** `duration_s` = МАКС поля `time` по всему JSON-логу (единый смысл:
 всё время kernel'а включая NbConvert-экспорт). Явные маркеры (`[OK] ... Ns`, `Total time: Ns`,
@@ -105,82 +105,82 @@ marker vs max_time: dev > 30s = warning в отчёте (систематиче�
 
 | # | name | log | duration_s (источник) |
 |---|------|-----|-----|
-| 40 | e45_damage_vs_structure | results/exp45_damage_vs_structure.log | null в своём логе; **нижняя граница 15505s** из queue_round.log (23:00:41→03:19:06) — в config `duration_lb_s` |
-| 41 | e45b_leaf_table | results/exp45b_leaf_table.log | 6079 (queue: 04:18:49→06:00:08) |
-| 42 | e45c_gauge_null | results/exp45c_gauge_null.log | 3583 (queue: 03:19:06→04:18:49) |
-| 43 | e46_frame_as_memory | results/exp46_frame_as_memory.log | 8 (queue: 06:00:09→06:00:17) |
-| 44 | e45c_rerun | results/exp45c_gauge_null.log | 1203 (лог: `wall 1203.0 с`; tail_round 05:15:41→05:35:58=1217s); **второй run на том же файле**: файл содержит ТОЛЬКО вывод rerun (первый прогон из queue перезаписан) — в config |
+| 40 | e45_damage_vs_structure | logs/exp45_damage_vs_structure.log | null в своём логе; **нижняя граница 15505s** из queue_round.log (23:00:41→03:19:06) — в config `duration_lb_s` |
+| 41 | e45b_leaf_table | logs/exp45b_leaf_table.log | 6079 (queue: 04:18:49→06:00:08) |
+| 42 | e45c_gauge_null | logs/exp45c_gauge_null.log | 3583 (queue: 03:19:06→04:18:49) |
+| 43 | e46_frame_as_memory | logs/exp46_frame_as_memory.log | 8 (queue: 06:00:09→06:00:17) |
+| 44 | e45c_rerun | logs/exp45c_gauge_null.log | 1203 (лог: `wall 1203.0 с`; tail_round 05:15:41→05:35:58=1217s); **второй run на том же файле**: файл содержит ТОЛЬКО вывод rerun (первый прогон из queue перезаписан) — в config |
 
-| 45 | e45_seednull | results/exp45_seednull.log | 255 (queue: 06:00:18→06:04:33) |
-| 46 | e45_verdicts | results/exp45_verdicts.log | null |
-| 47 | e45_gap_scan | results/exp45_gap_scan.log | 1007.9 (`wall 1007.9 с`) |
-| 48 | e45_kappa_seed_null | results/exp45_kappa_seed_null.log | null |
-| 49 | e45b_analysis | results/exp45b_analysis.log | null |
-| 50 | e45f_gauge_decomp | results/exp45f_gauge_decomp.log | 2373 (`wall 2373 с`) |
-| 51 | e45g_cut_stability | results/exp45g_cut_stability.log | 779 (`wall 779 с`) |
-| 52 | e46_verdicts | results/exp46_verdicts.log | null |
-| 53 | e47c_p2_loop_prediction | results/exp47c_p2_loop_prediction.log | null |
-| 54 | e7_cka_baseline | results/exp7_cka_baseline_n1024.log | 26620 (`[OK] … 26620s`) |
-| 55 | e_r11_basis_tie | results/exp_r11_basis_tie.log | null |
-| 56 | e32r2_hessian | results/exp32r2_hessian.log | 6142 (`total 6142s`) |
-| 57 | e32r2_smoke | results/exp32r2_smoke.log | 170 (`total 170s`) |
+| 45 | e45_seednull | logs/exp45_seednull.log | 255 (queue: 06:00:18→06:04:33) |
+| 46 | e45_verdicts | logs/exp45_verdicts.log | null |
+| 47 | e45_gap_scan | logs/exp45_gap_scan.log | 1007.9 (`wall 1007.9 с`) |
+| 48 | e45_kappa_seed_null | logs/exp45_kappa_seed_null.log | null |
+| 49 | e45b_analysis | logs/exp45b_analysis.log | null |
+| 50 | e45f_gauge_decomp | logs/exp45f_gauge_decomp.log | 2373 (`wall 2373 с`) |
+| 51 | e45g_cut_stability | logs/exp45g_cut_stability.log | 779 (`wall 779 с`) |
+| 52 | e46_verdicts | logs/exp46_verdicts.log | null |
+| 53 | e47c_p2_loop_prediction | logs/exp47c_p2_loop_prediction.log | null |
+| 54 | e7_cka_baseline | logs/exp7_cka_baseline_n1024.log | 26620 (`[OK] … 26620s`) |
+| 55 | e_r11_basis_tie | logs/exp_r11_basis_tie.log | null |
+| 56 | e32r2_hessian | logs/exp32r2_hessian.log | 6142 (`total 6142s`) |
+| 57 | e32r2_smoke | logs/exp32r2_smoke.log | 170 (`total 170s`) |
 | 58 | e32r3_1 | logs/exp32r3_1.log | null |
 | 59 | e32tail_pilot | logs_e32tail_pilot.log | null (Triton→CPU fallback) |
-| 60 | e35_preflight | results/exp35_preflight.log | null |
-| 61 | e37_run | results/exp37_run.log | null |
-| 62 | e37_run2 | results/exp37_run2.log | null |
-| 63 | e37_run3 | results/exp37_run3.log | null |
-| 64 | e37_run4 | results/exp37_run4.log | null |
-| 65 | e37r_run | results/exp37r_run.log | null |
-| 66 | e37r_agg | results/exp37r_agg.log | null |
-| 67 | e38a_rerun | results/exp38a_rerun.log | null (`in 7.7s` — время записи JSON, НЕ duration — не извлекать) |
-| 68 | e38b_rerun | results/exp38b_rerun.log | null |
-| 69 | e38c_rerun | results/exp38c_rerun.log | null |
-| 70 | e38d_rerun | results/exp38d_rerun.log | null |
-| 71 | e38e_rerun | results/exp38e_rerun.log | null |
-| 72 | e38f_rerun | results/exp38f_rerun.log | null |
-| 73 | e38g_rerun | results/exp38g_rerun.log | null |
-| 74 | e38h_rerun | results/exp38h_rerun.log | null |
-| 75 | e38i_rerun | results/exp38i_rerun.log | null |
-| 76 | e38e_true_j_l23 | results/E38e_true_J_L23.log | 1374.6 (`wall 1374.6 с`); канон дубля §3.5 |
-| 77 | e39a_v2 | results/archive/exp39a_v2.log | null |
-| 78 | e39a_v3 | results/archive/exp39a_v3.log | null |
-| 79 | e39a_v4 | results/archive/exp39a_v4.log | null |
-| 80 | e39a_v5 | results/archive/exp39a_v5.log | null |
-| 81 | e39a_v6 | results/archive/exp39a_v6.log | null |
-| 82 | e39a_v7 | results/archive/exp39a_v7.log | null |
-| 83 | e39a_v8 | results/archive/exp39a_v8.log | null |
-| 84 | e39a_v9 | results/archive/exp39a_v9.log | null |
-| 85 | e39a_v10 | results/archive/exp39a_v10.log | null |
-| 86 | e39a_v11 | results/archive/exp39a_v11.log | null |
+| 60 | e35_preflight | logs/exp35_preflight.log | null |
+| 61 | e37_run | logs/exp37_run.log | null |
+| 62 | e37_run2 | logs/exp37_run2.log | null |
+| 63 | e37_run3 | logs/exp37_run3.log | null |
+| 64 | e37_run4 | logs/exp37_run4.log | null |
+| 65 | e37r_run | logs/exp37r_run.log | null |
+| 66 | e37r_agg | logs/exp37r_agg.log | null |
+| 67 | e38a_rerun | logs/exp38a_rerun.log | null (`in 7.7s` — время записи JSON, НЕ duration — не извлекать) |
+| 68 | e38b_rerun | logs/exp38b_rerun.log | null |
+| 69 | e38c_rerun | logs/exp38c_rerun.log | null |
+| 70 | e38d_rerun | logs/exp38d_rerun.log | null |
+| 71 | e38e_rerun | logs/exp38e_rerun.log | null |
+| 72 | e38f_rerun | logs/exp38f_rerun.log | null |
+| 73 | e38g_rerun | logs/exp38g_rerun.log | null |
+| 74 | e38h_rerun | logs/exp38h_rerun.log | null |
+| 75 | e38i_rerun | logs/exp38i_rerun.log | null |
+| 76 | e38e_true_j_l23 | logs/E38e_true_J_L23.log | 1374.6 (`wall 1374.6 с`); канон дубля §3.5 |
+| 77 | e39a_v2 | logs/archive/exp39a_v2.log | null |
+| 78 | e39a_v3 | logs/archive/exp39a_v3.log | null |
+| 79 | e39a_v4 | logs/archive/exp39a_v4.log | null |
+| 80 | e39a_v5 | logs/archive/exp39a_v5.log | null |
+| 81 | e39a_v6 | logs/archive/exp39a_v6.log | null |
+| 82 | e39a_v7 | logs/archive/exp39a_v7.log | null |
+| 83 | e39a_v8 | logs/archive/exp39a_v8.log | null |
+| 84 | e39a_v9 | logs/archive/exp39a_v9.log | null |
+| 85 | e39a_v10 | logs/archive/exp39a_v10.log | null |
+| 86 | e39a_v11 | logs/archive/exp39a_v11.log | null |
 | 87 | e39c_pre_rerun_fix | logs/exp39c_pre_rerun_fix.log | null |
-| 88 | e39d_head_route_probe | results/E39d_head_route_probe.log | 489.7 (`wall 489.7 с`) |
-| 89 | e39d_control_lam0_order1 | results/exp39d_control_lam0_order1.log | null |
-| 90 | e39d_floor_seeds12 | results/exp39d_floor_seeds12.log | null |
-| 91 | e39d_stage1_ordering | results/exp39d_stage1_ordering.log | null |
-| 92 | e39j_run | results/exp39j_run.log | null |
-| 93 | e39k_run | results/exp39k_run.log | 22.6 (`wall 22.6 с`) |
-| 94 | e39m_smoke | results/exp39m_smoke.log | null |
-| 95 | e39_supp_pscale_probe | results/exp39_supp_pscale_probe.log | null |
-| 96 | e39_supp_three_objects | results/exp39_supp_three_objects.log | 356.6 (`wall 356.6 с`) |
-| 97 | e01_coherence_v6_draw2 | results/exp01_coherence_v6.draw2.log | null |
-| 98 | e01_coherence_v6_pinned | results/exp01_coherence_v6.pinned.log | 213 (`[OK] … 213s`) |
+| 88 | e39d_head_route_probe | logs/E39d_head_route_probe.log | 489.7 (`wall 489.7 с`) |
+| 89 | e39d_control_lam0_order1 | logs/exp39d_control_lam0_order1.log | null |
+| 90 | e39d_floor_seeds12 | logs/exp39d_floor_seeds12.log | null |
+| 91 | e39d_stage1_ordering | logs/exp39d_stage1_ordering.log | null |
+| 92 | e39j_run | logs/exp39j_run.log | null |
+| 93 | e39k_run | logs/exp39k_run.log | 22.6 (`wall 22.6 с`) |
+| 94 | e39m_smoke | logs/exp39m_smoke.log | null |
+| 95 | e39_supp_pscale_probe | logs/exp39_supp_pscale_probe.log | null |
+| 96 | e39_supp_three_objects | logs/exp39_supp_three_objects.log | 356.6 (`wall 356.6 с`) |
+| 97 | e01_coherence_v6_draw2 | logs/exp01_coherence_v6.draw2.log | null |
+| 98 | e01_coherence_v6_pinned | logs/exp01_coherence_v6.pinned.log | 213 (`[OK] … 213s`) |
 | 99 | e51_lfm3 | logs/e51_lfm3.log | null |
 | 100 | e51_qwen | logs/e51_qwen.log | null |
-| 101 | at0_1 | results/AT0/AT0_1_run.log | null |
-| 102 | at0_2 | results/AT0/AT0_2_run.log | null |
-| 103 | at0_2_r6_stdout | results/AT0/AT0_2_r6_stdout.log | null |
-| 104 | at0_3 | results/AT0/AT0_3_run.log | null |
-| 105 | at0_4 | results/AT0/AT0_4_run.log | null |
-| 106 | at0_4_rebuild | results/AT0/AT0_4_rebuild.log | null |
-| 106b | at0_4_rebuild_r3 | results/AT0/AT0_4_rebuild_r3.log | null (rebuild r3, 2026-11-14; маркеров wall нет) |
-| 106c | at0_4_rebuild_r4 | results/AT0/AT0_4_rebuild_r4.log | null (rebuild r4, 2026-11-14; маркеров wall нет) |
-| 106d | at0_4_rebuild_r5 | results/AT0/AT0_4_rebuild_r5.log | null (rebuild r5, 2026-11-15; маркеров wall нет) |
-| 107 | at0_5 | results/at0_5_run.log | null |
-| 108 | chain_e45b | results/chain_e45b.log | null |
-| 109 | chain_e46 | results/chain_e46.log | null |
-| 110 | stage0 | results/stage0.log | null (`Device: cpu`, n_samples=2, K=128 — smoke-прогон) |
-| 110b | at0_2b | results/AT0/AT0_2b_run.log | null (R/A-split r2, 2026-11-15; маркеров wall нет) |
+| 101 | at0_1 | logs/AT0/AT0_1_run.log | null |
+| 102 | at0_2 | logs/AT0/AT0_2_run.log | null |
+| 103 | at0_2_r6_stdout | logs/AT0/AT0_2_r6_stdout.log | null |
+| 104 | at0_3 | logs/AT0/AT0_3_run.log | null |
+| 105 | at0_4 | logs/AT0/AT0_4_run.log | null |
+| 106 | at0_4_rebuild | logs/AT0/AT0_4_rebuild.log | null |
+| 106b | at0_4_rebuild_r3 | logs/AT0/AT0_4_rebuild_r3.log | null (rebuild r3, 2026-11-14; маркеров wall нет) |
+| 106c | at0_4_rebuild_r4 | logs/AT0/AT0_4_rebuild_r4.log | null (rebuild r4, 2026-11-14; маркеров wall нет) |
+| 106d | at0_4_rebuild_r5 | logs/AT0/AT0_4_rebuild_r5.log | null (rebuild r5, 2026-11-15; маркеров wall нет) |
+| 107 | at0_5 | logs/at0_5_run.log | null |
+| 108 | chain_e45b | logs/chain_e45b.log | null |
+| 109 | chain_e46 | logs/chain_e46.log | null |
+| 110 | stage0 | logs/stage0.log | null (`Device: cpu`, n_samples=2, K=128 — smoke-прогон) |
+| 110b | at0_2b | logs/AT0/AT0_2b_run.log | null (R/A-split r2, 2026-11-15; маркеров wall нет) |
 
 Итого CPU: **75 run'а** (74 уникальных файла + второй run на exp45c-файле).
 
@@ -205,16 +205,16 @@ e45_seednull — из queue_round.log). «Время записи JSON» (`in 7.
 
 - exp01: `kaggle_kernel/kernel-exp01/out/prism-exp01-coherence.log` = дубль `prism-exp01-coherence.log` (md5 ec9573a5…)
 - stage0: `exp16-stage-0-target-jacobian-cache.log` = `exp16-stage0-target-jacobian-cache.log` = `prism-exp16-stage0-targets.log` (md5 adc4008c…) — все три = run #11
-- E38e: `results/E38e_true_J_L23_carrier_cheat.log` = `results/E38e_true_J_L23.log` (md5 d636bc48…)
-- AT0_1: `results/AT0/store/runlog_r5_pre_rerun.log` = `results/AT0/AT0_1_run.log` (md5 2b2c3661…;
+- E38e: `logs/E38e_true_J_L23_carrier_cheat.log` = `logs/E38e_true_J_L23.log` (md5 d636bc48…)
+- AT0_1: `logs/AT0/store/runlog_r5_pre_rerun.log` = `logs/AT0/AT0_1_run.log` (md5 2b2c3661…;
   пин р5-перепуска — байт-копия run-лога, 5-й дубль, v1.6 N1)
 
 ### 3.6 Исключённые файлы (12 из 130, НЕ run'ы; список в отчёте с причиной)
 
 - kaggle_kernel/auto_chain_tpu.log, _push_queue.log, _push_wait.log (3) — статусы-очереди Kaggle
 - logs/kaggle_daemon.log, logs/exp32r3_1_status.log (2) — статусы
-- results/queue_round.log, queue_tail.log, tail_round.log (3) — wall-часы очереди (ИСТОЧНИК duration, не run)
-- results/e93/sycl/bench_err.log, smoke_err.log (2) — stderr бенча
+- logs/queue_round.log, queue_tail.log, tail_round.log (3) — wall-часы очереди (ИСТОЧНИК duration, не run)
+- logs/e93/sycl/bench_err.log, smoke_err.log (2) — stderr бенча
 - xet-логи (2): kaggle_kernel/kernel-exp17-2nd-canary/out/.hf_cache/…, kaggle_kernel/kernel-exp19-tpu/.hf_cache/… — сетевые логи HF
 
 Вне скоупа find (не входят в 130 и в 12): `box/*` (4 файла — мониторинг/автономный бокс) и корневой

@@ -209,7 +209,7 @@ T_act < 32 ⇒ флаг `degenerate_short` (rep16/loopy считаются, ес
 - `results/AT0/store/<canonical-sha>.json` — store: per (λ,сид): per-doc записи
   (nll_main, dip, hump, plateau, margin, pr_sigma, eff_rank) + holdout nll + генерация
   (токены, text, T_act, rep16, loopy, degenerate_short) + health ray + S2/S2b-проверки.
-- `results/AT0/AT0_8_manifest.json`, `results/AT0/AT0_8_run.log` (stdout, tracked).
+- `results/AT0/AT0_8_manifest.json`, `logs/AT0/AT0_8_run.log` (stdout, tracked).
 - Поля TЗ §11.1: `threshold{...}` (lam_grid, grid_steps, seeds, lambda_c_seeds,
   statistic="normalized_u05", family, observables, monotone_only, monotonicity_criterion,
   excluded_non_monotone, overshoot_flag, all_params_randomized, complete, traj_complete),

@@ -11,7 +11,7 @@ S6–S9 (супервизор). Прогон r2 — валидный артеф�
 - Пре-рег: `docs/AT2_prereg.md` (sha256 `8c55fb3d27eba0999a8210512fca9d2d43fab8263d416de7e7491ea3bb9a7c62`; до ренейма `faf6e587…`)
 - Ревью r1: `docs/AT2_review_r1.md` (sha256 `43719327346b41cc1419a5f28e21105ca9eb51b5c6a8a0569bbc431325e844fe`; до ренейма `568e46ce…`; тело — снапшот на имя AT0_9)
 - Артефакт: `results/AT2/AT2.json` (11.8 MB, sha256 `ee3a78ec0480f0a5fab8275311d956020091ecc60e3ecf93b8b634b544ed78b3`)
-- Лог: `results/AT2_run.log` (sha256 `2912ab7a8f90697ca1f8838a4ba111a6288a6c8ed56a350c5c33ea1156edcc73`)
+- Лог: `logs/AT2_run.log` (sha256 `2912ab7a8f90697ca1f8838a4ba111a6288a6c8ed56a350c5c33ea1156edcc73`)
 - Trackio: run `at0_9_t21_r1` (legacy-имя до ренейма; project prism, group AT0), старт/финиш + 5 stage-точек, status ok.
 - Среда: /opt/miniconda3 base, py 3.12.9, torch 2.14.1+cu130 (CPU), 4 CPU-трёда, seed 0.
 - Прогон r2: wall 295.5 с (~5 мин), S7 exact-set 286272 == 286272.

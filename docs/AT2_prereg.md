@@ -176,7 +176,7 @@ def lk4(t):
   rematching), ε-диагностика (число λ > ε·λ_max), lk4-таблицы (k=1 hit + one-hot cos,
   k-ahead cos, N8-страта per-домен), L23-контроль, ker-J-контроль, verdict, price.
   (gitignored-конвенция AT0_2b C7; sha фиксируется в отчёте `docs/AT2_results.md`.)
-- `results/AT2_run.log` — stdout, tracked.
+- `logs/AT2_run.log` — stdout, tracked.
 - Store не нужен (нет λ-сетки).
 
 ## 12. Trackio

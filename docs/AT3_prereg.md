@@ -41,7 +41,7 @@
 9. Sлой L17: только описательный (median dip|Q_k по сторонам), без CI/вердиктов.
 10. Цена: ~10–20 мин CPU (TF matvec ~6 мин + dip + bootstrap). Trackio:
     `at3_margin_r1` (step = wall-с, config: device/model/log/md5/revision/script_sha/seed).
-11. Артефакты: `results/AT3/AT3.json` (gitignored, sha в отчёте), `results/AT3_run.log`
+11. Артефакты: `results/AT3/AT3.json` (gitignored, sha в отчёте), `logs/AT3_run.log`
     (tracked), отчёт `docs/AT3_results.md`. Скрипт: `experiments/AT3.py`
     (на prism/explog.py + prism/nulls_and_stats.py — указание user 16.11).
 12. Среда: /opt/miniconda3 base (py 3.12.9, torch 2.14.1 CPU), 4 тр. (OMP), seed 0;
