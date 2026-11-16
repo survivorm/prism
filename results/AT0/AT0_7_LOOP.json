@@ -1,5 +1,5 @@
 {
- "date": "2026-11-15T23:06:56.635521",
+ "date": "2026-11-16T10:13:31.372755",
  "experiment": "AT0_7 T0.7 (петля = стабильный copy-paste; repeat как necessary признак, v3)",
  "gates": {
   "G0": {
@@ -170,7 +170,7 @@
    "gen": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
    "own": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198"
   },
-  "date": "2026-11-15T23:06:56.635521",
+  "date": "2026-11-16T10:13:31.372755",
   "decode_probe": {
    "corpus_note": "not_testable G16",
    "corpus_toks": 0,
@@ -221,7 +221,7 @@
   ],
   "parallel_session_files": "AT0_7_loop_mine.py (external, not canonical), AT0_8_threshold.py (external) — не трогаются",
   "python": "3.12.9",
-  "script_sha256": "1539a56c1768b6c6fa5b1a1e9667965e49e875145a309fe22cb0a06ae6e21105",
+  "script_sha256": "15607b18c301f86936aea3263c5b8e7e58e54678a57efc2b52061cdbf65e9ca0",
   "seed_convention": "null 2026+doc_idx*1009+s (sorted(96)); G7/G1d токены rng(777+k).integers(0,4096,383) (G1d = k=0); POS h 7770+k, токены 7771/7772; G1b 77700 (= T0.6 G1b); G1a v_i = i",
   "smoke": false,
   "t_prime": "T−1 per-doc (gen/own 383)",
@@ -546,8 +546,8 @@
   "tz": "docs/TZ_add_0-3.md T0.7 (v3, closed r3: PASS, 0 MAJOR)"
  },
  "round": "v3-r1",
- "store": "store/82663436e02a5aa9.json",
- "store_sha256": "82663436e02a5aa9cfda0339f0ae0b94308454d34a2f28b3cccb42ff6eb01920",
+ "store": "store/b66d790bb6feb12c.json",
+ "store_sha256": "b66d790bb6feb12c54175994ec1b404004b61398cda027fae26eddf9920941fe",
  "tests": {
   "H1": {
    "f1": 30,
@@ -1186,8 +1186,8 @@
    "alignment": "x_t = h_{t+1} − mean ⇒ x_t ↔ tok[t+1] (tk = toks[1:T'])",
    "bad": [],
    "fp64_tol": 1e-20,
-   "identity": "R(p) ≡ 0 (алгебраическое тождество, не измерение; пороги 0.1/0.3 УБРАНЫ)",
-   "note": "вывод ТЗ: p-структура h = необходимое feedforward-последствие token-copy-paste; «динамика сверх токенов» per-doc disk-only НЕ ИЗМЕРИМА (контрфактуальный forward — вне scope)",
+   "identity": "R(p) ≡ 0 (алгебраическое тождество — держится для любого x; не измерение, не тест; пороги 0.1/0.3 УБРАНЫ)",
+   "note": "r2-exec N6: данный суррогат НЕ тест — тождество держится для ЛЮБОГО x (фазовые групповые суммы сохранены по построению); вывод о «необходимости» — not_identified_by_this_design; чтение «p-структура h = следствие repeat'а» поддерживается descriptively: структурный feedforward-аргумент (честная область) + H4 (h-линия следует за repeat'ом) + T0.6 (линия на токено-периоде); разделение с динамическим p-режимом — контрфактуальный forward (вне scope)",
    "ok": true,
    "r2_ref": {
     "R_clean37_max": "~1e-28",
@@ -1199,7 +1199,7 @@
    }
   },
   "verdict": {
-   "detail": "H1: петля ⇒ стабильный repeat (f1 = 30/30 ≥ 28; r0 воспроизведена в 1e-12: 30/30, min 0.888 code_14). H3: repeat necessary, не sufficient (доля loopy среди стабильных-repeat = 0.7895; 6/11 undetected + 2 дубля). H4: h-линия на p следует за repeat'ом (ρ_s = 0.495, порог 0.4). H5: R(p) ≡ 0 — граница. Итог: петля = стабильный copy-paste ∧ сильная Δu-структура; период-p структура T0.3 и спектральная линия T0.6 — feedforward-ПОСЛЕДСТВИЯ token-repeat'а. K4: T0.7 НЕ влечёт T0.6 (линия в h ≠ линия в du; носители разные — r1); T0.6-результат (smoke) НЕ переписывается T0.7.",
+   "detail": "H1: петля ⇒ стабильный repeat (f1 = 30/30 ≥ 28; r0 воспроизведена в 1e-12: 30/30, min 0.888 code_14). H3: repeat necessary, не sufficient (доля loopy среди стабильных-repeat = 0.7895; 6/11 undetected + 2 дубля). H4: h-линия на p следует за repeat'ом (ρ_s = 0.495, порог 0.4). H5: R(p) ≡ 0 — граница. Итог: петля = стабильный copy-paste ∧ сильная Δu-структура; период-p структура T0.3 и спектральная линия T0.6 — согласуются с feedforward-последствиями token-repeat'а (H4: h-линия следует за repeat'ом; «необходимость» не идентифицирована disk-only дизайном — H5 не тест, r2-exec N6). K4: T0.7 НЕ влечёт T0.6 (линия в h ≠ линия в du; носители разные — r1); T0.6-результат (smoke) НЕ переписывается T0.7.",
    "status": "CONFIRMED"
   }
  },

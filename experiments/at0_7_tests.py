@@ -284,15 +284,18 @@ def run_h5(docs, rows, pools):
            "R_loopy30": {"min": float(min(r_loopy)), "max": float(max(r_loopy))},
            "R_clean37_max": float(max(r_clean)),
            "Rtok_loopy30": {"min": float(min(rtok_loopy)), "max": float(max(rtok_loopy))},
-           "identity": "R(p) ≡ 0 (алгебраическое тождество, не измерение; пороги 0.1/0.3 УБРАНЫ)",
+           "identity": "R(p) ≡ 0 (алгебраическое тождество — держится для любого x; не измерение, не тест; пороги 0.1/0.3 УБРАНЫ)",
            "fp64_tol": H5_TOL, "ok": bool(not bad), "bad": bad,
            "r2_ref": {"R_loopy30_range": [2.5e-32, 3.5e-30], "R_clean37_max": "~1e-28",
                       "note": ("r2-замер (порядок суммирования fp64); r3-ревью и текущий прогон: "
                                "[2.88e-31, 3.66e-30] — тот же порядок; гейт <1e-20 не затронут (К3 r1-exec)")},
            "alignment": "x_t = h_{t+1} − mean ⇒ x_t ↔ tok[t+1] (tk = toks[1:T'])",
-           "note": ("вывод ТЗ: p-структура h = необходимое feedforward-последствие token-copy-paste; "
-                    "«динамика сверх токенов» per-doc disk-only НЕ ИЗМЕРИМА (контрфактуальный "
-                    "forward — вне scope)")}
+           "note": ("r2-exec N6: данный суррогат НЕ тест — тождество держится для ЛЮБОГО x "
+                    "(фазовые групповые суммы сохранены по построению); вывод о «необходимости» — "
+                    "not_identified_by_this_design; чтение «p-структура h = следствие repeat'а» "
+                    "поддерживается descriptively: структурный feedforward-аргумент (честная область) "
+                    "+ H4 (h-линия следует за repeat'ом) + T0.6 (линия на токено-периоде); "
+                    "разделение с динамическим p-режимом — контрфактуальный forward (вне scope)")}
     logline(f"H5: R loopy30 ∈ [{min(r_loopy):.3e}, {max(r_loopy):.3e}] (r0: 2.5e-32..3.5e-30); "
             f"R clean37 max = {max(r_clean):.3e} (r0: ~1e-28); Rtok loopy30 ∈ "
             f"[{min(rtok_loopy):.3e}, {max(rtok_loopy):.3e}] (вырожден при V≫T); "
@@ -316,8 +319,10 @@ def make_verdict(gates_ok, h1, r0_ok, h4, h3, h5):
                            f"H4: h-линия на p следует за repeat'ом (ρ_s = "
                            f"{h4['spearman_q_maxrun']:.3f}, порог 0.4). H5: R(p) ≡ 0 — граница. "
                            f"Итог: петля = стабильный copy-paste ∧ сильная Δu-структура; период-p "
-                           f"структура T0.3 и спектральная линия T0.6 — feedforward-ПОСЛЕДСТВИЯ "
-                           f"token-repeat'а. K4: T0.7 НЕ влечёт T0.6 (линия в h ≠ линия в du; "
+                           f"структура T0.3 и спектральная линия T0.6 — согласуются с "
+                           f"feedforward-последствиями token-repeat'а (H4: h-линия следует за "
+                           f"repeat'ом; «необходимость» не идентифицирована disk-only дизайном — "
+                           f"H5 не тест, r2-exec N6). K4: T0.7 НЕ влечёт T0.6 (линия в h ≠ линия в du; "
                            f"носители разные — r1); T0.6-результат (smoke) НЕ переписывается T0.7.")}
     if h1["ok"]:
         return {"status": "CONFIRMED_WITH_FLAG",

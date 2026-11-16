@@ -1,4 +1,4 @@
-AT0_7 start 2026-11-15T23:05:51.431120 py=3.12.9 np=2.5.3 smoke=False
+AT0_7 start 2026-11-16T10:12:00.659706 py=3.12.9 np=2.5.3 smoke=False
 trackio: run at07_loop_r1 init ok
 G1′ field.py sha bcc607c561f95e3e selfcheck OK
 пулы (контракт T0.3): loopy30 = 30, lu11 = 11, clean37 = 37, corpus16 = 16, rem2 = 2; дубли по токенам: 32 docs
@@ -67,8 +67,8 @@ H2 remainder: 2/2 (по докам) = 2/2 (по уникальным текст�
 H3: стабильный repeat = 38/80; доля loopy (T0.3-detected) среди стабильных = 30/38 = 0.7895
 H5: R loopy30 ∈ [2.885e-31, 3.660e-30] (r0: 2.5e-32..3.5e-30); R clean37 max = 7.378e-28 (r0: ~1e-28); Rtok loopy30 ∈ [1.161e-30, 2.227e-01] (вырожден при V≫T); identity R<1e-20: OK
 VERDICT: CONFIRMED (f1 = 30/30, r0_ok = True)
-store: results/AT0/store/82663436e02a5aa9.json (0.0 MB)
-claim: /home/survivor/work/prism/results/AT0/AT0_7_LOOP.json sha 015fce7f16c5c2bd
+store: results/AT0/store/b66d790bb6feb12c.json (0.0 MB)
+claim: /home/survivor/work/prism/results/AT0/AT0_7_LOOP.json sha 883e5fc65c400edc
 manifest: OK (self-hash по blob до вставки)
 written: /home/survivor/work/prism/results/AT0/AT0_7_LOOP.json, /home/survivor/work/prism/results/AT0/AT0_7_manifest.json, /home/survivor/work/prism/results/AT0/AT0_7_run.log
 AT0_7 DONE
