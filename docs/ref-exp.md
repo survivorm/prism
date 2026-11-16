@@ -1826,8 +1826,7 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
   (анти-горб h_raw/du σ_e3 = −11.4/−12.3; горб v_t +14.4, sign p = 0.016). Т.е. не-DC структура:
   у v̂ — горб на k=3,4 + плато; у Δh/Δu — только анти-горб. Anchor −0.0721980 (n=35). G8
   max_resid 1.04e-14 (2868 клеток).
-- **Сохранено:** `docs/dynamic/AT0_1_r7_REVIEW.md` (финальное внешнее), `docs/AT0_1_review_r7_answer.md`
-  (ответка: C1–C7 + 6 MINOR r3). Коммиты: r4/r5/r6/r7-линия (см. git log «AT0_1»). Артефакты:
+- **Доки:** процессные доки удалены 16.11 (docs-hygiene; содержимое — в git-истории). Коммиты: r4/r5/r6/r7-линия (см. git log «AT0_1»). Артефакты:
   `results/AT0/AT0_1_*.json` + store 1af1e9f3c1f14ba8.
 
 ## AT0_2 — T0.2 «Форма профиля при фиксированной сумме» (disk-only)
@@ -1841,8 +1840,7 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
   (решает primary, N6); h_raw iid Δmean 1.2569 (all_96); D_real 0.1385; seam-identity
   N%b≠0 (latent-баг round 1: фиксированная сетка blk-null сдвигала блоки — b=4/8/16/32
   rounds 1–5 загрязнены, b=2 проходил).
-- **Сохранено:** `docs/AT0_2_prereg.md`, `docs/dynamic/AT0_2_r6_REVIEW.md` (финальное внешнее,
-  маркер AT0_2_R6_REVIEW_DONE), `docs/AT0_2_review_r6_answer.md` (ответка). Коммит: 3247581.
+- **Доки:** процессные доки удалены 16.11 (docs-hygiene; содержимое — в git-истории). Коммит: 3247581.
   Артефакты: `results/AT0/AT0_2_SHAPE.json` + store f7cc011ef856a6dc.
 
 ## AT0_3 — T0.3 «Кто несёт отрицательную площадь» (disk-only)
@@ -1856,7 +1854,7 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
   p_obs=7 21.9%, chat_15 p_obs=8 14.4%); тройки KS различны (primary 0.530483/c=1, robust
   0.528684, desc 0.597769). Артефакт: `AT0_3_AREA.json` sha16 `8fe61affb13b443f` (замороженный
   вход AT0_6/AT0_7: 30 loopy-detected p∈7..32 + 11 undetected + 53 clean + 2 remainder).
-- **Сохранено:** `docs/AT0_3_prereg.md`, `docs/AT0_3_r33_REVIEW.md` (финальное внешнее).
+- **Доки:** процессные доки удалены 16.11 (docs-hygiene; содержимое — в git-истории).
   Коммиты: AT0_3 r3.1/r3.2/r3.2.1/r3.3-линия. Артефакты: `results/AT0/AT0_3_*.json`.
 
 ## AT0_4 — T0.4 «3×2 {R0,R1,R2} × {real, mix}» (CPU)
@@ -1865,7 +1863,7 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
   клеток); r — confirmed med 0.016; f_DC mirror-confirmed («не независимый сигнал», P3 по G3);
   random order-invariant 6/6 (null median, per-doc exceptions own_w0 2/6, own_w4 6/6 0.119–0.131);
   0 token-statistics flags.
-- **Сохранено:** `docs/AT0_4_prereg.md` (TZ v3.1), `docs/AT0_4_EXEC_REVIEW.md` + ответки r4–r6.
+- **Доки:** процессные доки удалены 16.11 (docs-hygiene; содержимое — в git-истории).
   **Прим. 16.11:** промежуточные раунды (TZ_REVIEW r1/r2, EXEC_REVIEW_r2, промты, ответки r3)
   удалены по 2-дн. docs-hygiene-правилу (содержимое — в git-истории; вердикты — в карточке).
   Артефакты: `results/AT0/AT0_4_MIX.json` + store f1cc7265dd40c874.
@@ -1880,8 +1878,7 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
   (не-гауссовость существенна — остаток для T3); plat_hi_oos 0.373–0.608 (in-sample GOF не
   переносится на held-out — объявлено в вердикте); S9 якорь 478/480 bit-в-бит T0.1; absent =
   own_w0/own_w4|L1 (предсказано пре-регом).
-- **Сохранено:** `docs/AT0_5_prereg.md`, `docs/dynamic/AT0_5_ARTIFACT_REVIEW_r5.md` (финальное
-  внешнее, маркер AT0_5_REVIEW_R5_DONE). Коммит: 9fc3883. Артефакты:
+- **Доки:** процессные доки удалены 16.11 (docs-hygiene; содержимое — в git-истории). Коммит: 9fc3883. Артефакты:
   `results/AT0/AT0_5_GENCHECK.json`.
 
 # Индекс экспериментов и реестр гипотез
