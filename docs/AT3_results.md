@@ -14,7 +14,7 @@ r3/r4 не меняются. Числа r4 ниже сохранены как б
 
 - Скрипт: `experiments/AT3.py` (r5; sha256 `3c2028a5399ba889a84dbd40848f9ff58bb472eda34f96aec1f5c73c6e3dbb4c`)
 - Пре-рег: `docs/AT3_prereg.md` (запись r3-прогона — §7; r4/r5 — расширения по ревью, без изменения primary-контракта)
-- Ревью: `docs/AT3_review_r1.md` (r5: B1–B5 + F2; sha256 `bd654030a6c008a441e5c86a3cf09400d62d88b2a45adf2aaa2acc518f312e9c`)
+- Ревью: `docs/AT3_review_r1.md` (r5: B1–B5 + F2; sha256 `0f306d734d27d53841f2ea189772a183f4157e4615ce69e998b652ebfbaf2971`)
 - Ответы: `docs/AT3_review_answers_r1.md` (раунд 5 — §9)
 - Артефакт: `results/AT3/AT3.json` (gitignored; sha256 `c5c387c2d5b98b2398cceea07eb062e15cd3879b7084b50866fe5aac491bf074`; S6 recheck OK)
 - Лог: `results/AT3_run.log` (sha256 `812ed13ec3f1a1992636ebfec4d82f946dda1d402921250e63b3a17f2b0346d2`)
