@@ -1807,6 +1807,83 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
 **Вердикт:** [И] top_k применяется к пост-сэмплированному набору кандидатов на этом форке (механика установлена); вопрос «кусается ли top_k» — да. Схему ответа читает по эху/режиму (post_sampling_probs), не по памяти pre-sampling-схемы.
 Артефакты: `results/e94/S3b.json` (v3, канон), `S3b_v1.json` (ложный report_empty — доказательство бага), `S3b_v2.json` (до текстовой ремедиации); код: `experiments/exp94_s3b.py` (selftest 50/50 до сервера); ТЗ: r19 PASS_WITH_MINORS (`2_REVIEW_E94_S3b_TZ_exec_r19.md`); внешнее ревью артефакта: `2_REVIEW_E94_S3b_exec_r1.md` (PASS_WITH_MINORS, 2 текстовых MINOR/COSMETIC — ремедиация в v3).
 
+# Серия AT0 (ТЗ v1.1, 12.11–16.11) — диск-карты и пороги: итоги
+
+> Карточки завершённых экспериментов серии AT (ТЗ: `docs/TZ_add_0-3.md` §1.5). Промежуточные
+> раунды ревью (r1–r5/r6-машина и т.д.) свёрнуты в git history (16.11, «чистка старых ревью»);
+> сохранены: пре-рег + финальное внешнее ревью + финальная ответка (путь в карточке). Числа —
+> из артефактов `results/AT0/` (claim/store/manifest, hash-цепи верифицированы финальными
+> ревью).
+
+## AT0_1 — T0.1 «Пересчёт учёта на трёх объектах» (disk-only)
+
+- **Вердикт (r7, 15.11): PASS** (MAJOR: нет; 4 MINOR космет., не блокируют). Провенанс-цепь
+  де305869 → r5 d4a4b101 → r6 b0f74312 → r7 v1 22302261 → r7 v2 82f44f08; C1–C7 закрыты
+  детерминированной аннотацией (153/153 z-статистики bit-eq).
+- **Ключевые числа (r4-эра, store 1af1e9f3c1f14ba8):** П4 — все три объекта (h_raw/du_unit/
+  v_tangent) **refuted против matched null** (p_perm = 0.016 — минимум достижимый; плато ВЫШЕ
+  null: h_raw/du +0.0018 зеркало анти-dip, v_t +0.0019 ≈ 25σ); П5 — **confirmed у всех трёх**
+  (анти-горб h_raw/du σ_e3 = −11.4/−12.3; горб v_t +14.4, sign p = 0.016). Т.е. не-DC структура:
+  у v̂ — горб на k=3,4 + плато; у Δh/Δu — только анти-горб. Anchor −0.0721980 (n=35). G8
+  max_resid 1.04e-14 (2868 клеток).
+- **Сохранено:** `docs/dynamic/AT0_1_r7_REVIEW.md` (финальное внешнее), `docs/AT0_1_review_r7_answer.md`
+  (ответка: C1–C7 + 6 MINOR r3). Коммиты: r4/r5/r6/r7-линия (см. git log «AT0_1»). Артефакты:
+  `results/AT0/AT0_1_*.json` + store 1af1e9f3c1f14ba8.
+
+## AT0_2 — T0.2 «Форма профиля при фиксированной сумме» (disk-only)
+
+- **Вердикт (r6-внешнее, round 2, B=199): PASS** (MAJOR: 0, MINOR: 2 — monotonicity v_tangent
+  reportable; α в хедер). Provenance: script e58b7d19, claim b3cad772, store f7cc011ef856…;
+  независимый пересчёт от нуля: real ≤1.3e-15 rel, iid-null bit-exact; log↔claim 162/162 полей;
+  r6-пункты E1–E8/M1–M5 закрыты с path'ами.
+- **Ключевые числа:** primary pool = verified∩nondeg (37); v_tangent primary: **not_testable**
+  (Δmean 0.0444/0.0181/0.0283 < DELTA_MIN 0.05) при all_96: refuted — расхождение раскрыто
+  (решает primary, N6); h_raw iid Δmean 1.2569 (all_96); D_real 0.1385; seam-identity
+  N%b≠0 (latent-баг round 1: фиксированная сетка blk-null сдвигала блоки — b=4/8/16/32
+  rounds 1–5 загрязнены, b=2 проходил).
+- **Сохранено:** `docs/AT0_2_prereg.md`, `docs/dynamic/AT0_2_r6_REVIEW.md` (финальное внешнее,
+  маркер AT0_2_R6_REVIEW_DONE), `docs/AT0_2_review_r6_answer.md` (ответка). Коммит: 3247581.
+  Артефакты: `results/AT0/AT0_2_SHAPE.json` + store f7cc011ef856a6dc.
+
+## AT0_3 — T0.3 «Кто несёт отрицательную площадь» (disk-only)
+
+- **Вердикт (r3.3-внешнее, 15.11): PASS** (блокеров нет; 1 wording-правка П1 keep_short-кавеата
+  + 2 косметики). Минимальный патч §6: 13/13 пунктов в коде и артефакте; ключевые числа
+  бит-идентичны независимому пересчёту; disk-only инвариант per_doc 96/96, 0 diff.
+- **Ключевые результаты:** H1 = **directional refutation** (знак площади: нечётные k),
+  H2 = **association** (петл. период ↔ площадь, ρ-базис loopy-профилей: медиана max-ρ 0.94);
+  keep_short 0.0277 > shuffle_full 0.0227 (макс 0.2189; 28/30 loopy выше пола; верхи code_13
+  p_obs=7 21.9%, chat_15 p_obs=8 14.4%); тройки KS различны (primary 0.530483/c=1, robust
+  0.528684, desc 0.597769). Артефакт: `AT0_3_AREA.json` sha16 `8fe61affb13b443f` (замороженный
+  вход AT0_6/AT0_7: 30 loopy-detected p∈7..32 + 11 undetected + 53 clean + 2 remainder).
+- **Сохранено:** `docs/AT0_3_prereg.md`, `docs/AT0_3_r33_REVIEW.md` (финальное внешнее).
+  Коммиты: AT0_3 r3.1/r3.2/r3.2.1/r3.3-линия. Артефакты: `results/AT0/AT0_3_*.json`.
+
+## AT0_4 — T0.4 «3×2 {R0,R1,R2} × {real, mix}» (CPU)
+
+- **Вердикт: PASS** (exec-reviews r1/r2; коммит 61483f3, 14.11). R2×real — vacuous ×3 (24/24
+  клеток); r — confirmed med 0.016; f_DC mirror-confirmed («не независимый сигнал», P3 по G3);
+  random order-invariant 6/6 (null median, per-doc exceptions own_w0 2/6, own_w4 6/6 0.119–0.131);
+  0 token-statistics flags.
+- **Сохранено:** `docs/AT0_4_prereg.md` (TZ v3.1), `docs/AT0_4_TZ_REVIEW.md` + `_r2.md`,
+  `docs/AT0_4_EXEC_REVIEW.md` + `_r2.md`, ответки r3–r6. **Прим. 16.11:** параллельная сессия
+  работает над AT0_4-ревью (dirty) — чистка промежуточных раундов отложена до её коммита.
+  Артефакты: `results/AT0/AT0_4_MIX.json` + store f1cc7265dd40c874.
+
+## AT0_5 — T0.5 «Генеративная проверка (disk-only)»
+
+- **Вердикт (r5-внешнее, 15.11): PASS** (3 MINOR, все опциональны). Все must-fix r4.1 (C1–C3)
+  и should-fix (M1–M5) закрыты в коде с доказательствами; статистика одна на обеих сторонах (S0);
+  вердикт не превышает in-sample GOF.
+- **Ключевые результаты:** DC+MA(1) воспроизводит дип+плато per-doc (покрытие 0.63–0.80 —
+  «три моды» мертвы, T3 остаётся только горб); full-cov G8-v3: sd_emp 1.6–5.5× выше sim-шума
+  (не-гауссовость существенна — остаток для T3); plat_hi_oos 0.373–0.608 (in-sample GOF не
+  переносится на held-out — объявлено в вердикте); S9 якорь 478/480 bit-в-бит T0.1; absent =
+  own_w0/own_w4|L1 (предсказано пре-регом).
+- **Сохранено:** `docs/AT0_5_prereg.md`, `docs/dynamic/AT0_5_ARTIFACT_REVIEW_r5.md` (финальное
+  внешнее, маркер AT0_5_REVIEW_R5_DONE). Коммит: 9fc3883. Артефакты:
+  `results/AT0/AT0_5_GENCHECK.json`.
+
 # Индекс экспериментов и реестр гипотез
 
 ## Блок «Лист: ущерб, память, рамки» (4.10). Таблицы-записи E-45 / E-45b / E-46
