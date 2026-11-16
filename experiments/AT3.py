@@ -275,13 +275,22 @@ def side_block(states, margins, p1s, layer_tag, window, local_margins=None, nois
         raise SystemExit(f"FAIL: n_docs_delta={deltas.size} < 4 (per-doc Δ не строится)")
     boot = paired_bootstrap(deltas, np.median, B=B_BOOT, seed=SEED)
     dl, dh = boot["ci_low"], boot["ci_high"]
+    # r4/F1: bootstrap-стабильность (MC-шум): primary остаётся B=1000/seed0 по
+    # пре-регу; свип — новое поле артефакта (B=1000 и 10000, seeds 0–4)
+    ci_stab = {
+        str(B): {str(s): (lambda b: [b["ci_low"], b["ci_high"]])(
+            paired_bootstrap(deltas, np.median, B=B, seed=s))
+        for s in range(5)}
+        for B in (1000, 10000)
+    }
     pooled = {}
     for bi in range(4):
         vals = np.concatenate(
             [dips[d][~np.isnan(dips[d])][_bin_of(margs[d][~np.isnan(dips[d])], q) == bi]
              for d in docs])
         pooled[bi] = float(np.median(vals))
-    # F5: min-n sensitivity (r3/N1: с n_docs и списком доков)
+    # F5: min-n sensitivity (r3/N1: с n_docs и списком доков; r4/F3: sign test
+    # + margin-IQR подвыборки — популяция-наследник)
     min_n_sens = {}
     for mn in (3, 20, 50):
         dd, ds = [], []
@@ -290,10 +299,23 @@ def side_block(states, margins, p1s, layer_tag, window, local_margins=None, nois
                     and per_doc_bin[d][0] is not None and per_doc_bin[d][3] is not None):
                 dd.append(per_doc_bin[d][0] - per_doc_bin[d][3])
                 ds.append(d)
+        arr = np.array(dd, dtype=float)
+        k_neg, n_dd = int(np.sum(arr < 0)), len(arr)
+        p_one = (sum(comb(n_dd, i) for i in range(k_neg, n_dd + 1)) / 2 ** n_dd
+                 if n_dd else None)
+        p_two = 2 * min(p_one, 1 - p_one) if p_one is not None else None
+        iqr_docs = [float(np.quantile(margs[d][~np.isnan(dips[d])], 0.75)
+                         - np.quantile(margs[d][~np.isnan(dips[d])], 0.25))
+                    for d in ds]
         min_n_sens[mn] = {
-            "delta": (float(np.median(dd)) if len(dd) >= 3 else None),
-            "n_docs": int(len(dd)),
+            "delta": (float(np.median(arr)) if n_dd >= 3 else None),
+            "n_docs": n_dd,
             "docs": ds,
+            "sign_neg": f"{k_neg}/{n_dd}" if n_dd else None,
+            "sign_p_one_sided": p_one,
+            "sign_p_two_sided": p_two,
+            "margin_iqr_median": (float(np.median(iqr_docs)) if iqr_docs else None),
+            "margin_iqr_per_doc": {str(d): v for d, v in zip(ds, iqr_docs)},
         }
     # F7: ±1 margin-shift (dip[j] ↔ mg[j+1]: условие на решении в точке поворота)
     mshift = {d: margins[d][1:dips[d].shape[0] + 1] for d in docs}
@@ -379,6 +401,7 @@ def side_block(states, margins, p1s, layer_tag, window, local_margins=None, nois
                                     if per_doc_bin[d][bi] is not None]))
                    for bi in range(4)],
         min_n_sensitivity={str(k): v for k, v in min_n_sens.items()},
+        ci_stability=ci_stab,
         ok_pair_rate={str(k): float(v) for k, v in ok_pair_rate.items()},
         nv_quantiles={str(k): v for k, v in nv_quantiles.items()},
         local_margin=local,

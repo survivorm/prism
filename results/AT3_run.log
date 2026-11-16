@@ -1,5 +1,5 @@
-AT3 (T3.1) start 2026-11-16T17:12:09.778640 py=3.12.9 smoke=False rev=r3
-trackio: run at3_margin_r3 init ok
+AT3 (T3.1) start 2026-11-16T18:19:17.579134 py=3.12.9 smoke=False rev=r4
+trackio: run at3_margin_r4 init ok
 S1 sha-гейт: 8/8 OK (+ AT0_4_MIX.json — источник дегенеративного фильтра)
 load: E (248320, 1024), wn min -0.777, tf_ids lens [164, 256, 254, 205]...
 S2 tf L23 dip_V,med median-of-docs = -0.167138 (dropped: max 0)
@@ -14,4 +14,4 @@ S5 bin-size: OK (gen [1337, 1337, 1337, 1337], tf [724, 724, 724, 724])
 F1 deg-filter: docs [0, 4] исключены из агрегатов; отброшено позиций (L23): gen 764, tf 290
 N7 corr(mg[j],mg[j+1]) L23: gen 0.7169, tf 0.0538
 N3 L17-local: Δ +0.0001 CI [-0.026601447951727947, 0.013619337993337713] (corr local/final -0.0509)
-AT3 (T3.1) DONE wall=471.2s verdicts: tf=b_non_boundary/weak gen=b_non_boundary/insufficient_power
+AT3 (T3.1) DONE wall=479.8s verdicts: tf=b_non_boundary/weak gen=b_non_boundary/insufficient_power
