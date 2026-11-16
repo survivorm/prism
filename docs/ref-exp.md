@@ -1912,6 +1912,40 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
   не тронут); логи: `logs/AT8/AT8_1_run.log` (v1, Kaggle T4), `logs/AT8/AT8_1_v2_run.log` (v2, local,
   wall 0.0s, маркер AT0_8_R2_DONE).
 
+## AT8_2 — T8.2 «Оконное восстановление + доза» (CPU, 16.11)
+
+- **Вердикт: ELASTIC (match pre-reg)** — окно после вставки луп-блока возвращается к
+  контролю, не к глобальному разбавлению (frac_to_global 0.2328 по 116 измеримым парам);
+  ℓ_rec слабо зависит от дозы (ratio 1.0333 по полной измеримой популяции, TZ §5).
+- **Ключевые результаты:** pert0 (возмущение dip-окна, медиана по докам, W=64) мало и
+  не масштабируется с дозой: 0.0139/0.0164/0.0153/0.0166 (n=2/4/8/16); ℓ_rec W64
+  (полная популяция, медиана по докам) {2: 60, 4: 39, 8: 49, 16: 62}, ratio 1.0333,
+  R² 0.184 (censored_excluded — {61.5, 0, 49, 62}, ratio 1.0081 — вторичный);
+  rec_status: recovered 29 / no_effect 32 / not_recovered 55 / not_measurable 8 /
+  D_max<8 — 4 (из 128). Низковозмущённый режим (пре-рег-ноут): порог 0.25·pert0 ≈ пол
+  шума dip — ось A неинформативна, вердикт через ось B.
+- **Ревью-цикл:** TZ-ревью r1 (2 MAJOR + 4 MINOR — закрыты в TZ v1.1); results-ревью r1
+  (MAJOR-1: медианы оси A по цензурированной популяции — против TZ §5; MINOR-1: не
+  реализованный NOT_RESOLVED-гейт; 3 MINOR + 5 NIT) — **закрыты БЕЗ перепрогона**:
+  v2 disk-only (пересчёт из committed store, ячейки == r1 побитово, общий анализный
+  фрагмент at8_2_analysis + exec-тесты resume/cells/verdict), TZ v1.2 (популяции
+  медиан/гейтов + конвенция combined + история r1→v2), код r2 (trackio stage/seed,
+  try/finally hook, resume_plan). Results-ревью r2: PASS (0 MAJOR, 1 MINOR + 5 NIT —
+  исправлены до коммита).
+- **Ограничения:** ось A неинформативна в низковозмущённом режиме (пре-рег); 8 ячеек
+  not_measurable (wiki_5/6, W=64, D_max<0); на W64-оси 75% not_recovered — diagnostic
+  (TZ v1.2: гейт по полной популяции, 47.4%); E-71B-артефакт не на диске ⇒ S8 — сверка
+  с референсным кодом (in-process, bit-identical, dev 0.0).
+- **Доки:** TZ `docs/AT8_2_TZ.md` (v1.2), TZ-ревью `docs/dynamic/AT8_2_TZ_review.md`,
+  results-ревью r1 `docs/dynamic/AT8_2_results_review.md` (REVISE → закрыто),
+  results-ревью r2 `docs/dynamic/AT8_2_results_review_r2.md` (PASS). Артефакты:
+  r1-снапшот `results/AT8/AT8_2_RECOVERY.json` (sha 779008c4…) + store (69f32421…);
+  **v2 (канон)** `results/AT8/AT8_2_RECOVERY_v2.json` (sha 215900e4…, timestamp в claim
+  → перепуск меняет sha, не числа), `AT8_2_v2_manifest.json`, `logs/AT8/AT8_2_v2_run.log`;
+  лог прогона `logs/AT8/AT8_2_run.log` (wall 257 s, AT8_2_DONE). Код:
+  `experiments/at8/AT8_2_recovery.py` (r2), `at8_2_analysis.py`, `AT8_2_v2_reanalysis.py`,
+  exec-тесты `test_at8_2_*.py`.
+
 # Индекс экспериментов и реестр гипотез
 
 ## Блок «Лист: ущерб, память, рамки» (4.10). Таблицы-записи E-45 / E-45b / E-46

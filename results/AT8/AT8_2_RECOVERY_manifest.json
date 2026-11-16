@@ -1,0 +1,11 @@
+{
+ "claim_file_sha256": "779008c46a770b0c2f96b8113e996170e9382cd88147d1754f8f70533440d8c0",
+ "store_file_sha256": "69f32421a22d7fba55b250c4b65f258ec1b5cfb4daaa7cb6fc34edeebd4365ea",
+ "e64_gpu_sha": "8c517e18f801fa877dfde9265ed5ce18df1e7d3af705194fc01ff6b150cf7633",
+ "docs_sha256": "a8f13abd59ae5f26cc23427c282d2cba4d0506711e5fe66f4d63eb5ea053b73c",
+ "pool_fp": "144c722df3046f2d",
+ "model": "/data/Qwen/Qwen3.5-0.8B",
+ "date": "2026-11-16T16:24:45.681463+00:00",
+ "verdict": "ELASTIC",
+ "wall_s": 257.4
+}

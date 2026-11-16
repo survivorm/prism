@@ -1,0 +1,10 @@
+AT8_2 r2 (T8.2) disk-only reanalysis start 2026-11-16T17:26:57.658518+00:00 py=3.12.9 np=2.5.3 (machine v2, без модели/перепрогона)
+sha-верификация: store 69f32421a22d7fba / r1-claim 779008c46a770b0c — совпадает с manifest (r1 прогон не тронут)
+ячейки: 128 (measurable=120) — пересчёт == r1-claim (0 расхождений; общий фрагмент at8_2_analysis воспроизводит r1-числа)
+ось A (W=64, ПОЛНАЯ популяция, TZ §5): lrec={2: 60.0, 4: 39.0, 8: 49.0, 16: 62.0} ratio=1.0333 b=0.7391 r2=0.1842
+  censored_excluded (вторичный): lrec={2: 61.5, 4: 0.0, 8: 49.0, 16: 62.0} (r1-claim был по этой популяции — MAJOR-1)
+ось B: frac_to_global=0.2328 (n=116)
+diag: {'n_pos': 4, 'n_meas_doc_n': 19, 'n_notrec': 55, 'n_meas_total': 116, 'notrecovered_share_full': 0.4741, 'axis_W64_notrecovered_share': 0.75}
+VERDICT: ELASTIC (match_pre_reg=True): ℓ_rec слабо зависит от n (ratio=1.0333, W=64, полная популяция), окно к контролю (frac_to_global=0.2328)
+written: /home/survivor/work/prism/results/AT8/AT8_2_RECOVERY_v2.json (sha 215900e4ac60f886), /home/survivor/work/prism/results/AT8/AT8_2_v2_manifest.json
+AT8_2_V2_DONE verdict=ELASTIC match_pre_reg=True (wall 0.1s)
