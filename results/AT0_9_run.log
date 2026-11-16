@@ -1,0 +1,22 @@
+[09:06:11] AT0_9 (T2.1) start 2026-11-16T09:06:11.073547 py=3.12.9 torch=2.14.1+cu130 smoke=False
+[09:06:11] trackio: run at0_9_t21_r1 init ok
+[09:06:27] S1 sha-гейт: 7/7 OK
+[09:06:30] load L6: H (32, 128, 1024) JR (32, 128, 128, 1024)
+[09:06:33] load L12: H (32, 128, 1024) JR (32, 128, 128, 1024)
+[09:06:35] load L18: H (32, 128, 1024) JR (32, 128, 128, 1024)
+[09:06:37] load L22: H (32, 128, 1024) JR (32, 128, 128, 1024)
+[09:06:39] E loaded: (248320, 1024)
+[09:07:05] S2 z-маршрут: mean KL = 1.885e-08 OK
+[09:07:08] S3 ориентация: hi 0.381/0.490 (ожид >0.1) lo 0.014/0.017 (ожид <0.05) OK
+[09:07:08] S4 lk4: total 90/4096 per-домен { wiki 8, math 41, code 36, chat 5 } OK
+[09:07:59] d_eff rematching: max/min = 2.13 > 1.2 -> r = 7
+[09:10:54] подпространства: r_final=7 (rematched=True); top/weak per (l,t), pca per (l,doc), haar глобальный, ker-J выборка
+[09:10:57] S5 eig-закрытость: True
+[09:10:59] readout L6 done
+[09:11:00] readout L12 done
+[09:11:02] readout L18 done
+[09:11:03] readout L22 done
+[09:11:04] readout L23 done
+[09:11:05] VERDICT: NOT_RESOLVED
+[09:11:06] S7 exact-set: 286272 == 286272 -> True
+[09:11:06] артефакт: /home/survivor/work/prism/results/AT0/AT0_9_T2_1.json (12068 KB)

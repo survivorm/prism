@@ -863,6 +863,64 @@ acf_moments, f_dc, degen — AT0_2b = тонкий драйвер, ничего 
   payload, 4.4M, file sha f8615708). v2 store (b7e90c93, superseded) — на диске, pин по sha
   в r2b-ревью.
 
+### AT0_2b — r3-ревью: минимальный патч F1–F4/M1–M3 (docs/AT0_2b_review.md заменён на ACCEPT-revю v2/v2.1, 15.11)
+
+Запрос (фиксация): «Косметика, смотри, правь, через петлю субагента». Ревью: v2/v2.1
+ACCEPT по всем заявленным фиксам; «минимальный патч» (§8 ревью) — всё из store, без
+пересчёта клеток: F1 — reachability-декларация (carrier-ветки недостижимы, dh_frac_dc = 0
+в 15/15); F2 — radial-диссоциация (лупо-специфичность) в primary summary; F3 —
+CANCELLED_GEOMETRY до dh-гейта + величина компенсации 1 − share_cross с CI; F4 — per-cell
+identity residual как гейт-число + ratio_of_means + note о неаддитивности медиан; M1 —
+note про skewed sign-flip null (radial-медиана 20–35% ниже 1/N — ожидаемо); M2 —
+p_anti = (#{null ≤ obs}+1)/(B+1) descriptive; M3 — ratio CI только при CI_low(знаменателя) > 0.
+
+- DONE:
+  [x] Верификация чисел ревью по store (всё совпадает; ОБНАРУЖЕНЫ ОШИБКИ ЛЕБЕЛЕЙ у
+  ревью: в таблицах F2/F3/F4 слои перепутаны — «all_96 L11» = loopy L11, «all_96 L23» =
+  all_96 L1, «38× на L23» = на самом деле L1; в F1 «all_96 L1» = L17; значения — настоящие
+  store-строки, подписи неверны → исправленная таблица в ответке). F1-текст ревью написан
+  против v2-порядка; после F3 реализованный вердикт — CANCELLED_GEOMETRY 15/15, не NO_DH_DC.
+  [x] Патч experiments/AT0_2b_ra_split.py (r3): CANCELLED_GEOMETRY до dh-гейта (старая
+  CANCELLED-ветка убрана — поглощена); compensation = 1 − share_cross per cell + пул med/CI95;
+  p_anti в sign_flip_fdc (4-tuple; все call-сайты обновлены); identity_resid per cell +
+  fail-loud гейт ≤ 1e-12 + gate_max[identity]; share mean (ratio_of_means — суммы = 1);
+  M3 ratio-гейт; M1 null_note; claim: round 3, prereg.verdict_rule обновлён + reachability,
+  summary (диссоциация + компенсация, числа из agg), pool_note, manifest round/note.
+  [x] Re-run disk-only (~10 мин CPU, НЕТ новых форвардов; клетки детерминированы сидами);
+  самосверка: клетки bit-identical к v2/v2.1 store 15ad06bdae5c14c5 (480/480, все старые
+  поля; новые: p_fdc_anti, p_fdc_dh_anti, identity_resid, compensation); store
+  623ba0494dca5c32 (canonical sha = имя; file sha d4ca7f10…); claim round 3 (file sha
+  48be4872…); manifest; run.log RC=0 gates ALL PASS (identity max 2.84e-14); вердикты
+  15/15 CANCELLED_GEOMETRY; p_fdc_dh_anti = 0.005 (floor) в 478/478; share means sum = 1
+  во 15/15; промежуточный store 5fc4121379d9265a (r3-атtempt 1 с wrong-headline) удалён.
+  [x] docs/AT0_2b_prereg.md — addendum §9 v3 (scope-коррекция ревью: новый порядок,
+  reachability, compensation, p_anti, M3-правило, identity-гейт; клетки не пересчитаны —
+  детерминированный re-run, без форвардов).
+  [x] docs/AT0_2b_review_r3_answers.md — по пунктам F1–F4/M1–M3 + спор про лейблы таблиц
+  (исправленные таблицы — все числа пересчитаны из store, CI-таблица сверена с claim)
+  + F1-текст после F3 + реализация M2 (re-run null на тех же данных, disk-only —
+  null-выборки в store не хранились).
+  [x] docs/dynamic/AT0_2b_REVIEW_r3_prompt.md — промпт для субагента-ревьюера (12
+  обязательных проверок).
+  [x] Петля субагента: фон-`pi -p` (obleth + ngenix-llm, --name at02b_r3_review) →
+  **VERDICT: PASS_WITH_MINORS, 0 MAJOR** (2 MINOR + 4 NIT; все 12 проверок пройдены,
+  все 4 лейбл-утверждения ответки независимо подтверждены). Фиксы: MINOR-1 (decode_probe
+  skipped = venv-регрессия, не данные — строка в claim.gates.note), MINOR-2 («в 4 из 5
+  луповых слоёв», не «во всех пяти»), NIT-3/4/5 (хедер-вердикты, «ровно 1−sc, sr+sa в
+  пределах identity_resid», окружение в claim.note) — в скрипте; NIT-4/6 — словесно в
+  ответке/пре-реге. Финальный r3-прогон: store f339894ff5e71108 (клетки 480/480 = пред.
+  r3-прогон = v2/v2.1 старые поля), claim 1c49f784…; промежуточный 623ba049 удалён.
+- DOING: [ ] коммит — ПО КОМАНДЕ (явные пути: PLAN.md, docs/AT0_2b_review.md (ревью
+  пользователя), docs/AT0_2b_review_r3_answers.md, docs/AT0_2b_prereg.md,
+  experiments/AT0_2b_ra_split.py, results/AT0/AT0_2b_RA.json, AT0_2b_manifest.json,
+  AT0_2b_run.log, store/f339894ff5e71108.json (force-add), docs/dynamic/AT0_2b_REVIEW_r3_prompt.md;
+  superseded stores b7e90c93 + 15ad06bdae5c14c5 — остаются на диске, sha зафиксированы в
+  ответке (практика r2b: не удалять без команды))
+- Границы (не менять): НЕТ новых форвардов (disk-only re-run на тех же npz, sha данных
+  сверяются скриптом); prism/field.py не трогать (sha в claim); клетки v2/v2.1 —
+  bit-identical (детерминизм сидами); docs/TZ_add_0-3.md не трогать; файлы параллельной
+  сессии не трогать; .trackio не трогать (см. урок trackio в AT0_4-блоке).
+
 ### Инцидент: удалён untracked-каталог artifacts/ (15.11 ~16:40)
 
 - Между 16:35 и 16:45 внешним процессом удалён untracked-каталог `artifacts/` (старая рабочая
@@ -1317,3 +1375,60 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
 - Границы: не менять e64_gpu.py/field.py/AT0_1..AT0_6; данные read-only (пины, /data);
   venv не чинить; коммит — по команде (явные пути). T9.1 — НЕ эта клетка: 13-точечная сетка
   и точка-данные для T9.1 отчитываются в store, но D-1_own/copy НЕ считаются.
+
+## AT0_9 — T2.1 «state-level ridge readout» (16.11, «Давай T2 через петлю субагента»)
+
+- Запрос (фиксация): клетка T2.1 (docs/TZ_add_0-3.md §3.5, волна 1, disk-only, 1–2 ч)
+  выполнять петлёй субагентов (headless pig-воркеры, .pig/jobs, DONE-маркеры —
+  AGENTS.md «Субагенты»). Клетка T2 = «слабо наблюдаемое будущее-адресуемое состояние»
+  (§3): подпространства weak-J/top-J/PCA_doc/Haar из C_l^t=(J_l^t)ᵀP J_l^t; state-level
+  ridge из спроецированного h → направление будущего логита/ошибки (один ранг, солвер,
+  регуляризация, CV); lk4 = текстовый baseline (4-грам-lookup, канон
+  experiments/exp64_at_battery.py:23); matching по d_eff данных; l ≤ 22 (арх. нуль A1:
+  O_H^fut(L_max)≡0), L23 — только нуль-контроль G9. Пре-рег ТЗ: top-J выигрывает на k=1;
+  weak-J выигрывает на k≥2 сверх PCA/Haar при matched d_eff и над lk4; иначе (b)/(c),
+  T2 понижается.
+- Нумерация: AT0_9 (AT0_1..AT0_8 заняты; коллизий с experiments/, docs/, kaggle_kernel/
+  нет — проверено).
+- Петля (1 воркер = 1 шаг, :low thinking, доказательство = маркер + файл на диске):
+  [x] S0: смоук headless-пайплайна (jobs smoke-070937: T21_SMOKE_DONE + файл + RC=0,
+    ~50 с — infra жива, в отличие от раунда AT0_8: ngenix 401 / obleth output-кап).
+    Воркер: pig -p --no-extensions --no-session, obleth/ngenix-llm:low, prompt-файлом.
+  [x] S1: scope-аудит → docs/dynamic/orch/T2_1_scope.md (job t21-s1-071153: T21_SCOPE_DONE
+    + RC=0, ~15 мин). Ключевые факты: кэш /data/prism_kernels/exp27b/results (6 файлов,
+    H — свой слой файла, JR [128,1024], 4096 поз/файл); позиция p=127−t, будущее = t−k;
+    z = H_L23 @ Eᵀ (E — tied embed, KL 4.4e-08, flip-тест 0.288 vs 0.018); rank(C)≤128
+    (eigh через 128×128 Грамиан); lk4-канон + N8 (compound.md:134), hit на пуле 1.6%
+    (65/4096); среда: /opt/miniconda3 base py3.12.9/torch2.14.1, .venv сломан (не чинить),
+    12 ядер/4 тр., RAM 32G avail, /home 98% (артефакты не в репо).
+  [x] S2: пре-рег → docs/AT0_9_T2_1_prereg.md — ЗАПИСАН СУПЕРВИЗОРом (3 попытки
+    воркера погибли на output-кап ~300 ток/ответ: t21-s2-072952, t21-s2b-073407,
+    t21-s2c-074134 — «Response was truncated», RC=1; инфра-лимит, не задача).
+    Содержимое: 12 фиксаций (sl≤22, k{1,2,4,8}, r=32, ε=1e-2, α=1.0, LOO-doc CV,
+    Грамиан P^{1/2}(JRJRᵀ)P^{1/2} + lift, weak-J = weak-сторона + ker-J контроль,
+    z=H@Eᵀ без нормировки, t↔p=127−t, lk4-канон+k-ahead, гейты S1..S9 с sha,
+    verdicts a/b/c, цена 15–45 мин, trackio at0_9_t21_r1).
+  [x] S3: ревью пре-рега → docs/AT0_9_T2_1_review_r1.md. 3 воркера погибли (output-кап ×3,
+    сеть ×2) — fallback (как AT0_8): 3-проходное САМО-ревью супервизором, VERDICT REVISE → PASS
+    после 6 правок (M1: lk4-числа scope 65 невоспроизводимы → канон as-is 90/4096 (8/41/36/5);
+    M2: (c) вердикт по попарным CI; M3: rematching d_eff; M4: S7 exact-set; m1-m3: SMOKE/ker-J/
+    floor-диагностика). Арбитраж — я (Грама = P^{1/2}(JRJR^T)P^{1/2}, weak = слабая сторона +
+    ker-J-контроль — численно верифицировано).
+  [x] S4: реализация experiments/AT0_9_t21.py (sha d522a075); само-аудит: 9 багов поймано до
+    запуска (S3-ориентация, lk4-цель t+1−k, N8-индекс, L23-LOO, SVD-ориентация Vh.T, dtype,
+    bias-в-цели, ker-J-пространство, verdict-направление).
+  [x] S5: код-ревью = S3-ревью + само-аудит по чек-листу AGENTS (см. S4; json.dump — float-касты,
+    trackio — config+stages+crash-fin, guard'ы — гейты fail-loud).
+  [x] S6: смоук (AT0_9_SMOKE=1: L6+2 дока+k=1, 53 с) + полный прогон r1/r2 через setsid nohup
+    (RAM avail 31G; r1 wall 300.5 с — вердикт-артефакт невалиден, D2; r2 wall 295.5 с — ВАЛИДЕН).
+  [x] S7: отчёт docs/AT0_9_T2_1_results.md + sha всех артефактов.
+  ИТОГ (прогон r2): VERDICT NOT_RESOLVED — метрика cos по сырым логитам floor-dominiрована
+  (floor cos(mean_y,y) = 0.945 > все readout 0.929–0.933; R² < 0; Haar ≈ J-базисы; разности
+  ≤0.2 % floor). T2-гипотеза scratchpad НЕ подтверждена disk-only readout'ом; T2 понижён
+  (пре-рег «иначе (b)/(c)»). Следующий шаг: T2.1b — центрированная метрика (отдельный пре-рег,
+  ~5 мин disk-only), НЕ перепуск. Артефакт: results/AT0/AT0_9_T2_1.json (11.8 MB, gitignored
+  results/*.json — sha в отчёте), trackio at0_9_t21_r1, лог results/AT0_9_run.log.
+- Границы: PLAN.md — только дописывать блок; файлы параллельной сессии (AGENTS.md,
+  AT0_2b*, docs/dynamic/0_E94*, 0_УТРО*) не трогать; кэш/пины /data — read-only;
+  venv не чинить; коммит — только по команде, явные пути; файлы воркеров — через
+  CJK/mixed-script гейт до коммита; trackio — config+stages в скрипте (локальный CPU).
