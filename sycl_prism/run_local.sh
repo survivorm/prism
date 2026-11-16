@@ -254,12 +254,15 @@ if [ -f build/libprism_sycl.so ]; then
     # и шаг молча печатал traceback — «тихая» поломка проверки ревизии).
     # PYTHONPATH НЕ должен молча перехватывать ошибку: если импорт не удался —
     # это КРАСНЫЙ шаг, а не информация.
-    if PRISM_SYCL_LIB=build/libprism_sycl.so PYTHONPATH="$PWD/py" "$PY" -c \
+    # ВАЖНО: статус берём ДО пайплайна (cmd | tail = статус tail, всегда 0 —
+    # ветка else была мертва, ревью NIT-NEW-1). Скрипт по дизайну продолжает
+    # работать после сбоев шага (красный маркер «!!!» — сигнал для G1).
+    out2b="$(PRISM_SYCL_LIB=build/libprism_sycl.so PYTHONPATH="$PWD/py" "$PY" -c \
         "import prism_sycl; print('собрана ревизия:', prism_sycl.device_info().get('src_rev','?'))" \
-        2>&1 | tail -2; then
-        :
-    else
-        echo "!!! не удалось прочитать ревизию собранной библиотеки (шаг 2b)"; rc=1
+        2>&1)"; rc2b=$?
+    printf '%s\n' "$out2b" | tail -2
+    if [ "$rc2b" -ne 0 ]; then
+        echo "!!! не удалось прочитать ревизию собранной библиотеки (шаг 2b)"
     fi
 fi
 
