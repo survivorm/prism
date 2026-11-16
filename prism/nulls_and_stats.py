@@ -10,12 +10,54 @@ norm/aggregation artifacts).
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 
 __all__ = [
     "operator_null", "mp_upper_edge", "mp_lambda_max_mc", "reduction_control",
     "paired_bootstrap", "permutation_test", "resolution_floor",
+    "spearman", "binom_sf",
 ]
+
+
+def spearman(a, b):
+    """Spearman ρ_s (mean-ranks, без scipy) — вынос из дублей experiments/
+    (at0_7_core, AT0_8_threshold). None: n < 3, разный len, не-конечные,
+    вырожденный ранг (std == 0)."""
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    n = len(a)
+    if n < 3 or n != len(b) or not np.all(np.isfinite(a)) or not np.all(np.isfinite(b)):
+        return None
+
+    def ranks(v):
+        o = np.argsort(v, kind="stable")
+        r = np.empty(n)
+        i = 0
+        while i < n:
+            j = i
+            while j + 1 < n and v[o[j + 1]] == v[o[i]]:
+                j += 1
+            r[o[i:j + 1]] = np.mean(np.arange(i, j + 1)) + 1.0
+            i = j + 1
+        return r
+
+    ra, rb = ranks(a), ranks(b)
+    if ra.std() == 0.0 or rb.std() == 0.0:
+        return None
+    return float(np.corrcoef(ra, rb)[0, 1])
+
+
+def binom_sf(k: int, n: int, p: float) -> float:
+    """P(X >= k), X ~ Bin(n, p) — точный (math.comb). Вынос из дублей
+    experiments/ (at06_v22_pinned, AT0_3_area, AT0_7 tests — null-строки)."""
+    if not (0 <= k <= n):
+        raise ValueError("k must be in [0, n]")
+    if not (0.0 <= p <= 1.0):
+        raise ValueError("p must be in [0, 1]")
+    return math.fsum(math.comb(n, j) * p ** j * (1.0 - p) ** (n - j)
+                     for j in range(k, n + 1))
 
 
 def operator_null(O: np.ndarray, X: np.ndarray, kind: str = "iid",

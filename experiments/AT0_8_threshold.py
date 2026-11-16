@@ -28,6 +28,7 @@ Smoke: --smoke (2 λ × 1 сид × 2 дока × 1 holdout + генерация
 """
 
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -141,16 +142,26 @@ def _script_sha():
     return None
 
 
+# Общие функции prism/ (spec-лоад, минуя prism/__init__.py — тот тянет
+# datasets/transformers; устоявшийся паттерн AT-экспов):
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _load_p(name, rel):
+    _sp = importlib.util.spec_from_file_location(name, os.path.join(_ROOT, "prism", rel))
+    _m = importlib.util.module_from_spec(_sp)
+    _sp.loader.exec_module(_m)
+    return _m
+
+
+_pf = _load_p("prism_field", "field.py")
+_nulls = _load_p("prism_nulls_and_stats", "nulls_and_stats.py")
+sha256_file = _pf.sha256_file        # was: локальный дубль (field.py)
+spearman = _nulls.spearman           # was: локальный дубль + rankdata
+
+
 def logline(s=""):
     print(s, flush=True)
-
-
-def sha256_file(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for blk in iter(lambda: f.read(1 << 20), b""):
-            h.update(blk)
-    return h.hexdigest()
 
 
 def check_e64_pin():
@@ -404,28 +415,6 @@ def run_block(m, sd0, sd_r, lam, doc_names, hold_names, tk_decode, curves_series
     finally:
         hook.remove()
     return cell
-
-
-def rankdata(x):
-    """Авг. ранги (Spearman с дублями)."""
-    x = np.asarray(x, dtype=float)
-    order = np.argsort(x, kind="mergesort")
-    ranks = np.empty(len(x), dtype=float)
-    i = 0
-    while i < len(x):
-        j = i
-        while j + 1 < len(x) and x[order[j + 1]] == x[order[i]]:
-            j += 1
-        ranks[order[i:j + 1]] = 0.5 * (i + j) + 1.0
-        i = j + 1
-    return ranks
-
-
-def spearman(a, b):
-    ra, rb = rankdata(a), rankdata(b)
-    if ra.std() == 0 or rb.std() == 0:
-        return None
-    return float(np.corrcoef(ra, rb)[0, 1])
 
 
 def u_curve(O, grid):

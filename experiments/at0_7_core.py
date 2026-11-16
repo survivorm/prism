@@ -12,9 +12,27 @@
      R(p) = Σ_d|S_x−S_sur|²/Σ_d|S_x|² ≡ 0 (АЛГЕБРАИЧЕСКОЕ ТОЖДЕСТВО, не измерение; fp64-уровень).
      Rtok(p) — per-token mean БЕЗ фазы: словарезависим, ВЫРОЖДЁН на V≫T (каждый токен ~T/V раз).
 """
+import importlib.util
 import math
+import os
 
 import numpy as np
+
+# Общие модули prism/ (spec-лоад, минуя prism/__init__.py — тот тянет
+# datasets/transformers; устоявшийся паттерн AT-экспов, как pinned field.py):
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _load_p(name, rel):
+    _sp = importlib.util.spec_from_file_location(name, os.path.join(_ROOT, "prism", rel))
+    _m = importlib.util.module_from_spec(_sp)
+    _sp.loader.exec_module(_m)
+    return _m
+
+
+_explog = _load_p("prism_explog", "explog.py")
+_nulls = _load_p("prism_nulls_and_stats", "nulls_and_stats.py")
+spearman = _nulls.spearman          # общий (was: локальный дубль)
 
 # p ∈ 3..48 — идентично AT0_6 P_GRID (T0.3 K=96 → p ≤ 48; p=2 — T0.2, закрыт)
 P_GRID = list(range(3, 49))
@@ -24,8 +42,6 @@ REPMIN = 0.8           # порог стабильного repeat (пре-рег
 H1_FLOOR = 28          # f1 ≥ 28 → PASS (пре-рег)
 R0_MIN = 0.888         # r0-якорь: min rep_frac (code_14) — воспроизведение в 1e-12
 B = 199                # per-doc перестановки (конвенция AT0_6); p_floor = 1/200
-SEED_BASE = 2026       # null: 2026 + doc_idx·1009 + s (doc_idx — индекс в sorted(96))
-SEED_STRIDE = 1009
 ALPHA = 0.05
 D_DIM = 1024
 T_PRIME = 383          # gen/own T' = T−1
@@ -56,12 +72,8 @@ def unique_root(nm, pairing):
     return root
 
 
-_log = []
-
-
-def logline(s=""):
-    print(s, flush=True)
-    _log.append(s)
+_log = _explog.ExpLog()
+logline = _log
 
 
 # ------------------------------------------------------------------- (A) токено-повтор
@@ -189,34 +201,6 @@ def _group_resid(x, b, key, den):
 def Sx_of(x, b):
     """S_d(p) = Σ_t x_{t,d} e^{−2πit/p} — общий базисный сумматор (x: (T', D))."""
     return x.T @ b
-
-
-# ------------------------------------------------------------------- статистика
-
-def spearman(a, b_):
-    """Spearman ρ_s (mean-ranks, без scipy). None: n < 3, разный len или вырожденный ранг."""
-    a = np.asarray(a, dtype=float)
-    b_ = np.asarray(b_, dtype=float)
-    n = len(a)
-    if n < 3 or n != len(b_) or not np.all(np.isfinite(a)) or not np.all(np.isfinite(b_)):
-        return None
-
-    def ranks(v):
-        o = np.argsort(v, kind="stable")
-        r = np.empty(n)
-        i = 0
-        while i < n:
-            j = i
-            while j + 1 < n and v[o[j + 1]] == v[o[i]]:
-                j += 1
-            r[o[i:j + 1]] = np.mean(np.arange(i, j + 1)) + 1.0
-            i = j + 1
-        return r
-
-    ra, rb = ranks(a), ranks(b_)
-    if ra.std() == 0.0 or rb.std() == 0.0:
-        return None
-    return float(np.corrcoef(ra, rb)[0, 1])
 
 
 # ------------------------------------------------------------------- синтетика

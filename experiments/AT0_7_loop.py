@@ -414,8 +414,7 @@ def main():
     logline(f"written: {OUT_JSON}, {MAN_JSON}, {RUN_LOG}")
     logline("AT0_7 DONE")
     logline("RUN_RC=0")
-    with open(RUN_LOG, "w") as f:
-        f.write("\n".join(core._log) + "\n")
+    core._log.write_to(RUN_LOG)
 
     if tr is not None:
         tr_done[0] = True
