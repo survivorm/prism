@@ -1,0 +1,14 @@
+AT8_1_r3 start 2026-11-16T18:38:53.664886+00:00 py=3.12.9 np=2.5.3 (disk-only reanalysis, machine v3, раунд 2 ревью)
+sha-верификация: claim b2923d74324e9180 / store 28a0c28d94d98239 — совпадает с manifest
+самопроверки: dip/eff_rank/nll_holdout (пересчёт из store) == артефакту, max dev = 0.00e+00
+самопроверка: u_dip (артефакт) == u_curve(сырой), max dev = 0.00e+00
+F2 (описательный): overshoot: dip (max_u=1.708@0.55), hump (max_u=2.078@0.85), plateau (max_u=1.566@0.85), pr_sigma (max_u=36.165@0.55), eff_rank (max_u=2.973@0.85)
+raw-отчёт: dip(0)=-0.22183 dip(1)=-0.17382 Δ=+0.04802 min=-0.30524@0.7 max=-0.13982@0.55
+V3: cond1=True (min -0.30524@0.7 vs dip(1)=-0.17382); C1=False C2=True C3=False → fired=True
+локаторы (dip/nll/margin × L1/L2/L3): dip: L1=[0.2, 0.4] L2=[0.6, 0.65] L3=[0.6, 0.65], nll_holdout: L1=[0.75, 0.85] L2=[0.6, 0.65] L3=[0.85, 1.0], margin: L1=[0.75, 0.85] L2=[0.6, 0.65] L3=[0.85, 1.0]
+V2: статусы {'L1': 'separated', 'L2': 'not_separated', 'L3': 'separated'} → verdict_differs_between_locators (fired=False)
+per-seed L3: [[0.6, 0.65], [0.65, 0.7], [0.6, 0.65]] span=1 → unresolved=False
+families v3: field=inconsistent, leaf=inconsistent, mode=vacuous
+VERDICT: V3_PATHOLOGY (pre-reg ожидание: V3_PATHOLOGY, match=True)
+written: /home/survivor/work/prism/results/AT8/AT8_1_THRESHOLD_v3.json (file sha c4fcb1ef5ad0d22f), /home/survivor/work/prism/results/AT8/AT8_1_v3_manifest.json, /home/survivor/work/prism/results/AT8/AT8_1_v3_run.log
+AT8_1_R3_DONE verdict=V3_PATHOLOGY match=True (wall 0.0s)

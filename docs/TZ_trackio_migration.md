@@ -1,6 +1,6 @@
 # ТЗ: миграция всех экспериментов prism в trackio
 
-**Статус:** v1.9 (аддендум 16.11: завершение миграции — §9) + v1.8 (patch по TZ-ревью round 4, docs/dynamic/trackio_migration_TZ_review_r4.md:
+**Статус:** v1.10 (аддендум 16.11: AT8_1 v3 + AT8_2-логи в реестр — §9.6) + v1.9 (аддендум 16.11: завершение миграции — §9) + v1.8 (patch по TZ-ревью round 4, docs/dynamic/trackio_migration_TZ_review_r4.md:
 N16 at16 пер-файловая атрибуция (ceil 47 / ceil3 71 / ceil4 144), N17 §3.3 «1 md5-дубль»→2
 (3 T4 + 2 CPU/AT0 = 5 ✓), N18 §7.5 empty_metrics + e18_logit_kd_tpu (11 T4 + e27b_early = 12;
 step_idx — прогресс-маркер, не экспериментальная метрика). v1.7 — round 3:
@@ -493,4 +493,29 @@ warnings — только dev-маркера (NbConvert-хвост, ТЗ §3.1).
 
 **Аудит-артёфакт:** отчёт `results/trackio_migration_report.json` — в git (исключение в .gitignore,
 v1.9-r1 INFO-фикс); 15.11-отчёт — бэкап `/tmp/recovered/trackio_migration_report_1511.json.bak`.
+
+### 9.6. Аддендум v1.10 (16.11): AT8_1 v3 + AT8_2-логи в реестр
+
+Прогон `at8_1_r3` (16.11 18:38, disk-only reanalysis, wall 0.0s, V3_PATHOLOGY) — реанализ-скрипт без
+live-trackio (как v2): запись в trackio — backfill из лога через миграцию. Два AT8_2-лога появились
+после v1.9-снапшота (прогоны 16.11 16:20–17:26; r1 — live-run `at8_2_recovery_r1` в DB) — fail-loud
+тест-прогон 16.11 их и поймал (UNCOVERED .log).
+
+- Лог: `results/AT8/AT8_1_v3_run.log` (пишет сам скрипт) → перенесён в `logs/AT8/AT8_1_v3_run.log`
+  (конвенция v2: логи в `logs/`; /tmp/at8_1_r3.log — тот же + wrapper-строка `RUN_RC=0`; mtime
+  восстановлен до времени записи 18:38:53).
+- Новые run'ы (3):
+  - `at8_1_v3` → `logs/AT8/AT8_1_v3_run.log` (CPU, disk-only, wall 0.0s);
+  - `at8_2_recovery_r2_partial` → `logs/AT8/AT8_2_run.log` (попытка полного прогона r2, 17:26:41:
+    только стартовая строка — не завершился, артефакт/trackio-записей нет; live r1 —
+    `at8_2_recovery_r1` в DB);
+  - `at8_2_v2` → `logs/AT8/AT8_2_v2_run.log` (r2 disk-only reanalysis, машина v2, wall 0.1s,
+    17:26:57, ELASTIC, match_pre_reg).
+- Счётчики: `TZ_EXPECTED_HITS` — без изменений (текст-логи не экстрактятся); `RUN_FAILED_EXPECTED` —
+  без изменений (failure-маркеров нет); `MD5_DUPES` — без изменений (5); `EMPTY_METRICS_EXPECTED`:
+  +3 = 103 имени.
+- Арифметика `check_registry`: find_count=148, sum_check=148, registry_runs=132
+  (= 130 уник. регистровых + 5 дублей + 13 исключённых).
+- Прогон: `--append` (live-записи в DB сохраняются); ожидаемый итог: +3 миграционных run'а.
+  Тест-прогон на копиях DB (TRACKIO_DIR/HF_DIR=/tmp/...): RC=0, 0 ошибок.
 

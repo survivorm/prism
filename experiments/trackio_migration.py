@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """Одноразовая не-деструктивная миграция всех прогонов prism в trackio.
 
-ТЗ: docs/TZ_trackio_migration.md (v1.9). Реестр: 129 run'ов / 145 .log (v1.9, 16.11: снапшот
-15.11 + AT0_5-финал/AT0_6×3/AT0_7/AT2/AT2b smoke+full/AT3 r1r3/AT8_1 T4+v2; 127 уник. регистровых
+ТЗ: docs/TZ_trackio_migration.md (v1.10). Реестр: 132 run'ов / 148 .log (v1.10, 16.11: снапшот
+15.11 + AT0_5-финал/AT0_6×3/AT0_7/AT2/AT2b smoke+full/AT3 r1r3/AT8_1 T4+v2+v3/AT8_2-логи; 130 уник. регистровых
 + 5 md5-дублей + 13 исключённых).
 Читает: логи (read-only). Пишет: {TRACKIO_DIR}/prism.db (SQLite, gitignored) +
 results/trackio_migration_report.json (sanitized).
@@ -31,7 +31,7 @@ DB_PATH = TRACKIO_DIR / "prism.db"
 LOCK_PATH = TRACKIO_DIR / "prism.lock"
 REPORT_PATH = ROOT / "results" / "trackio_migration_report.json"
 TZ_PATH = ROOT / "docs" / "TZ_trackio_migration.md"
-TZ_VERSION = "v1.9"
+TZ_VERSION = "v1.10"
 
 # ---------------------------------------------------------------------------
 # Реестр (ТЗ §3, v1.7). name: snake_case; log: путь от ROOT; duration_s: None =
@@ -170,6 +170,9 @@ CPU_RUNS = [
     ("at3_r1", "logs/AT3_run.log", None, "v1.9: T3.1 r1 (wall=270.0s в логе; duration-маркер-паттернов нет)"),
     ("at3_r4", "results/AT3_run.log", None, "v1.9: T3.1 r4 (wall=479.8s, 16.11 18:19); r4 переписал r3-лог (файл один, r3 на диске не выжил)"),
     ("at8_1_v2", "logs/AT8/AT8_1_v2_run.log", None, "v1.9: AT8_1 машина v2, disk-only (wall 0.0s)"),
+    ("at8_1_v3", "logs/AT8/AT8_1_v3_run.log", None, "v1.10: AT8_1 машина v3 (T8.1-r3), disk-only (wall 0.0s), 16.11 18:38 (V3_PATHOLOGY)"),
+    ("at8_2_recovery_r2_partial", "logs/AT8/AT8_2_run.log", None, "v1.10: попытка полного прогона r2 (16.11 17:26:41, rev=r2): только стартовая строка, артефакт/trackio-записи нет — не завершился; live-r1 — at8_2_recovery_r1 в DB"),
+    ("at8_2_v2", "logs/AT8/AT8_2_v2_run.log", None, "v1.10: AT8_2 r2 disk-only reanalysis (машина v2), wall 0.1s, 16.11 17:26 (ELASTIC, match_pre_reg)"),
     ("at2b_smoke", "results/AT2b_smoke/AT2b_smoke_run.log", None, "v1.9: smoke AT2b (T2.1b) 16.11 (smoke=True; полный прогон ещё не был)"),
     ("at2b", "results/AT2b/AT2b_run.log", None, "v1.9: полный прогон AT2b (T2.1b) 16.11 (SUBSPACE_CONTROL_FAIL); untracked; 16.11 18:2x файл перенесён в results/AT2b/"),
     ("chain_e45b", "logs/chain_e45b.log", None, ""),
@@ -214,7 +217,7 @@ FIND_EXCLUDES = [".git", ".venv", ".hf_cache", "box"]
 RUN_FAILED_MARKERS = ["[FAIL]", "Aborted (core dumped)", "AssertionError"]
 # прогресс-маркеры (не экспериментальные метрики, ТЗ §7.5 v1.8 N18): n_lines + step_idx
 PROGRESS_METRICS = {"n_lines", "step_idx"}
-# v1.9 (16.11): полный список пустых run'ов (99) — dry-run по всем 127 run'ам.
+# v1.10 (16.11): полный список пустых run'ов (103) — dry-run по всем 130 run'ам.
 # v1.8-список (12) никогда не проверялся полным прогоном (15.11 — срыв на quiescence):
 # текст-логи (все CPU/IGPU) не экстрактятся → empty_metrics=True у всех них. e93_sycl_bench
 # НЕ в списке (6 bench-точек). Происхождение: dry-run 16.11 (см. ТЗ §9.1 N2).
@@ -222,7 +225,7 @@ EMPTY_METRICS_EXPECTED = {
     "at0_1", "at0_2", "at0_2_r6_stdout", "at0_2b", "at0_3", "at0_4",
     "at0_4_rebuild", "at0_4_rebuild_r3", "at0_4_rebuild_r4", "at0_4_rebuild_r5", "at0_4_rebuild_r6", "at0_4_rebuild_r6b",
     "at0_5", "at0_5_g8fail", "at0_6", "at0_6_v2_2", "at0_6_v2r1_partial", "at0_7",
-    "at2", "at3_r1", "at3_r4", "at8_1", "at8_1_v2", "chain_e45b",
+    "at2", "at3_r1", "at3_r4", "at8_1", "at8_1_v2", "at8_1_v3", "at8_2_recovery_r2_partial", "at8_2_v2", "chain_e45b",
     "chain_e46", "e01_coherence_v6_draw2", "e01_coherence_v6_pinned", "e16_readout_pull_tpu", "e16_readout_pull_tpu2", "e16_stage0_targets",
     "e16_stage0_targets_short", "e17_2nd_canary_tpu", "e18_logit_kd_tpu", "e27b_early", "e2_heatmap", "e32r2_hessian",
     "e32r2_smoke", "e32r3_1", "e32tail_pilot", "e35_preflight", "e37_run", "e37_run2",
@@ -580,9 +583,9 @@ def check_registry(find_list):
         "sum_check": n_uniq_reg_log + len(MD5_DUPES) + len(excluded),
         "xet_logs": xet,
     }
-    # v1.9: 129 run'ов / 145 .log = 127 уник. регистровых + 5 дублей + 13 исключённых (ТЗ §9.2)
-    if stats["find_count"] != 145 or stats["sum_check"] != 145 or stats["registry_runs"] != 129:
-        errors.append(f"арифметика 129/145 нарушена: {stats}")
+    # v1.10: 132 run'ов / 148 .log = 130 уник. регистровых + 5 дублей + 13 исключённых (ТЗ §9.2/§9.6)
+    if stats["find_count"] != 148 or stats["sum_check"] != 148 or stats["registry_runs"] != 132:
+        errors.append(f"арифметика 132/148 нарушена: {stats}")
     return errors, stats, xet
 
 
@@ -922,22 +925,34 @@ def main():
         report["errors"].append(f"md5-расхождение после миграции (нарушение не-деструктивности): {mismatch}")
 
     # --- сверка счётчиков с ТЗ (только если реально обработан хотя бы один run; v1.9-r1:
-    # повторный --append со всеми skip'ами — пустой прогон, проверки не применяются)
+    # повторный --append со всеми skip'ами — пустой прогон, проверки не применяются;
+    # v1.10: инкрементальный --append, где новые run'ы все metric-empty (текст-логи) —
+    # full-сверка по всему реестру неприменима (их вклад в счётчики = 0); проверяется,
+    # что обработанные run'ы — ровно ожидаемо пустые/не-фейл; full-сверка — при полном прогоне)
     if report["runs"]:
-        report["raw_hits"] = dict(raw_hits_all)
-        for k, expected in TZ_EXPECTED_HITS.items():
-            got = raw_hits_all.get(k, 0)
-            if got != expected:
-                report["errors"].append(f"счётчик «{k}»: факт {got} ≠ ТЗ {expected} (ТЗ §4/r3)")
-        # --- expected-списки
+        processed = {r["name"] for r in report["runs"]}
         empty_actual = {r["name"] for r in report["runs"] if r["empty_metrics"]}
         failed_actual = {r["name"] for r in report["runs"] if r["run_failed"]}
-        if empty_actual != EMPTY_METRICS_EXPECTED:
-            report["errors"].append(f"empty_metrics: факт {sorted(empty_actual)} ≠ ТЗ §7.5 "
-                                    f"{sorted(EMPTY_METRICS_EXPECTED)}")
-        if failed_actual != RUN_FAILED_EXPECTED:
-            report["errors"].append(f"run_failed: факт {sorted(failed_actual)} ≠ ТЗ §4 "
-                                    f"{sorted(RUN_FAILED_EXPECTED)}")
+        report["raw_hits"] = dict(raw_hits_all)
+        if processed <= EMPTY_METRICS_EXPECTED:
+            # v1.10: обработаны только metric-empty run'ы — их вклад в счётчики = 0
+            for k in TZ_EXPECTED_HITS:
+                if raw_hits_all.get(k, 0) != 0:
+                    report["errors"].append(
+                        f"счётчик «{k}»: {raw_hits_all[k]} — новые run'ы metric-empty (ТЗ §7.5) — "
+                        "неожиданно")
+        else:
+            for k, expected in TZ_EXPECTED_HITS.items():
+                got = raw_hits_all.get(k, 0)
+                if got != expected:
+                    report["errors"].append(f"счётчик «{k}»: факт {got} ≠ ТЗ {expected} (ТЗ §4/r3)")
+        # --- expected-списки (v1.10: сверка по обработанному множеству — инкрементально-безопасно)
+        if empty_actual != (processed & EMPTY_METRICS_EXPECTED):
+            report["errors"].append(f"empty_metrics: факт {sorted(empty_actual)} ≠ ожидаемо для "
+                                    f"обработанных {sorted(processed & EMPTY_METRICS_EXPECTED)}")
+        if failed_actual != (processed & RUN_FAILED_EXPECTED):
+            report["errors"].append(f"run_failed: факт {sorted(failed_actual)} ≠ ожидаемо для "
+                                    f"обработанных {sorted(processed & RUN_FAILED_EXPECTED)}")
     else:
         report["raw_hits"] = {}
         report["warnings"].append("все run'ы пропущены (уже в DB) — счётчик/expected-проверки не применяются")
