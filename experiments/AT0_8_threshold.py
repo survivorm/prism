@@ -158,6 +158,7 @@ _pf = _load_p("prism_field", "field.py")
 _nulls = _load_p("prism_nulls_and_stats", "nulls_and_stats.py")
 sha256_file = _pf.sha256_file        # was: локальный дубль (field.py)
 spearman = _nulls.spearman           # was: локальный дубль + rankdata
+u_curve = _nulls.u_curve             # was: локальный дубль (AT0_8_r2-реанализ — 2-й потребитель)
 
 
 def logline(s=""):
@@ -415,14 +416,6 @@ def run_block(m, sd0, sd_r, lam, doc_names, hold_names, tk_decode, curves_series
     finally:
         hook.remove()
     return cell
-
-
-def u_curve(O, grid):
-    """u(λ) = (O(λ)−O(0))/(O(1)−O(0)) по grid; None если no_range (пре-рег §6.1)."""
-    o0, o1 = O[grid[0]], O[grid[-1]]
-    if abs(o1 - o0) < 1e-6 * max(1.0, abs(o0), abs(o1)):
-        return None
-    return {lam: (O[lam] - o0) / (o1 - o0) for lam in grid}
 
 
 def crossing_of(u, grid):

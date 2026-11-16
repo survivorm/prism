@@ -17,7 +17,7 @@ import numpy as np
 __all__ = [
     "operator_null", "mp_upper_edge", "mp_lambda_max_mc", "reduction_control",
     "paired_bootstrap", "permutation_test", "resolution_floor",
-    "spearman", "binom_sf",
+    "spearman", "binom_sf", "u_curve",
 ]
 
 
@@ -58,6 +58,17 @@ def binom_sf(k: int, n: int, p: float) -> float:
         raise ValueError("p must be in [0, 1]")
     return math.fsum(math.comb(n, j) * p ** j * (1.0 - p) ** (n - j)
                      for j in range(k, n + 1))
+
+
+def u_curve(O: dict, grid: list) -> dict | None:
+    """Нормированная кривая u(λ) = (O(λ)−O(0))/(O(1)−O(0)) по grid; None если
+    no_range (пре-рег AT0_8 §6.1: |O(1)−O(0)| < 1e-6·max(1, |O(0)|, |O(1)|)).
+    Вынос из дублей experiments/ (AT0_8_threshold — ламбда-интерполяция; AT0_8_r2 —
+    пересчёт per-doc субмножеств)."""
+    o0, o1 = O[grid[0]], O[grid[-1]]
+    if abs(o1 - o0) < 1e-6 * max(1.0, abs(o0), abs(o1)):
+        return None
+    return {lam: (O[lam] - o0) / (o1 - o0) for lam in grid}
 
 
 def operator_null(O: np.ndarray, X: np.ndarray, kind: str = "iid",

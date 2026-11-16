@@ -48,3 +48,31 @@ nll_holdout и margin сходятся в λ_c ≈ 0.85 (интервал [0.75,
   при явном задании; сейчас вердикт V0 закрыт, round 2 не пререгистрирован.
 - Никаких правок пререга/скрипта под результат — фикс v1 касался только
   бага (тип данных в бисекции), не логики.
+
+## Машина v2 (T8.1-r2, 16.11) — disk-only реанализ
+
+Внешнее ревью полного прогона: `docs/AT0_8_review.md` (гейты/провенанс **ACCEPT**,
+машина v1 — **REVISE**; разбор F1–F6 с числами — раздел 11, r2-exec). Пре-рег машины v2:
+`docs/TZ_add_4-8.md` §T8.1. Скрипт: `experiments/AT0_8_r2_reanalysis.py` (без RNG, без
+перепрогона; вход — committed store, sha-верификация по manifest).
+
+**Вердикт v2: V2_SOLITON_CANDIDATE** (coincides с pre-reg ожиданием, match=True):
+- полевой событияный эстиманд dip = интервал max-скорости **[0.60, 0.65]** (Δu = −2.099);
+  hump/plateau — тот же интервал ([0.60, 0.65], Δu = +0.910 / +0.652);
+- отделён от λ_c компетентности (nll_holdout ∧ margin, resolved) = **0.85** на 3 шага сетки;
+- V3 НЕ сработал: max(u_dip) = 1.708 > 1 (cond1 ✓), НО hinge(0.55) = 0.0340 <
+  hinge(0.00) = 0.0480 (cond2 ✗, seed-avg) — патология не подтверждена;
+- V1 структурно недостижим (dip немонотонен → λ_c^dip нет);
+- families 3/3 `intra_consistent=false` — нет единого координированного порога;
+- sensitivity F6: dip-сигнатура жива на не-луповом {wiki_2, wiki_3} (u: пик +1.844@0.55,
+  провал −3.056@0.7, max-скорость [0.60, 0.65]) — составный артефакт луповых доков отклонён;
+- r2-exec-опровержение F3b: raw rep16(1.0) = 0.0 (фразовый цикл ≈ 20 токенов > 16-окна),
+  sample λ=1 — «The program is designed to help you master the art of making delicious BBQ.»,
+  цитата «ame ame» из ревью не из AT0_8.
+
+Две события (в данных с v1-прогона, впервые выражены машиной): поле реорганизуется на
+λ ≈ 0.60–0.65; компетентность растёт к λ = 0.85; mode (loopy) включается на 0.85–1.0.
+
+Артефакты (gitignored `results/*.json`, на диске): `results/AT0_8_THRESHOLD_v2.json`
+(claim, file sha `bb507dac4d696981`), `results/AT0_8_v2_manifest.json` (self-sha `548eec26f37a5d19`), `results/AT0_8_v2_run.log` (tracked; маркер
+`AT0_8_R2_DONE verdict=V2_SOLITON_CANDIDATE match=True`).

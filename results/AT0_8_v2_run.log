@@ -1,0 +1,15 @@
+AT0_8_r2 start 2026-11-16T09:11:32.008936+00:00 py=3.12.9 np=2.5.3 (disk-only reanalysis, machine v2)
+sha-верификация: claim b2923d74324e9180 / store 28a0c28d94d98239 — совпадает с manifest
+самопроверка: 6-doc median dip (store) == curves_seedavg.dip (артефакт), max dev = 0.00e+00
+самопроверка: u_dip (артефакт) == u_curve(пересчёт), max dev = 0.00e+00
+F2: overshoot (до гейта, все наблюдаемые): dip=yes, hump=yes, plateau=yes, pr_sigma=yes, eff_rank=yes
+F1: полевые события (max |Δu/Δλ|): dip=[0.6,0.65] (Δu=-2.099), hump=[0.6,0.65] (Δu=+0.910), plateau=[0.6,0.65] (Δu=+0.652)
+F4: бинарные (first λ raw > 0): loopy=0.85, rep16=None
+компетентность: nll_holdout: resolved ci=[0.85, 0.85], margin: resolved ci=[0.85, 0.85]
+S9-декларация: points=[0.8, 0.8], widths={'nll_holdout': 0.04999999999999993, 'margin': 0.04999999999999993}
+V3: max_u_dip=1.7080@0.55, hinge(0.55)=0.03399912238266836, hinge(0)=0.04801819275283917 → fired=False
+V2: dip-интервал [0.6, 0.65] vs компетентность: {'nll_holdout': {'ci': [0.85, 0.85], 'field_interval': [0.6, 0.65], 'gap_steps': 3, 'separated': True}, 'margin': {'ci': [0.85, 0.85], 'field_interval': [0.6, 0.65], 'gap_steps': 3, 'separated': True}} → fired=True
+F6 sensitivity: ['wiki_2', 'wiki_3']: u пик +1.844@0.55, провал -3.056@0.7, max-скорость [0.6,0.65]
+VERDICT: V2_SOLITON_CANDIDATE (pre-reg ожидание: V2_SOLITON_CANDIDATE, match=True)
+written: /home/survivor/work/prism/results/AT0_8_THRESHOLD_v2.json (file sha bb507dac4d696981), /home/survivor/work/prism/results/AT0_8_v2_manifest.json, /home/survivor/work/prism/results/AT0_8_v2_run.log
+AT0_8_R2_DONE verdict=V2_SOLITON_CANDIDATE match=True (wall 0.0s)
