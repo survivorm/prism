@@ -1559,7 +1559,10 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
       фикс axis=0; новое окно — аналитический шум 2e-4 → frac ≈ 0.0004–0.0007.
     - F2: flip_threshold в артефакте: gen ci_high −0.015349 (стабилен),
       вердикт обращается при T < 0.015349; пре-рег 0.02 = +30.3%.
-    Прогон AT3_REVISION=r5, вердикты без изменений. NEXT: T3.2 (35-пул).
+    Прогон AT3_REVISION=r5 (wall 567.4 с), вердикты без изменений. [x] r5
+    ЗАКРЫТО (коммиты 0b52aa8 + cca4b5f; ревью-файл — финальная версия 190
+    строк, sha 0f306d73; поправка: TF p1 разрешён после B3, δp1 2.9e-5 <
+    IQR 0.239). NEXT: T3.2 (35-пул).
 - Общие модули (указание user 16.11): AT3.py — на prism/explog.py (ExpLog, drop-in
   для logline) и prism/nulls_and_stats.py (paired_bootstrap, spearman, permutation_test)
   — НЕ копировать логику в скрипт (рефакторинг 484943b).
