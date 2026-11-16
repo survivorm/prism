@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-"""AT0_9 (T2.1) — state-level ridge readout (disk-only).
+"""AT2 (T2.1) — state-level ridge readout (disk-only).
 
-Пре-рег: docs/AT0_9_T2_1_prereg.md (ревью r1: REVISE → PASS, 6 правок).
+Пре-рег: docs/AT2_prereg.md (ревью r1: REVISE → PASS, 6 правок).
 Клетка T2.1 (docs/TZ_add_0-3.md §3.5): readout будущего логита из h_l^t,
 спроецированного на weak-J / top-J / PCA_doc / Haar, vs lk4-текстовый базлайн.
 Ноль новых форвардов: кэш exp27b + E (tied embed). Среда: /opt/miniconda3 base
 py3.12.9 + torch 2.14.1; 4 CPU-трёда; CPU.
 """
-import atexit, hashlib, json, os, sys, time
+import atexit, importlib.util, json, os, sys, time
 from datetime import datetime
 
 os.environ["OMP_NUM_THREADS"] = "4"
@@ -22,10 +22,10 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CACHE_DIR = "/data/prism_kernels/exp27b/results"
 MODEL_DIR = "/data/Qwen/Qwen3.5-0.8B"
 RESULTS = os.path.join(ROOT, "results")
-ART = os.path.join(RESULTS, "AT0", "AT0_9_T2_1.json")
-LOG_PATH = os.path.join(RESULTS, "AT0_9_run.log")
+ART = os.path.join(RESULTS, "AT2", "AT2.json")
+LOG_PATH = os.path.join(RESULTS, "AT2_run.log")
 REVISION = "r1"
-SMOKE = os.environ.get("AT0_9_SMOKE", "0") == "1"
+SMOKE = os.environ.get("AT2_SMOKE", "0") == "1"
 
 # --- фиксация пре-рега (fix-до-прогона) -------------------------------------
 LAYS = (6, 12, 18, 22) if not SMOKE else (6,)   # A1: l <= 22
@@ -62,12 +62,12 @@ def logline(s):
     print(line, flush=True)
     _LOG.append(line)
 
-def sha256_file(p):
-    h = hashlib.sha256()
-    with open(p, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 22), b""):
-            h.update(chunk)
-    return h.hexdigest()
+# sha256_file — общий из prism/field.py (spec-лоад, минуя prism/__init__ —
+# тот тянет datasets/transformers):
+_sp = importlib.util.spec_from_file_location("prism_field", os.path.join(ROOT, "prism", "field.py"))
+_pf = importlib.util.module_from_spec(_sp)
+_sp.loader.exec_module(_pf)
+sha256_file = _pf.sha256_file
 
 # ------------------------------------------------------------------- trackio
 def trackio_start(name, cfg):
@@ -156,7 +156,7 @@ def d_eff_of(projs, Hdoc):
 def main():
     t0 = time.time()
     os.makedirs(os.path.dirname(ART), exist_ok=True)
-    logline(f"AT0_9 (T2.1) start {datetime.now().isoformat()} "
+    logline(f"AT2 (T2.1) start {datetime.now().isoformat()} "
             f"py={sys.version.split()[0]} torch={torch.__version__} smoke={SMOKE}")
 
     tr = None
@@ -172,9 +172,9 @@ def main():
             "layers": list(LAYS), "k": list(KS), "r": R, "alpha": ALPHA,
             "boot_b": BOOT_B, "n_docs": N_DOCS,
         }
-        tr = trackio_start(f"at0_9_t21_{REVISION}", tr_cfg)
+        tr = trackio_start(f"at2_t21_{REVISION}", tr_cfg)
         tlog(tr, 0, {"started": 1.0})
-        logline(f"trackio: run at0_9_t21_{REVISION} init ok")
+        logline(f"trackio: run at2_t21_{REVISION} init ok")
 
         def _trackio_on_exit():
             if not tr_done[0]:
@@ -612,7 +612,7 @@ def main():
     logline(f"S7 exact-set: {len(per_pos)} == {len(expected)} -> {gates['S7_exact_set']}")
 
     out = {
-        "run": f"at0_9_t21_{REVISION}",
+        "run": f"at2_t21_{REVISION}",
         "started_at": datetime.now().isoformat(),
         "config": {"layers": list(LAYS + (L_CTRL,)), "k": list(KS), "r": R,
                    "r_final": r_final, "rematched": rematched, "eps": EPS,
@@ -649,7 +649,7 @@ def main():
         tr.finish()
     with open(LOG_PATH, "w") as f:
         f.write("\n".join(_LOG) + "\n")
-    logline(f"AT0_9 (T2.1) DONE wall={time.time() - t0:.1f}s verdict={verdict}")
+    logline(f"AT2 (T2.1) DONE wall={time.time() - t0:.1f}s verdict={verdict}")
 
 def _lift_arr(lam, w, jrt, sp, idxs):
     V = np.zeros((D, len(idxs)), dtype=np.float32)

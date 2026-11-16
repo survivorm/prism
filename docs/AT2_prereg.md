@@ -1,4 +1,4 @@
-# AT0_9 (T2.1) — пре-рег «State-level ridge readout» (ТЗ docs/TZ_add_0-3.md §3.5, v1.1)
+# AT2 (T2.1) — пре-рег «State-level ridge readout» (ТЗ docs/TZ_add_0-3.md §3.5, v1.1)
 
 **Клетка:** T2.1 «Readout будущего без новых зондов (disk-only)» — центральный тест T2
 («слабо наблюдаемое будущее-адресуемое состояние»). Волна 1 ТЗ (§6.1, ~1–2 ч, ноль новых
@@ -7,7 +7,7 @@ T2.2/T2.3/T2.4 — НЕ эта клетка.
 
 ## 1. Что меняется против ТЗ (version notes — объявлены)
 
-| ТЗ §3 | AT0_9 (на диске) |
+| ТЗ §3 | AT2 (на диске) |
 |---|---|
 | `C_l^t = (J_l^t)ᵀ P_t J_l^t`, полный J (V=248320) | **C на U128-базисе** (K=128): J в кэше только в U128-столбцах, P128 ренормирована над U128 (прецедент серии E-38/E-39-suppl: readout-basis = U128). Полный C по V — новые JVP, НЕ disk-only. |
 | weak-J «из C_l^t, не из U_obs L23 (N6)» | weak-J = **32 наименьших ненулевых λ eigvec C** (weak-сторона null_ε, ε=1e-2 — диагностический порог, не селектор); контроль-строка **ker-J** (SVD-нуль JR, r=32 — точный λ=0, произвольный базис ядра) отдельно, не в verdict. |
@@ -171,12 +171,12 @@ def lk4(t):
 
 ## 11. Артефакты
 
-- `results/AT0/AT0_9_T2_1.json` — claim (схема §7.1 ТЗ): config, prereg-эхо, gates S1..S9,
+- `results/AT2/AT2.json` — claim (схема §7.1 ТЗ): config, prereg-эхо, gates S1..S9,
   per (l,k): cos_median / R² / Δz-cos по 4 подпространствам, d_eff, r_used (оба r при
   rematching), ε-диагностика (число λ > ε·λ_max), lk4-таблицы (k=1 hit + one-hot cos,
   k-ahead cos, N8-страта per-домен), L23-контроль, ker-J-контроль, verdict, price.
-  (gitignored-конвенция AT0_2b C7; sha фиксируется в отчёте `docs/AT0_9_T2_1_results.md`.)
-- `results/AT0_9_run.log` — stdout, tracked.
+  (gitignored-конвенция AT0_2b C7; sha фиксируется в отчёте `docs/AT2_results.md`.)
+- `results/AT2_run.log` — stdout, tracked.
 - Store не нужен (нет λ-сетки).
 
 ## 12. Trackio

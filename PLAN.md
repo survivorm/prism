@@ -1376,7 +1376,7 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
   venv не чинить; коммит — по команде (явные пути). T9.1 — НЕ эта клетка: 13-точечная сетка
   и точка-данные для T9.1 отчитываются в store, но D-1_own/copy НЕ считаются.
 
-## AT0_9 — T2.1 «state-level ridge readout» (16.11, «Давай T2 через петлю субагента»)
+## AT2 — T2.1 «state-level ridge readout» (16.11, «Давай T2 через петлю субагента»; начато как AT0_9)
 
 - Запрос (фиксация): клетка T2.1 (docs/TZ_add_0-3.md §3.5, волна 1, disk-only, 1–2 ч)
   выполнять петлёй субагентов (headless pig-воркеры, .pig/jobs, DONE-маркеры —
@@ -1388,8 +1388,9 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
   O_H^fut(L_max)≡0), L23 — только нуль-контроль G9. Пре-рег ТЗ: top-J выигрывает на k=1;
   weak-J выигрывает на k≥2 сверх PCA/Haar при matched d_eff и над lk4; иначе (b)/(c),
   T2 понижается.
-- Нумерация: AT0_9 (AT0_1..AT0_8 заняты; коллизий с experiments/, docs/, kaggle_kernel/
-  нет — проверено).
+- Нумерация: AT2 (правило user 16.11: блок T{N} → AT{N}; прежнее AT0_9 переименовано
+  16.11, git mv + refs, артефакт results/AT2/AT2.json, лог results/AT2_run.log,
+  trackio legacy at0_9_t21_r1).
 - Петля (1 воркер = 1 шаг, :low thinking, доказательство = маркер + файл на диске):
   [x] S0: смоук headless-пайплайна (jobs smoke-070937: T21_SMOKE_DONE + файл + RC=0,
     ~50 с — infra жива, в отличие от раунда AT0_8: ngenix 401 / obleth output-кап).
@@ -1427,7 +1428,7 @@ autocorrelation, lag-1 dip — отдельно) — для T0-аддентум�
   ≤0.2 % floor). T2-гипотеза scratchpad НЕ подтверждена disk-only readout'ом; T2 понижён
   (пре-рег «иначе (b)/(c)»). Следующий шаг: T2.1b — центрированная метрика (отдельный пре-рег,
   ~5 мин disk-only), НЕ перепуск. Артефакт: results/AT0/AT0_9_T2_1.json (11.8 MB, gitignored
-  results/*.json — sha в отчёте), trackio at0_9_t21_r1, лог results/AT0_9_run.log.
+  results/*.json — sha в отчёте), trackio at0_9_t21_r1 (legacy), лог results/AT2_run.log.
 - Границы: PLAN.md — только дописывать блок; файлы параллельной сессии (AGENTS.md,
   AT0_2b*, docs/dynamic/0_E94*, 0_УТРО*) не трогать; кэш/пины /data — read-only;
   venv не чинить; коммит — только по команде, явные пути; файлы воркеров — через

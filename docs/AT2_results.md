@@ -1,16 +1,18 @@
-# AT0_9 (T2.1) — state-level ridge readout: результаты
+# AT2 (T2.1) — state-level ridge readout: результаты
 
 Петля: S0–S5 (subagent-луп, 3-проходное само-ревью r1, VERDICT PASS c 6 правками),
 S6–S9 (супервизор). Прогон r2 — валидный артефакт (см. «Отклонения», D2).
 
 ## 1. Мета-данные
 
-- Скрипт: `experiments/AT0_9_t21.py` (sha256 `d522a07516f8dfec9ac635a37179a6e8175d325e38abfd1bac9efd0c13db3d25`)
-- Пре-рег: `docs/AT0_9_T2_1_prereg.md` (sha256 `faf6e58708ad9e8cff04d1d0d6639abcb4a3b47ce8e91f381a1b0d0f66c20f24`)
-- Ревью r1: `docs/AT0_9_T2_1_review_r1.md` (sha256 `568e46cee415462ad6b59c098aaa3f6c4ebe476299ed9048898c9a97f66df778`)
-- Артефакт: `results/AT0/AT0_9_T2_1.json` (11.8 MB, sha256 `ee3a78ec0480f0a5fab8275311d956020091ecc60e3ecf93b8b634b544ed78b3`)
-- Лог: `results/AT0_9_run.log` (sha256 `2912ab7a8f90697ca1f8838a4ba111a6288a6c8ed56a350c5c33ea1156edcc73`)
-- Trackio: run `at0_9_t21_r1` (project prism, group AT0), старт/финиш + 5 stage-точек, status ok.
+- 16.11 переименование (user: «T2 → AT2, T3 → AT3»): AT0_9 → AT2, файлы git mv, содержимое
+  артефакта и лога не менялось (sha ниже — для переименованных файлов).
+- Скрипт: `experiments/AT2.py` (sha256 `0467b8ffa968b7cef026e122352834b63328bb593cd7ad5f1cc57fd4c14ea4b5`; до ренейма `d522a075…`)
+- Пре-рег: `docs/AT2_prereg.md` (sha256 `8c55fb3d27eba0999a8210512fca9d2d43fab8263d416de7e7491ea3bb9a7c62`; до ренейма `faf6e587…`)
+- Ревью r1: `docs/AT2_review_r1.md` (sha256 `43719327346b41cc1419a5f28e21105ca9eb51b5c6a8a0569bbc431325e844fe`; до ренейма `568e46ce…`; тело — снапшот на имя AT0_9)
+- Артефакт: `results/AT2/AT2.json` (11.8 MB, sha256 `ee3a78ec0480f0a5fab8275311d956020091ecc60e3ecf93b8b634b544ed78b3`)
+- Лог: `results/AT2_run.log` (sha256 `2912ab7a8f90697ca1f8838a4ba111a6288a6c8ed56a350c5c33ea1156edcc73`)
+- Trackio: run `at0_9_t21_r1` (legacy-имя до ренейма; project prism, group AT0), старт/финиш + 5 stage-точек, status ok.
 - Среда: /opt/miniconda3 base, py 3.12.9, torch 2.14.1+cu130 (CPU), 4 CPU-трёда, seed 0.
 - Прогон r2: wall 295.5 с (~5 мин), S7 exact-set 286272 == 286272.
 
