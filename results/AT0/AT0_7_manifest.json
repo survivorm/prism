@@ -7,19 +7,19 @@
   "sha256": "c24cb6681e5eb26f6511fa177cbbc7a2b793333f7c5665357b70ac11ab1132bb"
  },
  "claim_path": "results/AT0/AT0_7_LOOP.json",
- "claim_sha256": "883e5fc65c400edc4c105e4ae2f10a506b1817bbc67fc5439963747495f7456e",
- "core_sha256": "b13178b3bfb0ee445023e08f7b2b725b5c154a746f207987ff5a90442fe8fd5d",
+ "claim_sha256": "cdf16e67f1baeeaa17f562261277cf018ae6143d83e24422597631384b1ff6bb",
+ "core_sha256": "55d6524990bb5c3fe4764294d7b6e086613180ba561e16cca4b13125d674e387",
  "data_sha256": {
   "cor": "5f42a08442a5d3bcb8d7c4de5c9658340c0378a917a5e633b9b2aa589ceac125",
   "gen": "f142f297ec16209d1520cf6f4ee46fdd2543b0d73f566a69d93c26771349fdd7",
   "own": "783e16338cdcb652198722a33ecec8a6e8e98fa3c611c687b17db722b0d58198"
  },
- "date": "2026-11-16T10:13:31.372755",
+ "date": "2026-11-16T11:24:19.736266",
  "experiment": "AT0_7 T0.7 (v3)",
  "field_sha256": "bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532",
- "manifest_sha256": "b92799b01fb0259847de483d3941b75976a86443b8a70eb43171ae2bdc1cf331",
+ "manifest_sha256": "78746c2cdfe5cd95d2b15bdef5dc6f08cc413e5fa30e5a28de49b40103c3348b",
  "parallel_session_files": "AT0_7_loop_mine.py (external, not canonical), AT0_8_threshold.py (external) — не трогаются",
- "script_sha256": "15607b18c301f86936aea3263c5b8e7e58e54678a57efc2b52061cdbf65e9ca0",
- "store_path": "results/AT0/store/b66d790bb6feb12c.json",
- "store_sha256": "b66d790bb6feb12c54175994ec1b404004b61398cda027fae26eddf9920941fe"
+ "script_sha256": "8026f9a90b07d4185590cac7f69dabdfeef82ab201bedf2117bda9c304ffc38b",
+ "store_path": "results/AT0/store/4669ce0de96c41b6.json",
+ "store_sha256": "4669ce0de96c41b62197dea61ce7dc47add69e8f04cfe6afe039649b12baf513"
 }

@@ -206,6 +206,10 @@ def _tstage(tr, t0, name, extra=None):
 def _run_gates(docs, pools, t0, tr):
     """G0 (как T0.6) + G1a/b/d + G2 (+ явные assert ТЗ) + G7 + POSITIVE. ДО интерпретации."""
     g0 = a6.g0_data(docs)
+    # K1 (r2-exec): a6.g0_data пишет в a6._log (никогда не пишется в файл) → дублируем G0-строку в канон run.log
+    logline(f"G0: gen {g0['data_sha256']['gen'][:16]} own {g0['data_sha256']['own'][:16]} "
+            f"cor {g0['data_sha256']['cor'][:16]} at03 {g0['at03_sha256'][:16]}; "
+            f"gen_sha_ok {g0['gen_sha_ok']}; corpus toks {g0['decode_probe']['corpus_toks']}/16 (G16); ok={g0['ok']}")
     _tstage(tr, t0, "g0")
     toks777 = np.random.default_rng(core.G1D_SEED).integers(0, core.V_SYNTH, core.G7_TOK_T)
     g1a = tests.g1a_identity()

@@ -130,4 +130,22 @@ r1-находки M1–M3+К1–К3 все закрыты в текущем ко
 
 **Вердикт ревью: PASS с MINOR (1 процессный, 0 MAJOR, 0 блокирующих).**
 
+## 9. Закрытие K1–K3 (16.11, пост-пасс: код + ре-ран)
+
+| № | фикс | верификация |
+|---|---|---|
+| К1 | `AT0_7_loop._run_gates`: после `a6.g0_data` дублирует G0-строку через core.logline → канон run.log | ре-ран: строка 5 `AT0_7_run.log` = `G0: gen f142f297… own 783e1633… cor 5f42a084… at03 8fe61aff…; gen_sha_ok 64/64; corpus toks 0/16 (G16); ok=True` |
+| К2 | `core.SEED_BASE/SEED_STRIDE` удалены | коммит 484943b; `hasattr(core,'SEED_BASE')` = False |
+| К3 | `_group_resid(x, Sx, b, key, den)` — Sx передаётся из `lookup_resid` (второй gemm не пересчитывается); `Sx_of` удалена (мёртвая, AGENTS-9) | числовая идентичность: 4/4 p ∈ {2,3,5,13}, \|R_new − R_old\| < 1e-15; core selfcheck OK |
+
+**Ре-ран (16.11, 11:18–11:24, wall ≈ 350 s под нагрузкой LA 45; предыдущий — 65 s):** RUN_RC=0, verdict CONFIRMED, trackio ok.
+gates/tests/pools — бит-идентичны предыдущему store (изменились только date + shas).
+Новые shas: store `4669ce0de96c41b6` (имя файла = raw file sha = store_sha256), claim `cdf16e67f1baeeaa`
+(= manifest.claim_sha256), manifest self-sha `78746c2cdfe5cd95` (канон: blob БЕЗ ключа manifest_sha256,
+ensure_ascii=False, indent=1, sort_keys — пересчитано, MATCH), script(loop) `8026f9a90b07d418`, core
+`55d6524990bb5c3f` — оба = значения в manifest. Hash-цепь проверена. Предыдущий store b66d790bb6feb12c
+остаётся на диске (sha зафиксирован в шапке §1).
+
+**Статус: K1–K3 — все закрыты. Блокирующих находок не осталось.**
+
 AT0_7_EXEC_R2_DONE

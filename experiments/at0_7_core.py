@@ -179,14 +179,15 @@ def lookup_resid(x, tk, p):
         return None, None
     # (токен, фаза)-группы: x^sur = group-mean; sum по группе = group-sum ⇒ p-бина сохранены
     key = tk.astype(np.int64) * int(p) + (np.arange(T) % p)
-    R, Rtok = _group_resid(x, b, key, den), None
+    R, Rtok = _group_resid(x, Sx, b, key, den), None
     key2 = tk.astype(np.int64)                    # per-token, БЕЗ фазы
-    Rtok = _group_resid(x, b, key2, den)
+    Rtok = _group_resid(x, Sx, b, key2, den)
     return R, Rtok
 
 
-def _group_resid(x, b, key, den):
-    """Σ_d|S_x − S_groupmean|²/Σ_d|S_x|² для группировки key (создатель lookup/Rtok)."""
+def _group_resid(x, Sx, b, key, den):
+    """Σ_d|S_x − S_groupmean|²/Σ_d|S_x|² для группировки key (создатель lookup/Rtok).
+    Sx — S_d(p), уже посчитанный в lookup_resid (K3 r2-exec: не пересчитывать gemm)."""
     T = x.shape[0]
     order = np.argsort(key, kind="stable")
     ks = key[order]
@@ -195,12 +196,7 @@ def _group_resid(x, b, key, den):
     for g in groups:
         out[g] = x[g].mean(axis=0, keepdims=True)
     Sg = out.T @ b
-    return float(np.sum(np.abs(Sx_of(x, b) - Sg) ** 2) / den)
-
-
-def Sx_of(x, b):
-    """S_d(p) = Σ_t x_{t,d} e^{−2πit/p} — общий базисный сумматор (x: (T', D))."""
-    return x.T @ b
+    return float(np.sum(np.abs(Sx - Sg) ** 2) / den)
 
 
 # ------------------------------------------------------------------- синтетика
