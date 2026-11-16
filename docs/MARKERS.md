@@ -56,7 +56,7 @@
   + bootstrap 10000 (seed 8181, 2.5/97.5); Spearman avg-ranks + перм-null 2000 (seed 8181);
   repro_rate = доля совпавших id r1/r2 (тот же сервер/тело/флаги), гейт медианы ≥0.95, иначе
   метка `non-interpretable (determinism)`.
-- Реализация: experiments/exp94_q1.py (запуск: exp94_sycl_stream.py --phase q1), артефакт
+- Реализация: experiments/sycl/exp94_q1.py (запуск: exp94_sycl_stream.py --phase q1), артефакт
   results/e94/Q1.json, raw /tmp/e94raw/q1_*.json. RUN_RC: 0/10/11/13/1 (ТЗ §3).
 - Поля сводки (ревью r1, 12.11): `n_docs_repro_identical` (r1≡r2, экс-`n_identical_docs`),
   `n_docs_prefix_full` (prefix_len==384), `spearman.p_definition` (two-sided на |rho|, MC-доля
@@ -72,7 +72,7 @@
 - Q3.json `summary.d_per_doc_rho` {median, ci_2.5_97.5, n_docs, n_positive} + `summary.p_note` (MAJOR-1
   ревью r1: первичная единица — ДОК; bootstrap 10000, seed 8181; пульный p_perm оптимистичен —
   цитировать только как p<=1/(B+1)). Значения этого прогона: median 0.3453, CI [0.2982, 0.4715], 15/16.
-- Q3cpu.json (experiments/exp94_q3cpu.py): один HF fp32 forward на док (448 id: prompts.json docs[i].ids
+- Q3cpu.json (experiments/sycl/exp94_q3cpu.py): один HF fp32 forward на док (448 id: prompts.json docs[i].ids
   + REPLAY.gen_ids), teacher-forcing на замороженном потоке. Новые имена: per_doc.repro_max_abs_d_p1/
   repro_pass/n_argmax_ne_gen (гейт: max|Δp1| < 1e-3 на первых 3 доках, иначе rc=2), summary.repro_gate,
   summary.pooled_positions (справочно, p_note о 1/(B+1)), summary.lags_per_doc (L 1/4/8/16, нескорректированные),
@@ -88,7 +88,7 @@
 - 12.11: +M10 (E94 Q1: prefix_len/rep8-Δ bootstrap/Spearman-perm/repro_rate, exp94_q1.py).
 - 12.11: M10 hygiene (ревью r1): n_docs_repro_identical/n_docs_prefix_full, p_definition/p_mc_se,
   interpretability, bifurcation_note, idempotence (exp94_q1.py --from-raw ×2).
-- 12.11: E94 Q2b/Q2c диагностика флипа (experiments/exp94_q2b.py, exp94_q2c.py;
+- 12.11: E94 Q2b/Q2c диагностика флипа (experiments/sycl/exp94_q2b.py, exp94_q2c.py;
   results/e94/Q2b.json, Q2c.json): новые имена — счётчики A.emitted_ids/A.distinct,
   C.per_position, D.flips_with_probs/D.flips_no_probs/D.first_diff, E.emitted/E.top1,
   Q2c.verdict_shift (результаты, не гейты); итог — флип детерминирован (A 5/5),
@@ -99,7 +99,7 @@
   D.stream_identity_no_vs_with_probs (+D.note: без запроса вероятностей флипы не
   вычислимываемы — метрика = тождественность потоков); переименование вступает в силу
   на следующем прогоне Q2b (артефакт Q2b.json с прежним ключом не перегонялся, GPU).
-  Q2 (experiments/exp94_q2.py): g2_violations/g2_violations_n ({doc,k,prompt_n}, мягкий
+  Q2 (experiments/sycl/exp94_q2.py): g2_violations/g2_violations_n ({doc,k,prompt_n}, мягкий
   G2 основной фазы — нарушения фиксируются, прогон не останавливается),
   g2_offline_check (max prompt_n со 2-го запроса документа, медианы wall last32/first32),
   device_gate_source ("live"/"reused_raw", рядом с fd_first_request), --from-raw с

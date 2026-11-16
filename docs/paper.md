@@ -803,11 +803,11 @@ gauge-free-преобразования, поэтому «лист хуже PCA�
 **Статус и следствие.** Закрывает ставку «лист = носитель» в отрицательной форме и переводит
 нулевую гипотезу для всех будущих steering-результатов на «PCA того же текста».
 
-**Источник.** вердикты `experiments/exp45_verdicts.py`; критерии E-45b/E-46 — `exp46_verdicts.py`.
+**Источник.** вердикты `experiments/e41_50/exp45_verdicts.py`; критерии E-45b/E-46 — `exp46_verdicts.py`.
 `results/exp45_damage_vs_structure.json`, `exp45f_gauge_decomp.json`, `exp45g_cut_stability.json`,
 `exp45_kappa_seed_null.json`, `exp45b_leaf_table.json.gz`, `exp46_frame_as_memory.json.gz`;
 логи `exp45_verdicts.log`, `exp45b_analysis.log`, `exp46_verdicts.log` (сверка —
-`experiments/exp45_table_check.py`, `experiments/exp40plus_doc_check.py`).
+`experiments/e41_50/exp45_table_check.py`, `experiments/e31_40/exp40plus_doc_check.py`).
 
 ### 4.11. Второй носитель: переносится ли механика (E-47/E-48)
 
@@ -913,7 +913,7 @@ last-norm + head, переносимые между GQA-Qwen и conv-LFM3. [И] 
 (механика) и непереносимые (домен/режим); заявки вида «наш метод работает для LLM вообще»
 обязаны ссылаться на 4.11, а не на числа одной модели.
 
-**Источник.** `docs/leaf_dynamics.md` §8–§10; `results/exp47a_kinematics_cache.json`, `results/exp47b_gen_kinematics.json`, `results/exp47c_p2_loop_prediction.json`, `results/exp48a_lfm3_kinematics.json`, `results/exp48b_lfm3_gen_kinematics.json`; чекер `experiments/exp40plus_doc_check.py`.
+**Источник.** `docs/leaf_dynamics.md` §8–§10; `results/exp47a_kinematics_cache.json`, `results/exp47b_gen_kinematics.json`, `results/exp47c_p2_loop_prediction.json`, `results/exp48a_lfm3_kinematics.json`, `results/exp48b_lfm3_gen_kinematics.json`; чекер `experiments/e31_40/exp40plus_doc_check.py`.
 
 ### 4.12. След повреждений, приписка кривизны порядку, кинематика шага (E-49…E-53)
 

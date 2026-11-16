@@ -3,7 +3,7 @@
 **Роль.** Независимый критик (не автор, не исполнитель). Протокол: ревью обязан проходить и КОД/артефакт, а не только ТЗ. Числа — пересчётом (read-only, OMP_NUM_THREADS=4), не верой.
 
 **Объекты:**
-1. Код: `experiments/AT0_7_loop.py` (427), `experiments/at0_7_core.py` (263), `experiments/at0_7_tests.py` (329), `experiments/at06_v22_pinned.py` (байт-пин AT0_6 v2.2 из git HEAD).
+1. Код: `experiments/at0/AT0_7_loop.py` (427), `experiments/at0/at0_7_core.py` (263), `experiments/at0/at0_7_tests.py` (329), `experiments/at0/at06_v22_pinned.py` (байт-пин AT0_6 v2.2 из git HEAD).
 2. ТЗ: `docs/TZ_add_0-3.md` → «### T0.7 —» (v3; PASS по r3 — docs/dynamic/AT0_7_TZ_REVIEW_r3.md; ретроспективные r0-числа там верифицированы).
 3. Артефакт: `results/AT0/AT0_7_LOOP.json` (claim), `AT0_7_manifest.json`, `AT0_7_run.log`, `results/AT0/store/7173b42fa0468fe8.json`.
 4. Контекст: AT0_3 (`results/AT0/AT0_3_AREA.json`, sha 8fe61affb13b443f), AT0_6 v2.2 store (`results/AT0/store/767d623f7233b1f4.json`).

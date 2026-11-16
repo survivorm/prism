@@ -3,7 +3,7 @@
 **Статус: C1–C7 закрыты аннотацией r7 (детерминированный пересчёт из закреплённых входов,
 без перепуска эксперимента) + перепуск r5 для восстановления цепочки provenance + 6 MINOR
 round 3 закрыты (r7 v2).**
-Дата: 2026-11-15. Скрипт: `experiments/at0_1_r7_annotation.py` (assert'ы само-аудита;
+Дата: 2026-11-15. Скрипт: `experiments/at0/at0_1_r7_annotation.py` (assert'ы само-аудита;
 любой сбой ⇒ артефакт не записывается). r7-claim: 82f44f0813f6adde… (пин
 `results/AT0/store/claim_r7_82f44f0813f6adde.json`). Changelog r7 — в claim
 `meta.r7_annotation`. Внешнее ревью round 3 — docs/dynamic/AT0_1_r7_REVIEW.md (PASS, MAJOR: нет).
@@ -100,7 +100,7 @@ U·hn ≡ h в обеих ветках max(·,1e-12) (hn>1e-12: U = u = h/hn; hn
   чувствителен к ним; r7-прогон: OMP_NUM_THREADS=4); в другом thread-окружении дрейф 1–2 ulp
   (≤3.4e-15 rel, независимо проверено ревьюером); z_raw_band/z_excess/θ/T_none_full/roundoff/
   l23_meta — bit-eq в обоих окружениях.
-- **MINOR-3** r6-скрипт закреплён: `experiments/at0_1_r6_annotation.py` (= apply_r6_edits.py из
+- **MINOR-3** r6-скрипт закреплён: `experiments/at0/at0_1_r6_annotation.py` (= apply_r6_edits.py из
   /tmp/recovered/AT0_1_r6/, sha 0d52eda5…) + sha в meta.r7_annotation.chain.
 - **MINOR-4** headline r/f_dc ≡ N (G3-тождество r = N·f_dc) — «тривиально, не цитировать»;
   заголовочный ответ = r per object (r_v ≈ 24.9 / r_du ≈ 0.0048).

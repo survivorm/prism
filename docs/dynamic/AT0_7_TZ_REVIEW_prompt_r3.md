@@ -11,7 +11,7 @@
 - T0.7 v3: `docs/TZ_add_0-3.md` → «### T0.7 — ...» (строка 547).
 - r1: `docs/dynamic/AT0_7_TZ_REVIEW_r1.md` (MAJOR-3), r2: `docs/dynamic/AT0_7_TZ_REVIEW_r2.md`
   (MAJOR-2). T0.3: `results/AT0/AT0_3_AREA.json` (sha 8fe61affb13b443f). T0.6:
-  `experiments/AT0_6_spectrum.py` (референс Q/null; коммит = smoke).
+  `experiments/at0/AT0_6_spectrum.py` (референс Q/null; коммит = smoke).
 - Данные: /data/prism_kernels/exp62/gen_layers_qwen.npz (64 gen, L{1,5,11,17,23}, u/hn/tok,
   T=384); results/e64/tpu_v8/P1_own.npz (16 own); P2_corpus.npz (16 cor, 0/16 токенов).
 

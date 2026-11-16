@@ -10,7 +10,7 @@
   (disk-only, matched-filter) — НОВЫЙ (15.11, v2 после r1-ревью)».
 - **r1-ревью:** `docs/dynamic/AT0_6_TZ_REVIEW_r1.md` (что было найдено; сверяй закрытие по пунктам).
 - **Контекст (читать):** `docs/TZ_add_0-3.md` §0/§1.5, `docs/dynamic/0_итоги_раунда.md` (R9-6),
-  `prism/field.py` (read-only), `experiments/AT0_2_shape.py` (хедер: конвенции сидов/store/claim),
+  `prism/field.py` (read-only), `experiments/at0/AT0_2_shape.py` (хедер: конвенции сидов/store/claim),
   `results/AT0/AT0_3_AREA.json` (замероз. вход: period_structure.per_doc).
 - **Измерение, мотивирующее v2 (можно перепроверить, read-only):** matched-filter замер
   амплитуды линии по 30 detected-докам: mean a/σ ≈ 0.55 (h_raw = u·hn, T′=383, базис e^{2πit/p});

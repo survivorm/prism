@@ -1,7 +1,7 @@
 # Патч к ТЗ коллеги 1 — правки и дополнения
 
 **Статус:** ТЗ коллеги 1 в работе; это патч поверх него, не замена. Ключ: `[I.5]` = раздел ТЗ коллеги 1.
-**Основа сверка:** коммитнутые документы репо (`docs/E39+.md`, `docs/E40_tier0.md`, `results/E40_1_audit.json`, `docs/ref-math.md`, `prism/spectral.py`, `prism/permutation.py`, `experiments/exp40_1_audit.py`).
+**Основа сверка:** коммитнутые документы репо (`docs/E39+.md`, `docs/E40_tier0.md`, `results/E40_1_audit.json`, `docs/ref-math.md`, `prism/spectral.py`, `prism/permutation.py`, `experiments/e31_40/exp40_1_audit.py`).
 
 **Принято без правок:** §0 (кроме дополнений, В6), I.2 (срезы и срез-локальность), I.3 (тождества O2/O3 — одна величина), I.6 (cos ≈ 0.064–0.108, перпендикулярное возмущение), I.8 (align_signs_and_columns — полный порядок знаки/столбцы/proximity/artifact), II.1 (структура ChannelTag), II.10 (gate behavior через CI import-check), раздел V почти целиком.
 

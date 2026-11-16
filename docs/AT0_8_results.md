@@ -53,7 +53,7 @@ nll_holdout и margin сходятся в λ_c ≈ 0.85 (интервал [0.75,
 
 Внешнее ревью полного прогона: `docs/AT0_8_review.md` (гейты/провенанс **ACCEPT**,
 машина v1 — **REVISE**; разбор F1–F6 с числами — раздел 11, r2-exec). Пре-рег машины v2:
-`docs/TZ_add_4-8.md` §T8.1. Скрипт: `experiments/AT0_8_r2_reanalysis.py` (без RNG, без
+`docs/TZ_add_4-8.md` §T8.1. Скрипт: `experiments/at0/AT0_8_r2_reanalysis.py` (без RNG, без
 перепрогона; вход — committed store, sha-верификация по manifest).
 
 **Вердикт v2: V2_SOLITON_CANDIDATE** (coincides с pre-reg ожиданием, match=True):

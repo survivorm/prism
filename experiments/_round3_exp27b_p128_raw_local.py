@@ -29,7 +29,7 @@ from transformers import AutoModelForCausalLM
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _ROOT)
 _spec = importlib.util.spec_from_file_location(
-    "exp27b_dense", os.path.join(_ROOT, "experiments", "exp27b_dense.py")
+    "exp27b_dense", os.path.join(_ROOT, "experiments", "e21_30", "exp27b_dense.py")
 )
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)

@@ -8,7 +8,7 @@ MAJOR/BLOCK дефекты ДО прогона (как r1 для AT0_2/AT0_6).
 - T0.3 (`results/AT0/AT0_3_AREA.json`, sha256[:16] = `8fe61affb13b443f`): период-p структура
   (ρ(k)≥0.9 ∧ ρ(2k)≥0.81, du_unit|L23, K=96) у 30 из 41 loopy-дока, p ∈ 7..32.
 - T0.6 (AT0_6, v2.2): спектральная линия (matched-filter Q(p)) на p_T0.3 в h|L23; permutation
-  null (B=199). Скрипт `experiments/AT0_6_spectrum.py` (референс реализации).
+  null (B=199). Скрипт `experiments/at0/AT0_6_spectrum.py` (референс реализации).
 - T0.7 (этот документ): «петля = стабильный copy-paste» — repeat (rep_frac) как necessary
   признак петли. Диск-only.
 - Данные: /data/prism_kernels/exp62/gen_layers_qwen.npz (64 gen, L{1,5,11,17,23}, u/hn/tok,
@@ -102,5 +102,5 @@ MAJOR/BLOCK дефекты ДО прогона (как r1 для AT0_2/AT0_6).
 - Числа — только из пересчётов в /tmp (OMP_NUM_THREADS=4), НЕ из головы. Read-only npz.
 - НЕ запускать эксперименты; писать только свой ревью-файл (+/tmp).
 - Вьедливость: не принимать на веру «как T0.6» — сверить ключевые места (per-doc T',
-  центрирование, σ²_d, сиды) в `experiments/AT0_6_spectrum.py`.
+  центрирование, σ²_d, сиды) в `experiments/at0/AT0_6_spectrum.py`.
 - Если находка MAJOR/BLOCK — конкретное «как чинить» (не «пересмотреть»).

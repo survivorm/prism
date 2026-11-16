@@ -4,7 +4,7 @@
 
 Объект: `docs/TZ_add_0-3.md` → «### T0.7 — Петля = стабильный copy-paste …» (строка 547).
 Рекомпиляция в /tmp (read-only npz, OMP_NUM_THREADS=4); скрипты: /tmp/at07_review/{tok_stats,pools,final}.py.
-Сверка «как T0.6» — по коду `experiments/AT0_6_spectrum.py` (v2.2), а не по памяти.
+Сверка «как T0.6» — по коду `experiments/at0/AT0_6_spectrum.py` (v2.2), а не по памяти.
 
 ## 1. НАУЧНАЯ ЛОГИКА
 

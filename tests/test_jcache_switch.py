@@ -15,7 +15,7 @@ import pytest
 import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                                "experiments"))
+                                "experiments", "e31_40"))  # reorg 16.11
 import _e38_cache as ec  # noqa: E402
 
 DOMS = ("wiki", "math")

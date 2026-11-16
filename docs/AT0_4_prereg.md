@@ -221,7 +221,7 @@ d_eff, c0>0), вырожденность — диагностический си
 
 ## 9. Границы
 
-- Read-only: P1_own.npz, модель, gen_layers. Новый код — только `experiments/AT0_4_mix.py`
+- Read-only: P1_own.npz, модель, gen_layers. Новый код — только `experiments/at0/AT0_4_mix.py`
   + артефакты; field.py/AT0_1–3 не трогать.
 - CPU numpy/torch ≤4 тредов; один процесс; `setsid nohup ... < /dev/null &` (чек-лист #5).
 - Коммит — только после внешнего ревью (протокол).

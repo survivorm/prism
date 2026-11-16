@@ -4,7 +4,7 @@
 
 **Объекты:**
 1. Артефакт: `results/AT0/AT0_6_SPECTRUM.json` (claim, round v3), `AT0_6_manifest.json`, `AT0_6_run.log`, `results/AT0/store/602aa9d170c82897.json` (store: spectral_map, r_map, bnn_ratio, ar2, per_doc).
-2. Код: `experiments/AT0_6_spectrum.py` (v3, с r4-фиксами — сверка только там, где артефакт-числа касаются).
+2. Код: `experiments/at0/AT0_6_spectrum.py` (v3, с r4-фиксами — сверка только там, где артефакт-числа касаются).
 3. TZ: `docs/TZ_add_0-3.md` → «### T0.6 —» (v3).
 4. Входы: AT0_3 (`results/AT0/AT0_3_AREA.json`, sha 8fe61affb13b443f); v2.2-базовый прогон (архив: `results/AT0/archive/v2.2/AT0_6_SPECTRUM.json` — для версионного сравнения).
 

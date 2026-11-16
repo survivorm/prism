@@ -2,10 +2,10 @@
 
 Статус: прогнан ревью-лупом ДО полного прогона (docs/AT0_2_REVIEW.md, раунд 1,
 fixes N2/N4/N5; субагент-ревью + само-ревью исполнителя). Текст = блок пре-рега
-в хедере `experiments/AT0_2_shape.py` (единственный источник правды; расхождение
+в хедере `experiments/at0/AT0_2_shape.py` (единственный источник правды; расхождение
 хедер↔код — нарушение, см. урок N4).
 
-Скрипт: experiments/AT0_2_shape.py (sha256 зафиксирован в store/claim после прогона).
+Скрипт: experiments/at0/AT0_2_shape.py (sha256 зафиксирован в store/claim после прогона).
 ТЗ: docs/TZ_add_0-3.md §1.5 T0.2 (v1.1).
 
 ## Зафиксировано ДО прогона
@@ -89,7 +89,7 @@ results/AT0/AT0_2_manifest.json, results/AT0/AT0_2_run.log (tracked).
 
 ## Round 2 (ревью r6, docs/AT0_2_REVIEW_r6_review.md → ответы docs/AT0_2_REVIEW_r6.md, 14.11)
 
-Источники правды: хедер `experiments/AT0_2_shape.py` (обновлён) + ответка. Отклонения
+Источники правды: хедер `experiments/at0/AT0_2_shape.py` (обновлён) + ответка. Отклонения
 round 1 → round 2 (все — по ревью r6):
 
 - **E3**: B = 20 → **199** (p_floor = 1/200 = 0.005; стандарт T0.1 NNULL=199). Сиды 0..19

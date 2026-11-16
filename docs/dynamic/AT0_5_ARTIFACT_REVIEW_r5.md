@@ -7,7 +7,7 @@
 
 | файл | sha256 |
 |---|---|
-| experiments/AT0_5_gencheck.py | `c0c3dd4267dc37027e397cd9085868996d2aa17f3a5843b9c3dd90d9799cfaa0` |
+| experiments/at0/AT0_5_gencheck.py | `c0c3dd4267dc37027e397cd9085868996d2aa17f3a5843b9c3dd90d9799cfaa0` |
 | docs/AT0_5_prereg.md | `986f51b74cf63bc2ddd6ae8abaaa20cc6d36c6bd15ebd2254b8a991977646ef0` |
 | results/AT0/AT0_5_GENCHECK.json (claim) | `173c62adf9252f81f2fc65b54c5a521e4c328f6e6c2426e47b32823a1a866a5d` |
 | results/AT0/store/4732f98c6291fc8c7c41c3d47407eb0fcce1c009420068b9f83be78341952fcb.json (store) | `4732f98c6291fc8c7c41c3d47407eb0fcce1c009420068b9f83be78341952fcb` |
@@ -22,7 +22,7 @@
 ## 1. Чек-лист
 
 ### 1.1 Одинаковая статистика на обеих сторонах — ПРОВЕРЕНО
-- `S0` гейт (experiments/AT0_5_gencheck.py:802-814): exec-сравнение `field.acf_moments` vs
+- `S0` гейт (experiments/at0/AT0_5_gencheck.py:802-814): exec-сравнение `field.acf_moments` vs
   `rho_metrics` на 2 матрицах, assert `dev ≤ 1e-14`. В артефакте: `gates.S0.max_dev = 0.0`, ok (claim).
   Лог: `S0 ok` (/tmp/at05_r1.log:18). Один прибор подтверждён гейтом, а не утверждением.
 - `sim_mats` реально вызывает `rho_metrics` (нет тихой дубликации формул). Каскад-баг разупаковки
@@ -36,14 +36,14 @@
   `n_f_le_0` = 49/49/50/50/50, `n_out_of_model` = 1/1/0/0/0 (per layer, store).
 - `build_paths`: K=0 skip и k<16 fail-loud — exercised: claim.meta.skipped = [own_w0 L1, own_w4 L1],
   причина `T0.1 K=0 (fp16_l1_degraded provenance)`; лог: `skip 2`, `478 клеток из 480`.
-- `var_ladder`: `bic None` (sign ≤ 0 из slogdet) → fallback в selection (experiments/AT0_5_gencheck.py:599-600).
+- `var_ladder`: `bic None` (sign ≤ 0 из slogdet) → fallback в selection (experiments/at0/AT0_5_gencheck.py:599-600).
 - `coverage`: None-metrics для коротких клеток (plat_lo/plat_hi = None при k < границы) — обрабатываются
   как non-covered; `n_short_k_lt_33 = 0` в G8 (claim).
-- `oos_fit`: пер-cell `n` в нормировке `(1−k/n)` (experiments/AT0_5_gencheck.py:856-888, docstring + код).
+- `oos_fit`: пер-cell `n` в нормировке `(1−k/n)` (experiments/at0/AT0_5_gencheck.py:856-888, docstring + код).
 - `fit_scale`: M=0/E=0 edge — см. M1 ниже (флаги `dc_dir`).
-- `fullcov_sim`: chol + SVD-fallback (experiments/AT0_5_gencheck.py:503-525); exercised:
+- `fullcov_sim`: chol + SVD-fallback (experiments/at0/AT0_5_gencheck.py:503-525); exercised:
   `how: {'chol': 255, 'svd': 0}` (лог :31).
-- trackio atexit-страховка: experiments/AT0_5_gencheck.py:982-984 (`import atexit` + finish при краше);
+- trackio atexit-страховка: experiments/at0/AT0_5_gencheck.py:982-984 (`import atexit` + finish при краше);
   exercised: лог `trackio: finish ok (status=ok, verdict=branch2)`.
 
 ### 1.3 Каскад фиксов — ПРОВЕРЕНО

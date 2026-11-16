@@ -81,7 +81,7 @@ structurally unreachable: c0 median 259…268 ≫ 4») + wording в summary.
 Мелочь «drift_smooth_walk не гейтится» — СПОРЮ (факт): в rebuild-скрипте ассерты
 есть: `assert null_rep["drift_smooth_walk"]["band_frac_0.75_1.5"] < 0.01` и
 `assert null_rep["drift_smooth_walk"]["r"]["median"] > 100` (в текущем
-experiments/AT0_4_rebuild_r5.py — строки 161–162; ранние rebuild-скрипты r1–r4
+experiments/at0/AT0_4_rebuild_r5.py — строки 161–162; ранние rebuild-скрипты r1–r4
 удалены — не трекались, в репо только актуальный AT0_4_rebuild_r5.py).
 
 ## §5. «G_nd per-doc ok=False не исключается» — ПРИНЯТО

@@ -2,7 +2,7 @@
 
 Объект: `docs/AT0_4_EXEC_REVIEW.md` (14.11, «инженерно PASS with caveats / scientific REVISE»).
 Ответы по пунктам: принято / принято с модификацией / спорю (с аргументом) / самокоррекция.
-Исправления: `experiments/AT0_4_mix.py` (sha `72d5f658…`, METRICS_VERSION v2) +
+Исправления: `experiments/at0/AT0_4_mix.py` (sha `72d5f658…`, METRICS_VERSION v2) +
 `experiments/AT0_4_rebuild_r3.py` (rebuild БЕЗ форвардов) → новый store
 `4c0a1db2e7984621` (full sha `4c0a1db2e798462138aba970ec636634b2d96ff6f994e99762d45d3bc09d13d0`), claim `AT0_4_MIX.json`, manifest, `AT0_4_rebuild_r3.log`.
 Проверено, что ревьюер смотрел актуальные файлы: disk sha `a4b7a138…` (момент ревью) =

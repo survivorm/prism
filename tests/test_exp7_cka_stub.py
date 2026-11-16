@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "experiments"))
 
 _spec = importlib.util.spec_from_file_location(
-    "exp7_under_test", ROOT / "experiments" / "exp7_cka_baseline.py"
+    "exp7_under_test", ROOT / "experiments" / "e01_10" / "exp7_cka_baseline.py"  # reorg 16.11
 )
 e7 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(e7)

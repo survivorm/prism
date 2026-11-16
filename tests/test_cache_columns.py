@@ -16,7 +16,7 @@ import sys
 import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                                "experiments"))
+                                "experiments", "e21_30"))  # reorg 16.11
 from exp27b_dense import _forward_dense  # noqa: E402
 
 from tests.helpers.tiny_model import make_tiny_qwen  # noqa: E402

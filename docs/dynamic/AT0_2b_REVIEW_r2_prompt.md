@@ -13,7 +13,7 @@ carrier_verdict по вкладу в net displacement Δh + Δh-DC gate + n_pres
 - `docs/AT0_2b_prereg.md` — пре-рег v2 (зафиксирован ДО прогона: правило carrier_verdict
   §5 канал 2, CI-сиды §7, гейт energy §3.6, границы null §4).
 - `prism/field.py` — пинненное ядро (ra_split, cross_acf, vpath, dcurve, degen; sha в claim).
-- `experiments/AT0_1_accounting.py`, `experiments/AT0_2_shape.py` — зависимости
+- `experiments/at0/AT0_1_accounting.py`, `experiments/at0/AT0_2_shape.py` — зависимости
   (load_source/decode_probe/LAYERS; acf_full).
 - `docs/AT0_2b_review.md` — исходные требования (C1–C7, M1–M3).
 

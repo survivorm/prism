@@ -7,7 +7,25 @@ Usage:
 """
 
 import argparse
+import importlib.util
+import os
 import sys
+
+
+def _resolve_module(name: str) -> str:
+    """reorg 16.11: experiments/<name> или experiments/<dir>/<name> (подкаталоги серий)."""
+    base = os.path.dirname(os.path.abspath(__file__))
+    cand = f"experiments.{name}"
+    if importlib.util.find_spec(cand):
+        return cand
+    for d in sorted(os.listdir(base)):
+        p = os.path.join(base, d)
+        if os.path.isdir(p) and d != "__pycache__" and not d.startswith("kaggle"):
+            c = f"experiments.{d}.{name}"
+            if importlib.util.find_spec(c):
+                return c
+    return cand  # fail-loud в __import__
+
 
 _EXP_MODULES = [
     "exp1_identity",
@@ -43,7 +61,7 @@ def main():
 
     ok = True
     for name in targets:
-        module_name = f"experiments.{name}"
+        module_name = _resolve_module(name)
         print(f"\n{'=' * 60}")
         print(f"Running {name}...")
         print(f"{'=' * 60}")

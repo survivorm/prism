@@ -12,14 +12,14 @@ for md, tag, bits in JOBS:
     rd = f"../results/r52d_{tag}"
     os.makedirs(rd, exist_ok=True)
     with open(f"/tmp/e52d_{tag}_trace.log", "w") as lg:
-        subprocess.run([P, "-u", "exp47b_gen_kinematics.py", "--model", md,
+        subprocess.run([P, "-u", "e41_50/exp47b_gen_kinematics.py", "--model", md,
                         "--n-docs", "4", "--max-new", "160", "--rtn-bits", str(bits),
                         "--results-dir", rd], cwd=EXP, stdout=lg, stderr=subprocess.STDOUT)
     if not os.path.exists(rd + "/exp47b_gen_kinematics.npz"):
         print(tag, "trace FAILED", flush=True); continue
     # τ базовая (квантованная модель её же головой — npz g_norm) + RTN-поверх-RTN уже не нужен
     with open(f"/tmp/e52d_{tag}_tau.log", "w") as lg:
-        subprocess.run([P, "-u", "exp52a_perturb_axis.py", "--model", "qwen", "--n-docs", "16",
+        subprocess.run([P, "-u", "e51_60/exp52a_perturb_axis.py", "--model", "qwen", "--n-docs", "16",
                         "--families", "noise", "--model-dir", md,
                         "--npz", rd + "/exp47b_gen_kinematics.npz",
                         "--docs-json", rd + "/exp47b_gen_kinematics.json",

@@ -1,7 +1,7 @@
 # AT0_3 r3.3 — code + artifact review
 
 Ревью фикс-цикла по docs/AT0_3_fixreview_REVIEW.md (sha d9f785c5567d…, 823 строки).
-Объекты: experiments/AT0_3_area.py (sha fb9b6c585ba4…, 1723 стр.), results/AT0/AT0_3_AREA.json
+Объекты: experiments/at0/AT0_3_area.py (sha fb9b6c585ba4…, 1723 стр.), results/AT0/AT0_3_AREA.json
 (claim, 10505b9f…), results/AT0/AT0_3_manifest.json (525ffb9c…),
 results/AT0/store/4d0323e9b32f4c59.json (store, 4d0323e9…), results/AT0/AT0_3_run.log,
 смоук /tmp/at0_3_smoke_r33.log vs /tmp/at0_3_smoke_r32.log.
@@ -131,7 +131,7 @@ None-безопасность агрегата: `np.array([v for v in … if v i
   («подтверждён (ассоциация …)»). Формула гейта в verdict.H2.gate совпадает с кодом. ✅
 - summary-числа == артефакт-числа: 30/41, 0/51, Fisher 2.12e−15, median 5.41 (legacy 6.06),
   top2 0.632, tail 0.892/0.543, k1 0.330/0.074 (4.5× = round(4.4809,1)), KS p=1.0e-03. ✅
-- Script binding: meta.script_sha256 == sha256(experiments/AT0_3_area.py) == fb9b6c58…;
+- Script binding: meta.script_sha256 == sha256(experiments/at0/AT0_3_area.py) == fb9b6c58…;
   имя store == sha256[:16] содержимого (пересчитано); manifest.claim_sha256 ==
   sha256(sort_keys(claim из манифеста)) — пересчитано, совпадает; manifest.store_sha256 ==
   sha256(store blob); claim.store = {path: store/4d0323e9b32f4c59.json, sha256: полный sha}. ✅

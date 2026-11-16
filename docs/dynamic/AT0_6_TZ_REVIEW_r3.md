@@ -35,7 +35,7 @@ null. Пересматривать не стал (по правилам r3).
 ## Новые находки
 
 ### N12 (MINOR) — verdict INCONCLUSIVE есть в коде, но отсутствует в verdict-таблице ТЗ
-- **Где:** experiments/AT0_6_spectrum.py (docstring + main: `if h1["f"] >= H1_SIG and not
+- **Где:** experiments/at0/AT0_6_spectrum.py (docstring + main: `if h1["f"] >= H1_SIG and not
   H1C: verdict = INCONCLUSIVE`) vs TZ-секция, блок ВЕРДИКТ (4 ветки) и H1-параграф.
 - **Что:** код вводит ПЯТЫЙ статус: 10 ≤ f ≤ 14 → INCONCLUSIVE («значимо, но порог
   пре-рега не достигнут»). В verdict-таблице ТЗ только 4 ветки (H1/¬H1 × H2/¬H2); при
@@ -52,7 +52,7 @@ null. Пересматривать не стал (по правилам r3).
 - **Серьёзность:** минор.
 
 ### N13 (косметика) — docstring скрипта застрял на v2.1, код — v2.2
-- **Где:** experiments/AT0_6_spectrum.py, docstring (строки ~80–100).
+- **Где:** experiments/at0/AT0_6_spectrum.py, docstring (строки ~80–100).
 - **Что:** docstring: G7 «k ≤ 2 (FPR ∈ [0.00, 0.10]; P(Bin(20,0.05) ≥ 3) = 0.014)» (факт:
   G7_K_MAX=3, P(k≥4)=0.016); G1a «двумя независимыми формулами» (факт: три, включая
   production gemm — g1a_identity сверяет gemm vs einsum vs cos/sin); «Цена: ~0.7 TFLOP
@@ -64,7 +64,7 @@ null. Пересматривать не стал (по правилам r3).
 - **Серьёзность:** косметика.
 
 ### N14 (косметика) — застывшие claim-метки: «round: v2-r1» и дата 2026-11-15
-- **Где:** experiments/AT0_6_spectrum.py, main() (claim: `"round": "v2-r1"`,
+- **Где:** experiments/at0/AT0_6_spectrum.py, main() (claim: `"round": "v2-r1"`,
   `"date": "2026-11-15 (UTC+3)"` — хардкод).
 - **Что:** полный v2.2-прогон запишет claim с меткой v2-r1/15-11 — та же метка, что у
   заархивированных smoke-артефактов (N9). Архив отделён префиксом AT0_6_v2r1_partial_*,

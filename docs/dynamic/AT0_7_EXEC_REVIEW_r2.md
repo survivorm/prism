@@ -20,7 +20,7 @@ Spearman/perm-null/(токен,фаза)-lookup — без импорта at0_7_
 | data shas gen/own/cor | f142f297 / 783e1633 / 5f42a084 | = G0-артефакт ✓ (данные не менялись) |
 | AT0_3-артефакт sha16 | `8fe61affb13b443f` | = TZ-пин ✓ |
 | gen_meta sha_ok | 64/64 | ✓ |
-| pin = git blob `7bef68b:experiments/AT0_6_spectrum.py` | `c24cb668…` | byte-идентичен ✓ (проверено `git show`) |
+| pin = git blob `7bef68b:experiments/at0/AT0_6_spectrum.py` | `c24cb668…` | byte-идентичен ✓ (проверено `git show`) |
 | decoding: G0 decode_probe gen/own | в артефакте | ✓ |
 
 ## 2. Пулы и pairing — независимая реконструкция из T0.3: ВСЕ MATCH

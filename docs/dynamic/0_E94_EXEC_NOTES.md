@@ -18,14 +18,14 @@
   `/tmp/q1_independent_perdoc.json` — **16/16: prefix_len точное равенство, max|Δ| по
   rep8_llama/rep8_cpu/delta = 0.0** (< 1e-12). Подгонки не было — формулы совпали.
   Результат записан в артефакт: `independent_crosscheck = {pass: true, prefix_len_exact_matches: 16, max_abs_delta_rep8: 0.0, missing: []}`.
-- Запуск фикса: `python3 -u experiments/exp94_sycl_stream.py --phase q1 --from-raw`
+- Запуск фикса: `python3 -u experiments/sycl/exp94_sycl_stream.py --phase q1 --from-raw`
   → `E94 q1 from-raw: ok=16/16 crosscheck pass=True prefix_exact=16 max_d=0.0`, RUN_RC=0.
 - Артефакт: `results/e94/Q1.json` (per_doc=16, сводки, independent_crosscheck, t_rebuild_s).
 
 ## Что сделано (Q1, ровно по ТЗ §2.1 + steering; Q2/Q3/кэш-гейт НЕ тронуты)
-- Новый код: `experiments/exp94_q1.py` (244 строки, `run_q1()`), плюс 3 строки в
-  `experiments/exp94_sycl_stream.py` (`--phase q1` → `sys.exit(run_q1())`; spike-ветка не тронута).
-  Запуск ровно командой из ТЗ: `RUN_ONE_MIN_MEM=3 ./run_one.sh e94 "python3 -u experiments/exp94_sycl_stream.py --phase q1"`.
+- Новый код: `experiments/sycl/exp94_q1.py` (244 строки, `run_q1()`), плюс 3 строки в
+  `experiments/sycl/exp94_sycl_stream.py` (`--phase q1` → `sys.exit(run_q1())`; spike-ветка не тронута).
+  Запуск ровно командой из ТЗ: `RUN_ONE_MIN_MEM=3 ./run_one.sh e94 "python3 -u experiments/sycl/exp94_sycl_stream.py --phase q1"`.
 - Тело запроса — канон (B) из `results/e94/FORMAT.md` дословно: `n_probs:20, top_logprobs:20`
   (реальное поле — n_probs, top_logprobs сервером игнорируется, но остаётся в теле по канону),
   снятое прореживание `top_k:400, top_p:1.0, min_p:0.0, typical_p:1.0, xtc_probability:0.0`,
@@ -67,9 +67,9 @@
   (`pgrep -x` до старта и по дежурству).
 
 ## Хайен-раунд по ревью r1 (12.11 ~02:40; GPU/сервер НЕ тронуты, только /tmp/e94raw)
-Артефакт перегнан ЧИСТО из raw: `python3 -u experiments/exp94_sycl_stream.py --phase q1 --from-raw`
+Артефакт перегнан ЧИСТО из raw: `python3 -u experiments/sycl/exp94_sycl_stream.py --phase q1 --from-raw`
 → `ok=16/16 crosscheck pass=True prefix_exact=16 max_d=0.0 idempotent=True`, RUN_RC=0, ~1 c;
-llama-процессов нет (ps до запуска). Четыре правки `experiments/exp94_q1.py`, одна на пункт:
+llama-процессов нет (ps до запуска). Четыре правки `experiments/sycl/exp94_q1.py`, одна на пункт:
 1. `summary.n_identical_docs` → **`n_docs_repro_identical=16`** (это r1≡r2), рядом
    **`n_docs_prefix_full=5`** (prefix_len==384: w9, w10, w11, w12, w15).
 2. **`spearman.p_definition`**: two-sided на |rho|, MC-доля |rho_perm| ≥ |rho_obs| без +1,
@@ -111,7 +111,7 @@ E94_EXEC_DONE phase=q1_hygiene rc=0
 
 ## E94 Q2b/Q2c — диагностика флипа (03:2x, 12.11, свежий iGPU-сервер)
 
-Скрипты: `experiments/exp94_q2b.py`, `experiments/exp94_q2c.py`; артефакты
+Скрипты: `experiments/sycl/exp94_q2b.py`, `experiments/sycl/exp94_q2c.py`; артефакты
 `results/e94/Q2b.json` (rc=0, 61 c), `results/e94/Q2c.json` (rc=0, 9 c); оба в
 ARTIFACTS_MANIFEST. Тело — канон Q2 (body_template Q1.json: temp 0, top_k 400,
 top_p 1.0, min_p 0.0, n_probs/top_logprobs 20, seed 8181, нейтральные штрафы);
@@ -185,7 +185,7 @@ E94 Q3 (без GPU, пересчёт из raw_q1.json.tar.gz → /tmp/e94raw, ru
 E94_Q3_DONE rc=0
 
 ## MINOR Q2 fixes (внешнее ревью docs/dynamic/2_REVIEW_E94_Q2_exec_r1, раздел `## MINOR (4)`; GPU не запускать, перезапуск прогона не нужен)
-1. G2 в основной фазе (experiments/exp94_q2.py): со второго запроса каждого документа
+1. G2 в основной фазе (experiments/sycl/exp94_q2.py): со второго запроса каждого документа
    (k=65) prompt_n <= 8 и плоский wall по окнам 32 (медиана последних 32 / первых 32 <= 1.5).
    **Объявленное отклонение:** основная фаза — теперь мягкий гейт: нарушения НЕ убивают
    прогон, а копируются в артефакт Q2.json `g2_violations` (список {doc,k,prompt_n}) +
@@ -196,19 +196,19 @@ E94_Q3_DONE rc=0
    w4 0.850949, w9 0.941003, w13 1.189024, w14 1.124242 (max 1.189 <= 1.19 — совпало с
    числами ревьюера), g2_violations = 0.
 2. Мёртвая ветка `len(ids448) != 448` в run_q2 убрана (load_data уже бросает: 64+384).
-3. Q2b (experiments/exp94_q2b.py): `flips_no_probs` переименован в коде в
+3. Q2b (experiments/sycl/exp94_q2b.py): `flips_no_probs` переименован в коде в
    `stream_identity_no_vs_with_probs` + в артефакт добавлено поле `note`: без запроса
    вероятностей флипы не вычислимываемы (no_probs-ответ не несёт top_logprobs), поэтому
    метрика равна тождественности потоков (identical/n_diff), а не числу флипов. Артефакт
    Q2b.json НЕ перегонялся (GPU): переименование вступит в силу на следующем прогоне Q2b,
    текущий Q2b.json хранит старый ключ (зафиксировано в CHANGELOG MARKERS.md).
-4. get_raw/main_run (experiments/exp94_q2.py): явный флаг `device_gate_source` в Q2.json
+4. get_raw/main_run (experiments/sycl/exp94_q2.py): явный флаг `device_gate_source` в Q2.json
    рядом с fd_first_request: "live" — fd-сэмплер отработал живьём, "reused_raw" — первый
    запрос взят из кэша сырья (счётчик /dev/dri не пополнен, device-доказательство при
    резюме теряется). Этот прогон: "live" (20/20 с /dev/dri/renderD128).
-5. Добавлен режим `--from-raw` (experiments/exp94_q2.py): пересборка из /tmp/e94raw без
+5. Добавлен режим `--from-raw` (experiments/sycl/exp94_q2.py): пересборка из /tmp/e94raw без
    сервера, поля прогона сохраняются из Q2.json, идемпотентность ×2 (canonical sha256).
-   Перегонка (python3 -u experiments/exp94_q2.py --from-raw, wall 5.6 s, RUN_RC=0):
+   Перегонка (python3 -u experiments/sycl/exp94_q2.py --from-raw, wall 5.6 s, RUN_RC=0):
    median_abs_d_pmax=3.069582e-06, top1_agreement=0.993924, median_rank_cpu_hits=1.0
    (top20_hit_rate=1.0, n_censored=0, per_doc и per_position (2304 позиции) — побитово
    идентичны артефакту до правок); idempotence sha256=cbc9d4b88602b36a834f. Числа НЕ
@@ -218,7 +218,7 @@ E94_Q2_MINORS_DONE rc=0
 
 ## Q3cpu — автор и исполнитель = надзиратель (объявленное отклонение, 04:05)
 
-Три рапортированных исполнения этой задачи от детей оказались фантомными: `experiments/exp94_q3cpu.py`
+Три рапортированных исполнения этой задачи от детей оказались фантомными: `experiments/sycl/exp94_q3cpu.py`
 оставался скелетом на 1368 байт, `run_one`-лога не существовало, «pid» прогона был несуществующим,
 а NOTES не содержал ни строчки. Поэтому код написан мной, запущен мной через `./run_one.sh e94q3cpu2`
 (единственный разрешённый лаунчер) и проверен мной же; внешнее ревью кода и артефакта — отдельным

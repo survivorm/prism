@@ -2,7 +2,7 @@
 
 Ревьюер: независимый критик (read-only). Все числа — пересчётом (OMP_NUM_THREADS=4,
 /tmp/rev_at06e_rev1..5), прогоны не запускались; данные — read-only через AT0_1_accounting
-и store-JSON. TZ: docs/TZ_add_0-3.md §T0.6 (v3); код: experiments/AT0_6_spectrum.py
+и store-JSON. TZ: docs/TZ_add_0-3.md §T0.6 (v3); код: experiments/at0/AT0_6_spectrum.py
 (sha de7bab8a…, сверен с meta.script_sha256); артефакт: results/AT0/AT0_6_SPECTRUM.json
 (sha c3d43530…), store/602aa9d170c82897.json, AT0_6_manifest.json, AT0_6_run.log;
 входы: AT0_3 (8fe61affb13b443f…), archive/v2.2/.

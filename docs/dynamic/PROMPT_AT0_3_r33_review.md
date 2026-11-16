@@ -25,7 +25,7 @@
   store bba6fde3a7e807d4 (удалён; в git — в коммите 6350d25).
 
 ## Что сделано (r3.3)
-- Патч experiments/AT0_3_area.py (проверь сам: sha256sum — ждём fb9b6c58…).
+- Патч experiments/at0/AT0_3_area.py (проверь сам: sha256sum — ждём fb9b6c58…).
 - Свежий полный прогон патченого скрипта (disk-only, без пере-форвардов):
   results/AT0/AT0_3_run.log, store results/AT0/store/4d0323e9b32f4c59.json,
   claim results/AT0/AT0_3_AREA.json, manifest results/AT0/AT0_3_manifest.json.
@@ -63,7 +63,7 @@
   chat 11 nondeg → n<12 → False.
 - KS diagnostics: primary max_gap_x=0.530483 crossings=1;
   robust max_gap_x=0.528684 crossings=1 (разные — не copy-paste).
-- Script binding: meta.script_sha256 == sha256(experiments/AT0_3_area.py);
+- Script binding: meta.script_sha256 == sha256(experiments/at0/AT0_3_area.py);
   manifest.claim_sha256 == canonical sha (sort_keys) файла claim;
   имя store == sha256[:16] содержимого.
 - Verdict: H1 = refuted (directional refutation), H2 = confirmed (ассоциация).

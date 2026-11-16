@@ -30,7 +30,7 @@
 |---|---|---|
 | 16 промптов (HF ids, 64 токена) | `results/e93/prompts.json` → `d['docs']['w*']['ids']` (пинованный round-trip 16/16, `pin_file_sha16 083c732ff67c04f8`) | e93 |
 | CPU id-поток генерации (384) и p1-трек | `results/e81/REPLAY.json` → `gen_ids[w*]`, `gen_p1[w*]` (это **верхние** словари, не `docs.w*`; в `docs.w*` лежат `segments/onset/p1_med`) | e81 |
-| Формулы rep8 / rep_flags / spear | `experiments/exp81b_replay.py` (копировать дословно, не переизобретать) | e81b |
+| Формулы rep8 / rep_flags / spear | `experiments/e81_91/exp81b_replay.py` (копировать дословно, не переизобретать) | e81b |
 | SYCL-канал и модель | **`/data/Qwen/qwen3.5-0.8B-f16.gguf`** (на диске лежат только `qwen3.5-0.8B-f16.gguf` и `-f32.gguf`; Q4_K_M **не существует** — `ls /data/Qwen/*.gguf`), `-sm none -mg 0 -ngl 99 -fa on -c 2048 -np 1` | e93 (`results/e93/sycl/NOTES.md`) |
 | i915/IGC-предосторожности | `~/work/llama.cpp/PLAN.md` (пауза ≥5 с между стартами; asserts-build; DMMV не ставить для f16) | PLAN.md |
 | CPU-референс p1/top-2 на id-последовательности | transformers fp32 `/data/Qwen/Qwen3.5_0.8B`, кодовая база exp81b (один forward на док) | e81b |

@@ -3,7 +3,7 @@
 Роль: независимый верификатор (НЕ автор). Прогнан: 15.11, gates ALL PASS.
 Артефакты: `results/AT0/AT0_2_SHAPE.json` (claim), `results/AT0/store/f7cc011ef856a6dc.json` (store, 222.8MB),
 `results/AT0/AT0_2_manifest.json`, `results/AT0/AT0_2_run.log` / `AT0_2_r6_stdout.log`.
-Код: `experiments/AT0_2_shape.py` (1214 LOC), прибор `prism/field.py`.
+Код: `experiments/at0/AT0_2_shape.py` (1214 LOC), прибор `prism/field.py`.
 Все числа ниже — из фактических пересчётов (numpy 2.5.3, /tmp), не из головы.
 
 ## Таблица проверок
@@ -87,7 +87,7 @@
 | M4 (DELTA_MIN=0.05 pre-registered) | закрыт | хедер строка ~107 (B_NNULL/DELTA_MIN константы), pre-reg doc round 2, агрегаты: delta_min=0.05 во всех 81 слоте |
 | M5 (confirmed_anomaly semantics) | закрыт | store.prereg.verdict + verdict_note в агрегатах; в r6-результатах confirmed_anomaly нет (все refuted/not_testable) — ветка не срабатывала, семантика зафиксирована |
 
-### 6. Код (experiments/AT0_2_shape.py)
+### 6. Код (experiments/at0/AT0_2_shape.py)
 - **Assert-самоаудит останавливает запись**: все fail-loud assert'ы (G2:963, G8:976, G7-inv:977, G-seam:988, positive-control:999) предшествуют блоку записи (store:1024, claim:1093, manifest:1183, run.log:1209); `--smoke` возвращает ДО записей (1013, «SMOKE: артефакты НЕ пишем»). Сбой любого assert ⇒ артефакты не пишутся. ✓
 - **Детерминизм**: все 6 call-site `np.random.default_rng` сессионно засеяны (363 AR-eps, 410 perm-null, 449 seam, 538 fourier (+1000+s), 631 boot (seed=117), 823 test-pin (123)); нет global `np.random.*`, нет `time`, нет hash-итерации; документы итерируются `sorted(docs)`, ключи store — `sort_keys=True`; пересчёт агрегатов bit-exact — эмпирическое подтверждение. ✓
 - **NaN/Inf sanitize**: jclean (field.py:161) NaN/Inf → None; raw-скан claim: 0 токенов NaN/Infinity. ✓

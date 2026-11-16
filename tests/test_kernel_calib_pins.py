@@ -37,7 +37,7 @@ def _pin_cells(nb_path: pathlib.Path) -> list[str]:
 def test_all_pins_of_domain_are_inlined(tmp_path):
     mod = _loader()
     mod.build_kernel(
-        exp_file=str(REPO / "experiments" / "exp01_coherence.py"),
+        exp_file=str(REPO / "experiments" / "e01_10" / "exp01_coherence.py"),  # reorg 16.11
         out_dir=str(tmp_path),
         kernel_id="voroninmichael/test-exp01-pins",
         calib_pins=["wiki"],
@@ -57,7 +57,7 @@ def test_domain_without_pin_fails_loud(tmp_path):
     mod = _loader()
     with pytest.raises(SystemExit):
         mod.build_kernel(
-            exp_file=str(REPO / "experiments" / "exp01_coherence.py"),
+            exp_file=str(REPO / "experiments" / "e01_10" / "exp01_coherence.py"),  # reorg 16.11
             out_dir=str(tmp_path),
             kernel_id="voroninmichael/test-exp01-pins",
             calib_pins=["nosuchdomain"],

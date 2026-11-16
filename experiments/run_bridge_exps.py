@@ -19,7 +19,7 @@ def run(name: str, module: str, args: list[str], results_dir: str):
     t0 = time.time()
     try:
         import importlib
-        mod = importlib.import_module(f"experiments.{module}")
+        mod = importlib.import_module(f"experiments.e11_20.{module}")  # reorg 16.11: bridge-экспы в e11_20/
         # Build namespace with defaults
         ns = {
             "device": "auto",

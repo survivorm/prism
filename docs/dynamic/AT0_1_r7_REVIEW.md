@@ -9,7 +9,7 @@
 
 | файл | sha256 | статус |
 |---|---|---|
-| `experiments/AT0_1_accounting.py` | `de3058693022320876da8028c4e63dd1ef57ca8fe9dc565f08f49d396a763f20` | ✓ совпал с требованием (НЕ изменён) |
+| `experiments/at0/AT0_1_accounting.py` | `de3058693022320876da8028c4e63dd1ef57ca8fe9dc565f08f49d396a763f20` | ✓ совпал с требованием (НЕ изменён) |
 | `prism/field.py` | `bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532` | ✓ = claim `gates.G1prime_field_sha256`; = версия из git 67addba |
 | `results/AT0/store/23281c64cc418ff1.json` (store) | `23281c64cc418ff1fedad2a5013c4bf7c8b7dd7680ac8d4fa7cf746c62fd1732` | ✓ |
 | `store/claim_r5_d4a4b101.json` | `d4a4b10135e8b63f361f6fe75475cff7d44b6810e9248d03a8bdf96b5b73d94a` | ✓ существует, sha = `meta.r7_annotation.chain.r5_claim_sha256` |
@@ -79,8 +79,8 @@ MAJOR-находок нет. MINOR — 6 (таблица выше), все ко�
 
 Дата: 2026-11-15. Замещение: claim `22302261…` (v1) → `82f44f0813f6adde047f11b97568f08ca19807fb41af145b2977f3fd450999c5` (v2).
 Входы (проверено): v1-claim `2230226141a9a697…` (на диске, не восстановлен), v2-claim `82f44f08…` = `T0_ACCOUNTING.json` (bit-eq);
-`experiments/at0_1_r7_annotation.py` = `91fcc9bbe2df4b9fd828a04ce758caeb077aa2cd6c3817e73b3d5e5b32a5345b`;
-`experiments/at0_1_r6_annotation.py` = `0d52eda5f1f4128aebe1bfdce9f3c32532b4a5ec14be9e1172a6757d2bfe508e` = bit-eq `/tmp/recovered/AT0_1_r6/apply_r6_edits.py`;
+`experiments/at0/at0_1_r7_annotation.py` = `91fcc9bbe2df4b9fd828a04ce758caeb077aa2cd6c3817e73b3d5e5b32a5345b`;
+`experiments/at0/at0_1_r6_annotation.py` = `0d52eda5f1f4128aebe1bfdce9f3c32532b4a5ec14be9e1172a6757d2bfe508e` = bit-eq `/tmp/recovered/AT0_1_r6/apply_r6_edits.py`;
 лог v2 `/tmp/at01_r7b.log`: RUN_RC=0, маркер R7_ANNOTATION_DONE (1 шт.), `r7_claim_sha256 = 82f44f08…`; mtime v2-артефактов 2026-11-15 02:55 (+0300).
 
 - **Числовой diff v1→v2: 13 листьев, только текст** (0 removed; 956 численных листьев в обоих, diff = 0, bit-eq).
@@ -98,12 +98,12 @@ MAJOR-находок нет. MINOR — 6 (таблица выше), все ко�
 
 - **MINOR-1: закрыт.** `meta.r7_annotation.date` = «2026-11-15»; `reconstruction_roundoff_identity_detail.provenance` содержит «пересчёт r7 (2026-11-15)»; согласуется с mtime v2-артефактов (2026-11-15 02:55 +0300) и датой в AT0_1_artifact_hashes.json.
 - **MINOR-2: закрыт.** c1_c4_note (все 3 объекта): «per_doc d_eff/z_excess_eff и se_factor_median — bit-eq только в pinned-окружении (run_one.sh: OpenBLAS/MKL_NUM_THREADS=6; r7-прогон: OMP_NUM_THREADS=4 — eigvalsh чувствителен к OpenBLAS/MKL-тредам); в другом thread-окружении дрейф 1–2 ulp (≤3.4e-15 rel, проверено независимо, ревью round 3). z_raw_band/z_excess/θ/T_none_full/roundoff/l23_meta — bit-eq в обоих окружениях».
-- **MINOR-3: закрыт.** `experiments/at0_1_r6_annotation.py` существует; sha256 = `0d52eda5…e508e` = `meta.r7_annotation.chain.r6_annotation_script_sha256`; bit-eq с `/tmp/recovered/AT0_1_r6/apply_r6_edits.py` (одинаковый sha).
+- **MINOR-3: закрыт.** `experiments/at0/at0_1_r6_annotation.py` существует; sha256 = `0d52eda5…e508e` = `meta.r7_annotation.chain.r6_annotation_script_sha256`; bit-eq с `/tmp/recovered/AT0_1_r6/apply_r6_edits.py` (одинаковый sha).
 - **MINOR-4: закрыт.** identity_check_G1.headline (3 объекта) + t0_headline_note: «заголовочный T0 — r per object … r/f_dc ≡ N (G3-тождество r = N·f_dc) — тривиально, не цитировать; информативно: r_v ≈ 24.9 (not DC-free), r_du ≈ 0.0048 (DC-suppressed)».
 - **MINOR-5: закрыт.** c1_c4_note: «guard th is None (no_match-док в пуле) — defensive, не достигается на данных (все 51 доки пула matched); проверен exec'ом реальной ma1_recompute с имитированным no_match».
 - **MINOR-6: закрыт.** c1_c4_note: «Поля median_z/mean_z/n_abs_z_ge_3 (r5) bit-eq z_raw_band.median/mean/n_abs_z_ge_3 — дубль сохранён инвариантом r5-листьев; цитировать z_raw_band».
 
-- **Цепочка: OK.** `T0_ACCOUNTING.json` bit-eq с `store/claim_r7_82f44f0813f6adde.json` (82f44f08…). Manifest = claim v2 + manifest-блок (deep-eq; `manifest.claim_sha256 = 82f44f08…`, `store_sha256 = 23281c64…`); manifest-sha `4ccaa860…` совпадает с `manifest_sha256` в artifact_hashes. `AT0_1_artifact_hashes.json`: `claim_sha256 = 82f44f08…`; pins полные (claim_r5 d4a4b101 / claim_r6 b0f74312 / claim_r7 82f44f08 / manifest_r5/r6 / runlog e6dcd6fc — все sha сверены с файлами на диске); `store 23281c64cc418ff1.json` и `experiments/AT0_1_accounting.py` (de305869…) не тронуты (sha без изменений); chain: run_script de305869…, r5 d4a4b101…, r6 b0f74312…, r6_annotation_script 0d52eda5…, annotation_script 91fcc9bb… (все = фактические файлы); `superseded_by_current` честно сохраняет v1 (22302261, 9ffc1585, manifest d40847a6).
+- **Цепочка: OK.** `T0_ACCOUNTING.json` bit-eq с `store/claim_r7_82f44f0813f6adde.json` (82f44f08…). Manifest = claim v2 + manifest-блок (deep-eq; `manifest.claim_sha256 = 82f44f08…`, `store_sha256 = 23281c64…`); manifest-sha `4ccaa860…` совпадает с `manifest_sha256` в artifact_hashes. `AT0_1_artifact_hashes.json`: `claim_sha256 = 82f44f08…`; pins полные (claim_r5 d4a4b101 / claim_r6 b0f74312 / claim_r7 82f44f08 / manifest_r5/r6 / runlog e6dcd6fc — все sha сверены с файлами на диске); `store 23281c64cc418ff1.json` и `experiments/at0/AT0_1_accounting.py` (de305869…) не тронуты (sha без изменений); chain: run_script de305869…, r5 d4a4b101…, r6 b0f74312…, r6_annotation_script 0d52eda5…, annotation_script 91fcc9bb… (все = фактические файлы); `superseded_by_current` честно сохраняет v1 (22302261, 9ffc1585, manifest d40847a6).
 - **Регрессия: OK.** Все 956 численных листьев v1↔v2 bit-eq (diff = 0). Точечно: z_raw_band medians 381.3249665142485 / −0.21574175798491185 / −0.21562117252716537 ✓; z_excess v_tangent median 10.547543645305291 ✓; T_none_full identity −0.5023582212969491 (h_raw) / −12.868956825537097 (v_tangent) ✓ (в identity_check_G1 diff только строка headline); roundoff 3.7939126356469717e-16 ✓ (detail bit-eq, кроме даты в provenance).
 
 - **Вердикт: PASS.** MAJOR: нет, новых MINOR: нет. Все 6 MINOR round 3 закрыты по существу; изменения v1→v2 — только текст/даты/chain-пины; цепочка пинов согласована; чисел прогона не тронуто.
@@ -113,7 +113,7 @@ MAJOR-находок нет. MINOR — 6 (таблица выше), все ко�
 Дата: 2026-11-15 03:1x (+0300). Ревьюер — второй независимый (не автор правки, не автор
 §0–4). К моменту этого прогона на диске уже были: (a) r7 v1-claim `22302261…` (02:14) с
 ревью §0–3 (PASS, 6 MINOR) и (b) r7 v2-claim `82f44f08…` (02:55, фиксы MINOR-1..6, скрипт
-`91fcc9bb…` + новый `experiments/at0_1_r6_annotation.py` `0d52eda5…`) с addendum §4. Текущий
+`91fcc9bb…` + новый `experiments/at0/at0_1_r6_annotation.py` `0d52eda5…`) с addendum §4. Текущий
 состояние репо на момент этого прогона — **v2** (`T0_ACCOUNTING.json` = `82f44f08…`); v1-пин
 сохранён (`store/claim_r7_2230226141a9a697.json`). Все числа ниже — из моих собственных
 пересчётов (/tmp/review_at01, python 3.13.14/np 2.5.2) и фактических артефактов; key claims
@@ -123,7 +123,7 @@ MAJOR-находок нет. MINOR — 6 (таблица выше), все ко�
 
 | файл | sha256 | статус |
 |---|---|---|
-| `experiments/AT0_1_accounting.py` | `de3058693022320876da8028c4e63dd1ef57ca8fe9dc565f08f49d396a763f20` | ✓ неизменён |
+| `experiments/at0/AT0_1_accounting.py` | `de3058693022320876da8028c4e63dd1ef57ca8fe9dc565f08f49d396a763f20` | ✓ неизменён |
 | `prism/field.py` | `bcc607c561f95e3ed7aaf07677d088159aeb572b804c2f32fc9c5f4c26396532` | ✓ = claim `gates.G1prime_field_sha256`; **итог: bit-eq c git `67addba:prism/field.py`** (проверено `git show`) |
 | TZ (claim `meta.tz_sha256`) | `647c03ab05a25642c6f7e647fbd8dbc333c53d6de2ea8555ed3bee80baa8013d` | **итог: bit-eq c git `67addba:docs/TZ_add_0-3.md`**; коммит `2dab888` в логе («прогон на TZ-sha 647c03ab») — существует |
 | store `23281c64…` / claim_r5 `d4a4b101…` / claim_r6 `b0f74312…` / run.log `e6dcd6fc…` | см. §0 | ✓ все бит-ровно; run.log bit-eq c `runlog_r5_pre_rerun.log` |
@@ -163,7 +163,7 @@ verdict P4 r6≡r7 bit-eq (все 3 «refuted»), P5-объекты целико
 **MAJOR: нет.**
 
 **MINOR (новые, мой прогон):**
-1. **MINOR-R3A — CWD-зависимый путь в v2-скрипте.** `sha256_file("experiments/at0_1_r6_annotation.py")`
+1. **MINOR-R3A — CWD-зависимый путь в v2-скрипте.** `sha256_file("experiments/at0/at0_1_r6_annotation.py")`
    (v2, строка 545) — относительный путь при абсолютных (ROOT-based) для всех остальных входов.
    Работает только из корня репо (run_one.sh делает `cd /home/survivor/work/prism`); из другого
    CWD — FileNotFoundError ДО любой записи (проверено: fail-safe, частичного артефакта нет).
@@ -210,7 +210,7 @@ env / ≤1.2e-15 rel в ином, T_none_full bit-eq c r6, l23 bit-eq, /88, це
 **Вердикт: PASS**
 
 MAJOR: нет. MINOR (4 новых, ни один не меняет число claim):
-- MINOR-R3A: CWD-относительный путь `experiments/at0_1_r6_annotation.py` в v2-скрипте (fail-safe,
+- MINOR-R3A: CWD-относительный путь `experiments/at0/at0_1_r6_annotation.py` в v2-скрипте (fail-safe,
   работает под run_one.sh).
 - MINOR-R3B: thread-нота c1_c4_note неоднозначна (6 тредов = аннотация r7; 4 = перепуск r5).
 - MINOR-R3C: env аннотационного прогона (python/np) не свёрнут в chain; воспроизводство d_eff —

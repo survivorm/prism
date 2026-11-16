@@ -7,7 +7,7 @@ wording/consistency fixes»). Ответы — этот файл (протоко
 - store `store/ab8ec0ed2df2f8c7.json` (sha = имя; old store `e852a4bd88c92649` сохранён,
   untracked — удаление в коммите);
 - `AT0_4_MIX.json` (claim) + `AT0_4_manifest.json` (цепочка 4/4, см. C6);
-- `experiments/AT0_4_mix.py` (fff89220…), `experiments/AT0_4_rebuild_r5.py` (6a2d3729…,
+- `experiments/at0/AT0_4_mix.py` (fff89220…), `experiments/at0/AT0_4_rebuild_r5.py` (6a2d3729…,
   NOT REUSABLE); лог `results/AT0/AT0_4_rebuild_r5.log`.
 - **pretest_results бит-неизменен — ни один вердикт не изменился** (vacuous ×3, same ×3 +
   trunk_carries, descriptive ×2, null ×6, outliers 2/6+6/6); diff store = ровно 8 ключей
@@ -120,8 +120,8 @@ S13 — own_w7 not-ok (R1_S13), own_w2 not-ok (R2_S13). Поэтому чест�
 
 (размеры/sha — на момент верификации; после r5 скрипт rebuild r4 удалён — в репо
 только актуальный AT0_4_rebuild_r5.py)
-| experiments/AT0_4_rebuild_r5.py | 29 326 B | 6a2d37291974b73e |
-| experiments/AT0_4_mix.py | 82 352 B | fff89220f202b905 |
+| experiments/at0/AT0_4_rebuild_r5.py | 29 326 B | 6a2d37291974b73e |
+| experiments/at0/AT0_4_mix.py | 82 352 B | fff89220f202b905 |
 | results/AT0/store/ab8ec0ed2df2f8c7.json | — | ab8ec0ed2df2f8c7 (первое имя = префикс sha) |
 
 Верификация цепочки (rebuild r5, все ассерты зелёные, лог `AT0_4_rebuild_r5.log`):
