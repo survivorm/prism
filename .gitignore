@@ -86,4 +86,6 @@ kaggle_daemon.log
 
 # trackio (AGENTS.md / TZ_trackio): локальная БД, регенерируемый кэш от логов
 .trackio/
+# v1.9-r1 (16.11): отчёт миграции — аудит-артёфакт, в git
+!results/trackio_migration_report.json
 .pig/

@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 """Одноразовая не-деструктивная миграция всех прогонов prism в trackio.
 
-ТЗ: docs/TZ_trackio_migration.md (v1.8). Реестр: 115 run'ов / 130 .log (снапшот 15.11 04:00).
+ТЗ: docs/TZ_trackio_migration.md (v1.9). Реестр: 129 run'ов / 145 .log (v1.9, 16.11: снапшот
+15.11 + AT0_5-финал/AT0_6×3/AT0_7/AT2/AT2b smoke+full/AT3 r1r3/AT8_1 T4+v2; 127 уник. регистровых
++ 5 md5-дублей + 13 исключённых).
 Читает: логи (read-only). Пишет: {TRACKIO_DIR}/prism.db (SQLite, gitignored) +
 results/trackio_migration_report.json (sanitized).
 
@@ -29,7 +31,7 @@ DB_PATH = TRACKIO_DIR / "prism.db"
 LOCK_PATH = TRACKIO_DIR / "prism.lock"
 REPORT_PATH = ROOT / "results" / "trackio_migration_report.json"
 TZ_PATH = ROOT / "docs" / "TZ_trackio_migration.md"
-TZ_VERSION = "v1.8"
+TZ_VERSION = "v1.9"
 
 # ---------------------------------------------------------------------------
 # Реестр (ТЗ §3, v1.7). name: snake_case; log: путь от ROOT; duration_s: None =
@@ -75,6 +77,8 @@ T4_RUNS = [
     ("e17_2nd_canary_tpu", "kaggle_kernel/kernel-exp17-2nd-canary/out/prism-exp17-2nd-order-canary-tpu.log", ""),
     ("lfm3_textgen", "logs/lfm3gen_out/prism-lfm3-textgen.log", ""),
     ("probe_input", "logs/probe_out/prism-probe-input.log", ""),
+    # v1.9 (16.11): AT8_1 T4-прогон (бывш. AT0_8; kernel JSON-лог)
+    ("at8_1", "logs/AT8/prism-at8-1-threshold.log", ""),
 ]
 TABLE_RUNS = [
     ("e27b_early", "logs/prismexp27b.log", ""),
@@ -155,7 +159,19 @@ CPU_RUNS = [
     ("at0_4_rebuild_r4", "logs/AT0/AT0_4_rebuild_r4.log", None, "rebuild r4, 14.11; маркеров wall нет"),
     ("at0_4_rebuild_r5", "logs/AT0/AT0_4_rebuild_r5.log", None, "rebuild r5, 15.11; маркеров wall нет"),
     ("at0_4_rebuild_r6", "logs/AT0/AT0_4_rebuild_r6.log", None, "rebuild r6, 15.11; live-trackio в самом rebuild-скрипте"),
-    ("at0_5", "logs/at0_5_run.log", None, ""),
+    ("at0_5", "logs/AT0/AT0_5_run.log", None, "v1.9: путь исправлен (v1.8: logs/at0_5_run.log — тот файл теперь at0_5_g8fail)"),
+    ("at0_5_g8fail", "logs/at0_5_run.log", None, "v1.9: ранний прогон AT0_5 — G8 negative control FAIL (traceback); untracked, pre-reorg"),
+    ("at0_6", "logs/AT0/AT0_6_run.log", None, "v1.9: финальный AT0_6 (claim 41c5e061)"),
+    ("at0_6_v2_2", "logs/AT0/archive/v2.2/AT0_6_run.log", None, "v1.9: архив v2.2 (claim 655594d0)"),
+    ("at0_6_v2r1_partial", "logs/AT0/archive/AT0_6_v2r1_partial_run.log", None, "v1.9: partial (обрыв; claim b33e84bc)"),
+    ("at0_7", "logs/AT0/AT0_7_run.log", None, "v1.9: финальный 16.11; ранние 15.11 (×3) без выживших логов (live-run'ы at07_loop_r1 в DB)"),
+    ("at0_4_rebuild_r6b", "logs/AT0/AT0_4_rebuild_r6b.log", None, "v1.9: post-process r6.1; live-run того же имени в DB"),
+    ("at2", "logs/AT2_run.log", None, "v1.9: T2.1 (бывш. AT0_9); live-run at0_9_t21_r1 в HF-cache DB"),
+    ("at3_r1", "logs/AT3_run.log", None, "v1.9: T3.1 r1 (wall=270.0s в логе; duration-маркер-паттернов нет)"),
+    ("at3_r4", "results/AT3_run.log", None, "v1.9: T3.1 r4 (wall=479.8s, 16.11 18:19); r4 переписал r3-лог (файл один, r3 на диске не выжил)"),
+    ("at8_1_v2", "logs/AT8/AT8_1_v2_run.log", None, "v1.9: AT8_1 машина v2, disk-only (wall 0.0s)"),
+    ("at2b_smoke", "results/AT2b_smoke/AT2b_smoke_run.log", None, "v1.9: smoke AT2b (T2.1b) 16.11 (smoke=True; полный прогон ещё не был)"),
+    ("at2b", "results/AT2b/AT2b_run.log", None, "v1.9: полный прогон AT2b (T2.1b) 16.11 (SUBSPACE_CONTROL_FAIL); untracked; 16.11 18:2x файл перенесён в results/AT2b/"),
     ("chain_e45b", "logs/chain_e45b.log", None, ""),
     ("chain_e46", "logs/chain_e46.log", None, ""),
     ("stage0", "logs/stage0.log", None, "Device: cpu, n_samples=2, K=128 — smoke-прогон"),
@@ -186,6 +202,7 @@ EXCLUDED = {
     "logs/tail_round.log": "wall-часы очереди (источник duration, не run)",
     "logs/e93/sycl/bench_err.log": "stderr бенча",
     "logs/e93/sycl/smoke_err.log": "stderr бенча",
+    "logs/AT8/AT8_1_run.log": "v1.9: stdout-текст T4-прогона at8_1 (канон — kernel JSON-лог; md5 различаются, один прогон)",
 }
 XET_GLOBS = [
     "kaggle_kernel/kernel-exp17-2nd-canary/out/.hf_cache/xet/logs/xet_*.log",
@@ -197,10 +214,28 @@ FIND_EXCLUDES = [".git", ".venv", ".hf_cache", "box"]
 RUN_FAILED_MARKERS = ["[FAIL]", "Aborted (core dumped)", "AssertionError"]
 # прогресс-маркеры (не экспериментальные метрики, ТЗ §7.5 v1.8 N18): n_lines + step_idx
 PROGRESS_METRICS = {"n_lines", "step_idx"}
+# v1.9 (16.11): полный список пустых run'ов (99) — dry-run по всем 127 run'ам.
+# v1.8-список (12) никогда не проверялся полным прогоном (15.11 — срыв на quiescence):
+# текст-логи (все CPU/IGPU) не экстрактятся → empty_metrics=True у всех них. e93_sycl_bench
+# НЕ в списке (6 bench-точек). Происхождение: dry-run 16.11 (см. ТЗ §9.1 N2).
 EMPTY_METRICS_EXPECTED = {
-    "e16_stage0_targets", "e16_stage0_targets_short", "e2_heatmap", "e6_l18_snr",
-    "e38d_holonomy", "e16_readout_pull_tpu", "e16_readout_pull_tpu2",
-    "e17_2nd_canary_tpu", "lfm3_textgen", "probe_input", "e18_logit_kd_tpu", "e27b_early",
+    "at0_1", "at0_2", "at0_2_r6_stdout", "at0_2b", "at0_3", "at0_4",
+    "at0_4_rebuild", "at0_4_rebuild_r3", "at0_4_rebuild_r4", "at0_4_rebuild_r5", "at0_4_rebuild_r6", "at0_4_rebuild_r6b",
+    "at0_5", "at0_5_g8fail", "at0_6", "at0_6_v2_2", "at0_6_v2r1_partial", "at0_7",
+    "at2", "at3_r1", "at3_r4", "at8_1", "at8_1_v2", "chain_e45b",
+    "chain_e46", "e01_coherence_v6_draw2", "e01_coherence_v6_pinned", "e16_readout_pull_tpu", "e16_readout_pull_tpu2", "e16_stage0_targets",
+    "e16_stage0_targets_short", "e17_2nd_canary_tpu", "e18_logit_kd_tpu", "e27b_early", "e2_heatmap", "e32r2_hessian",
+    "e32r2_smoke", "e32r3_1", "e32tail_pilot", "e35_preflight", "e37_run", "e37_run2",
+    "e37_run3", "e37_run4", "e37r_agg", "e37r_run", "e38a_rerun", "e38b_rerun",
+    "e38c_rerun", "e38d_holonomy", "e38d_rerun", "e38e_rerun", "e38e_true_j_l23", "e38f_rerun",
+    "e38g_rerun", "e38h_rerun", "e38i_rerun", "e39_supp_pscale_probe", "e39_supp_three_objects", "e39a_v10",
+    "e39a_v11", "e39a_v2", "e39a_v3", "e39a_v4", "e39a_v5", "e39a_v6",
+    "e39a_v7", "e39a_v8", "e39a_v9", "e39c_pre_rerun_fix", "e39d_control_lam0_order1", "e39d_floor_seeds12",
+    "e39d_head_route_probe", "e39d_stage1_ordering", "e39j_run", "e39k_run", "e39m_smoke", "e45_damage_vs_structure",
+    "e45_gap_scan", "e45_kappa_seed_null", "e45_seednull", "e45_verdicts", "e45b_analysis", "e45b_leaf_table",
+    "e45c_gauge_null", "e45c_rerun", "e45f_gauge_decomp", "e45g_cut_stability", "e46_frame_as_memory", "e46_verdicts",
+    "e47c_p2_loop_prediction", "e51_lfm3", "e51_qwen", "e6_l18_snr", "e7_cka_baseline", "e_r11_basis_tie",
+    "lfm3_textgen", "probe_input", "stage0", "at2b_smoke", "at2b",
 }
 RUN_FAILED_EXPECTED = {
     "e27_noise_floor", "e27_noise_floor_v9", "e19_destruction_tpu", "e19_destruction_early",
@@ -267,10 +302,13 @@ def md5_of(path):
 
 
 def is_json_log(path):
-    """JSON-Kaggle-лог: первая непустая строка (после ','-обрезки) начинается с '{'."""
+    """JSON-Kaggle-лог: первая непустая строка — `{…}` или `[{…}`/`, {…}`/`]`.
+    Формат Kaggle: NDJSON-массив — 1-я строка `[{…}`, средние `,{…}`, последняя `]`.
+    (v1.9 N1: v1.8-версия ждала только `{` и не распознавала 1-ю строку `[{…}` → все T4-логи
+    трактвались как текст → 0 метрик.)"""
     with open(path, errors="replace") as f:
         for line in f:
-            s = line.strip().lstrip(",").rstrip(",")
+            s = line.strip().lstrip("[").lstrip(",").rstrip("]").rstrip(",")
             if s:
                 return s.startswith("{")
     return False
@@ -542,9 +580,9 @@ def check_registry(find_list):
         "sum_check": n_uniq_reg_log + len(MD5_DUPES) + len(excluded),
         "xet_logs": xet,
     }
-    # 130 = 113 уник .log в run'ах + 5 дублей + 12 исключённых (ТЗ §3)
-    if stats["find_count"] != 130 or stats["sum_check"] != 130 or stats["registry_runs"] != 115:
-        errors.append(f"арифметика 115/130 нарушена: {stats}")
+    # v1.9: 129 run'ов / 145 .log = 127 уник. регистровых + 5 дублей + 13 исключённых (ТЗ §9.2)
+    if stats["find_count"] != 145 or stats["sum_check"] != 145 or stats["registry_runs"] != 129:
+        errors.append(f"арифметика 129/145 нарушена: {stats}")
     return errors, stats, xet
 
 
@@ -624,9 +662,81 @@ def bench_points(path):
     return pts
 
 
+def merge_hf_db(report):
+    """v1.9 N5: консолидация live-записей из HF-cache DB (~/.cache/huggingface/trackio/prism.db)
+    в DB репо. Backup → копирование строк (configs/metrics/system_metrics) по run_id;
+    существующие run_id не трогать; id-колонка не копируется (autoincrement).
+    Fail-loud: расхождение схем = error. Нет HF DB / нет run'ов = warning."""
+    import shutil
+    import sqlite3
+    hf = Path(os.environ.get("TRACKIO_HF_DIR",
+                             str(Path.home() / ".cache" / "huggingface" / "trackio"))) / "prism.db"
+    out = {"hf_source_db": str(hf), "backup": None, "runs_migrated": [],
+           "rows": {}, "skipped_existing": []}
+    if not hf.exists():
+        report["warnings"].append(f"HF merge: DB {hf} не найден — консолидация пропущена")
+        report["hf_merge"] = out
+        return
+    os.makedirs("/tmp/recovered", exist_ok=True)
+    bak = Path("/tmp/recovered") / (
+        f"hf_trackio_prism_backup_{time.strftime('%Y%m%d_%H%M%S')}.db")
+    shutil.copy2(hf, bak)
+    out["backup"] = str(bak)
+    src = sqlite3.connect(f"file:{hf}?mode=ro", uri=True)
+    dst = sqlite3.connect(DB_PATH)
+    try:
+        for tbl in ("configs", "metrics", "system_metrics"):
+            scols = [r[1] for r in src.execute(f"PRAGMA table_info({tbl})")]
+            dcols = [r[1] for r in dst.execute(f"PRAGMA table_info({tbl})")]
+            if scols != dcols:
+                raise RuntimeError(f"HF merge: расхождение схем {tbl}: {scols} vs {dcols}")
+        pairs = src.execute("SELECT DISTINCT run_id, run_name FROM configs").fetchall()
+        if not pairs:
+            report["warnings"].append("HF merge: в HF DB нет run'ов — копировать нечего")
+            report["hf_merge"] = out
+            return
+        existing = {r[0] for r in dst.execute(
+            "SELECT DISTINCT run_id FROM metrics UNION SELECT run_id FROM configs")}
+        new = [(rid, nm) for rid, nm in pairs if rid not in existing]
+        out["runs_migrated"] = [nm for _, nm in new]
+        out["skipped_existing"] = [nm for rid, nm in pairs if rid in existing]
+        if not new:
+            report["warnings"].append("HF merge: все run'ы уже в DB репо — строки не скопированы")
+            report["hf_merge"] = out
+            return
+        new_ids = [rid for rid, _ in new]
+        ph = ",".join("?" * len(new_ids))
+        # ATTACH: обычный путь (uri-параметры mode=ro в ATTACH не парсятся, v1.9-r1 fix);
+        # источник — бэкап (стабильный снапшот; живой HF-DB не читается — quiescence-риск).
+        dst.execute(f"ATTACH DATABASE '{bak}' AS hfsrc")
+        try:
+            for tbl in ("configs", "metrics", "system_metrics"):
+                cols = [c for c in [r[1] for r in dst.execute(f"PRAGMA table_info({tbl})")] if c != "id"]
+                cl = ",".join(cols)
+                cur = dst.execute(
+                    f"INSERT INTO {tbl} ({cl}) SELECT {cl} FROM hfsrc.{tbl} WHERE run_id IN ({ph})",
+                    tuple(new_ids))
+                out["rows"][tbl] = out["rows"].get(tbl, 0) + cur.rowcount
+            dst.commit()
+        finally:
+            dst.execute("DETACH DATABASE hfsrc")
+        report["hf_merge"] = out
+        print(f"HF merge: {len(new)} run'ов ({out['runs_migrated']}) → DB репо; "
+              f"rows={out['rows']}; backup={bak}", flush=True)
+    except Exception as e:
+        report["errors"].append(f"HF merge прерван: {type(e).__name__}: {e}")
+        report["hf_merge"] = out
+    finally:
+        src.close()
+        dst.close()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fresh", action="store_true", help="удалить только prism.db (ТЗ §5.2)")
+    ap.add_argument("--append", action="store_true",
+                    help="v1.9: DB существует → НЕ удалять, миграционные run'ы добавить в существующий "
+                         "(live-записи сохраняются); DB отсутствует → как fresh (ТЗ §9.3)")
     ap.add_argument("--smoke", action="store_true",
                     help="только find-аффт + quiescence + md5, без trackio (демо-режим)")
     args = ap.parse_args()
@@ -634,13 +744,16 @@ def main():
     report = {"tz": str(TZ_PATH), "tz_version": TZ_VERSION, "rc": 0,
               "errors": [], "warnings": [], "runs": []}
 
-    # --- idempotency (ТЗ §5.2)
-    if DB_PATH.exists() and not args.fresh:
-        print(f"FATAL: {DB_PATH} существует; пересоздание только с --fresh (ТЗ §5.2)", file=sys.stderr)
+    # --- idempotency (ТЗ §5.2 + v1.9 §9.3 --append)
+    if DB_PATH.exists() and not args.fresh and not args.append:
+        print(f"FATAL: {DB_PATH} существует; пересоздание только с --fresh, "
+              f"добавление в существующий — с --append (ТЗ §5.2/§9.3)", file=sys.stderr)
         return 2
     if args.fresh and DB_PATH.exists():
         DB_PATH.unlink()
-    if LOCK_PATH.exists():
+    if args.fresh and LOCK_PATH.exists():
+        LOCK_PATH.unlink()
+    if not args.fresh and LOCK_PATH.exists():
         LOCK_PATH.unlink()
     TRACKIO_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -679,6 +792,11 @@ def main():
 
     def process_run(name, log, device, group, duration_s, notes):
         nonlocal n_metrics_total
+        if name in existing_runs and (log in existing_runs[name]
+                                      or str(ROOT / log) in existing_runs[name]):
+            report["skipped_existing_runs"].append(name)
+            print(f"  skip {name}: уже в DB (name+log) — идемпотентный --append", flush=True)
+            return
         fp = ROOT / log
         is_json = is_json_log(fp)
         max_time = 0.0
@@ -766,6 +884,20 @@ def main():
                                "n_metrics": sum(len(v) for v in metrics.values())})
 
     try:
+        # v1.9: идемпотентность --append: run'ы уже в DB (name+log) пропускаются —
+        # перезапуск не дублирует миграционные записи.
+        existing_runs = {}
+        if args.append and DB_PATH.exists():
+            import sqlite3 as _sq
+            con = _sq.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+            for rn, cfg in con.execute("SELECT run_name, config FROM configs"):
+                try:
+                    existing_runs.setdefault(rn, set()).add(json.loads(cfg).get("log"))
+                except Exception:
+                    pass
+            con.close()
+        report["skipped_existing_runs"] = []
+
         for name, log, notes in T4_RUNS:
             process_run(name, log, "T4", "T4", None, notes)
         for name, log, notes in TABLE_RUNS:
@@ -779,6 +911,9 @@ def main():
         _finish_report(report)
         return 1
 
+    # --- v1.9 N5: консолидация HF-cache DB (только в полном прогоне)
+    merge_hf_db(report)
+
     # --- md5 после (ТЗ §5.1)
     md5_after = {p: md5_of(ROOT / p) for p in find_list}
     mismatch = [p for p in find_list if md5_before[p] != md5_after[p]]
@@ -786,21 +921,26 @@ def main():
     if mismatch:
         report["errors"].append(f"md5-расхождение после миграции (нарушение не-деструктивности): {mismatch}")
 
-    # --- сверка счётчиков с ТЗ
-    report["raw_hits"] = dict(raw_hits_all)
-    for k, expected in TZ_EXPECTED_HITS.items():
-        got = raw_hits_all.get(k, 0)
-        if got != expected:
-            report["errors"].append(f"счётчик «{k}»: факт {got} ≠ ТЗ {expected} (ТЗ §4/r3)")
-    # --- expected-списки
-    empty_actual = {r["name"] for r in report["runs"] if r["empty_metrics"]}
-    failed_actual = {r["name"] for r in report["runs"] if r["run_failed"]}
-    if empty_actual != EMPTY_METRICS_EXPECTED:
-        report["errors"].append(f"empty_metrics: факт {sorted(empty_actual)} ≠ ТЗ §7.5 "
-                                f"{sorted(EMPTY_METRICS_EXPECTED)}")
-    if failed_actual != RUN_FAILED_EXPECTED:
-        report["errors"].append(f"run_failed: факт {sorted(failed_actual)} ≠ ТЗ §4 "
-                                f"{sorted(RUN_FAILED_EXPECTED)}")
+    # --- сверка счётчиков с ТЗ (только если реально обработан хотя бы один run; v1.9-r1:
+    # повторный --append со всеми skip'ами — пустой прогон, проверки не применяются)
+    if report["runs"]:
+        report["raw_hits"] = dict(raw_hits_all)
+        for k, expected in TZ_EXPECTED_HITS.items():
+            got = raw_hits_all.get(k, 0)
+            if got != expected:
+                report["errors"].append(f"счётчик «{k}»: факт {got} ≠ ТЗ {expected} (ТЗ §4/r3)")
+        # --- expected-списки
+        empty_actual = {r["name"] for r in report["runs"] if r["empty_metrics"]}
+        failed_actual = {r["name"] for r in report["runs"] if r["run_failed"]}
+        if empty_actual != EMPTY_METRICS_EXPECTED:
+            report["errors"].append(f"empty_metrics: факт {sorted(empty_actual)} ≠ ТЗ §7.5 "
+                                    f"{sorted(EMPTY_METRICS_EXPECTED)}")
+        if failed_actual != RUN_FAILED_EXPECTED:
+            report["errors"].append(f"run_failed: факт {sorted(failed_actual)} ≠ ТЗ §4 "
+                                    f"{sorted(RUN_FAILED_EXPECTED)}")
+    else:
+        report["raw_hits"] = {}
+        report["warnings"].append("все run'ы пропущены (уже в DB) — счётчик/expected-проверки не применяются")
     # --- duration marker vs max_time (T4: dev > 30s = warning)
     for r in report["runs"]:
         if r["device"] == "T4" and r["duration_marker_s"] is not None and r["duration_s"] is not None:
@@ -818,6 +958,7 @@ def main():
 
 
 def _finish_report(report):
+    report["rc"] = 1 if report["errors"] else 0
     report = sanitize(report)
     with open(REPORT_PATH, "w") as f:
         json.dump(report, f, indent=1, ensure_ascii=False)

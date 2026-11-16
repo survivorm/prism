@@ -1,6 +1,6 @@
 # ТЗ: миграция всех экспериментов prism в trackio
 
-**Статус:** v1.8 (patch по TZ-ревью round 4, docs/dynamic/trackio_migration_TZ_review_r4.md:
+**Статус:** v1.9 (аддендум 16.11: завершение миграции — §9) + v1.8 (patch по TZ-ревью round 4, docs/dynamic/trackio_migration_TZ_review_r4.md:
 N16 at16 пер-файловая атрибуция (ceil 47 / ceil3 71 / ceil4 144), N17 §3.3 «1 md5-дубль»→2
 (3 T4 + 2 CPU/AT0 = 5 ✓), N18 §7.5 empty_metrics + e18_logit_kd_tpu (11 T4 + e27b_early = 12;
 step_idx — прогресс-маркер, не экспериментальная метрика). v1.7 — round 3:
@@ -28,6 +28,10 @@ N10 MAJOR cell_s-паттерн `, 0\)`→`, (\d+)` (24→192 точки, e32r3)
 AGENTS): если инвентарь изменился (новые .log) — пересобрать реестр, не молча афтить.
 
 ## 2. Окружение (проверено)
+
+> **v1.9: устарело — см. §9.5.** Строка «`trackio==0.45.1` в `.venv` (Python 3.13.14)» не действует:
+> в `.venv` trackio не импортируется (httpx-ошибка); рабочий интерпретатор — `/opt/miniconda3/bin/python3.12`
+> (py 3.12.9, trackio 0.45.1 в user-site `~/.local/lib/python3.12/site-packages`).
 
 - `trackio==0.45.1` в `.venv` (Python 3.13.14), `uv pip install` — локальная сеть, HF-токен не нужен.
 - API: `trackio.init(project, name, group, config)` → `run.log(metrics, step)` → `run.finish()`.
@@ -364,6 +368,129 @@ trackio 0.45.1 выбрасывает run без метрик (проверен�
 3. Quiescence-проверка §5.1 (нет живого писателя в регистровые логи; AT0_2 r6 завершён).
 4. `setsid nohup ./run_one.sh trackio_mig ".venv/bin/python experiments/trackio_migration.py" &` (полный прогон;
    обёртка обязательна — память-вэйт run_one.sh foreground, AGENTS п.6).
+   **v1.9: устарело — см. §9.5** (интерпретатор `/opt/miniconda3/bin/python3.12` + флаг `--append` + pre-flight).
 5. Само-ревью артефакта (п.7).
 6. Внешнее ревью (субагент): код + артефакт → `trackio_migration_REVIEW.md`.
 7. Коммит (явные пути).
+
+## 9. Аддендум v1.9 (16.11): завершение миграции — «все старые прогоны в trackio»
+
+**Контекст.** Bulk-миграция (реестр 15.11) **ни разу не завершилась**: попытка 15.11 05:37 сбилась на
+quiescence (live writer `at0_2_r6`, pid 1198497 — на 16.11 мёртв). За это время: reorg логов
+(results/→logs/, 16.11), переименование AT0_8→AT8_1 (16.11), новые прогоны AT0_5 (финал), AT0_6 (×3),
+AT0_7, AT2, AT3 (r1/r3), AT8_1 (T4 + v2), и **live-trackio** (AGENTS: обязателен для CPU-прогонов)
+написал 10 записей в **два** DB: репо `.trackio/prism.db` (5 run'ов: at0_4_rebuild_r6/r6b,
+at05_gencheck_r1, at05_selftest_tmp2, at07_loop_r1) и `~/.cache/huggingface/trackio/prism.db`
+(5 run'ов: at05_selftest_tmp, at0_9_t21_r1, at3_margin_r1/r2/r3 — TRACKIO_DIR не был задан).
+Задача: загнать ВСЕ прогоны (115 из снапшота + новые) в канонический DB репо, live-записи не терять.
+
+### 9.1. Найденные дефекты (dry-run 16.11, `/opt/miniconda3/bin/python3.12`)
+
+- **N1 (MAJOR, латентный): `is_json_log` не распознаёт формат Kaggle-лога.** Формат: 1-я строка
+  `[{…}`, средние `,{…}`, последняя `]` (NDJSON-mассив). `is_json_log` ждёт, что первая непустая
+  строка начинается с `{` → ВСЕ T4-логи классифицируются как текст → 0 метрик → счётчик-чек
+  (`TZ_EXPECTED_HITS`) падает. Проверено: `is_json_log(logs/prism-exp17-lora-distill.log) = False`,
+  но `parse_json_log` даёт 622 события (парсинг-тело работает). 15.11-прогон не дошёл до счётчиков
+  (quiescence), поэтому баг выжил 4 ревью-раунда. **Фикс:** принимать первую строку, начинающуюся с `[`
+  (`lstrip("[").lstrip(",")` + `rstrip("]").rstrip(",")`). **Верификация фикса:** 116 старых run'ов с
+  исправленным детектором воспроизводят ВСЕ 25 счётчиков v1.8 (bridge 1549, kl 1551, dose 1011, …)
+  ровно → логи не менялись с снапшота, экстракторы стабильны. (INFO v1.9-r1: детектор —
+  over-approximation: xet-логи `[{…}` тоже «JSON»; безвредно — применяется только к ранам
+  реестра, xet-логи исключены из реестра.)
+- **N2 (MAJOR, латентный): `EMPTY_METRICS_EXPECTED` (v1.8, 12 имён) никогда не проверялся полным
+  прогоном и некорректен.** Текст-логи (все CPU/IGPU) по коду НЕ экстрактятся → `empty_metrics=True`
+  у всех них. Факт (dry-run 16.11, все 129 run'ов): **101 пустых** (12 старых T4/table + 89 текст-run'ов
+  включая 13 новых; e93_sycl_bench НЕ пуст — 6 bench-точек). Полный список — в `EMPTY_METRICS_EXPECTED`
+  v1.9 (происхождение: dry-run 16.11; список в ревью-файле для сверки).
+- **N3 (инфо): `at8_1` (новый T4-лог) не даёт эксперимент-метрик** (формат выводов «S7: sha…», «u_…»
+  не покрывается паттернами §4) → `empty_metrics=True`, `run_failed=False`, `duration_marker` = 841 s
+  (`[OK]`-маркер, совпадает с wall 841.0 s из AT8_1-результатов).
+
+### 9.2. Реестр v1.9: 129 run'ов / 145 .log = 127 уник. регистровых + 5 md5-дублей + 13 исключённых
+
+Новые run'ы (13), добавляются в `CPU_RUNS`/`T4_RUNS`:
+
+| name | log | device | note |
+|---|---|---|---|
+| at0_5 | `logs/AT0/AT0_5_run.log` (путь исправлен; v1.8: `logs/at0_5_run.log`) | CPU | финальный прогон (tracked) |
+| at0_5_g8fail | `logs/at0_5_run.log` (старый файл, untracked) | CPU | ранний прогон: G8 negative control FAIL, traceback; остался после reorg |
+| at0_6 | `logs/AT0/AT0_6_run.log` | CPU | финальный (claim 41c5e061) |
+| at0_6_v2_2 | `logs/AT0/archive/v2.2/AT0_6_run.log` | CPU | архив v2.2 (claim 655594d0) |
+| at0_6_v2r1_partial | `logs/AT0/archive/AT0_6_v2r1_partial_run.log` | CPU | partial (обрыв; claim b33e84bc) |
+| at0_7 | `logs/AT0/AT0_7_run.log` | CPU | финальный 16.11; ранние 15.11 (×3) без выживших логов — их live-записи `at07_loop_r1` в DB |
+| at0_4_rebuild_r6b | `logs/AT0/AT0_4_rebuild_r6b.log` | CPU | post-process r6.1; live-run того же имени в DB (допуск дуплика) |
+| at2 | `logs/AT2_run.log` | CPU | T2.1 (бывш. AT0_9); live-run `at0_9_t21_r1` в HF-cache DB |
+| at3_r1 | `logs/AT3_run.log` | CPU | T3.1 r1 (wall=270.0s в логе; duration-маркер-паттернов нет) |
+| at3_r4 | `results/AT3_run.log` | CPU | T3.1 r4 (wall=479.8s, 16.11 18:19); r4 переписал r3-лог (один файл, r3 не выжил) |
+| at8_1_v2 | `logs/AT8/AT8_1_v2_run.log` | CPU | машина v2, disk-only (wall 0.0s) |
+| at2b_smoke | `results/AT2b_smoke/AT2b_smoke_run.log` | CPU | smoke AT2b (T2.1b) 16.11 (smoke=True) |
+| at2b | `results/AT2b/AT2b_run.log` | CPU | полный прогон AT2b (T2.1b) 16.11 (SUBSPACE_CONTROL_FAIL); untracked; файл перенесён в results/AT2b/ (16.11 18:2x) |
+| at8_1 | `logs/AT8/prism-at8-1-threshold.log` | T4 | T4-прогон (kernel JSON-лог) |
+
+Новое исключение (1): `logs/AT8/AT8_1_run.log` — stdout-текст того же T4-прогона at8_1
+(канон — kernel JSON-лог; md5 различаются, один прогон).
+
+**Счётчики `TZ_EXPECTED_HITS`: без изменений** (новые run'ы дают 0 raw hits — dry-run: текст-логи
+не экстрактятся, at8_1-JSON не покрывается паттернами §4). `RUN_FAILED_EXPECTED`: без изменений
+(10; at8_1 — failure-маркеров нет). `MD5_DUPES`: без изменений (5). `EMPTY_METRICS_EXPECTED`: 101 имя
+(100 по dry-run + at2b; текст-логи → empty).
+
+**Арифметика (заменено в `check_registry`):** find_count=145, sum_check=145, registry_runs=129.
+
+**Допуск дупликаций имён:** trackio допускает несколько run'ов с одним `run_name`
+(прецедент: `at07_loop_r1` ×5 в текущем DB). Миграционные run'ы с именами, совпадающими с live-
+записями (at0_4_rebuild_r6b, at0_4_rebuild_r6, at05_gencheck_r1→at0_5, at07_loop_r1→at0_7) — это
+«лог-версия» того же прогона с более бедными метриками; live-записи сохраняются (--append),
+дупликат — документирован в note-полях. (опечатка v1.9-оригинала «dopпуск dуплика» — исправлено, v1.9-r1.)
+
+### 9.3. `--append` (N4)
+
+`--fresh` (удаление DB) для текущего состояния разрушит 5 live-записей в DB репо. Новый флаг:
+- DB существует + `--append` → DB НЕ удаляется, миграционные run'ы добавляются в существующий DB;
+  **идемпотентность:** run'ы, уже присутствующие в DB по (name+log), пропускаются (репорт:
+  `skipped_existing_runs`) — перезапуск не дублирует записи;
+- DB отсутствует + `--append` → поведение как fresh (создание);
+- DB существует без флага → FATAL (без изменений).
+
+### 9.4. Консолидация HF-cache DB (N5; v1.9-r1: источник — бэкап)
+
+После append-прогона: backup `~/.cache/huggingface/trackio/prism.db` → `/tmp/recovered/`, затем
+копирование строк 5 live-run'ов (at05_selftest_tmp, at0_9_t21_r1, at3_margin_r1/r2/r3; 9 configs —
+at3_margin_r1 имеет 3) из **бэкапа** (`configs`, `metrics`, `system_metrics` по `run_id`;
+существующие `run_id` в DB репо не трогать) в DB репо. Источник — бэкап (стабильный снапшот),
+не живой HF-DB: живой писатель (процесс без `TRACKIO_DIR`) не может повлиять на merge (v1.9-r1
+MINOR-фикс; ATTACH с обычным путём — uri-параметры в ATTACH не парсятся). В отчёт: число
+скопированных строк по таблице. Цель — все live-записи в каноническом
+DB проекта (TRACKIO_DIR по умолчанию = `ROOT/.trackio`).
+
+### 9.5. Прогон (v1.9-r1: pre-flight + формула ожидаемого итога)
+
+**Pre-flight (обязателен, MAJOR-фикс 16.11-r1):** инвентарь живой — параллельная сессия пишет
+новые .log (16.11: at2b_smoke 17:50, AT2b full 18:03 — оба появились после dry-run). Замороженные
+числа реестра — недолговечный контракт (AGENTS п.7). Порядок:
+1. Quiescence: все .log (не только регистровые) старше 10 мин, живых писателей нет
+   (проверка скриптом, как в §5.1 — `find ... -newermt '-10 minutes'` + /proc-scan).
+   **Прецедент 16.11 (реализовано):** параллельная сессия во время pre-flight (а) перенесла
+   `results/AT2b_run.log` → `results/AT2b/AT2b_run.log`, (б) r4-прогон переписал
+   `results/AT3_run.log` (r3 → r4) — реестр обновлён (at2b-путь, at3_r4) до прогона.
+2. Свежий `find` .log → классификация каждого нового (run/md5-дубль/исключён) →
+   обновление реестра + арифметики `check_registry` + `EMPTY_METRICS_EXPECTED`.
+3. Тест-прогон на копиях DB (`TRACKIO_DIR=/tmp/... TRACKIO_HF_DIR=/tmp/...`, реальные DB не
+   трогать) → RC=0, 0 ошибок, HF-merge с реальными rows → только тогда реальный прогон.
+
+**Прогон:** интерпретатор `/opt/miniconda3/bin/python3.12` (py 3.12.9 — тот же, что live-прогоны;
+trackio 0.45.1 в user-site `~/.local/lib/python3.12/site-packages`).
+`setsid nohup ./run_one.sh trackio_mig "/opt/miniconda3/bin/python3.12 experiments/trackio_migration.py --append" &`
+
+**Ожидаемый итог (формула, не замороженные числа; v1.9-r1):** RC=0; в DB репо:
+`N0` (существующие configs: live-записи) + 129 миграционных + 9 HF-консолидированных = N0+138 configs;
+уникальных имён ≈ 133 + (новые имена среди N0/9). Известные дупликатные имена: `at07_loop_r1` (live,
+×5), `at0_4_rebuild_r6` (live + миграционный = ×2), `at0_4_rebuild_r6b` (live + миграционный = ×2) —
+допущены (прецедент: trackio допускает несколько run'ов с одним run_name). Отчёт: 0 ошибок,
+`rc: 0` (поле rc в отчёте — v1.9-r1: выставляется по errors; раньше оставалось 0 всегда),
+warnings — только dev-маркера (NbConvert-хвост, ТЗ §3.1). Идемпотентность: повторный `--append`
+пропускает run'ы уже в DB по (name+log) — `skipped_existing_runs` в отчёте.
+
+**Аудит-артёфакт:** отчёт `results/trackio_migration_report.json` — в git (исключение в .gitignore,
+v1.9-r1 INFO-фикс); 15.11-отчёт — бэкап `/tmp/recovered/trackio_migration_report_1511.json.bak`.
+
