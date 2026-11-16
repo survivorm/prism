@@ -17,6 +17,18 @@ KAGGLE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(KAGGLE_DIR)
 
 KERNELS = {
+    # --- AT8_1 T8.1 (пороговое возбуждение; formerly AT0_8) ---
+    "at08_threshold": {
+        "dir": "kernel-at08",
+        "slug": "prism-at08-threshold",
+        "id": "voroninmichael/prism-at08-threshold",
+        "title": "Prism: at08-threshold",
+        "exp_file": "experiments/at8/AT8_1_threshold.py",
+        "note": "T8.1: 13 λ × 3 сида × (6 main + 4 holdout + генерация) + бисекция; "
+                "torch-fallback (без fla — численная согласованность с CPU-смоуком), "
+                "T4 GPU fp32; артефакты в /kaggle/working/results (pull: kaggle kernels "
+                "pull --kernel voroninmichael/prism-at08-threshold).",
+    },
     # --- Mandatory / optional GPU re-runs (audit GPU-queue items 1-6) ---
     # runner_extra = Python kwargs lines injected into runner_<exp>(...) by
     # build_kernel (it auto-passes model/device/results). NOT CLI flags.

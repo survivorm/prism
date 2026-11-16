@@ -13,7 +13,7 @@ AT0_6 v2.2 — ПИН (решение супервизора, 15.11): experiment
    experiments/at06_v22_pinned.py
 (sha256 c24cb668…; /tmp/at06_v22_pinned.py — та же копия). WIP-файл из репо НЕ импортируется.
 Провенанс: в репо есть файлы параллельной сессии — AT0_7_loop_mine.py (external, not canonical),
-AT0_8_threshold.py (external) — не трогаются (решение супервизора).
+AT8_1_threshold.py (experiments/at8/, formerly AT0_8_threshold.py) — не трогаются (решение супервизора).
 
 Вопрос: период-p структура T0.3 — динамический режим h или артефакт повторения токенов?
 ЧЕСТНАЯ ОБЛАСТЬ: feedforward ⇒ p-периодичные токены ⇒ h p-периодичен ⇒ период-p структура h —

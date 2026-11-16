@@ -1,0 +1,300 @@
+{
+ "date": "2026-11-16T09:11:32.040481+00:00",
+ "experiment": "AT0_8 T8.1 — машина v2 (T8.1-r2) disk-only reanalysis",
+ "f2_max_overshoot": {
+  "dip": {
+   "argmax_lam": 0.55,
+   "max_u": 1.7080466888387433,
+   "overshoot": true
+  },
+  "eff_rank": {
+   "argmax_lam": 0.85,
+   "max_u": 2.973032389018403,
+   "overshoot": true
+  },
+  "hump": {
+   "argmax_lam": 0.85,
+   "max_u": 2.077872116740102,
+   "overshoot": true
+  },
+  "loopy": {
+   "argmax_lam": 1.0,
+   "max_u": 1.0,
+   "overshoot": false
+  },
+  "margin": {
+   "argmax_lam": 1.0,
+   "max_u": 1.0,
+   "overshoot": false
+  },
+  "nll_holdout": {
+   "argmax_lam": 1.0,
+   "max_u": 1.0,
+   "overshoot": false
+  },
+  "plateau": {
+   "argmax_lam": 0.85,
+   "max_u": 1.5658616968477643,
+   "overshoot": true
+  },
+  "pr_sigma": {
+   "argmax_lam": 0.55,
+   "max_u": 36.16481421959373,
+   "overshoot": true
+  },
+  "rep16": {
+   "argmax_lam": 1.0,
+   "max_u": 1.0,
+   "overshoot": false
+  }
+ },
+ "input": {
+  "claim_file_sha256": "b2923d74324e9180407f143a83fcffeaba22634ffe212cf723f86456457699a0",
+  "manifest_file_sha256": "15996723567030b9ed51467ea692d83211f122471aa31dbf36af2688773301fe",
+  "store_file_sha256": "28a0c28d94d982398492e19dbe733b984253173c49b0e55de3de1430a53e618d"
+ },
+ "machine": "v2 (TZ_add_4-8.md T8.1 r2-exec pre-reg; review §10 + §11 r2-exec)",
+ "note": "перепуск прогона не нужен: пере-агрегация committed store; store не трогается; вердикт v1 (V0_NOT_RESOLVED) не переписывается — остаётся артефактом v1-машины",
+ "revision": "v2-r2-exec",
+ "s9": {
+  "cap_mismatch": "пре-рег §6.6 «кап ≤ 6 точек» vs код BIS_CAP = 12 — зафиксировано; capped=false (не сработало)",
+  "capped": false,
+  "declaration": "один раунд бисекции (точка 0.8); ширина 0.05 = ½ зазора сетки; «≤ 0.02» на этой сетке недостижимо — декларатив, не гейт (пре-рег S9: «width ≤ 0.02 или итераций = 5» — по пре-регу v1-гейт должен был FAIL, код v1 проверял только наличие клеток)",
+  "points": [
+   0.8,
+   0.8
+  ],
+  "widths": {
+   "margin": 0.04999999999999993,
+   "nll_holdout": 0.04999999999999993
+  }
+ },
+ "selfcheck": {
+  "dip6_recompute_dev": 0.0,
+  "u_dip_dev": 0.0
+ },
+ "verdict": {
+  "details": {
+   "binaries": {
+    "loopy": {
+     "raw_at_transition": 0.3333333333333333,
+     "transition_lam": 0.85
+    },
+    "rep16": {
+     "note": "no_transition: raw(0) > 0 (baseline 0.8824)",
+     "transition_lam": null
+    }
+   },
+   "competence": {
+    "margin": {
+     "ci": [
+      0.85,
+      0.85
+     ],
+     "outcome": "resolved",
+     "refined": 0.825,
+     "spearman_seedavg": 0.990909090909091
+    },
+    "nll_holdout": {
+     "ci": [
+      0.85,
+      0.85
+     ],
+     "outcome": "resolved",
+     "refined": 0.825,
+     "spearman_seedavg": -0.990909090909091
+    }
+   },
+   "families": {
+    "families": {
+     "field": {
+      "intra_consistent": false,
+      "members": [
+       "dip",
+       "hump",
+       "plateau"
+      ],
+      "pairs": {
+       "dip|hump": {
+        "comparable": false
+       },
+       "dip|plateau": {
+        "comparable": false
+       },
+       "hump|plateau": {
+        "comparable": false
+       }
+      }
+     },
+     "leaf": {
+      "intra_consistent": false,
+      "members": [
+       "pr_sigma",
+       "eff_rank"
+      ],
+      "pairs": {
+       "pr_sigma|eff_rank": {
+        "comparable": false
+       }
+      }
+     },
+     "mode": {
+      "intra_consistent": false,
+      "members": [
+       "rep16",
+       "loopy"
+      ],
+      "pairs": {
+       "rep16|loopy": {
+        "comparable": false
+       }
+      }
+     }
+    },
+    "note": "3/3 семейств intra_consistent=false ⇒ нет единого координированного порога (содержательный результат, §8)"
+   },
+   "field_events": {
+    "dip": {
+     "du": -2.098722657655046,
+     "interval": [
+      0.6,
+      0.65
+     ],
+     "monotone_gate_v1": "non_monotone_excluded",
+     "spearman_seedavg": -0.30000000000000004,
+     "speed": 41.97445315310088
+    },
+    "hump": {
+     "du": 0.9097947034983026,
+     "interval": [
+      0.6,
+      0.65
+     ],
+     "monotone_gate_v1": "non_monotone_excluded",
+     "spearman_seedavg": -0.7000000000000001,
+     "speed": 18.195894069966037
+    },
+    "plateau": {
+     "du": 0.6522750475527945,
+     "interval": [
+      0.6,
+      0.65
+     ],
+     "monotone_gate_v1": "non_monotone_excluded",
+     "spearman_seedavg": -0.7000000000000001,
+     "speed": 13.045500951055878
+    }
+   },
+   "reachability": {
+    "V0_NOT_RESOLVED": {
+     "reachable": true,
+     "why": "fallback, если V3/V2 не сработали (не ожидается — pre-reg)"
+    },
+    "V1_GENERIC_COMPETENCE": {
+     "reachable": false,
+     "why": "dip немонотонен (v1: non_monotone_excluded, ρ = -0.30000000000000004) → λ_c^dip не существует → coin_all (все DISC_OTHERS сравнимы + coincide с dip) недостижим на этом дизайне"
+    },
+    "V2_SOLITON_CANDIDATE": {
+     "reachable": true,
+     "why": "dip-интервал [0.6, 0.65]; nll_holdout: {'ci': [0.85, 0.85], 'field_interval': [0.6, 0.65], 'gap_steps': 3, 'separated': True}; margin: {'ci': [0.85, 0.85], 'field_interval': [0.6, 0.65], 'gap_steps': 3, 'separated': True}"
+    },
+    "V3_PATHOLOGY": {
+     "reachable": false,
+     "why": "cond1=True, cond2=False (hinge(0.55)=0.03399912238266836 vs hinge(0)=0.04801819275283917)"
+    }
+   },
+   "sensitivity_F6": {
+    "du": -3.1670602005154955,
+    "full6_check": "пересчёт 6-doc median == артефакту (max dev ≤ 1e-12, самопроверка выше)",
+    "max_speed_interval": [
+     0.6,
+     0.65
+    ],
+    "note": "dip-сигнатура на не-луповом подмножестве: та же форма (пик/провал на тех же λ), что и 6-doc — составный артефакт луповых доков отклонён (r2-exec F6)",
+    "raw_seedavg": {
+     "0.00": -0.206599,
+     "0.20": -0.26604,
+     "0.40": -0.194275,
+     "0.50": -0.147676,
+     "0.55": -0.146151,
+     "0.60": -0.181454,
+     "0.65": -0.28528,
+     "0.70": -0.306797,
+     "0.75": -0.291749,
+     "0.85": -0.274449,
+     "1.00": -0.173816
+    },
+    "subset": [
+     "wiki_2",
+     "wiki_3"
+    ],
+    "u_peak": 1.8438879509686172,
+    "u_peak_lam": 0.55,
+    "u_seedavg": {
+     "0.000": 0.0,
+     "0.200": -1.813162,
+     "0.400": 0.375926,
+     "0.500": 1.79739,
+     "0.550": 1.843888,
+     "0.600": 0.767013,
+     "0.650": -2.400047,
+     "0.700": -3.056422,
+     "0.750": -2.597381,
+     "0.850": -2.069665,
+     "1.000": 1.0
+    },
+    "u_trough": -3.0564215475765146,
+    "u_trough_lam": 0.7
+   },
+   "two_event_summary": {
+    "competence_rise": "0.85 (nll_holdout ∧ margin resolved)",
+    "field_reorganization": "[0.6, 0.65] (dip max-скорость, Δu = -2.099)",
+    "mode_on": "0.85 (loopy first raw > 0; λ=1 — phrase-loop, raw rep16(1) = 0.0 — r2-exec F3b)"
+   },
+   "v1": {
+    "reachable": false,
+    "reason": "dip немонотонен (v1: non_monotone_excluded, ρ = -0.30000000000000004) → λ_c^dip не существует → coin_all (все DISC_OTHERS сравнимы + coincide с dip) недостижим на этом дизайне"
+   },
+   "v2": {
+    "margin": {
+     "ci": [
+      0.85,
+      0.85
+     ],
+     "field_interval": [
+      0.6,
+      0.65
+     ],
+     "gap_steps": 3,
+     "separated": true
+    },
+    "nll_holdout": {
+     "ci": [
+      0.85,
+      0.85
+     ],
+     "field_interval": [
+      0.6,
+      0.65
+     ],
+     "gap_steps": 3,
+     "separated": true
+    }
+   },
+   "v3": {
+    "argmax_lam": 0.55,
+    "cond1_max_gt_1": true,
+    "cond2_hinge_gt_0": false,
+    "fired": false,
+    "hinge_0_seedavg": 0.04801819275283917,
+    "hinge_argmax_seedavg": 0.03399912238266836,
+    "max_u_dip": 1.7080466888387433,
+    "rule": "max(u_dip) > 1 (любой λ) ∧ hinge(argmax u_dip) > hinge(0) (seed-avg); хардкод-0.7 и rep16-сравнение убраны (r2-exec: F3a, F3b)"
+   }
+  },
+  "expectation_match": true,
+  "outcome": "V2_SOLITON_CANDIDATE",
+  "prereg_expectation": "V2_SOLITON_CANDIDATE",
+  "rule": "полевой интервал dip отделён от λ_c компетентности на ≥ 1 шага сетки (машина v2)"
+ }
+}

@@ -1,8 +1,11 @@
-# AT0_8: результаты полного прогона (round 1)
+# AT8_1: результаты полного прогона (round 1)
+
+> 16.11: эксперимент переименован AT0_8 → AT8_1 (имя AT0_8 освобождено под T0.8); артефакты
+> — results/AT8/, логи — logs/AT8/ (содержимое и sha не тронуты).
 
 Дата: 2026-11-16. Карриер: Qwen3.5-0.8B (tie_word_embeddings). Кернел:
 `voroninmichael/prism-at08-threshold` v2 (T4, GPU). Пререгистрация:
-`docs/AT0_8_prereg.md` (неизменяемо). Ревью: `docs/AT0_8_review_r1.md`.
+`docs/AT8_1_prereg.md` (неизменяемо). Ревью: `docs/AT8_1_review_r1.md`.
 
 ## Прогон
 
@@ -10,10 +13,10 @@
   `_bisect_lambda` (векторный mean по (сид,слою)), v2.
 - v2: **gates S1–S9 ALL PASS, wall 841.0 s**. Т: 256 токенов, 3 сида ×
   4 домена × 32 доков, λ-грид 0.55…1.0, слои 11/12/13 (линейные).
-- Артефакты: `results/AT0_8_THRESHOLD.json` (claim, file sha
-  `b2923d74324e9180`), `results/AT0_8_manifest.json` (self-sha
-  `74571c823aa5aa8b`), `results/store/018c3dac90eb1bba.json`
-  (canonical sha `018c3dac90eb1bba`), `logs/AT0_8_run.log` (tracked).
+- Артефакты: `results/AT8/AT8_1_THRESHOLD.json` (claim, file sha
+  `b2923d74324e9180`), `results/AT8/AT8_1_manifest.json` (self-sha
+  `74571c823aa5aa8b`), `results/AT8/store/018c3dac90eb1bba.json`
+  (canonical sha `018c3dac90eb1bba`), `logs/AT8/AT8_1_run.log` (tracked).
   Все sha перепроверены локально по конвенции AT0_2b-v2 C7 (canonical
   = json.dumps sort_keys, self-поле = None).
 
@@ -51,9 +54,9 @@ nll_holdout и margin сходятся в λ_c ≈ 0.85 (интервал [0.75,
 
 ## Машина v2 (T8.1-r2, 16.11) — disk-only реанализ
 
-Внешнее ревью полного прогона: `docs/AT0_8_review.md` (гейты/провенанс **ACCEPT**,
+Внешнее ревью полного прогона: `docs/AT8_1_review.md` (гейты/провенанс **ACCEPT**,
 машина v1 — **REVISE**; разбор F1–F6 с числами — раздел 11, r2-exec). Пре-рег машины v2:
-`docs/TZ_add_4-8.md` §T8.1. Скрипт: `experiments/at0/AT0_8_r2_reanalysis.py` (без RNG, без
+`docs/TZ_add_4-8.md` §T8.1. Скрипт: `experiments/at8/AT8_1_r2_reanalysis.py` (без RNG, без
 перепрогона; вход — committed store, sha-верификация по manifest).
 
 **Вердикт v2: V2_SOLITON_CANDIDATE** (coincides с pre-reg ожиданием, match=True):
@@ -68,11 +71,14 @@ nll_holdout и margin сходятся в λ_c ≈ 0.85 (интервал [0.75,
   провал −3.056@0.7, max-скорость [0.60, 0.65]) — составный артефакт луповых доков отклонён;
 - r2-exec-опровержение F3b: raw rep16(1.0) = 0.0 (фразовый цикл ≈ 20 токенов > 16-окна),
   sample λ=1 — «The program is designed to help you master the art of making delicious BBQ.»,
-  цитата «ame ame» из ревью не из AT0_8.
+  цитата «ame ame» из ревью не из AT8_1.
 
 Две события (в данных с v1-прогона, впервые выражены машиной): поле реорганизуется на
 λ ≈ 0.60–0.65; компетентность растёт к λ = 0.85; mode (loopy) включается на 0.85–1.0.
 
-Артефакты (gitignored `results/*.json`, на диске): `results/AT0_8_THRESHOLD_v2.json`
-(claim, file sha `bb507dac4d696981`), `results/AT0_8_v2_manifest.json` (self-sha `548eec26f37a5d19`), `logs/AT0_8_v2_run.log` (tracked; маркер
+Артефакты (на диске, в git — results/AT8/): `results/AT8/AT8_1_THRESHOLD_v2.json`
+(claim, file sha `bb507dac4d696981`), `results/AT8/AT8_1_v2_manifest.json` (self-sha `548eec26f37a5d19`), `logs/AT8/AT8_1_v2_run.log` (tracked; маркер
 `AT0_8_R2_DONE verdict=V2_SOLITON_CANDIDATE match=True`).
+
+> По ревью AT8_2 (16.11): в тексте выше «T8.2 (реальная траектория обучения)» — на самом
+> деле T8.4 (отложено); T8.2 = оконное восстановление + доза (AT8_2).

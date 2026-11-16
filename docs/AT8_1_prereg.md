@@ -1,4 +1,7 @@
-# AT0_8 (T8.1) — пре-рег «Пороговое возбуждение» (TЗ docs/TZ_add_4-8.md §8, v1.5)
+# AT8_1 (T8.1) — пре-рег «Пороговое возбуждение» (TЗ docs/TZ_add_4-8.md §8, v1.5)
+
+> 16.11: эксперимент переименован AT0_8 → AT8_1 (имя AT0_8 освобождено под T0.8); путь
+> артефактов — results/AT8/, логи — logs/AT8/ (содержимое и sha не тронуты).
 
 **Клетка:** T8.1 «Multi-observable threshold» — решает статус «солитона»: либо снять слово
 «солитон» из заголовков (генерическая компетентность), либо дать ему первый настоящий
@@ -7,7 +10,7 @@
 
 ## 1. Что меняется против E-71 (version break — объявлен)
 
-| E-71 (audit2, 11.11) | AT0_8 (T8.1) |
+| E-71 (audit2, 11.11) | AT8_1 (T8.1) |
 |---|---|
 | сетка 0.1 (11 точек) | сетка T8.1 11 точек + 2 точки T9.1 = **13** (общий прогон) |
 | 8 wiki-доков | **6** wiki (TЗ) + **4 holdout** (math/code/chat) |
@@ -18,7 +21,7 @@
   глубже финального −0.174 на 19%). Числа E-71 НЕ пересчитываются и в артефакт не входят. |
 
 Оба λ=0 различаются: E-71 FIX-λ=0 — все параметры случайны (FIX audit2 B2 уже включал 1-D);
-AT0_8 λ=0 — та же формула `randn·std`, но **другой сид-набор и модель-состояние** (новый
+AT8_1 λ=0 — та же формула `randn·std`, но **другой сид-набор и модель-состояние** (новый
 прогон). Старый артефакт недоступен ⇒ сравнение bit-в-бит невозможно; версия разрыва
 зафиксирована строкой.
 
@@ -204,12 +207,12 @@ T_act < 32 ⇒ флаг `degenerate_short` (rep16/loopy считаются, ес
 
 ## 11. Артефакты
 
-- `results/AT0/AT0_8_THRESHOLD.json` — claim (gates, prereg, per-λ curves, per-observable
+- `results/AT8/AT8_1_THRESHOLD.json` — claim (gates, prereg, per-λ curves, per-observable
   λ_c + исходы, вердикт, summary, bisection, u_exit, health-ray-сводка).
-- `results/AT0/store/<canonical-sha>.json` — store: per (λ,сид): per-doc записи
+- `results/AT8/store/018c3dac90eb1bba.json` — store: per (λ,сид): per-doc записи
   (nll_main, dip, hump, plateau, margin, pr_sigma, eff_rank) + holdout nll + генерация
   (токены, text, T_act, rep16, loopy, degenerate_short) + health ray + S2/S2b-проверки.
-- `results/AT0/AT0_8_manifest.json`, `logs/AT0/AT0_8_run.log` (stdout, tracked).
+- `results/AT8/AT8_1_manifest.json`, `logs/AT8/AT8_1_run.log` (stdout, tracked).
 - Поля TЗ §11.1: `threshold{...}` (lam_grid, grid_steps, seeds, lambda_c_seeds,
   statistic="normalized_u05", family, observables, monotone_only, monotonicity_criterion,
   excluded_non_monotone, overshoot_flag, all_params_randomized, complete, traj_complete),

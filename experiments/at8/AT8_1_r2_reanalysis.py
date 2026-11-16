@@ -74,13 +74,13 @@ COMPETENCE = ["nll_holdout", "margin"]
 MAIN6 = ["wiki_0", "wiki_1", "wiki_2", "wiki_3", "wiki_4", "wiki_5"]
 CLEAN_SUBSET = ["wiki_2", "wiki_3"]  # не-луповое подмножество (F6; r2-exec)
 
-ART = os.path.join(_ROOT, "results", "AT0_8_THRESHOLD.json")
-STORE = os.path.join(_ROOT, "results", "store", "018c3dac90eb1bba.json")
-MANIFEST = os.path.join(_ROOT, "results", "AT0_8_manifest.json")
-OUT_DIR = os.path.join(_ROOT, "results")
-CLAIM = os.path.join(OUT_DIR, "AT0_8_THRESHOLD_v2.json")
-OUT_MANIFEST = os.path.join(OUT_DIR, "AT0_8_v2_manifest.json")
-RUN_LOG = os.path.join(OUT_DIR, "AT0_8_v2_run.log")
+ART = os.path.join(_ROOT, "results", "AT8", "AT8_1_THRESHOLD.json")
+STORE = os.path.join(_ROOT, "results", "AT8", "store", "018c3dac90eb1bba.json")
+MANIFEST = os.path.join(_ROOT, "results", "AT8", "AT8_1_manifest.json")
+OUT_DIR = os.path.join(_ROOT, "results", "AT8")
+CLAIM = os.path.join(OUT_DIR, "AT8_1_THRESHOLD_v2.json")
+OUT_MANIFEST = os.path.join(OUT_DIR, "AT8_1_v2_manifest.json")
+RUN_LOG = os.path.join(OUT_DIR, "AT8_1_v2_run.log")
 
 
 def sha256_file(path):
@@ -388,7 +388,7 @@ def main():
         "date": claim["date"],
         "claim_file_sha256": claim_sha,
         "store_file_sha256": store_sha,  # вход, не выход (не трогается)
-        "script_sha256": sha256_file(os.path.join(_ROOT, "experiments", "AT0_8_r2_reanalysis.py")),
+        "script_sha256": sha256_file(os.path.join(_ROOT, "experiments", "at8", "AT8_1_r2_reanalysis.py")),
         "hash_convention": "AT0_2b-v2 C7 (file sha256 фактических файлов)",
         "note": "disk-only reanalysis из committed store (sha-верификация в claim.input); "
                 "без RNG, без перепрогона.",
