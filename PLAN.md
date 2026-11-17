@@ -384,11 +384,24 @@
   insensitive/gates-fail).
 - DONE — смоук 17.11: SMOKE_PASS (wiki_0 ctrl CE 3.321, wiki_1 3.186; filler 4.995/3.356;
   e_null конечен; 26 с/фд при LA 18).
-- DOING — полный прогон через ./run_one.sh at8_2_r2 (98 форвардов, ~45 мин).
-- NEXT:
-  - [ ] Отчёт docs/AT8_2_R2_results.md + ref-exp-карта (R2) + PLAN + коммит (явные пути).
-- Границы: код/прогон R2 — НЕ в этом раунде (процесс: ТЗ → ревью ТЗ → код → смоук → прогон);
-  frozen r1/v2/v3-артефакты не трогать; старый store — только как источник данных для верификации.
+- DONE — полный прогон 17.11: ./run_one.sh at8_2_r2, 98 форвардов, wall 2596 s,
+  RUN_RC=0, все 14 доков × 7 условий в store (12.2 MB, gitignored, бэкап
+  /data/prism_backups/at8_2_r2/).
+- DONE — ревью r1 машины (`docs/AT8_2_review.md`, F1–F7/M1–M7): все 7 флипперов
+  подтверждены по коду и данным; фиксы — машина r2 (TZ §20): δ через ту же
+  near/far-статистику (δ_near 0.1480/δ_far 0.0332 vs 0.0823), CI-правила,
+  primary dose 16, парный G_inside (14/14), phrase-token-check (проверено: стимул
+  корректен), finite-гейт, DOMAINS_MIN=4, npz из store, docs-sha по токенам.
+  Ответка: docs/AT8_2_review_r1_answers.md. Синтетика машины r2: 6/6 PASS.
+- DONE — пересчёт disk-only (--reanalysis, 0.8 s, числа воспроизводятся):
+  **r1-машина: LOOP_RESPONSE_DECAYS → машина r2: NO_LOOP_SPECIFIC_EFFECT**
+  (near(16) 0.1020, CI95 [0.0844,0.1197] ≤ δ_near 0.1480; near_generic max CI_low
+  0.1160 ≤ δ_near; DOSE_FLAT; шов −0.05…−0.08 — противоположен near[0]).
+  Смысл: луп-специфичного локального отклика на разрешении филлер-вариативности
+  нет; есть затухающий локальный эффект вставки как таковой.
+- DONE — отчёт docs/AT8_2_R2_results.md + ref-exp-карта (R2) + TZ §20 + коммит.
+- Границы: frozen r1/v2/v3-артефакты не трогать; store R2 — только /data-бэкап
+  (не в git); re-run форвардов не нужен (машина r2 — disk-only над store r1).
 
 ## AT0_8 — T0.8 «v_tangent period-p: локализация T0.1-плато» (17.11, «сделай T 0.8, мы его забыли»)
 

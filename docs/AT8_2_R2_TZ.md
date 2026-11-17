@@ -333,3 +333,31 @@ gate_inside_block: CE_loop_block < 1.0 И CE_fillerA_block ≥ 2.0, ≥12/16
 ставится T8.2-S: две локализованные инъекции с разными периодами, прохождение
 друг сквозь друга, форма-инвариантность, квази-интеграл, внутренняя мода
 (черновик §22). До R2 — не начинать.
+
+## 20. Машина r2 — ревизия по ревью-раунду 1 (17.11, `docs/AT8_2_review.md`)
+
+Ревью (статическое, «без запуска») пришло во время полного прогона; фиксы —
+статистический дизайн машины, не реакция на числа. Прогон выполнен машиной r1,
+вердикт пересчитан disk-only машиной r2 (store один); оба вердикта публикуются.
+Ответка по пунктам: `docs/AT8_2_review_r1_answers.md`.
+
+| # | Фикс (ревью) | Реализация (машина r2) |
+|---|---|---|
+| F1 | phrase-token-check | `assert tk(PHRASE)==PHRASE_IDS` в `run_main`; `phrase_token_check` в манифесте. Проверено: стимул прогона корректен |
+| F2 | множественность доз | первичная доза пре-рег `PRIMARY_DOSE=16`; скан n* упразднён (доза — диагностика) |
+| F3 | CI в вердиктах | PERSISTS: CI_low(far)>δ_far; DECAYS: CI_low(near−far)>0 И CI_high(far)≤δ_far; GENERIC: max CI_low(near_generic)>δ_near; NO_LOOP: всё ≤ |
+| F4 | δ из той же статистики | δ_near/δ_far = 95th pct **per-doc** null near/far (тот же пайплайн, что и e_spec). L23: 0.1480/0.0332 (было 0.0823 позиц.) |
+| F5 | парный G_inside | loop<fillerA И loop<fillerB, ≥75% доков (n=16); абс-пороги — вторичная диагностика |
+| F6 | слой-тег | LAYER_INCONSISTENT убран; ≥1 внутренних без L23 → INTERNAL_ONLY |
+| F7 | DOMAINS_MIN | честно 4 (все домены обязательны, ≥2 дока; k=2 — филлеры из след. домена) |
+| M1 | шовный инкремент | option A зафиксирован (шов вне post-ряда); шов — диагностика в JSON (значения отрицательны) |
+| M3 | источник филлеров | `filler_source: same_pool_cross_doc` в манифесте |
+| M4 | docs_sha256 | fingerprint от токенов |
+| M5 | finite-гейт | fail-loud гейт до вердикта (ce/cos_raw/cos_state/norm_delta/e_*) |
+| M6 | store > 10 MB | gitignored + бэкап /data/prism_backups/at8_2_r2/ + sha256 в манифесте |
+| M7 | npz при resume | npz строится из store (полный набор) |
+
+**Результат:** r1-машина → `LOOP_RESPONSE_DECAYS`; машина r2 →
+`NO_LOOP_SPECIFIC_EFFECT` (near(16) CI_low 0.0844 ≤ δ_near 0.1480;
+near_generic max CI_low 0.1160 ≤ 0.1480; парный гейт 14/14; DOSE_FLAT).
+Финальный вердикт — машина r2. Отчёт: `docs/AT8_2_R2_results.md`.

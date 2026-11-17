@@ -89,3 +89,5 @@ kaggle_daemon.log
 # v1.9-r1 (16.11): отчёт миграции — аудит-артёфакт, в git
 !results/trackio_migration_report.json
 .pig/
+results/AT8/AT8_2_R2_store.json
+results/AT8/AT8_2_R2_series.npz

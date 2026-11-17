@@ -2,23 +2,26 @@
 """AT8_2-R2 (T8.2 redesign, 17.11): локальный отклик и релаксация поля после
 инъекции повторяющегося блока.
 
-ТЗ (пре-рег): docs/AT8_2_R2_TZ.md v1.0. Черновик: docs/AT8_2_review.md (r2,
-sha 4ea557bc…). Машина р1/v2/v3 (ELASTIC-ветки) НЕ используется — R2
-самостоятельный: 4 условия (ctrl/loop/fillerA/fillerB) на док, позиционные
-контрасты e_spec/e_generic/e_null, primary object h_raw / stat lag1_pair_cos /
-layer L23, δ_min из fillerA−fillerB, новый вердиктный словарь (TZ §10).
+ТЗ (пре-рег): docs/AT8_2_R2_TZ.md v1.0. Черновик: docs/AT8_2_review.md.
+Машина: r1 (форварды) + r2 (анализ, ревизия по ревью-раунду 1:
+docs/AT8_2_review_r1_answers.md, F1–F7/M1–M7): primary dose n=16 (F2),
+δ_near/δ_far через ту же near/far-статистику (F4), CI-правила вердиктов (F3),
+parный G_inside (F5), слой-теги без LAYER_INCONSISTENT (F6), DOMAINS_MIN=4 (F7),
+phrase-token-check (F1), finite-гейт (M5), token-sha (M4), npz из store (M7),
+filler_source в манифесте (M3), шовный инкремент — диагностика, option A (M1).
 
 Моды:
-  (нет флага)     полный прогон (14 доков, n=2/4/8/16; 182 форварда)
+  (нет флага)     полный прогон (14 доков, n=2/4/8/16; 98 форвардов)
   --smoke         wiki × 2 дока × n=2 (8 форвардов) + якоря (TZ §14)
-  --reanalysis    disk-only: store → verdict + JSON (TZ §12)
+  --reanalysis    disk-only: store → verdict + JSON (машина r2, TZ §12)
   --test-synth    синтетические тесты вердикт-машины (без модели)
 
 Артефакты: results/AT8/AT8_2_R2{,_store,_manifest}.json, AT8_2_R2_series.npz
-(полные позиционные ряды; untracked — sha256 в manifest; JSON ≤10 MB, AGENTS),
+(>10 MB — gitignored, бэкап /data/prism_backups/at8_2_r2/, sha256 в manifest),
 logs/AT8/AT8_2_R2_run.log (trackio at8_2_r2_r1).
 
-Привилегия 16.11: prism/explog.py (ExpLog) + prism/nulls_and_stats.py.
+Привилегия 16.11: prism/explog.py + prism/nulls_and_stats.py (по файлу —
+prism/__init__ тянет matplotlib, которого нет в runtime-окружении).
 """
 
 import hashlib
@@ -27,17 +30,13 @@ import math
 import os
 import sys
 import time
+import importlib.util
 from collections import Counter
 from datetime import datetime, timezone
 
 import numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-# prism/__init__ тянет diagnostics→matplotlib, которого нет в runtime-окружении
-# (python3 3.12, torch 2.14.1 — то, на котором крутятся r1/AT0_8); модули
-# standalone — импортируем по файлу (та же привилегия 16.11, тот же код).
-import importlib.util
 
 
 def _load(name, path):
@@ -52,16 +51,17 @@ _nulls = _load("prism_nulls_and_stats", os.path.join(ROOT, "prism", "nulls_and_s
 ExpLog = _explog.ExpLog
 paired_bootstrap = _nulls.paired_bootstrap
 
-# ----------------------------- константы (TZ §17) -----------------------------
+# ----------------------------- константы (TZ §17 + машина r2) -----------------------------
 MODEL = "/data/Qwen/Qwen3.5-0.8B"
 LAYERS = [6, 12, 18, 19, 23]            # TZ §4: 3 GDN + full L19 + readout L23
 PRIMARY_LAYER = 23
+PRIMARY_DOSE = 16                       # F2 (ревью r1): первичная доза пре-рег
 PHRASE = " The class will be held at the park."        # 9 токенов (E-71B, р1)
 PHRASE_IDS = [561, 523, 668, 381, 5467, 506, 279, 5926, 13]
 N_DOSE = [2, 4, 8, 16]
 H = 64
-NEAR_END = 15                              # near: d ∈ [0, 15]
-FAR_START = H - 16                         # far:  d ∈ [48, 63]
+NEAR_END = 15                              # near: d ∈ [0, 15] (16 точек)
+FAR_START = H - 16                         # far:  d ∈ [48, 63] (16 точек)
 DOMAIN_ORDER = ["wiki", "math", "code", "chat"]
 PINS = {
     d: os.path.join(ROOT, "data", "calib_pins",
@@ -73,15 +73,16 @@ GRAM = 9
 GRAM_DUP_MAX = 1                           # S_no_baseline_loop: 9-грамма ≥2 → out
 N_PER_DOMAIN = 4
 DOCS_MIN = 12
-DOMAINS_MIN = 3
-# G_inside_block (TZ §8; калибровка 17.11: loop 0.59 / filler 4.12 nat, n=8)
-CE_LOOP_MAX = 1.0
+DOMAINS_MIN = 4                            # F7 (ревью r1): все 4 домена обязательны,
+                                           # по ≥2 дока (старое 3 — мёртвая логика)
+CE_LOOP_MAX = 1.0                          # вторичный диагностический абс-гейт (TZ §8)
 CE_FILLER_MIN = 2.0
-INSIDE_DOSE = 16                           # гейт считается на n=16
-INSIDE_PASS_MIN = 12
+INSIDE_DOSE = 16
+INSIDE_PASS_FRAC = 0.75                    # F5 (ревью r1): парный гейт, ≥75% доков
 SEED = 0
 B_BOOT = 2000
-REVISION = "r1"
+RUN_REVISION = "r1"                        # форварды (store fingerprint)
+MACHINE_REVISION = "r2"                    # анализ по ревью-раунду 1
 
 OUT_DIR = os.path.join(ROOT, "results", "AT8")
 CLAIM = os.path.join(OUT_DIR, "AT8_2_R2.json")
@@ -90,7 +91,7 @@ MANIFEST = os.path.join(OUT_DIR, "AT8_2_R2_manifest.json")
 SERIES = os.path.join(OUT_DIR, "AT8_2_R2_series.npz")
 RUNLOG = os.path.join(ROOT, "logs", "AT8", "AT8_2_R2_run.log")
 
-# ----------------------------- лог + trackio (установка р1) -----------------------------
+# ----------------------------- лог + trackio (установка r1) -----------------------------
 _log = ExpLog()
 logline = _log
 
@@ -107,6 +108,11 @@ def sha256_text(s):
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
+def sha256_ids(ids):
+    # M4 (ревью r1): fingerprint фактического входа (токены), не сырого текста
+    return hashlib.sha256(np.asarray(ids, dtype="int64").tobytes()).hexdigest()[:16]
+
+
 def init_trackio(t0, script_path):
     # AGENTS п.6: TRACKIO_DIR задаёт run_one.sh; прямой запуск — fail-loud.
     if not os.environ.get("TRACKIO_DIR"):
@@ -116,10 +122,11 @@ def init_trackio(t0, script_path):
             "--test-synth/--reanalysis задайте TRACKIO_DIR вручную.")
     import trackio
     # API как в AT0_8_vtanp: init() сразу создаёт run.
-    tr = trackio.init(project="prism", name=f"at8_2_r2_{REVISION}", group="AT8_2",
+    tr = trackio.init(project="prism", name=f"at8_2_r2_{RUN_REVISION}", group="AT8_2",
                       config={"device": "cpu", "model": MODEL,
                               "log": os.path.abspath(RUNLOG),
-                              "revision": REVISION,
+                              "run_revision": RUN_REVISION,
+                              "machine_revision": MACHINE_REVISION,
                               "script_sha": sha256_file(script_path),
                               "seed": SEED})
     tr.log({"started_at": datetime.now(timezone.utc).isoformat()}, step=0)
@@ -141,8 +148,9 @@ def tstage(tr, t0, name):
            step=int(time.time() - t0))
     logline(f"stage: {name} ({time.time() - t0:.1f}s)")
 
-
 # ----------------------------- пул (TZ §6) -----------------------------
+
+
 def max_gram_count(ids):
     g = [tuple(ids[j:j + GRAM]) for j in range(len(ids) - GRAM + 1)]
     return max(Counter(g).values()) if g else 0
@@ -150,7 +158,7 @@ def max_gram_count(ids):
 
 def load_pool(tk):
     """12 кандидатов/домен из пинов → 9g-фильтр (max count ≥2 → out) →
-    первые 4/домен (fallback: все прошедшие; нужно ≥12 доков и ≥3 домена)."""
+    первые 4/домен (fallback: все прошедшие; нужно ≥12 доков и 4 домена)."""
     cand, pool_fps = {}, {}
     for d in DOMAIN_ORDER:
         pin = json.load(open(PINS[d]))
@@ -166,6 +174,10 @@ def load_pool(tk):
     selected = {}
     for d in DOMAIN_ORDER:
         passed = [(t, i, g) for (t, i, g) in cand[d] if g <= GRAM_DUP_MAX]
+        if len(passed) < 2:
+            # F7 (ревью r1): домен выпадает → прогон стоп (DOMAINS_MIN=4)
+            raise SystemExit(f"INSUFFICIENT_POOL: домен {d} < 2 доков "
+                             f"(DOMAINS_MIN=4 — все 4 домена обязательны)")
         selected[d] = passed[:N_PER_DOMAIN] if len(passed) >= N_PER_DOMAIN else passed
     docs = []
     for d in DOMAIN_ORDER:
@@ -175,14 +187,12 @@ def load_pool(tk):
     if len(docs) < DOCS_MIN or n_dom < DOMAINS_MIN:
         raise SystemExit(f"INSUFFICIENT_POOL: {len(docs)} доков / {n_dom} доменов "
                          f"(нужно ≥{DOCS_MIN}/≥{DOMAINS_MIN})")
-    # filler-карта (TZ §7): round-robin +1/+2 внутри домена (k≥3); при k<3 —
+    # filler-карта (TZ §7): round-robin +1/+2 внутри домена (k≥3); при k=2 —
     # следующий домен в DOMAIN_ORDER (циклически): fillerA = его док [0],
-    # fillerB = док [1] (k≥2 гарантировано гейтом выше).
+    # fillerB = док [1]. M3 (ревью r1): филлеры — из того же пула (cross-doc).
     filler_map = {}
     for d in DOMAIN_ORDER:
         k = len(selected[d])
-        if k < 2:
-            raise SystemExit(f"INSUFFICIENT_POOL: домен {d} < 2 доков")
         next_d = DOMAIN_ORDER[(DOMAIN_ORDER.index(d) + 1) % len(DOMAIN_ORDER)]
         for i in range(k):
             if k >= 3:
@@ -195,11 +205,13 @@ def load_pool(tk):
                 n_passed={d: sum(1 for (_, _, g) in cand[d] if g <= GRAM_DUP_MAX)
                           for d in DOMAIN_ORDER},
                 baseline_loop_metrics={doc["name"]: doc["gram"] for doc in docs},
-                filler_map=filler_map)
+                filler_map=filler_map,
+                filler_source="same_pool_cross_doc")   # M3 (ревью r1)
     return docs, meta
 
-
 # ----------------------------- форвард + ряды (TZ §3) -----------------------------
+
+
 def fwd(m, ids, torch):
     """Один forward: per-position CE + hidden states 5 слоёв. use_cache=False —
     GDN-путь р1 (r1-якорь: CE ctrl-doc wiki_0 = 3.2320)."""
@@ -229,12 +241,12 @@ def fwd(m, ids, torch):
 def cond_series(res, T, cut, L_n):
     """Позиционные ряды условия.
     cos_raw[p]    = cos(Δh_p, Δh_{p+1}),  Δh_p = h_{p+1} − h_p   (primary stat)
-    cos_state[p]  = cos(u_p, u_{p+1}),  u = unit(h)  (вторичный; cos(unit Δh)
-                   тождественно cos_raw — cos масштабно-инвариантен, черновой
-                   «du_unit» — тавтология, исправлено здесь)
+    cos_state[p]  = cos(u_p, u_{p+1}),  u = unit(h)  (вторичный)
     norm_delta[p] = ‖Δh_p‖
     p = 0..T'-2; post-индекс d: cut + L_n + d (loop/filler) или cut + d (ctrl).
-    Возврат: cell (без post)."""
+    M1 (ревью r1): option A — шовный инкремент cos_raw[cut+L_n-1] в post-ряд
+    НЕ входит (near[0] = первая внутренняя пара суффикса); значение шва —
+    диагностика в анализе."""
     T_ = res["T"]
     out = {"ce": [round(float(x), 6) for x in res["ce"]]}
     for L in LAYERS:
@@ -270,14 +282,19 @@ def filler_ids(tk, text, n):
     return tk(text, max_length=T_MAX, truncation=True,
               add_special_tokens=False)["input_ids"][:9 * n]
 
+# ----------------------------- статистики (машина r2) -----------------------------
+N_W = NEAR_END + 1            # 16 точек near
+F_W = H - FAR_START           # 16 точек far
 
-# ----------------------------- вердикт-машина (TZ §10) -----------------------------
+
 def _near(vals):
-    return float(np.percentile(np.abs(vals), 90))
+    """90th pct |vals| по первым N_W позициям (TZ §8)."""
+    return float(np.percentile(np.abs(np.asarray(vals)[:N_W]), 90))
 
 
 def _far(vals):
-    return float(np.mean(np.abs(vals)))
+    """mean |vals| по последним F_W позициям (TZ §8)."""
+    return float(np.mean(np.abs(np.asarray(vals)[FAR_START:])))
 
 
 def _dose_tag(i_loop):
@@ -296,173 +313,254 @@ def _dose_tag(i_loop):
     return "DOSE_MONOTONIC"
 
 
-def compute_verdict(near, far, near_generic, near_by_layer, dmin, dmin_by_layer,
-                    inside_pass, n_inside_total, i_loop, n_docs, n_domains,
-                    gates_ok=True, ci_near_minus_far=None):
-    """Чистая функция; порядок дерева жёсткий (TZ §10)."""
+def _boot(arr2col):
+    """doc-bootstrap CI95 пары колонок (near, far, near-far, near_generic)."""
+    a = np.asarray(arr2col, dtype="float64")
+    res = {}
+    rng = np.random.default_rng(seed=SEED)
+    n = a.shape[0]
+    for name, col in (("near", 0), ("far", 1), ("near_minus_far", 2),
+                      ("near_generic", 3)):
+        boots = []
+        for _ in range(B_BOOT):
+            idx = rng.integers(0, n, size=n)
+            boots.append(float(a[idx, col].mean()))
+        res[name] = dict(point=float(a[:, col].mean()),
+                         ci_low=float(np.percentile(boots, 2.5)),
+                         ci_high=float(np.percentile(boots, 97.5)),
+                         B=B_BOOT)
+    return res
+
+
+def compute_verdict(ci, dmin_near, dmin_far, near, far, near_generic,
+                    near_by_layer, dmin_near_layer, inside_pass, n_docs,
+                    i_loop, n_domains, gates_ok=True):
+    """Чистая функция; дерево машины r2 (ревью r1, F2–F4, F6):
+    первичная доза = PRIMARY_DOSE; значимость — по CI (CI_low > δ той же
+    статистики); слой-тег без LAYER_INCONSISTENT.
+    ci[n] = {near, far, near_minus_far, near_generic} — doc-bootstrap CI95."""
     diag = dict(n_docs=n_docs, n_domains=n_domains,
-                inside_pass=f"{inside_pass}/{n_inside_total}")
+                inside_pass=f"{inside_pass}/{n_docs}",
+                inside_pass_min=f"{int(math.ceil(INSIDE_PASS_FRAC * n_docs))}/{n_docs}")
     dose_tag = _dose_tag(i_loop)
+    pn = str(PRIMARY_DOSE)
+    nci = ci[pn]["near"]
+    fci = ci[pn]["far"]
+    dci = ci[pn]["near_minus_far"]
+    gci = {n: ci[n]["near_generic"] for n in ci}
+
     if not gates_ok:
-        return dict(value="NOT_RESOLVED", match_pre_reg=False, n_star=None,
+        return dict(value="NOT_RESOLVED", match_pre_reg=False, n_star=pn,
                     tags=dict(layer=None, dose=dose_tag),
                     reasons=["gates failed"], diagnostics=diag)
-    if inside_pass < INSIDE_PASS_MIN:
-        return dict(value="INSENSITIVE_CELL", match_pre_reg=False, n_star=None,
+    if inside_pass < int(math.ceil(INSIDE_PASS_FRAC * n_docs)):
+        return dict(value="INSENSITIVE_CELL", match_pre_reg=False, n_star=pn,
                     tags=dict(layer=None, dose=dose_tag),
-                    reasons=[f"G_inside_block {inside_pass}/{n_inside_total} "
-                             f"< {INSIDE_PASS_MIN} — клетка не видит стимул"],
+                    reasons=[f"G_inside (парный) {inside_pass}/{n_docs} < "
+                             f"ceil(0.75×{n_docs}) — клетка не видит стимул"],
                     diagnostics=diag)
-    n_star = None
-    for n in sorted(N_DOSE, reverse=True):
-        if near[str(n)] > dmin:
-            n_star = str(n)
-            break
-    if n_star is None:
-        mg = max(near_generic.values())
-        if mg > dmin:
-            return dict(value="GENERIC_INSERTION_EFFECT", match_pre_reg=False,
-                        n_star=None, tags=dict(layer=None, dose=dose_tag),
-                        reasons=[f"e_spec не значим ни на одной дозе; e_generic значим "
-                                 f"(max near_generic={mg:.4f} > δ_min={dmin:.4f}) — "
-                                 f"эффект от вставки как таковой"],
-                        diagnostics=diag)
-        return dict(value="NO_LOOP_SPECIFIC_EFFECT", match_pre_reg=False,
-                    n_star=None, tags=dict(layer=None, dose=dose_tag),
-                    reasons=[f"e_spec не превышает δ_min ({dmin:.4f}) ни в near, "
-                             f"ни в far ни на одной дозе — ниже разрешения"],
-                    diagnostics=diag)
-    f = float(far[n_star])
-    reasons = [f"n*={n_star}: near={near[n_star]:.4f} > δ_min={dmin:.4f}, "
-               f"far={f:.4f}"]
-    ci = ci_near_minus_far
-    if f <= dmin and ci is not None and ci["ci_low"] > 0:
-        v = "LOOP_RESPONSE_DECAYS"
-        reasons.append(f"far ≤ δ_min И CI95(near−far)=[{ci['ci_low']:.4f}, "
-                       f"{ci['ci_high']:.4f}] целиком > 0 — релаксация к базовой "
-                       f"линии (НЕ упругость)")
-    elif f > dmin:
-        v = "LOOP_RESPONSE_PERSISTS"
-        reasons.append(f"far > δ_min — специфический отклик не затухает до конца "
-                       f"горизонта H={H}")
+    if nci["ci_low"] > dmin_near:
+        reasons = [f"primary n={pn}: CI95(near)=[{nci['ci_low']:.4f}, "
+                   f"{nci['ci_high']:.4f}] > δ_near={dmin_near:.4f}"]
+        if fci["ci_low"] > dmin_far:
+            v = "LOOP_RESPONSE_PERSISTS"
+            reasons.append(f"CI95(far)=[{fci['ci_low']:.4f}, {fci['ci_high']:.4f}] "
+                           f"> δ_far={dmin_far:.4f} — специфический отклик не "
+                           f"затухает до конца горизонта H={H}")
+        elif dci["ci_low"] > 0.0 and fci["ci_high"] <= dmin_far:
+            # F3 (ревью r1): DECAYS = CI_low(near−far) > 0 И CI_high(far) ≤ δ_far
+            v = "LOOP_RESPONSE_DECAYS"
+            reasons.append(f"CI95(near−far)=[{dci['ci_low']:.4f}, "
+                           f"{dci['ci_high']:.4f}] > 0 И CI95(far)="
+                           f"[{fci['ci_low']:.4f}, {fci['ci_high']:.4f}] "
+                           f"≤ δ_far={dmin_far:.4f} — релаксация к базовой линии "
+                           f"(НЕ упругость)")
+        else:
+            v = "NOT_RESOLVED"
+            reasons.append(f"near значимо, но far/релаксация не резолвятся: "
+                           f"CI95(near−far)=[{dci['ci_low']:.4f}, "
+                           f"{dci['ci_high']:.4f}], CI95(far)="
+                           f"[{fci['ci_low']:.4f}, {fci['ci_high']:.4f}], "
+                           f"δ_far={dmin_far:.4f}")
     else:
-        v = "NOT_RESOLVED"
-        c = f"{ci['ci_low']:.4f}" if ci is not None else "n/a"
-        reasons.append(f"far ≤ δ_min, но CI95(near−far) не целиком > 0 (low={c})")
+        mg = max(c["ci_low"] for c in gci.values())
+        if mg > dmin_near:
+            v = "GENERIC_INSERTION_EFFECT"
+            reasons = [f"CI95(near) ≤ δ_near={dmin_near:.4f} на всех дозах; "
+                       f"e_generic значим (max CI_low={mg:.4f} > δ_near) — эффект "
+                       f"от вставки как таковой, не специфичный луп"]
+        else:
+            v = "NO_LOOP_SPECIFIC_EFFECT"
+            reasons = [f"CI95(near) ≤ δ_near={dmin_near:.4f} на всех дозах "
+                       f"(max CI_low={max(ci[n]['near']['ci_low'] for n in ci):.4f}) "
+                       f"И e_generic ≤ δ_near (max CI_low={mg:.4f}) — "
+                       f"специфического локального отклика на луп нет (ниже "
+                       f"разрешения)"]
+    # слой-тег (F6): значимость — near_layer > δ_near_layer (та же статистика)
     sig = [L for L in LAYERS
-           if near_by_layer[n_star][str(L)] > dmin_by_layer[str(L)]]
+           if near_by_layer[pn][str(L)] > dmin_near_layer[str(L)]]
     if PRIMARY_LAYER in sig and len(sig) >= 2:
         lt = "FIELD_RESPONSE"
     elif sig == [PRIMARY_LAYER]:
         lt = "READOUT_ONLY"
-    elif len(sig) == 1:
+    elif PRIMARY_LAYER not in sig and len(sig) >= 1:
         lt = "INTERNAL_ONLY"
-    elif len(sig) >= 2:
-        lt = "LAYER_INCONSISTENT"
     else:
         lt = None
-    return dict(value=v, match_pre_reg=False, n_star=n_star,
+    return dict(value=v, match_pre_reg=False, n_star=pn,
                 tags=dict(layer=lt, dose=dose_tag), reasons=reasons,
                 diagnostics=diag)
 
+# ----------------------------- анализ (TZ §8, §10 + машина r2) -----------------------------
 
-# ----------------------------- анализ (TZ §8, §10, §11) -----------------------------
+
+def _check_series(cell, dn, label):
+    ce = np.asarray(cell["ce"], dtype="float64")
+    if not np.isfinite(ce).all():
+        raise SystemExit(f"M5 finite-gate: {dn} {label} ce содержит NaN/Inf")
+    for L in LAYERS:
+        for key in ("cos_raw", "cos_state", "norm_delta"):
+            a = np.asarray(cell[f"L{L}"][key], dtype="float64")
+            if not np.isfinite(a).all():
+                raise SystemExit(f"M5 finite-gate: {dn} {label} L{L} "
+                                 f"{key} содержит NaN/Inf")
+
+
+def _finite_gate(store, docs, doses):
+    """M5 (ревью r1): fail-loud finite-гейт до вердикта."""
+    for dn in docs:
+        _check_series(store[dn]["ctrl"], dn, "ctrl")
+        for n in doses:
+            cell = store[dn][f"n{n}"]
+            for cond in ("loop", "fillerA", "fillerB"):
+                _check_series(cell[cond], dn, f"n{n} {cond}")
+            for key in ("e_spec", "e_generic", "e_null"):
+                for L in LAYERS:
+                    a = np.asarray(cell[key][str(L)], dtype="float64")
+                    if not np.isfinite(a).all():
+                        raise SystemExit(f"M5 finite-gate: {dn} n{n} {key} "
+                                         f"L{L} содержит NaN/Inf")
+    logline("M5 finite-gate: PASS (все ряды конечны)")
+
+
 def analyze(store, doses=None):
-    """store → сводки + δ_min + G_inside + bootstrap + вердикт."""
+    """store → сводки + δ (та же статистика, F4) + гейты + bootstrap + вердикт."""
     doses = list(doses or N_DOSE)
     docs = sorted(k for k in store.keys() if k != "__config__")
     n_docs = len(docs)
     n_domains = len({store[k]["domain"] for k in docs})
-    # δ_min per layer: 95th pct |e_null(d)| по докам×дозам×d (TZ §8)
-    dmin_by_layer = {}
+    _finite_gate(store, docs, doses)
+    # δ (F4, ревью r1): null прогоняется через тот же near/far-пайплайн;
+    # 95th pct по докам×дозам (per-doc), не по сырым позициям
+    dmin_near_layer, dmin_far_layer = {}, {}
     for L in LAYERS:
-        vals = []
+        nn, fn = [], []
         for dn in docs:
             for n in doses:
-                vals += [abs(x) for x in store[dn][f"n{n}"]["e_null"][str(L)]]
-        dmin_by_layer[str(L)] = float(np.percentile(np.array(vals), 95))
-    dmin = dmin_by_layer[str(PRIMARY_LAYER)]
-    # doc-средние near/far + per-doc (для бутстрапа)
-    near, far, near_generic, near_by_layer = {}, {}, {}, {}
-    per_doc = {str(n): [] for n in doses}
-    # TZ §8: near = d ∈ [0, NEAR_END] (первые NEAR_END+1 точек ряда),
-    # far = d ∈ [FAR_START, H-1] (последние H-FAR_START точек).
-    N_W = NEAR_END + 1
-    F_W = H - FAR_START
+                en = store[dn][f"n{n}"]["e_null"][str(L)]
+                nn.append(_near(en))
+                fn.append(_far(en))
+        dmin_near_layer[str(L)] = float(np.percentile(nn, 95))
+        dmin_far_layer[str(L)] = float(np.percentile(fn, 95))
+    dmin_near = dmin_near_layer[str(PRIMARY_LAYER)]
+    dmin_far = dmin_far_layer[str(PRIMARY_LAYER)]
+    # пер-доковые near/far/generic + bootstrap по докам (4 колонки)
+    near, far, near_generic = {}, {}, {}
+    near_by_layer = {}
+    boot = {}
     for n in doses:
         ns, fs, ng, nbl = [], [], [], {}
         for dn in docs:
             c = store[dn][f"n{n}"]
-            ns.append(_near(c["e_spec"][str(PRIMARY_LAYER)][:N_W]))
-            fs.append(_far(c["e_spec"][str(PRIMARY_LAYER)][FAR_START:]))
-            ng.append(_near(c["e_generic"][str(PRIMARY_LAYER)][:N_W]))
+            ns.append(_near(c["e_spec"][str(PRIMARY_LAYER)]))
+            fs.append(_far(c["e_spec"][str(PRIMARY_LAYER)]))
+            ng.append(_near(c["e_generic"][str(PRIMARY_LAYER)]))
             for L in LAYERS:
-                nbl.setdefault(str(L), []).append(
-                    _near(c["e_spec"][str(L)][:N_W]))
+                nbl.setdefault(str(L), []).append(_near(c["e_spec"][str(L)]))
         near[str(n)] = float(np.mean(ns))
         far[str(n)] = float(np.mean(fs))
         near_generic[str(n)] = float(np.mean(ng))
         near_by_layer[str(n)] = {str(L): float(np.mean(v)) for L, v in nbl.items()}
-        per_doc[str(n)] = list(zip(ns, fs))
-    # G_inside_block (TZ §8): CE_loop_block < 1.0 И CE_fillerA ≥ 2.0
+        boot[str(n)] = _boot(list(zip(ns, fs, [a - b for a, b in zip(ns, fs)], ng)))
+    # G_inside (F5, ревью r1): парный гейт — loop < fillerA И loop < fillerB,
+    # ≥75% доков на PRIMARY_DOSE; абсолютные пороги — вторичная диагностика
     inside_dose = INSIDE_DOSE if INSIDE_DOSE in doses else max(doses)
-    inside_pass = sum(
-        1 for dn in docs
-        if store[dn][f"n{inside_dose}"]["loop"]["ce_block"] < CE_LOOP_MAX
-        and store[dn][f"n{inside_dose}"]["fillerA"]["ce_block"] >= CE_FILLER_MIN)
+    inside_pass = 0
+    abs_pass = 0
+    for dn in docs:
+        c = store[dn][f"n{inside_dose}"]
+        lb, fa, fb = (c["loop"]["ce_block"], c["fillerA"]["ce_block"],
+                      c["fillerB"]["ce_block"])
+        if lb < fa and lb < fb:
+            inside_pass += 1
+        if lb < CE_LOOP_MAX and fa >= CE_FILLER_MIN:
+            abs_pass += 1
     # I_loop: doc-медиана Σ CE по луп-блоку (TZ §9)
     i_loop = {str(n): float(np.median([store[dn][f"n{n}"]["loop"]["i_loop"]
                                        for dn in docs])) for n in doses}
-    # n* и paired doc-bootstrap (TZ §11)
-    n_star = None
-    for n in sorted(doses, reverse=True):
-        if near[str(n)] > dmin:
-            n_star = str(n)
-            break
-    ci = {}
-    if n_star is not None:
-        arr = np.column_stack([
-            [p[0] for p in per_doc[n_star]],
-            [p[1] for p in per_doc[n_star]],
-            [p[0] - p[1] for p in per_doc[n_star]],
-            [near_generic[n_star]] * n_docs,
-        ])
-        for j, key in enumerate(["near", "far", "near_minus_far", "near_generic"]):
-            ci[key] = paired_bootstrap(arr, lambda X, j=j: float(X[:, j].mean()),
-                                       B=B_BOOT, seed=SEED)
-    v = compute_verdict(near, far, near_generic, near_by_layer, dmin, dmin_by_layer,
-                        inside_pass, n_docs, i_loop, n_docs, n_domains,
-                        ci_near_minus_far=ci.get("near_minus_far"))
-    return dict(dmin=dmin, dmin_by_layer=dmin_by_layer, near=near, far=far,
-                near_generic=near_generic, near_by_layer=near_by_layer,
-                inside_pass=inside_pass, i_loop=i_loop, bootstrap=ci,
-                verdict=v, n_docs=n_docs, n_domains=n_domains,
-                docs=docs, n_star=n_star)
-
-
+    # шовный инкремент (M1, диагностика): cos_raw[cut+L_n-1], loop − fillerA
+    seam = {}
+    for n in doses:
+        L_n = 9 * n
+        vals = []
+        for dn in docs:
+            cut = store[dn]["cut"]
+            c = store[dn][f"n{n}"]
+            vals.append(c["loop"][f"L{PRIMARY_LAYER}"]["cos_raw"][cut + L_n - 1]
+                        - c["fillerA"][f"L{PRIMARY_LAYER}"]["cos_raw"][cut + L_n - 1])
+        seam[str(n)] = float(np.mean(vals))
+    v = compute_verdict(boot, dmin_near, dmin_far, near, far, near_generic,
+                        near_by_layer, dmin_near_layer, inside_pass, n_docs,
+                        i_loop, n_domains)
+    return dict(dmin_near=dmin_near, dmin_far=dmin_far,
+                dmin_near_layer=dmin_near_layer, dmin_far_layer=dmin_far_layer,
+                near=near, far=far, near_generic=near_generic,
+                near_by_layer=near_by_layer, bootstrap=boot,
+                inside_pass=inside_pass, inside_abs_pass=abs_pass,
+                seam=seam, i_loop=i_loop, verdict=v,
+                n_docs=n_docs, n_domains=n_domains, docs=docs)
 # ----------------------------- артефакты (TZ §12) -----------------------------
+
+
+def _round_ci(c):
+    return {k: (round(x, 6) if isinstance(x, float) else x) for k, x in c.items()}
+
+
 def _write_artifacts(an, manifest, mode):
     v = an["verdict"]
     claim = dict(
-        experiment="AT8_2-R2", tz="docs/AT8_2_R2_TZ.md", revision=REVISION,
-        mode=mode, verdict=v,
-        delta_min=dict(L23=round(an["dmin"], 6),
-                       by_layer={k: round(x, 6)
-                                 for k, x in an["dmin_by_layer"].items()}),
+        experiment="AT8_2-R2", tz="docs/AT8_2_R2_TZ.md",
+        run_revision=RUN_REVISION, machine=MACHINE_REVISION, mode=mode,
+        verdict=v,
+        delta_min=dict(
+            near_L23=round(an["dmin_near"], 6), far_L23=round(an["dmin_far"], 6),
+            near_by_layer={k: round(x, 6) for k, x in an["dmin_near_layer"].items()},
+            far_by_layer={k: round(x, 6) for k, x in an["dmin_far_layer"].items()},
+            note="95th pct per-doc null near/far (F4: та же статистика, что и "
+                 "сравниваемые near/far e_spec)"),
         near={k: round(x, 6) for k, x in an["near"].items()},
         far={k: round(x, 6) for k, x in an["far"].items()},
         near_generic={k: round(x, 6) for k, x in an["near_generic"].items()},
         near_by_layer={n: {k: round(x, 6) for k, x in m.items()}
                        for n, m in an["near_by_layer"].items()},
+        bootstrap={n: {k: _round_ci(c) for k, c in m.items()}
+                   for n, m in an["bootstrap"].items()},
+        seam={k: round(x, 6) for k, x in an["seam"].items()},
         i_loop={k: round(x, 6) for k, x in an["i_loop"].items()},
         inside_pass=an["inside_pass"],
-        bootstrap=({k: {kk: round(vv, 6) for kk, vv in c.items()}
-                    for k, c in an["bootstrap"].items()} if an["bootstrap"] else {}),
-        gate=dict(ce_loop_max=CE_LOOP_MAX, ce_filler_min=CE_FILLER_MIN,
-                  inside_dose=INSIDE_DOSE, inside_pass_min=INSIDE_PASS_MIN,
+        inside_abs_pass=an["inside_abs_pass"],
+        gate=dict(primary_dose=PRIMARY_DOSE,
+                  inside_rule="pair: loop_ce < fillerA_ce AND loop_ce < fillerB_ce, "
+                              f"pass >= {int(INSIDE_PASS_FRAC * 100)}% docs "
+                              f"(F5); abs diag: loop<{CE_LOOP_MAX} & fillerA>="
+                              f"{CE_FILLER_MIN}",
+                  inside_dose=INSIDE_DOSE,
                   H=H, near=[0, NEAR_END], far=[FAR_START, H - 1],
+                  seam="option A: шовный инкремент (d=-1) вне post-ряда (M1), "
+                       "значение шва — диагностика 'seam'",
                   gram_filter=f"9g max_count ≤ {GRAM_DUP_MAX}"),
         layers=LAYERS, primary_layer=PRIMARY_LAYER,
+        primary_dose=PRIMARY_DOSE,
         n_docs=an["n_docs"], n_domains=an["n_domains"],
     )
     json.dump(claim, open(CLAIM, "w"), indent=1)
@@ -471,7 +569,22 @@ def _write_artifacts(an, manifest, mode):
     logline(f"claim sha256={manifest['claim_sha256'][:16]}")
 
 
+def _series_from_store(store, doses):
+    """M7 (ревью r1): npz строится ИЗ STORE (полный набор при любом resume)."""
+    out = {}
+    for dn in sorted(k for k in store.keys() if k != "__config__"):
+        cell_doc = store[dn]
+        out[f"{dn}__ctrl__n0"] = cell_doc["ctrl"]
+        for n in doses:
+            if f"n{n}" not in cell_doc:
+                continue
+            for cond in ("loop", "fillerA", "fillerB"):
+                out[f"{dn}__{cond}__n{n}"] = cell_doc[f"n{n}"][cond]
+    return out
+
 # ----------------------------- run -----------------------------
+
+
 def run_main(mode="full"):
     import torch
     sys.modules["fla"] = None
@@ -492,10 +605,15 @@ def run_main(mode="full"):
     sys.stdout = _Tee(sys.__stdout__, _logf)
     logline(f"AT8_2-R2 start {datetime.now(timezone.utc).isoformat()} "
              f"py={sys.version.split()[0]} torch={torch.__version__} "
-             f"(CPU, position contrasts, rev={REVISION}, mode={mode})")
+             f"(CPU, position contrasts, run={RUN_REVISION}, "
+             f"machine={MACHINE_REVISION}, mode={mode})")
     tr, tr_done = init_trackio(t0, os.path.abspath(__file__))
 
     tk = AutoTokenizer.from_pretrained(MODEL)
+    # F1 (ревью r1): phrase-token-check — стимул обязан совпадать с токенизатором
+    pcheck = tk(PHRASE, add_special_tokens=False)["input_ids"]
+    assert pcheck == PHRASE_IDS, f"phrase mismatch: {pcheck} != {PHRASE_IDS}"
+    logline(f"F1 phrase-token-check: PASS {pcheck}")
     docs_all, pool_meta = load_pool(tk)
     # тексты филлеров всегда из пула (filler_map ссылается только на доки пула)
     texts_by_name = {d["name"]: d["text"] for d in docs_all}
@@ -509,16 +627,16 @@ def run_main(mode="full"):
     logline(f"pool: {n_docs} docs / {n_domains} domains "
              f"lens={[len(d['ids']) for d in docs]}")
     logline(f"pool_fps={pool_meta['pool_fps']} passed={pool_meta['n_passed']} "
-             f"filler_map={pool_meta['filler_map']}")
+             f"filler_map={pool_meta['filler_map']} "
+             f"filler_source={pool_meta['filler_source']}")
     tstage(tr, t0, "pool")
 
-    # store + resume (C4: config-fingerprint)
+    # store + resume (config-fingerprint)
     cfg_fp = dict(model=MODEL, layers=LAYERS, phrase_ids=PHRASE_IDS,
                   n_dose=N_DOSE if mode == "full" else [2], H=H,
-                  pool_fps=pool_meta["pool_fps"], revision=REVISION,
+                  pool_fps=pool_meta["pool_fps"], run_revision=RUN_REVISION,
                   filler_map=pool_meta["filler_map"], mode=mode,
-                  docs_sha256={d["name"]: sha256_text(d["text"])[:16]
-                               for d in docs})
+                  docs_sha256={d["name"]: sha256_ids(d["ids"]) for d in docs})
     store = {}
     if os.path.exists(STORE):
         store = json.load(open(STORE))
@@ -535,7 +653,6 @@ def run_main(mode="full"):
     tstage(tr, t0, "model_loaded")
 
     doses = N_DOSE if mode == "full" else [2]
-    series_buf = {}
     n_fwd = 0
     for doc in docs:
         nm, ids = doc["name"], doc["ids"]
@@ -554,7 +671,6 @@ def run_main(mode="full"):
             n_fwd += 1
             c = cond_series(r, T, cut, 0)
             store[nm]["ctrl"] = c
-            series_buf[f"{nm}__ctrl__n0"] = c
             logline(f"  {nm} ctrl: T={T} cut={cut} CE={float(r['ce'].mean()):.4f} "
                     f"(якорь р1 wiki-шкала ~3.2)")
             json.dump(store, open(STORE, "w"), default=float)
@@ -593,7 +709,6 @@ def run_main(mode="full"):
                 s["ce_block"] = round(float(np.mean(ce[cut - 1:cut + L_n - 1])), 6)
                 s["i_loop"] = round(float(np.sum(ce[cut - 1:cut + L_n - 1])), 6)
                 cell[cond] = s
-                series_buf[f"{nm}__{cond}__n{n}"] = s
                 logline(f"  {nm} n={n} {cond}: len={len(seq)} "
                         f"CE={float(ce.mean()):.4f} block_CE={s['ce_block']:.3f}")
                 json.dump(store, open(STORE, "w"), default=float)
@@ -642,22 +757,27 @@ def run_main(mode="full"):
         _log.write_to(RUNLOG)
         return 0 if ok else 1
 
-    # полный прогон: npz (ряды) → анализ → артефакты
-    np.savez(SERIES, **series_buf)
+    # полный прогон: npz (из store, M7) → анализ → артефакты
+    npz = _series_from_store(store, doses)
+    np.savez(SERIES, **npz)
     tstage(tr, t0, "series_saved")
     an = analyze(store)
     manifest = dict(
-        generated_by="AT8_2_R2.py", revision=REVISION,
+        generated_by="AT8_2_R2.py", run_revision=RUN_REVISION,
+        machine=MACHINE_REVISION,
         script_sha256=sha256_file(os.path.abspath(__file__)),
         store_file_sha256=sha256_file(STORE),
         series_npz_sha256=sha256_file(SERIES),
         model=MODEL, attn_impl=attn_impl,
         threads=os.environ.get("OMP_NUM_THREADS", "?"),
         seed=SEED, B_boot=B_BOOT, mode=mode,
+        phrase_token_check=True,
+        tokenizer=MODEL,
         pool_fps=pool_meta["pool_fps"],
         n_candidates=pool_meta["n_candidates"],
         n_passed=pool_meta["n_passed"],
         baseline_loop_metrics=pool_meta["baseline_loop_metrics"],
+        filler_source=pool_meta["filler_source"],
         docs_sha256=cfg_fp["docs_sha256"],
         doc_lens={d["name"]: len(d["ids"]) for d in docs},
         filler_map=pool_meta["filler_map"],
@@ -672,16 +792,19 @@ def run_main(mode="full"):
     logline(f"VERDICT: {v['value']} (n*={v['n_star']}, tags={v['tags']})")
     for r in v["reasons"]:
         logline(f"  {r}")
-    logline(f"δ_min: L23={an['dmin']:.4f} by_layer="
-             f"{json.dumps({k: round(x, 4) for k, x in an['dmin_by_layer'].items()})}")
-    logline(f"inside={an['inside_pass']}/{an['n_docs']} | i_loop={an['i_loop']}")
+    logline(f"δ: near_L23={an['dmin_near']:.4f} far_L23={an['dmin_far']:.4f} "
+             f"near_by_layer={json.dumps({k: round(x, 4) for k, x in an['dmin_near_layer'].items()})}")
+    logline(f"inside pair={an['inside_pass']}/{an['n_docs']} "
+             f"abs={an['inside_abs_pass']} | i_loop={an['i_loop']} | "
+             f"seam={an['seam']}")
     logline(f"AT8_2_R2_DONE verdict={v['value']} mode={mode} "
              f"(wall {time.time() - t0:.0f}s)")
     tr_done("ok")
     return 0
 
-
 # ----------------------------- reanalysis (disk-only) -----------------------------
+
+
 def reanalysis_main():
     t0 = time.time()
     store = json.load(open(STORE))
@@ -689,7 +812,8 @@ def reanalysis_main():
         raise SystemExit("store без __config__ — не R2-store")
     an = analyze(store, doses=store["__config__"]["n_dose"])
     manifest = dict(
-        generated_by="AT8_2_R2.py --reanalysis", revision=REVISION,
+        generated_by="AT8_2_R2.py --reanalysis", run_revision=RUN_REVISION,
+        machine=MACHINE_REVISION,
         script_sha256=sha256_file(os.path.abspath(__file__)),
         store_file_sha256=sha256_file(STORE),
         series_npz_sha256=sha256_file(SERIES) if os.path.exists(SERIES) else None,
@@ -705,21 +829,31 @@ def reanalysis_main():
              f"(wall {time.time() - t0:.1f}s)")
     return 0
 
+# ----------------------------- синтетические тесты (TZ §14.2, машина r2) -----------------------------
 
-# ----------------------------- синтетические тесты (TZ §14.2) -----------------------------
+
 def _synth_store(kind, n_docs=14):
-    """Синтетический store (TZ §14.2): e_spec/e_generic/e_null по (док, n, слой)."""
+    """Синтетический store (TZ §14.2): e_spec/e_generic/e_null по (док, n, слой).
+    Профили (машина r2: near/far-статистики, δ через тот же пайплайн):
+    null    — e_spec ~ N(0, 0.01), e_generic ~ N(0, 0.005) → NO_LOOP
+    decays  — e_spec = exp(−d/8) + N(0, 0.005) → DECAYS
+    persists— e_spec = 0.3 + N(0, 0.005) → PERSISTS
+    generic — e_spec ~ N(0, 0.005), e_generic = 0.6 → GENERIC"""
     rng = np.random.default_rng(0)
     store = {"__config__": {"n_dose": N_DOSE}}
     for i in range(n_docs):
         dn = f"syn_{i}"
         store[dn] = {"T": 256, "cut": 128, "domain": "syn"}
-        store[dn]["ctrl"] = {f"L{L}": dict(cos_raw=[0.9] * 500) for L in LAYERS}
+        store[dn]["ctrl"] = {f"L{L}": dict(cos_raw=[0.9] * 500, cos_state=[0.9] * 500,
+                                            norm_delta=[1.0] * 500) for L in LAYERS}
+        store[dn]["ctrl"]["ce"] = [3.0] * 256
         for n in N_DOSE:
             L_n = 9 * n
             cell = {"L_n": L_n}
             for cond in ("loop", "fillerA", "fillerB"):
-                cell[cond] = {f"L{L}": dict(cos_raw=[0.9] * (256 + L_n))
+                cell[cond] = {f"L{L}": dict(cos_raw=[0.9] * (256 + L_n),
+                                             cos_state=[0.9] * (256 + L_n),
+                                             norm_delta=[1.0] * (256 + L_n))
                               for L in LAYERS}
                 cell[cond]["ce"] = [3.0] * (256 + L_n)
                 cell[cond]["ce_block"] = 0.5 if cond == "loop" else 4.0
@@ -732,9 +866,9 @@ def _synth_store(kind, n_docs=14):
                     if kind == "null":
                         s = rng.normal(0, 0.01)
                     elif kind == "decays":
-                        s = 0.5 * math.exp(-d / 10.0) + rng.normal(0, 0.005)
+                        s = math.exp(-d / 8.0) + rng.normal(0, 0.005)
                     elif kind == "persists":
-                        s = 0.4 + rng.normal(0, 0.005)
+                        s = 0.3 + rng.normal(0, 0.005)
                     elif kind == "generic":
                         s = rng.normal(0, 0.005)
                     else:
@@ -761,35 +895,34 @@ def test_synth_main():
     for kind, expected in cases:
         store = _synth_store(kind)
         an = analyze(store)
-        docs = an["docs"]
-        v = compute_verdict(an["near"], an["far"], an["near_generic"],
-                            an["near_by_layer"], an["dmin"], an["dmin_by_layer"],
-                            an["inside_pass"], len(docs), an["i_loop"],
-                            len(docs), an["n_domains"],
-                            ci_near_minus_far=an["bootstrap"].get("near_minus_far"))
+        v = an["verdict"]
         good = v["value"] == expected
         ok += good
         logline(f"  synth {kind}: {v['value']} (ожид. {expected}) "
-                f"{'PASS' if good else 'FAIL'}")
+                f"{'PASS' if good else 'FAIL'} | δ_near={an['dmin_near']:.4f} "
+                f"near_ci16=[{an['bootstrap']['16']['near']['ci_low']:.4f},"
+                f"{an['bootstrap']['16']['near']['ci_high']:.4f}]")
     store = _synth_store("null")
     an = analyze(store)
-    v = compute_verdict(an["near"], an["far"], an["near_generic"],
-                        an["near_by_layer"], an["dmin"], an["dmin_by_layer"],
-                        3, 14, an["i_loop"], 14, an["n_domains"])
+    v = compute_verdict(an["bootstrap"], an["dmin_near"], an["dmin_far"],
+                        an["near"], an["far"], an["near_generic"],
+                        an["near_by_layer"], an["dmin_near_layer"],
+                        3, 14, an["i_loop"], 14)
     good = v["value"] == "INSENSITIVE_CELL"
     ok += good
     logline(f"  synth insensitive: {v['value']} {'PASS' if good else 'FAIL'}")
-    v = compute_verdict(an["near"], an["far"], an["near_generic"],
-                        an["near_by_layer"], an["dmin"], an["dmin_by_layer"],
-                        14, 14, an["i_loop"], 14, an["n_domains"], gates_ok=False)
+    v = compute_verdict(an["bootstrap"], an["dmin_near"], an["dmin_far"],
+                        an["near"], an["far"], an["near_generic"],
+                        an["near_by_layer"], an["dmin_near_layer"],
+                        14, 14, an["i_loop"], 14, gates_ok=False)
     good = v["value"] == "NOT_RESOLVED"
     ok += good
     logline(f"  synth gates-fail: {v['value']} {'PASS' if good else 'FAIL'}")
     logline(f"SYNTH_TEST: {ok}/6 PASS")
     return 0 if ok == 6 else 1
 
-
 # ----------------------------- main -----------------------------
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     if "--test-synth" in args:
