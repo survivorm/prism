@@ -1,0 +1,87 @@
+#include "../src/prism_sycl_compat.h"
+#include <sycl/sycl.hpp>
+#include <cstddef>
+#include <cstdio>
+#include <vector>
+#include <unistd.h>
+#include <chrono>
+using Clock = std::chrono::steady_clock;
+
+// buffer<2>, TILE=16, 1 барьер/итерацию, 2 реальных буфера
+template <size_t TILE, size_t KC>
+static void gemm_buf_db1(sycl::queue& q, std::vector<float>& a, std::vector<float>& b,
+                         std::vector<float>& c, size_t M, size_t K, size_t N) {
+  constexpr size_t R = KC / TILE;
+  sycl::buffer<float, 2> ba(a.data(), sycl::range<2>(M, K));
+  sycl::buffer<float, 2> bb(b.data(), sycl::range<2>(K, N));
+  sycl::buffer<float, 2> bc(c.data(), sycl::range<2>(M, N));
+  q.submit([&](sycl::handler &h) {
+      auto aa = ba.get_access<sycl::access::mode::read>(h);
+      auto ab = bb.get_access<sycl::access::mode::read>(h);
+      auto ac = bc.get_access<sycl::access::mode::write>(h);
+      auto ta0 = sycl::local_accessor<float, 2>(sycl::range<2>(TILE, KC), h);
+      auto tb0 = sycl::local_accessor<float, 2>(sycl::range<2>(KC, TILE), h);
+      auto ta1 = sycl::local_accessor<float, 2>(sycl::range<2>(TILE, KC), h);
+      auto tb1 = sycl::local_accessor<float, 2>(sycl::range<2>(KC, TILE), h);
+      h.parallel_for(
+          sycl::nd_range<2>(sycl::range<2>(M, N), sycl::range<2>(TILE, TILE)),
+          [=](sycl::nd_item<2> it) {
+              const size_t row = it.get_global_id(0);
+              const size_t col = it.get_global_id(1);
+              const size_t lr = it.get_local_id(0);
+              const size_t lc = it.get_local_id(1);
+              auto load = [&](auto ta, auto tb, size_t k0) {
+#pragma unroll
+                for (size_t t = 0; t < R; ++t)
+                  ta[lr][R * lc + t] = (row < M && k0 + R * lc + t < K)
+                      ? aa[row][k0 + R * lc + t] : 0.f;
+#pragma unroll
+                for (size_t t = 0; t < R; ++t)
+                  tb[R * lr + t][lc] = (k0 + R * lr + t < K && col < N)
+                      ? ab[k0 + R * lr + t][col] : 0.f;
+              };
+              load(ta0, tb0, 0);
+              float acc = 0.f;
+              for (size_t k0 = 0; k0 < K; k0 += KC) {
+                const size_t bi = (k0 / KC) % 2;
+                auto& Cta = bi ? ta1 : ta0;
+                auto& Ctb = bi ? tb1 : tb0;
+                auto& Nta = bi ? ta0 : ta1;
+                auto& Ntb = bi ? tb0 : tb1;
+                prism_sycl::barrier(it);
+                if (k0 + KC < K) load(Nta, Ntb, k0 + KC);  // prefetch в СВОБОДНЫЙ буфер
+#pragma unroll
+                for (size_t kk = 0; kk < KC; ++kk)
+                  acc += Cta[lr][kk] * Ctb[kk][lc];
+              }
+              if (row < M && col < N) ac[row][col] = acc;
+          });
+  }).wait_and_throw();
+}
+
+int main(){
+  setvbuf(stdout,NULL,_IOLBF,0);
+  sycl::device gpu; bool have=false;
+  for(auto&d:sycl::device::get_devices()) if(d.is_gpu()){gpu=d;have=true;break;}
+  if(!have) return 1;
+  sycl::queue q{gpu};
+  const size_t M=4096,K=1024,N=4096;
+  std::vector<float> a(M*K,0.01f), b(K*N,0.01f), c(M*N,0.f);
+  auto bench=[&](const char* nm, auto kern){
+    kern();
+    std::vector<double> t;
+    for (int r=0;r<5;r++){
+      auto t0=Clock::now(); kern(); auto t1=Clock::now();
+      t.push_back(std::chrono::duration<double,std::milli>(t1-t0).count());
+    }
+    std::sort(t.begin(),t.end());
+    double gf=2.0*M*K*N/(t[t.size()/2]/1000.0)/1e9;
+    std::printf("  %-12s %.1f GF/s (med %.1f ms)\n", nm, gf, t[t.size()/2]);
+  };
+  std::printf("4096x1024x4096, buffer<2> DB 1-barrier:\n");
+  bench("KC=16", [&]{ gemm_buf_db1<16,16>(q,a,b,c,M,K,N); });
+  bench("KC=32", [&]{ gemm_buf_db1<16,32>(q,a,b,c,M,K,N); });
+  bench("KC=64", [&]{ gemm_buf_db1<16,64>(q,a,b,c,M,K,N); });
+  std::printf("BUF_DB1_DONE\n");
+  return 0;
+}
