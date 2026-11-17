@@ -9,7 +9,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from at8_2_analysis import classify_cell
+from AT8_2 import classify_cell
 
 # 1) not_finite: NaN в dip-кривой → status=not_finite, нет l_rec/pert0
 c = classify_cell("wiki_0", 2, 64, 256, -0.2, -0.2,

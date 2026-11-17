@@ -1,0 +1,194 @@
+{
+ "experiment": "AT8_2",
+ "what": "калибровка машины на синтетических store (ревью §7 P0.5: нуль / истинная упругость / вечный сдвиг / диффузия)",
+ "date": "2026-11-17T15:10:13.761125+00:00",
+ "machine_v2_sha256": "3c8212e86f585387f1c2a3238cb45b3e109e00d11cf89bd1a5070d206ae8f056",
+ "machine_v3_sha256": "bdd53f74f581681ca59e3f272d4ba18266b4c3626b0cf54a7ecf52917f4434cc",
+ "scenarios": {
+  "null": {
+   "truth": "NOT_RESOLVED/NO_EFFECT (эффекта нет)",
+   "v2_frozen": {
+    "verdict": "NOT_RESOLVED",
+    "detail": "ratio=0.0 b=0.0 r2=0.0 frac_to_global=0.2969 n_pos=0 n_meas_doc_n=0 notrec=0/128 (мало пар (doc,n) с ℓ_rec>0 на W=64: 0 < 6)",
+    "lrec_w64": {
+     "2": 0.0,
+     "4": 0.0,
+     "8": 0.0,
+     "16": 0.0
+    },
+    "ratio": 0.0,
+    "frac": 0.2969,
+    "diag": {
+     "n_pos": 0,
+     "n_meas_doc_n": 0,
+     "n_notrec": 0,
+     "n_meas_total": 128,
+     "notrecovered_share_full": 0.0,
+     "axis_W64_notrecovered_share": 0.0
+    }
+   },
+   "v3": {
+    "verdict": "NO_EFFECT",
+    "detail": "большинство клеток W=64 — no_effect (1.00 > 0.5): возмущение ниже разрешения оценщика — not_testable, не refuted (paper §6 п.25)",
+    "lrec_w64": {
+     "2": null,
+     "4": null,
+     "8": null,
+     "16": null
+    },
+    "ratio": null,
+    "frac": null,
+    "diag": {
+     "n_rec_pairs": 0,
+     "n_pos": 0,
+     "n_notrec_perturbed": 0,
+     "n_perturbed": 0,
+     "nr_share_perturbed": null,
+     "n_no_effect": 128,
+     "ne_share_axis": 1.0,
+     "notrecovered_share_full": 0.0,
+     "axis_W64_notrecovered_share": 0.0
+    }
+   }
+  },
+  "elasticity": {
+   "truth": "ELASTIC (быстрое восстановление)",
+   "v2_frozen": {
+    "verdict": "ELASTIC",
+    "detail": "ℓ_rec слабо зависит от n (ratio=1.0588, W=64, полная популяция), окно к контролю (frac_to_global=0.0)",
+    "lrec_w64": {
+     "2": 8.5,
+     "4": 8.0,
+     "8": 9.0,
+     "16": 9.0
+    },
+    "ratio": 1.0588,
+    "frac": 0.0,
+    "diag": {
+     "n_pos": 4,
+     "n_meas_doc_n": 32,
+     "n_notrec": 0,
+     "n_meas_total": 128,
+     "notrecovered_share_full": 0.0,
+     "axis_W64_notrecovered_share": 0.0
+    }
+   },
+   "v3": {
+    "verdict": "ELASTIC",
+    "detail": "ℓ_rec слабо зависит от n (ratio=1.0588, W=64, возмущённая популяция), окно к контролю (frac_to_global=0.0)",
+    "lrec_w64": {
+     "2": 8.5,
+     "4": 8.0,
+     "8": 9.0,
+     "16": 9.0
+    },
+    "ratio": 1.0588,
+    "frac": 0.0,
+    "diag": {
+     "n_rec_pairs": 32,
+     "n_pos": 4,
+     "n_notrec_perturbed": 0,
+     "n_perturbed": 96,
+     "nr_share_perturbed": 0.0,
+     "n_no_effect": 0,
+     "ne_share_axis": 0.0,
+     "notrecovered_share_full": 0.0,
+     "axis_W64_notrecovered_share": 0.0
+    }
+   }
+  },
+  "shift": {
+   "truth": "NOT_RESOLVED (вечный сдвиг — восстановления нет)",
+   "v2_frozen": {
+    "verdict": "NOT_RESOLVED",
+    "detail": "ratio=1.0 b=0.0 r2=0.0 frac_to_global=0.4219 n_pos=4 n_meas_doc_n=32 notrec=111/128 (большинство not_recovered: 111/128 по полной популяции)",
+    "lrec_w64": {
+     "2": 64.0,
+     "4": 64.0,
+     "8": 64.0,
+     "16": 64.0
+    },
+    "ratio": 1.0,
+    "frac": 0.4219,
+    "diag": {
+     "n_pos": 4,
+     "n_meas_doc_n": 32,
+     "n_notrec": 111,
+     "n_meas_total": 128,
+     "notrecovered_share_full": 0.8672,
+     "axis_W64_notrecovered_share": 0.875
+    }
+   },
+   "v3": {
+    "verdict": "NOT_RESOLVED",
+    "detail": "ratio=1.0 b=0.0 r2=None frac_to_global=0.4062 n_rec_pairs=4 n_pos=3 nr_pert=83/96 (мало восстановленных пар (doc,n) на W=64: 4 < 6; провал (цензурированный) не засчитывается восстановлением — A1) (большинство not_recovered по возмущённой популяции: 83/96 — A4)",
+    "lrec_w64": {
+     "2": 64.0,
+     "4": 64.0,
+     "8": 64.0,
+     "16": 64.0
+    },
+    "ratio": 1.0,
+    "frac": 0.4062,
+    "diag": {
+     "n_rec_pairs": 4,
+     "n_pos": 3,
+     "n_notrec_perturbed": 83,
+     "n_perturbed": 96,
+     "nr_share_perturbed": 0.8646,
+     "n_no_effect": 0,
+     "ne_share_axis": 0.0,
+     "notrecovered_share_full": 0.8672,
+     "axis_W64_notrecovered_share": 0.875
+    }
+   },
+   "degeneracy_note": "ревью §1: условие ratio<=2 ВЫПОЛНЕНО при полном невосстановлении (ratio=1.0 в этом сценарии); спасает только majority-гейт (share 0.93 здесь). На реальном store share=0.474 < 0.5 — гейт промахнулся → v2-артефакт = ELASTIC; v3-гейты (A1/A4) дают NOT_RESOLVED disk-only — см. AT8_2_RECOVERY_v3.json"
+  },
+  "diffusion": {
+   "truth": "DIFFUSION (длина растёт с дозой)",
+   "v2_frozen": {
+    "verdict": "DIFFUSION",
+    "detail": "ℓ_rec растёт с дозой (ratio=5.8182, b=3.713, r2=0.9212, W=64)",
+    "lrec_w64": {
+     "2": 11.0,
+     "4": 23.0,
+     "8": 48.0,
+     "16": 64.0
+    },
+    "ratio": 5.8182,
+    "frac": 0.0,
+    "diag": {
+     "n_pos": 4,
+     "n_meas_doc_n": 32,
+     "n_notrec": 8,
+     "n_meas_total": 128,
+     "notrecovered_share_full": 0.0625,
+     "axis_W64_notrecovered_share": 0.25
+    }
+   },
+   "v3": {
+    "verdict": "DIFFUSION",
+    "detail": "ℓ_rec растёт с дозой (ratio=5.8182, b=3.713, r2=0.9212, W=64)",
+    "lrec_w64": {
+     "2": 11.0,
+     "4": 23.0,
+     "8": 48.0,
+     "16": 64.0
+    },
+    "ratio": 5.8182,
+    "frac": 0.0,
+    "diag": {
+     "n_rec_pairs": 24,
+     "n_pos": 3,
+     "n_notrec_perturbed": 8,
+     "n_perturbed": 96,
+     "nr_share_perturbed": 0.0833,
+     "n_no_effect": 0,
+     "ne_share_axis": 0.0,
+     "notrecovered_share_full": 0.0625,
+     "axis_W64_notrecovered_share": 0.25
+    }
+   }
+  }
+ }
+}

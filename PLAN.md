@@ -254,1318 +254,150 @@
 - Пустые ссылки на несуществующие артефакты/доки (например `results/exp49b2_floor_*.json` — теперь
   закоммичены `24762d9`).
 
-## Аудит ядра prism/ (11.11, «методология, логика, скорость, математика vs ref-math, off-by-one/сущность/отсчёт/проекция/CI»)
-
-Запрос: въедливый аудит ядра `prism/` (31 файл, 7947 строк, = GitHub main 5b52eda
-побайтово — сверено diff -rq) по тому же стандарту, что аудит скриптов.
-Контекст: рабочее дерево было восстановлено параллельной сессией 11.11 21:19
-(docs/, prism/, experiments/ вернулись; git = 5b52eda + 2 коммита восстановления
-f51350f/e0ebdeb; старая история Nov-9/10 после filter-repo недоступна).
-
-Критерий математики: docs/ref-math.md (218 строк). Фокус-классы ошибок:
-off-by-one, не та сущность, не тот отсчёт, проекция (gauge/центр.), CI/нули.
-
-- [x] инвентарь + сверка с GitHub (rc=0, дерево чистое)
-- [x] ref-math.md — полный проход, выписать эталоны (формулы, константы, правила)
-- [x] слой 1 (математика): jacobian, p_algebra, invariants, holonomy, spectral,
-      esg, kinetic, nulls_and_stats, operator_checks, permutation, noise,
-      topology, transport, cheap_invariants
-- [x] слой 2 (инфраструктура): cache, cache_io, calibration, pipeline,
-      interventions, behavior, bridge, diagnostics, exp38_hi_common, json_utils,
-      jstruct, layer_selection, profiles, svd_bundle, tag, __init__
-- [x] скоростной проход: python-циклы по тензорам, O(n²), лишние clone/.to(),
-      отсутствие batch/BLAS, повторные forward
-- [x] docs/prism_core_audit.md + фиксы (только если найденные баги — в том же
-      коммите) + коммит явными путями
-
-**DONE (11.11)**: 31 файл прочитан построчно. Найденное: P1×2 (c_pred —
-«изотропный предиктор» vs формула-спектральная-плоскостность, A_alignment
-в 38× отличается от A из E-40-дока — на решение пользователя; ref-math
-gauge_share без 1/K — только к акту), P2×2 исправлены в коммите
-(KL_lin: фикс. 1e-8 → _check_p; channel_energy_matrix: fail-loud при
-permU≠permV), P3×1 исправлен (interventions docstring KL-порядок). Designed-
-сценарии guard'ов протестированы exec; тесты: test_transport_kinetic +
-test_audit_core_v2 + test_operator_invariants = 25 passed, test_nulls_tag_gate
-8, test_e40_acceptance 20, test_p_algebra 11, test_layer_selection 5, 
-test_interventions 25/26 PASSED (последний — тяжёлый model-forward, за
-таймаут; правка там docstring-only).
-
-Границы: не трогать experiments/ (аудитировалось отдельно), kaggle_kernel/,
-docs/ кроме нового аудит-дока; коммит явными путями (дерево общее);
-не запускать тяжёлые прогоны.
-
-## P1-фиксы аудита ядра (11.11, «продолжай»)
-
-- [x] P1-1: `c_pred` формула → `tr P / K` (изотропный предиктор, канон E-40
-  дока `A`); модуль/функция docstring; test_c_pred_is_the_isotropic_predictor
-  (ортонорм. строки точно + iid концентрация); ref-impl строка.
-- [x] P1-2: 1/K в спектральной формуле gauge_share во всех 6 местах
-  (ref-math:39, paper 214/326/218, ref-exp 1091/1610) + уточнение λ_k = σ_k².
-- [x] тесты (test_operator_invariants, test_audit_core_v2, test_p_algebra,
-  test_layer_selection) зелёные.
-- [x] mixed-script скан рус. доков; коммит явными путями.
-
-Границы: только формулы/подписи, никаких новых чисел; experiments/,
-kaggle_kernel/ не трогать; коммит явными путями (дерево общее).
-
-## Список на перезапуск после аудита ядра (11.11)
-
-Проверено: кто реально потребляет каждый дефект (grep по experiments/, results/,
-kaggle_kernel/);
-- [x] **E-40.5 (exp40_5_kinetic.py) — НЕ перезпускать.** Единственное
-      использование дефектной `channel_energy_matrix` в прогоне — замыкание
-      `G.sum() == ‖ΔJ‖²`, которое инвариантно к смешиванию каналов (Пифагор);
-      все опубликованные энергии каналов приходят из `kinetic_decomposition`,
-      которая `sigma_perm_mismatch` уже флагует «ambiguous». Числа
-      `results/E40_5_kinetic.json` не затронуты P2-2.
-- [ ] **kernel-exp52k — единственный устаревший inline-бандл** (проверены
-      все 41 kernels: у остальных нет этих модулей или бандл свежий). В нём:
-      старый `c_pred` (A в ~38× от канона), старый `KL_lin` (фикс. 1e-8 — молча
-      отбрасывает 88 % реальных fp32-строк), `channel_energy_matrix` без
-      fail-loud. **Перепакетировать бандл из актуального `prism/` перед любым
-      следующим прогом.** Прогон не перезапускать сейчас — решение 05.11:
-      линия 40+ = параллельная сессия, GPU-слоты заняты.
-- [ ] **docs/models/corr/1-4.md:204 — `A = 0.87` устарело** (считано со
-      старой `c_pred`); K4-решение это значение из ядра/paper исключает, но
-      в дискуссионном доке пометить «стало после фикса c_pred 11.11» (истинное
-      A = 0.87 × ~38, если мерить).
-- [x] **A_alignment/c_pred — ни в одном эксперименте и results-JSON не
-      используется** (только тесты и E-40-док, где A определён независимо:
-      `K·tr(PG)/(trP·trG)` = c/(trP/K) — совпадает с новым c_pred). Публик.
-      чисел для пересчёта нет.
-- [x] **P2-1 (KL_lin) — эксперименты не затрагивает**: `behavior.KL_lin`
-      вызывают только тесты; `exp12a` считает свой локальный `kl_lin =
-      ½‖Jv‖²` (не `behavior.KL_lin`).
-- [x] **P1-2 (1/K в ref-math) — docs-only, уже исправлен, чисел не меняет.**
-
-## Разбор критики docs/exp_audit.md (11.11)
-
-- [x] Разбор по пунктам: `docs/exp_audit_answers.md` (свод =
-  docs/dynamic/0_итоги_раунда.md; 10 разделов: 7 принято, 2 принято с
-  оговоркой, 3 возражения с фактами: B4 loopy-столбец ЕСТЬ в §15.4; E-76
-  v1→v4 — баг измерения, не «пере-прогон»; E-71 — линейная среда различена,
-  дыра только в других нелинейностях). Список действий (7 пунктов, дешёвые →
-  дорогие) — в конце файла; ничего не запускаем, только пометки/пре-реги.
-
-## Аудиты 2/3/4 (exp_audit2/3/4.md, 11.11) — «много косяков в фундаменте»
-
-- [x] **С1 решён: оценщик e64_gpu.py восстановлен** из
-  experiments/kaggle_e64gpu/__pycache__/e64_gpu.cpython-312.pyc (08.11) по
-  диссекции python3.12: vpath_units/dcurve/curves_series, байт-код match 3/3,
-  поведение тождественно B4-батареи (max|diff|=0). Пин: results/e64/ESTIMATOR_PIN.json.
-  Важно: curves_series в pyc = ВАРИАНТ С АДАПТИВНЫМ kk=min(96,len(P)//3)+nan-гарды
-  (≠ b4_reshot). Остальной исходник ядра утерян; 8/8 потребителей тянут ровно 3 фн.
-- [x] **Код-фиксы (без прогонов, LA=45):** P3_ladder (seam-маска B1 + перцентиль-CI H1);
-  exp67 (k[:-4], os/makedirs, T2=degenerate, T1=переименованный дип, cwd-якорь);
-  exp71 (nll по λ, sd_r полный, 3 сида, гейт в коде res["A"]["gate"], окно после вставки,
-  .eval(), resume по полноте); exp69 (self-anchor на тех же 8 доках, .eval(),
-  docstring: rep16 НЕ считается); readmatrix (docstring gap→cos, авто-вердикт СНЯТ);
-  exp64_mark (moving-block бутстрап D7, пометка win D8, cwd-якорь); exp52a (кит. хвост D11).
-- [x] **С2 частичный:** .gitignore `results/e*/**` снят (исключения: exp36_gauge_anatomy.json,
-  e50v3 tokenizer.json); мелкие артефакты (<5M) в git + results/ARTIFACTS_MANIFEST.json.
-  УТОЧНЕНИЕ: TPU meta-JSON (P1_own_meta и др.) пропали с МАШИНЫ (в tpu/ только npz >10M);
-  каталогов e69/e71/e75 на машине нет — часть чисел §4.15/§4.16 не имеет ни кода, ни артефакта.
-- [x] **Ответы с возражениями:** docs/exp_audit2_3_4_answers.md — 4 возражения:
-  H5 (hump_k k∈2..8 корректен, off-by-one не подтверждён); B5 (arg_near_pi ≠ min_re<0,
-  совпадение только на вещ. оси); D1 (механизма усечения нет — inject мерился целиком,
-  дефект в B3); С1 (pyc на машине — «невозможно проверить dip» не верно).
-- [ ] **ОЧЕРЕДЬ ПРОГОНОВ (CPU, старт после LA-спада / по команде):**
-  (1) P3_ladder перепуск seam+≥5 сидов (~15 мин) — переснимает «масштаб 2–4» (не установлен);
-  (2) H2: R-null × corpus TF (одна клетка); (3) RV-3: random→random null (~20 мин);
-  (4) E-71 по новому протоколу (1–2 ч); (5) E-69c holdout-скрипт (D4) + RV-2
-  здоровый-LoRA-контроль (~2 ч); (6) corpus E(k)-лестница (RV-5); (7) win-null на rnull (D8);
-  (8) sum-rule per-doc ACF; (9) E-72/E-73/replay-клетка (RV-1) — уже в очереди.
-- [ ] **ДОКИ (дешёвые, без прогонов):** снять «λ₁ подтверждена на L23» (B5: L23
-  stab_half=0.49 «не разрешено»); понизить «солитон» в заголовках до перепуска;
-  n-сноски T-лестницы; B4-T строка + 0.846 re-cite (RV-8b); реестр метрик (RV-9:
-  lift^state/lift^incr, plateau-окна, e1/e2, joint4); loopy-гейт в загрузчике пула (RV-4);
-  якорная тройка (дип/горб/плато+E-кривая) на каждую аппаратную эпоху (RV-5);
-  E-72-экран: запинить точностную полосу (RV-6) + проверить chat-шаблон в AT-клетках (RV-1);
-  «двухканальность» — одна клетка, до 2×2 формулировка понижена.
-- [ ] **D9 (e81b-гейт 0.99 vs 0.93–0.98) — НЕ ТРОГАТЬ до завершения прогона**
-  (v3 за e81c); после прогона — оценить (порог по трекам или не-фатальный гейт).
-- [ ] **Не делал (нужна команда):** перенос npz-артефактов (4.9G) в Kaggle-датасет
-  (диск 97%, 16G free); новые GPU-прогоны (квота 30ч/нед исчерпана, сброс в 7 дней).
-
-## Восстановление экспов из git (11.11, «восстанови все экспы, не пиши сам»)
-
-Проверены ВСЕ источники: refs (main/origin), reflog --all (68 записей, старейшая —
-11.10 22:04 = первый recovery-коммит), 562 коммита истории, dangling (666402d/6d8420e —
-ветка E-36, только results-файл), bundle /data/prism_git_backup_1011.bundle (main=та же
-история + worktrees/pristine/HEAD=666402d), origin.
-
-- **Все эксп-скрипты, когда-либо бывшие в git, — на диске.** Union 461 файла
-  (experiments/+kaggle_kernel/) по 562 коммитам vs 486 на диске: «в git, нет на диске» = 21,
-  из них: exp28_dense (ренейм → exp27b_dense.py, на месте), 4 results/exp3[47]* — в
-  results/archive/ (dedupe 5f2da24), 9 файлов старого kaggle-леяута (reorg 2a5e534/1a52cdf:
-  .py → per-kernel notebooks, контент в kernel-expNN/kernel.ipynb и root prism/), 2 xet-лога
-  + exp18_logit_kd.py.py + корневые kernel.ipynb/metadata (мусор старого леяута).
-- **19 «удалённых чисткой» скриптов (round-3, E-45/46 очереди, E-52d, сироты) — на диске.**
-  Коммит-чистка 3657b3f (10.11 18:03) погиб в инциденте вместе с удалением: дерево
-  восстановлено с базы 10.11 23:58 (5b52eda), где они были. Список из сессионного jsonl
-  сверен: 19/19 на месте.
-- **Восстановлен (побайто, md5-совпадение):** experiments/e41_50/exp50_gauges.py из cb700dc^
-  (единственный реально удалённый из живущей истории; был снят 10.11 как superseded —
-  вернуть по запросу пользователя).
-- **Восстановить НЕВОЗМОЖНО из источников (честно):** (1) оригинал
-  experiments/kaggle_e64gpu/e64_gpu.py — в git не было никогда (audit4 S1), единственный
-  след — pyc 08.11 (из него восстановлены 3 функции, остальной исходник файла потерян);
-  (2) точные оригиналы Nov6–10 скриптов (e81b/e83/e85a/e82b/exp90/91) — на диске
-  replay-реконструкции §42, коммиты и их байты уничтожены filter-repo+gc, reflog их не
-  содержит (старый reflog expired filter-repo); (3) артефакты Nov6–10 (SOLITON.json,
-  THERAPY.json, каталоги e69/e71/e75, TPU meta-JSON) — в git не было (gitignore), с диска
-  снесены; (4) сами коммит-границы Nov6–10 (§42).
-- **Reflog-подозревание не подтвердилось:** reflog покрывает только post-incident историю
-  (11.10 22:04 → 11.11 11:06); Nov6–10 коммитов в нём нет.
-- Источники за пределами git: сессионный jsonl (120M, ~/.pi/agent/sessions/
-  --home-survivor-work-prism--/2026-10-28T11-15-...) — из него и был сделан replay;
-  пересобирать что-либо из него без команды не стал («не пиши сам»).
-
-## Реплей артефактов Nov6–10 из сессии (11.11, «сгенерировать как было, именно реплеить»)
-
-Запрос: восстановить потерянные артефакты реплеем генерации (не писанием от руки).
-Сессия-источник: pig `~/.pig/agent/sessions/--home-survivor-work-prism--/
-2026-10-13T13-52-27-235Z_01a13589...jsonl` (13.10→11.11, 25097 строк).
-
-Потеряно (сверено с диском + сессией; e81/e82/e83/e85 — уже regenerated 11.10 18:26
-сессией-реставром, на месте):
-- results/e69/THERAPY.json (прогон exp69_therapy.py, 10-11 21:22, ~40 мин CPU)
-- results/e71/SOLITON.json (exp71_soliton.py, 09.11, ~10-30 мин CPU)
-- results/e75/TMPL_FAMILY.json (exp75_tmpl_family.py, 09.11; Qwen0.8B + LFM3-1.7B, CPU)
-- results/e64/tpu/: P*_meta.json (×4), P4_T*_meta.json (×3), STATUS.json, P5_shift.json,
-  JUDGMENTS.json, LAMBDA1.json, READMATRIX.json, EIGEN.json, EIGEN_J.json, EIGEN_L.json,
-  EIGEN_LATE.json, EIGEN_M.json, EIGEN_k.json, cor_p1.npz (из инвентаря 09.11 09:29 в сессии)
-- results/e64/tpu_v8/: P*_meta.json (×7), STATUS.json (kernel output v8)
-- results/e64/SOLITON_COLLISION.json (содержимое в сессии: буквально `[]`, 24/24 —
-  неподтверждённое, из ТЗ/статей снято)
-
-Границы (не менять): scripts с audit-фиксами на месте НЕ откатывать (replay-копии
-оригиналов — в /tmp, не в репо); npz в tpu/tpu_v8/ не трогать; e81-e85 regenerated — не
-перепускать; numbers из сессии — эталон верификации.
-
-- [x] **Ф1. Kaggle: pull kernel output prism-e64-gpu → meta-JSON в tpu_v8/ и tpu/**
-      (ядро = voroninmichael/prism-e64-gpu, COMPLETE; все 4 npz побайто = диск,
-      размеры meta = инвентарь 09.11 09:29: P1_own_meta 217143, P2c 128040, P2_corpus
-      150809, P3_rnull 346402, P4_T1.2 192984 / T1.5 192619 / T2.0 192449, STATUS 335 —
-      все совпали; P5_shift 2085). P4_T*.npz в tpu/ на момент инцидента НЕ БЫЛО
-      (их нет в инвентаре 09:29) — не докачивать.
-- [ ] **Ф2. Локальные генераторы TPU-батареи:**
-      - [x] JUDGMENTS.json — exp64_tpu_report.py (репо + v.get-фикс 22385); 2604B
-        (инцидент 2623B); числа = доковые: RNULL dip 4.1e-6 (полоса ±1.6e-5), trained
-        −0.111, MATRIX −0.167/−0.111, LL asym 0.0039 «симметрично».
-      - [x] READMATRIX.json — exp64_readmatrix.py: on-disk читал плоский формат meta,
-        а meta (Kaggle) вложенный ('curve') → All-NaN; перенесён 2-строчный фикс из
-        патча 22385. 749B (инцидент 655B — артефакт был от более старой версии);
-        числа верифицированы: dip_corpus −0.1671, dip_own −0.1111, xdoc_cos 0.193,
-        NO-AUTO-VERDICT (audit2 B4).
-      - [x] LAMBDA1.json — exp64_lambda1.py exit=0 (28.9K ≈ инцидент 29577B).
-      - [x] P5_shift.json / STATUS.json — из Kaggle (Ф1).
-      - [ ] EIGEN.json — ФОРЕНЗИКА ЗАКРЫТА: генератор = v2 «в-файле общий базис»
-        (lift_docs без M; v2-патч утерян из лога, old-текст восстановлен из цитаты
-        патча 23187). Побайто-верификация по дампу сессии 23145 (11-09 11:19):
-        L1 0.231/0.873/λcor [−1.103,−0.748] λown [−1.184,−0.955]; L11 0.244/0.939/
-        [−0.875,−0.497]/[−0.915,−0.837]; L23 0.510/0.800/[−0.907,−0.526]/[−1.199,
-        −1.127] — ВСЁ совпало по данным с диска (npz целы). Перепуск по честной
-        v3-сборке (10:30 + v2 lift_docs) запущен.
-      - [ ] EIGEN_k/EIGEN_L/EIGEN_J — цепочка запущена: финальные сессионные версии
-        exp76k/exp76l/exp79 реконструированы (write+патчи, песочница, все применились
-        с подтверждениями) — on-disk были stale; e64_gpu.py для exp76k — из Kaggle-
-        источника (все нужные функции: dcurve/vpath_units/curves_series/prompt_ids).
-- [ ] **Ф3. e69:** генератор THERAPY.json = v2, НЕ v1: v1 (write 11-08 19:03) +
-      attach-патч 21:26 (generic LoRA-scan: все Linear c out_features>=1024 в attention,
-      n=66) — v1-ран (21:22) не дожил. transformers 5.x: Qwen3_5 = linear_attn
-      (L6/12/18/22: in_proj_qkv/z/b/a, out_proj) + self_attn (L23) — generic scan
-      покрывает оба. Запущен (очередь после e75). Эталон: [t0] nll 10.219 dip −0.2956
-      (lora n=66).
-- [ ] **Ф4. e71:** v1-оригинал + зачистка хвоста (heredoc-извлечение подмешало shell-
-      текст после EOF; обрезан по `E71 DONE`). Эталон: A-кривая dip_med (0.0…-0.005
-      @λ≤0.5, -0.207 @0.7, -0.235 @0.8), B: wiki_0 -0.179→-0.19 … wiki_7 -0.137→-0.157.
-- [x] **Ф5. e75:** TMPL_FAMILY.json 7.5K, «E75 DONE» (qwen raw/tmpl + lfm, verdict).
-- [x] **Ф6. SOLITON_COLLISION.json ← `[]`** (2 байта, из сессии head -c 400; 24/24 —
-      неподтверждённое, из ТЗ/статей снято — артефакт-пустышка, как был)
-- [x] **Ф2-бис: НЕВЫПОЛНИМО реплеем:** EIGEN_M.json и EIGEN_LATE.json — генераторы
-      были /tmp-скретчи сессии, не в репо; в сессии только чтения, не запись. Отмечено
-      в отчёте.
-- [ ] **Ф7.** PLAN.md + коммит (explicit paths) + отчёт
-
-## Аддентум v2: правки по docs/addentum/*.md (12.11)
-- Запрос: `addentum.md` исправить по `addentum/add_1.md`; результат — `docs/addentum_v2.md`
-  (уже существует, 34K — заполнять пробелы, не переписывать). «Не снято по возражениям» = в v2.
-- DONE: прочитаны addentum.md (1170), add_1, 1_1, 3_1, 4_1, итоги/ТЗ раунда 9; сверены
-  B4 T-числа (архив: B4 T-таблица −0.071→−0.111 = код ПОТЕРЯН; исправленный e64-gpu
-  sha_gen TRUE: T-инвариантно −0.159/−0.165/−0.156, rep16 0.0→0.067→0.0 — строка v2 верна);
-  артефакты для таблицы проверяемости (exp45f ✓, exp46 ✓, e69c только .pt, E-65b/A5/D-1 —
-  проза/внешние).
-- DONE: правки v2 — T0 (контрпример, 2×2, сумма Δ_med ≈+5.6, чтение LADDER по R9-1),
-  T1 (dither опора, композиция T1×T2 через O_H^fut), T2 (null random×real, нить_Г +
-  cos-клетка, нулевой шаг λ₁-плоскость, r_eff^U=178), T3 (провенанс T-тренда, 3 якоря
-  графа, margin-факты), T4 (E-69c статус + ICL-вопрос), T5 (двусоставность LFM3, random
-  0.49/0.97, тип-слоя дизайн), T6 (T6×T2), T8 (статус B2/B3 + R9-3/R9-4), запрет 11,
-  §8 статусы тестов раунда 9 (14 строк), §9 таблица проверяемости (16 строк), §5 (нить_Г
-  строка + мост поле↔T-серия), §6 (single-teacher как спекуляция + фальсификатор),
-  §7 (+читатель/писатель, single-teacher), §10 (критический путь T0/T2 + приоритеты).
-  Файл 852→1051 строк. Mixed-script scan чист. Дубликатов нет (проверено по счётчикам).
-- DONE: PLAN.
-- Границы: не трогать docs/addentum.md и docs/addentum/*.md (тексты ревью — чужое);
-  не запускать прогоны; не коммитить без команды; R9-статусы — только по
-  docs/dynamic/0_итоги_раунда.md + 1_ТЗ_раунд9.md + артефактам (не «из головы»).
-## TZ v1.1: патч по docs/addentum/tz_review/compound.md (12.11)
-- Запрос: «проверяешь и делаешь compound.md, контекст в том же каталоге; объекты правки
-  docs/addentum_v2.md, docs/TZ_add_0-3.md».
-- DONE: прочитаны compound.md (454), 1_1_review_TZ_v1 (П1-П15), 3_1 (5 правок), 4_1 (13),
-  TZ_add_0-3 (798), addentum_v2 (1051).
-- DONE: верификация матем. ядра (python): G1/G3/G7 — точные тождества (G7 численно:
-  Σ real ≡ Σ perm); G6 closure 5.6e-17, ‹Δu,ū› 2.9e-16; G8 f=0.06,a=0.26 → ρ(1)=−0.1689
-  (изм. −0.167), плато 0.06; G4 r_max≈1.04 при θ=0.1, 2/√N=0.1021; G5 граница (N−1)/2=191.5;
-  A3 radial-patch Δz=1.8e-13, 0 флипов; A4 градиент 2.9e-8, тангенциален; P7 0.666/0.707/0.878;
-  контрпример δ=1 (порог e1, ratio e2); LOO P(≥5/6)=0.109, P(6/6)=0.0156, P(≥7/8)=0.035.
-  Одна формальная поправка: формула G9 без нормировки — ‖Δu+2sin²(θ/2)u_t‖ = sinθ точно.
-- DONE: правки TZ_add_0-3.md по части 2 compound (все 32 блока): §0.1 (G1′+G7–G10), §0.2 (реестр+
-  ду_unit/tangent_frame/N + скаляры r/r_max/f_DC/d_eff + исправление ярлыка), §0.4 (крит. r_partial,
-  LOO 6/6, словарь вердиктов), §0.8 (порядок арбитража), §1.2 (dip_raw,mean, f_DC≈3%), §1.3 (G1–G8
-  + новая таблица), §1.4.1/4.4 (G2, баг −0.472), T0.1 (6-пунктный пре-рег), T0.2 (форма при фикс.
-  сумме) + T0.2b (R/A), T0.3 (знак: нечётные), T0.4 (3×2, гейт невырожденности), T0.5 (joint,
-  per-doc, DC+MA(1)), §1.6 (пин gen_sha), §1.7 (sanity +5), T1a.1 (канон dip_V,med, панель, LOO),
-  T1a.2 (C1 off-grid, C2→активации, C-ctrl, C-seed), T1b.1 (расщепление a/b), §3.3 (порог первичен,
-  контрпример δ=1, A1, N6/N7, H=8/16), T2.1 (state-level ridge, lk4=текстовый baseline, d_eff),
-  T2.2 (главные углы), T2.3 (3 режима, гейты argmax/logit/metric, P-radial@L23), §3.7, §4.3 (конусы,
-  A4, условие g), 4.4.1, T3.1 (margin универсален), T3.3 (конфаунд + стратификация), T3.5 (волна 2),
-  T3.6 (аналитически), §5.1 (условный арбитр), §6 (волна 0 + реордер), §7 (схема: derived/gates/
-  power, N=383, outcome-словарь), §8 (8 новых банов + замена масштаба + k≥W), итог (волна 0).
-  798→945 строк. Mixed-script scan чист. Остатков старого текста нет (проверено grep'ом).
-- DONE: 6 следствий в addentum_v2.md: T0 (G1/G3/G5/G7 + r_max, «коридор» = описание,
-  3×2 клетка, f_DC≈3% вместо парадокса, dip_raw,mean вместо Δ_med), T2 (A1: l ≤ L_max−1,
-  L23 — текущая видимость + G9-нуль), T3 (точные конусы, «искривлённость» изъята, g-условие),
-  T1a (dither = механизм-проба, C2 на весах не существует), E-45f (невидимость текущему
-  токену на L23, о будущем не свидетельствует), §6 статус-строка «коридор». 1051→1067 строк.
-- DONE: mixed-script scan обоих файлов чист; структура таблиц гейтов выровнена (4 ячейки).
-- Границы: не трогать docs/addentum/*.md (тексты ревью); не запускать прогоны;
-  не коммитить без команды.
-
-## Серия AT: эксперименты ТЗ v1.1 (12.11)
-
-- Запрос: «начинай писать серию экспериментов, префикс A (AT0.x); как пишешь —
-  субагент на ревью, максимально строгое, пока не сойдёмся».
-- DONE: рекогносцировка данных (см. ниже); prism/field.py (G1′: vpath, dcurve(stat), acf_moments c
-  rho_Tk/sum_rho_full/gram_resid, f_dc, ra_split, degen, rho_t; __main__-самопроверки — pass;
-  закоммичен юзером 19:23 как 80a142e (р1-ревью field: docs/dynamic/1_REVIEW_field_r1.md),
-  я удалил dead locals (f_dc N, ra_split T) — sha сменился, гейт фиксирует новый);
-  AT0_1 round 1 (11 мин CPU, gates ALL PASS) → 2 внешних ревью (qwen3.8-flash-next):
-  docs/AT0_1_review_code.md (23 замечания) + docs/AT0_1_review_numbers.md (60+ сверок, все ≤ 1e-15).
-  КРИТ-нашёл: (У1) hn-поле P1_own — баг продюсера (нормы первых 384 СТОЛБЦОВ L23, e64_gpu.py:125),
-  строки — raw fp16 (e64_gpu.py:218) → TPU h_raw-моменты вычисляемы (128 клеток возвращены);
-  (У2) L1-деградация doc-specific (2/32: own_w0/own_w4, L1-шаг < fp16-шума), не layer-specific;
-  (У3) П4: оценка-медиана vs CI-бутстрап средних — разные статистики.
-  AT0_1 round 2 (12 мин CPU, gates ALL PASS, store sha 8dec738ff38ceeb3): 2880 клеток (stat-ось §0.2),
-  TPU h_raw-моменты + R/A все 96 доков, L1 per-doc гейт (исключены только own_w0/own_w4),
-  П4/П5 на rho_Tk (ρ̄, §1.4-1), вердикты из словаря §0.4, asserts до записи, hash-store (G7),
-  G0-a: декод-проба 3 строк (gen wiki_3 — здравый wiki; own_w0 — single-token артефакт видим).
-  Ключевые числа r2: anchor −0.0721980 (n=35, docs-список в гейте); G8 max_resid 1.04e-14 (2868 клеток);
-  G6 closure_rel 2.67e-15 (96 доков); perm 1.67e-16; П3: frac_rmax_below_1 = 1.0 → исход B (T0 = арбитр);
-  П4 (rho_Tk, общая выборка n=53): h_raw est −0.0024 CI [−0.0033,−0.0014] → refuted (структура сверх
-  DC+MA(1)); du_unit −0.0020 [−0.0036,−0.0009] → refuted; v_tangent +0.0011 [−0.0003,+0.0033] →
-  not_testable (|est| < ширина CI/2); П5 (двусторонний sign-тест): h_raw e3 −0.0217 p=0.0022 → confirmed
-  negative (анти-горб k=3,4); du_unit e3 −0.0233 p=0.0008 → confirmed negative; v_tangent e3 +0.0193
-  p=0.027 → confirmed positive (горб). Т.е. не-DC структура: у v̂ — горб на k=3,4; у Δh/Δu — анти-горб.
-- DONE round 3 (6 мин 09 с CPU, gates ALL PASS, store sha 780fcadbf73e117b): все CRIT/MAJOR
-  + дешёвые MINOR из ре-ревью round 2 (docs/AT0_1_review_r2_code.md). П4 перепроектирован
-  (CRIT-1): полоса k≥9 по букве ТЗ, per-doc СРЕДНЕЕ по полосе (медиана по лагам —
-  чувствительность), DELTA_MIN=2e-4 до прогона, ветки по §0.4 (DELTA_MIN-гейт ПЕРВЫЙ:
-  «ниже разрешения ⇒ not_testable, не refuted» — порядок проверен self-audit: du_unit
-  est −9.1e-5 < 2e-4 при CI ∌ 0 → not_testable, не refuted). П5 — один комбинированный
-  sign-тест (MINOR-12). Ключевые числа r3: anchor −0.0721980 (n=35, бит-в-бит); G8 1.035e-14
-  (2868 = 2×1434); G6 2.672e-15; П3 frac=1.0 → арбитр (исход B); П4 (пул K=96, n=51):
-  h_raw −9.7e-5 CI [−2.0e-4, +3.1e-5] → not_testable; du_unit −9.1e-5 [−2.06e-4, −1.2e-5] →
-  not_testable; v_tangent +1.939e-3 [6.87e-4, 3.385e-3] → refuted (структура сверх DC+MA(1));
-  чувствительность (медиана по лагам, stat r2): −2.31e-3/−2.01e-3/−1.87e-3. П5 (n=53): h_raw
-  p=0.000269 → confirmed negative (анти-горб k=3,4); du_unit p=0.000269 → confirmed negative;
-  v_tangent p=0.00219 → confirmed positive (горб). Т.е. не-DC структура: у v̂ — горб + плато
-  сверх DC+MA(1); у Δh/Δu — только анти-горб, плато ниже разрешения. §1.7: телескоп все
-  (doc,L), field._selfcheck ok, рамка (med θ 55.2°, dip_V−dip_du +0.258); G0-a: L23
-  meta-vs-recomputed max dev 2.08e-4 (own_w4)/5.5e-5 (P2) — совпало с независимым замером
-  ревьюера; env: python 3.13.14/numpy 2.5.2/4 тр.; run-лог logs/AT0/AT0_1_run.log (tracked).
-  Round-1 .gz/hash-реестр/осиротевшие блобы удалены (MAJOR-4; паралл. сессия тоже чистила).
-  MAJOR-3 (git-пины): заблокирован командой юзера «не коммитить без команды» — числа AT0_1
-  не цитируются до коммита (согласовано с ревьюером r2).
-- DONE: r2-ревью чисел (docs/AT0_1_review_r2_numbers.md, ревизия ROUND-2 артефакта 8dec738f):
-  все числа бит-в-бит, но CRIT-1 — null статистики П4 ≠ 0 (E[ρ̄(k)−f] = −(1−f)/(N−1) ≈ −1/N;
-  block-2 null: h_raw p=0.883, du p=0.533, v_t p=0.000) → вердикты р2 перевёрнуты. MAJOR-1: p-values П5
-  от Binomial(53, 0.5) — неверный null. MAJOR-2: полоса/агрегатор/DELTA_MIN не пре-рег. MAJOR-3: git-пины
-  (блокировано командой юзера «не коммитить без команды»). MAJOR-4: исход A G10 недостижим (Σ‖Δu‖² ≥ 19.3).
-  План r4: matched null в скрипте (block-2 permutation, 60 сидов, blk=2 сохраняет лаг-1 = DC+MA(1)) +
-  p_perm в артефакт; П5 — sign-тест против matched null + канал по уровню (σ); G10 reword; G3 norm/window;
-  заметки (gram_resid-путь, K=96-обрезка); ответ — docs/AT0_1_answers_r2.md (спорь по пунктам).
-  Итог r4 (store 1af1e9f3c1f14ba8, wall ≈ 25 мин, rev.4 sha dc5bc3b2700059d2): П4 — все три объекта
-  refuted против matched null (p_perm = 0.016, минимум достижимый; h_raw/du: плато ВЫШЕ null на
-  +0.0018 — зеркало анти-dip k=2..8 по тождеству G1; v_t: положительное плато +0.0019, gap ≈ 25σ);
-  П5 — confirmed у всех трёх (h_raw/du анти-горб σ_e3 = −11.4/−12.3; v_t горб +14.4, sign p = 0.016);
-  G10 reword (исход A недостижим); G3 norm/window гейт; guard N>32 у П5; gram_resid path_note.
-  Верификация чисел ревьюера — независимая (все ключевые числа подтверждены; расхождение null-доли
-  плюсов 0.36–0.40 vs 0.21 — перестановочный шум, не влияет на вердикты). Коммит — по команде юзера.
-- DOING (было): ре-ревью round 3 → итерации до согласия. (Субагенты at01r3A/B упали — лог обрезан;
-  их экспериментальные store-блобы 3a6a18ee/4f53d302 — удалить.)
-  Данные: /data/prism_kernels/exp62/gen_layers_qwen.npz (64 дока × L{1,5,11,17,23}, u (384,1024)
-  fp16 unit + hn + tok, meta с gen_sha); results/e64/tpu_v8/P1_own.npz + P2_corpus.npz (16+16 доков,
-  L{1,5,11,17,23}, (T,1024) fp16 raw, T=384 own / 124..255 corpus; P1 c _hn (баг продюсера), P2 без
-  hn/tok); gen_RAND_T0.0/T1.0_qwen.npz (R-клетки, 704 ключа, meta {T, rand, docs}); LADDER_V2.json
-  (якорь dip_V,med L23 nonwiki nonloopy = −0.0722, оценщик curve_u == Vpath — один и тот же);
-  t25_ekurve.json жив в /tmp/e63_rerun (не в репо).
-- NEXT: AT0_2b (R/A-split ACF), AT0_3 (кто несёт площадь, знак: нечётные k), AT0_5 (DC+MA(1)→VAR
-  лестница per-doc), AT0_4 (3×2 CPU-форварды — волна 2, ~4 ч, после волны 1).
-- Границы: не менять exp62/e64/tpu_v8 данные (read-only); не коммитить без команды
-  (G1′ требует field.py в git — коммит только после явной команды); не трогать файлы
-  параллельной сессии (docs/models/corr/, experiments/e41_50/_exp40a_docs.py); CPU numpy ≤4 тредов.
-
-## AT0_1 — r7: независимая повторная верификация (§5, 15.11) — PASS, 4 MINOR космет.
-
-- Второй независимый ревью-проход (docs/dynamic/AT0_1_r7_REVIEW.md §5): цепочка provenance
-  закрыта и воспроизведена (de305869 → store+run.log bit-eq → r5 d4a4b101 → r6 b0f74312 →
-  r7 v1 22302261 → r7 v2 82f44f08); C1–C7 независимо пересчитаны (153/153 z-статистики bit-eq);
-  вердикты P4/P5 не тронуты. **Вердикт: PASS, MAJOR: нет.**
-- 4 новых MINOR (косметические, числа claim не меняют; не блокируют закрытие):
-  R3A — CWD-относительный путь `experiments/at0/at0_1_r6_annotation.py` в v2-скрипте
-  (fail-safe, работает под run_one.sh); R3B — thread-нота c1_c4_note неоднозначна
-  (6 тредов = аннотация r7; 4 = перепуск r5); R3C — env аннотационного прогона
-  (python/np) не свёрнут в chain; R3D — def z_raw_band ulp-неточность текста
-  («mean_band/se» vs r5-формула ((s_doc+f_dc)/se), 10/153 док).
-  Закрытие — опциональный r8-cosmetic (текст/пин-правки + перепуск аннотации); на сейчас —
-  зафиксированы как известные. docs/AT0_1_review.md — новый external-проход (r6-эра,
-  C1–C7) — учтён в r7 (C1–C7 закрыты фактом).
-
-## AT0_2 — T0.2 «Форма профиля при фиксированной сумме» (13.11)
-
-ТЗ: docs/TZ_add_0-3.md §1.5 T0.2 (disk-only, ~40 мин). Г7 ⇒ «Σ против полосы» вырожден;
-estimand — форма профиля (доли площади по полосам, нормировка на (r−1)/2 = sum_rho_full,
-тождество G1) + расстояние профилей real vs null.
-
-- Запрос (фиксация): objects h_raw/du_unit/v_tangent × 96 доков × L{1,5,11,17,23} (L1-TPU
-  degraded — absent: ровно own_w0, own_w4, как AT0_1 excluded_L1; 1440 ключей = 1434
-  обычных + 6 absent). Полосы ТЗ буквально: {1},{2},{3..8},{9..32},
-  {33..96}; хвост {97..N−1} — отчитан отдельно (скаляр), в вектор профиля не входит
-  (объявленная K=96-обрезка, урок AT0_1). Расстояние: L1 (основное) + L2 (отчёт) по
-  5-компонентному вектору долей. Null'ы (ТЗ): iid-перестановка строк (full independence),
-  blk-shuffle БЕЗ seam-exclusion b∈{2,4,8,16,32} (локальность), AR(p) per-dim Yule-Walker
-  на demeaned, p∈{1,2,4} (линейный процесс; Σ отчитывать отдельно — r_AR своё), Fourier
-  phase-randomization (zero-padded ≥ 2N−1, per dim) = POSITIVE CONTROL: обязан воспроизвести
-  ρ̂ до 1e-6 и r точно (проверка ДО интерпретации null'ов). Seam-excluded blk — только
-  отдельный оценщик (within-block k<b), Σ с real НЕ СРАВНИВАТЬ.
-- Пре-рег (зафиксировано ДО прогона): B = 20 сидов на (iid/blk/AR), отдельный сид на
-  (док, s): seed = 2026 + doc_idx·1009 + s; fourier B=3 (только контроль). p_doc =
-  (#{s: D_s ≥ D_center} + 1)/(B+1), D_center = ‖P_real − mean_s(P_s)‖. Вердикт (obj,null)
-  (реализованное правило, N4: старая pooled-формула p_agg удалена): D_real/D_null —
-  per-doc mean по L, cluster-бутстрап по докам (B=1000, seed=117); not_testable если
-  D_real < пол-ширины его CI (DELTA_MIN, §0.4 — до интерпретации); refuted если D_real
-  выше CI_null; confirmed_anomaly если ниже; confirmed если внутри. frac_cells_p_lt_alpha
-  (p_doc < 0.05) + n_docs_unique_p_lt_alpha — описательные, в вердикт не входят.
-  Пре-рег-файл: docs/AT0_2_prereg.md (текст = хедер; ревью-луп пройдён ДО прогона).
-  G-гейты: G2 (1440 ключей set-равенство + absent = 6), G7 (hash-store+claim+manifest+run.log),
-  G8 (gram_resid < 1e-10
-  на real-клетках), positive-control gate (круговой ACF max|Δρ̂| < 1e-6, |Δr_full| < 2e-4;
-  линейный ACF — wrap-член, отчёт), G7-invariance
-  (permutation-null'ы: |r_null − r_real| ≤ 1e-9), profile-sum = 1 (5 полос + хвост) на каждом
-  realization, AR σ²-гейт (σ² ≤ 0 ⇒ fail-loud счётчик), r≈1-гейт (|sum_rho_full| < 1e-6 ⇒
-  клетка absent-degenerate).
-- DONE: [x] PLAN-секция; [x] скрипт experiments/at0/AT0_2_shape.py; [x] смоук (гейты:
-  G1/G1′+пін ACF (cumsum≡per-lag≡FFT, batch), G2 30/30, G8, G7-inv, positive control;
-  поймано в смоке/пинах и исправлено: FFT по feature-оси вместо time, Nyquist-бин в
-  phase-rand, batched-axis'ы, einsum-индексы, rfft∘irfft-пін, axis batch/time в
-  band_sums_direct (пин поймал), einsum "btd,btd->" (сумма по batch) → "->b" (пин поймал);
-  оптимизация: bandsums через cumsum (10 проходов вместо 96 лагов) — 22→4.5 с/клетку,
-  полный прогон ~108 мин; [x] ревью-луп: раунд 1 (docs/AT0_2_REVIEW.md, BLOCK: N1 полный
-  прогон не сделан / N2 smoke затирает production / N3 нет пре-рег-файла / N4 хедер p_agg
-  ≠ код / N5 бутстрап по клеткам) → фиксы + переработка внешнего ревьюера (нашёл в ней
-  KeyError frac_docs_p в финальном logline — полный прогон срывался бы после store/claim,
-  до run.log) + мои фиксы (N5-домены per-doc, n_docs_unique_p_lt_alpha) → раунд 2
-  (docs/AT0_2_REVIEW_r2.md, субагент pi -p read-only + само-ревью
-  docs/AT0_2_selfreview_r2.md: PASS / PASS_WITH_MINORS; MINOR G2-smoke guard (not smoke)
-  и COSMETIC терминология p_cell→p_doc исправлены, file-хэндлы отклонены с аргументом);
-  [x] ревью-раунд 3 (docs/AT0_2_REVIEW_r3.md; принято: #1 доменный гейт по ДОКАМ —
-  code(8)/chat(11) теряют доменные утверждения (клетки 40/55 ≥ 12 проходили по старому гейту),
-  #4 G0_sources в claim (P2_corpus 0/16 tok → not_testable, G16; P1_own 16/16 + probe),
-  #5 мёртвая n_l1_absent; отклонено с аргументом: #3 (a1.load_source пересчитывает ‖row‖
-  из сырых строк, _hn не трогается; gen-hn scale-замер dev≤0.009 vs порог 0.2; добавлен
-  fail-loud пин), #2 (p_doc ≥ 1/(B+1)=1/21 конструктивно, знак sum_rho — свойство суррогата;
-  добавлен note), #6 (assert — fail-loud, G8 — записанный гейт), #8 (tail = 1−Σ₅band, L1₅ ≥
-  |tail_r−tail_n|), #9 (bootstrap по параметрам — YAGNI), #10 (hi=min(hi₀,N−1) ≥ lo при
-  lo≤N−1 — мёртвый код);
-  [x] ревью-раунд 4 (docs/AT0_2_REVIEW.md → ответы docs/AT0_2_REVIEW_r4.md, ревью
-  заморожено в AT0_2_REVIEW_r4_review.md; принято: A частично — state-ветка unit-пин
-  регресс-гард (ревью прав), gen-ветка (npz только _u/_hn, raw h нет) unit-пин на _u —
-  реальная проверка (dev 2.43e-4), НО нашёл и исправил свой неверный комментарий о
-  scale-пине: это однородность row-скал (sdev≈CV²/2, ловит CV≳0.63), константный _hn
-  проходит → residual_risk записан в claim (G0a_hn_field), гейт вынесен в g0a_hn_gate
-  (F) + 4 designed-теста exec'ом (реальные PASS / state-регрессия CAUGHT / gen CV≈1
-  CAUGHT / gen constant PASS=limitation); B — механизм sign-dependence верен, но в данных
-  signs совпадают (AR-фит наследует знаки ACF real; frac same-sign ≥0.90/cell, mean 1.00;
-  D_center flip-invariant по всем 9 парам) → per-cell frac_cells_seed_sign_mismatch +
-  sign_check_ok + note + pre-reg (метрика D_center не меняется); D per-cell — принято;
-  E — note «если verdict'ы расходятся — решает verified-only» (дублирующее поле не нужно —
-  verdict'ы и так в aggregates_verified_only); G — confirmed_anomaly интерпретация в pre-reg;
-  H — D_bands_L1 помечен reportable only; отклонено: C (guard lo>hi — мёртвый код, инвариант
-  lo≤hi в BANDS + N−1-guard до min; комментарий вместо ветки);
-  [x] ревью-раунд 5 (docs/AT0_2_REVIEW.md → ответы docs/AT0_2_REVIEW_r5.md, ревью
-  заморожено в AT0_2_REVIEW_r5_review.md; все пункты minor, ревью: «ни один не
-  блокирует»; принято 8/8: A — degenerate h (‖row‖<1e-12) → fail-loud, desired,
-  зафиксирован в docstring+claim.edge (тест CAUGHT); B — guard на пустой класс docs
-  (2 теста CAUGHT); C — обоснование порога 0.1 в note (эмпирический, замер ≤0.01,
-  при 0.5 — знаки случайны); D — пермутированный _hn в residual_risk (mean/rms/CV
-  инвариантны к перестановке; guard-предложение ревью = тавтология); E — assert lo≤hi
-  после continue (тесты: BANDS PASS / (10,2) CAUGHT); F — verifies-поля в claim
-  (state: только нормализация, hn доказана конструкцией); H — meta.n_docs_verified=80;
-  I — meta.confounds_note (P2_corpus — единственный конфунд); G — согласен (t25 = AT0_1);
-  J–O — проверки ревью, все OK);
-  [x] само-аудит (positive control первым, mixed-script scan — поймано «парach»);
-  [x] orphaned smoke-store b870e6a791567507.json удалён (smoke=True, пред-r2 артефакт);
-  [x] полный прогон #5 (./run_one.sh at0_2_full, 13.11, ~2 ч 5 м; прогон #4 остановлен
-  на ранней стадии — фиксы раунда 5 меняют claim-текст, правило 7 → перепуск):
-  gates ALL PASS, RUN_RC=0; store 5b05537017013a4f (480 клеток, 30/30 ключей G2);
-  числовые значения клеток — бит-в-бит с прогоном №1 (0 численных расхождений; только
-  новые поля D_bands_L1/sum_rho_real + текст AR-note из раундов 3–4);
-  ВЕРДИКТЫ: все 27 (obj×null) — REFUTED (h_raw: iid D_real 1.5328 … blk32 0.2172;
-  du_unit: 1.5328 … 0.2192; v_tangent: 0.3437 … 0.1244) в обоих пулах (96 и 80),
-  расхождений verdict'ов между пулами: 0; sign_check_ok=True по всем 9 AR-null'ам
-  (seed sign-mismatch ≤ 0.0002); meta.n_docs_verified=80, confounds_note, verifies/edge
-  на месте; артефакты: AT0_2_SHAPE.json / AT0_2_manifest.json / AT0_2_run.log;
-  [x] PLAN-обновление с числами. (Коммит — по команде юзера, как AT0_1.)
-  Важно: positive control — круговой ACF ≤ 1e-6 и r (полный ряд) ≤ 2e-4 (сохранены
-  конструкцией ТОЧНО); линейный (обрезанный до N) ACF первых N сэмплов у any
-  spectrum-preserving суррогата отличается на wrap-around хвостовой член — отчитано
-  отдельно (max|Δρ̂_lin| wrap) с пометкой «свойство, не баг» — ТЗ 1e-6 для линейного
-  ACF не выполнимо конструктивно.
-
-### AT0_2 раунд 6 (docs/AT0_2_REVIEW.md, 14.11 — «машина: PASS with caveats; ответ T0.2: REVISE»)
-
-- Запрос (фиксация): E1 estimand drift (Σ-band vs shape-distance); E2 blk-null без
-  seam-exclusion не чистый locality-null (w(k,b)=max(0,1−k/b)); E3 B=20 → p-floor 1/21 —
-  saturated p-counter; E4 aggregate через separate CI, не paired difference; E5 AR-
-  diagnostics неполные, AR1/AR2 refutation ≈ тавтология; E6 primary pool 96 vs 80 не
-  закреплён; E7 degen (loopy) в агрегате; E8 h_raw_gen conditional on hn; M1 Wilson >1;
-  M2 descriptive_/tested_ prefix; M3 multiple comparisons — pre-register primary;
-  M4 DELTA_MIN pre-registered; M5 confirmed_anomaly semantics.
-- DONE: [x] разбор: E1 — цитата ревью устарела: ТЗ v1.2 G7 «Σ против полосы ВЫРОЖДЕН»,
-  estimand = форма при фиксированной сумме (проверено в TZ_add_0-3.md:272/355); фикс =
-  явная декларация + численная проверка Σ-инвариантности + AR Σ-mismatch caveat.
-  E2: within-block estimator на blk-null ≡ real (блоки нетронуты) — алгебраический
-  identity-check в клетке ⇒ seam-excluded within-block не может быть null'ом; фикс =
-  wording (damped/seamed null) + P3-ladder как locality-прибор.
-- DOING: [x] код: B_NNULL=199 (p_floor 1/200, T0.1-стандарт; сиды 0..19 — репродукция
-  round 1), DELTA_MIN=0.05 pre-registered, paired-delta verdict (E4/M4/M5), Σ-degeneracy
-  декларация (E1), blk-wording + identity-check (E2), AR diagnostics: max_root/
-  n_nonstat/burn_mix/clip_frac/rho1..4 match (E5), pools: primary=verified∩nondeg (37)
-  + sensitivity 80/96 (E6/E7), object provenance (E8), Wilson clamp (M1), rename
-  tested_/descriptive_ (M2), primary family pre-reg (M3);
-  [x] само-аудит + смоук (RC=0, все гейты вкл. новый G-seam) + дизайн-тесты (paired
-  bootstrap на синтетике, AR roots, seam identity N%b≠0, репродукция: per-seed r_null/DtoN
-  + real — бит-в-бит с round 1 на 4 клетках; per-seed Dnull — НЕ гейт, зависит от B);
-  [x] пойман и исправлен latent-баг round 1: null_blk_seam_excl фиксированная сетка
-  сдвигала блоки после короткого N%b≠0 (seam-prof b=4/8/16/32 rounds 1–5 загрязнены;
-  b=2 проходил — 382 делится на 2); mixed-script: «Mеханизм» (лат. M) — поймано,
-  правка → перезапуск прогона (правило 7: sha-согласованность);
-  [ ] ПОЛНЫЙ ПРОГОН B=199 (запущен 14.11 ~10:40, setsid nohup, OMP=8, ~10–14 ч);
-  [ ] ответка docs/AT0_2_REVIEW_r6.md + docs/AT0_2_prereg.md round 2 (готовы);
-  [ ] PLAN-обновление с числами. (Коммит — по команде юзера, как AT0_1/AT0_2.)
-- Границы AT0_2 r6: read-only данные; не менять field.py/AT0_1/AT0_3/AT0_5; старый store
-  5b05537017013a4f — не трогать (референс репродукции); AT0_5-прогон — не прерывать.
-- Границы AT0_2: read-only данные; не менять field.py/AT0_1 (импорт load_source — как есть);
-  один процесс ≤4 тредов; store/claim/manifest в results/AT0/ (AT0_2_SHAPE.json — claim).
-
-## AT0_2b — T0.2b «R/A-split: кто несёт DC» (14.11, «AT0_2b сделан? нет — надо»)
-
-ТЗ: docs/TZ_add_0-3.md §1.5 T0.2b (disk-only, ~20 мин). Ядро уже в пинненном
-prism/field.py (G1′): ra_split (G6 точный Δh = r̄·Δu + Δr·ū), cross_acf («для T0.2b»),
-acf_moments, f_dc, degen — AT0_2b = тонкий драйвер, ничего не переизобретать.
-
-- Запрос (фиксация): 96 доков × L{1,5,11,17,23}; L1: absent own_w0/own_w4 (то же правило
-  L1-TPU degraded, что AT0_1/AT0_2) → 1440 ключей, n_absent = 6 (пин). На клетку: (1) G6-гейты
-  fail-loud: closure REL ≤ 1e-12 (ТЗ G6′: scale = max‖Δh‖²), additivity REL ≤ 1e-12
-  (Δh = radial + angular точно), ⟨Δu_t,ū_t⟩ ≤ 1e-9 (ортогональность — только при равных t);
-  (2) f_dc(R), f_dc(A) (G3) + SIGN-FLIP null B = 199 (p_floor 0.005, стандарт серии, урок E3;
-  перестановка для f_dc вырождена — mean инвариантен к reorder, дизайн-решение зафиксировано
-  в пре-реге §4): p_fdc = (#{s: fdc_s ≥ fdc_obs}+1)/(B+1), DC-присутствие p < 0.05;
-  (3) ACF k=1..96 (FFT, a2.acf_full) для R и A + G1-пин r = 1+2Σρ̂ на каждом компоненте;
-  (4) кросс-лаги cross_acf(R,A,K), cross_acf(A,R,K), норм. √(c0_R·c0_A) — ОЧЕРЕДНО (ТЗ: «отчитать»,
-  вердикта нет). Пулы: all_96 / primary (verified∩nondeg, флаг AT0_2, пин n = 37)
-  / loopy (degen). Сиды: seed = 2026 + doc_idx·1009 + s, doc_idx ГЛОБАЛЬНЫЙ по 96 (конвенция
-  серии, AT0_3 r3.2).
-- Вердикт (L, пул) — пре-рег (docs/AT0_2b_prereg.md): RADIAL_DC (frac_docs(R-DC) > 0.5 И
-  med fdc_R > 1.1·med fdc_A); ANGULAR_DC (зеркало); MIXED (оба > 0.5); NO_DC (оба ≤ 0.5).
-  Интерпретационная карта ТЗ: RADIAL_DC ⇒ плато T0.1 = рост нормы; ANGULAR_DC ⇒ когерентный
-  поворот; NO_DC ⇒ DC нет, плато — остаток T0.5 (VAR).
-- DONE: [x] PLAN-секция; [x] docs/AT0_2b_prereg.md (зафиксирован ДО прогона);
-  [x] experiments/AT0_2b_ra_split.py (драйвер на field.py + a2.acf_full + a1.load_source);
-  [x] само-аудит (чек-лист AGENTS.md); [x] дизайн-тесты (радиальный рост → RADIAL_DC;
-  когерентный поворот → ANGULAR_DC; iid → NO_DC; closure на синтетике);
-  [x] смоук (--smoke, rc=0, артефакты не пишет — паттерн AT0_2).
-
-### AT0_2b exec-review r1 (docs/AT0_2b_review.md, 14.11): «R/A decomposition PASS / verdict REVISE»
-
-Ревьюер видел актуальный файл (все цитаты сверены с диском ae1d9452). Полный прогон ЕЩЁ НЕ
-запускался — правки идут ДО первого прогона (чистый случай, без rebuild). Петля: правка →
-само-аудит → повторный ревью-проход (по пунктам, по коду+артефакту) до PASS.
-
-- C1: verdict игнорирует вклад компонент в net displacement Δh (share_rad/ang/cross
-  считаются, но не используются; cancellation не виден) → NEW: carrier_verdict по
-  contrib_R = share_rad + ½·share_cross, contrib_A = share_ang + ½·share_cross (half-cross
-  attribution), пороги: CI95_low(contrib_X) > 0.5 И med_X > med_Y; CANCELLED: cross_med < −0.5
-  И rad_med > 0.5 И ang_med > 0.5.
-- C2: DC-присутствие самого Δh не гейтит вердикт → NEW: cell: p_fdc_dh,
-  fdc_dh_perm_median, dc_present_dh; pool: dh_frac_dc, dh_fdc_med, dh_p_med; гейт:
-  dh_frac_dc > 0.5 И dh_fdc_med ≥ DELTA_MIN_FDC = 1/383 (E[fdc|null] = 1/N) — иначе NO_DH_DC.
-- C3: frac_dc/1.1 без uncertainty, n_present не виден → NEW: n_cells (present),
-  radial/angular_n_present, absent_frac; paired bootstrap CI (B=2000, seed 117+pool_idx) для
-  med fdc R/A, ratios med_R/med_A (оба направления), med contrib R/A и их ratio; dominance-rule
-  v2: frac > 0.5 И CI95_low(ratio) > 1 (множитель 1.1 убран).
-- C4: sign-flip = MEAN-DIRECTION null (фиксирует ‖x_t‖, НЕ сохраняет ACF/telescoping/bounded
-  path) — не ACF-matched spectral null, не сопоставим с T0.1/T0.2 spectral DC → явное имя в
-  docstring/null_note/claim.
-- C5: n_docs в _pool_stats — переименовать n_cells + per-component n_present (absent L1/
-  dh_zero вычитаются caller'ом, но компонентные absent-дегенераты — нет).
-- C6: decode-probe skipped ⇒ meta.provenance_limited = content_sanity_skipped
-  (decode_probe_status: ok|skipped), не просто «G0 sha ok».
-- C7: store_sha256/manifest_sha256 — canonical PAYLOAD hash (self-field None), не sha файла
-  (в файле поле заполнено) → записать конвенцию + file_sha256 для store/claim в claim/manifest.
-- M1: energy-additivity гейт: |c0_dh − c0_R − c0_A|/c0_dh ≤ 1e-12 (fail-loud, n_gate["energy"]).
-- M2: vt_plateau — явно «descriptive, не часть вердикта» (claim note).
-- M3: radial/angular_absent_frac в агрегате (survivor-bias frac_dc) — в составе C3.
-- Пререг: §5 → v2 (заменено ДО первого прогона; оба вердикта + пороги + гейт), §4 —
-  уточнение null (C4), §6 — contrib, §7 — отчёт (новые поля), §3.6 — M1.
-- DOING: [ ] код AT0_2b_ra_split.py (C1–C7, M1–M3); [ ] пререг v2;
-  [ ] py_compile + дизайн-тесты (bootstrap-детерминированность, ветки verdict-лестницы,
-  contrib sum = 1, energy-гейт, NO_DH_DC-гейт); [ ] смоук; [ ] полный прогон (setsid nohup);
-  [ ] аудит артефакта; [ ] ответка docs/AT0_2b_review_answers.md (принято/спорю/самокоррекция);
-  [ ] ревью-проход 2 (петля до PASS); коммит — по команде юзера.
-- NEXT: [x] коммит (явные пути) — 15.11 (см. ниже).
-- Границы: не менять field.py (пин), AT0_1/AT0_2/AT0_3/AT0_5 скрипты, данные (read-only);
-  CPU ≤4 тредов; артефакты results/AT0/AT0_2b_*; не трогать файлы параллельной сессии.
-  Правило 7: AT0_2_shape.py сейчас В ПРОГОНЕ — не редактировать (2b от него только импортирует
-  a2.acf_full из файла на диске на момент запуска — зафиксировать: файл не менялся со старта).
-
-### AT0_2b — ЗАКРЫТ (15.11): pre-run r2+r2b PASS, полный прогон, данные
-
-- Pre-run-ревью-луп: r1 (exec-review, C1–C7+M1–M3) → r2 (docs/dynamic/AT0_2b_REVIEW_r2.md):
-  **PASS_WITH_MINORS, 0 MAJOR** (4 MINOR: carrier not_testable-клетки с причинами, CI в claim,
-  energy-gate, file_sha256). Ответка: docs/dynamic/AT0_2b_REVIEW_r2_answer.md.
-- Pre-run протокол v2 (docs/AT0_2b_prereg.md) — verdict-правила ДО прогона: carrier
-  (floor-gate по |Δh_null| + energy-gate), anti-correlation (n_absent=2, L1/L23, |r|>0.25);
-  claim + cell-list (18 клеток) + energy-threshold rationale. Fail-loud поймал v1-пин
-  (n_absent = 2, не 6: own_w0/own_w4 × L1) — исправлено ДО данных.
-- Полный прогон v2 (15.11, RC=0, gates ALL PASS): **Δh (full − null) не содержит DC-компоненту
-  ни в одном пуле/слое** (carrier не проходит floor-gate; floor = |Δh_null| ≈ 3e-17); угловая
-  составляющая ≈ 100% net displacement (L23: net 99.85% / 103.87%); P2 (corpus) ≠ P1 (own);
-  L11 — единственная явная анти-корреляция (−0.0465…−0.0012, L17/L23 loopy).
-- r2b (4 MINOR закрыты в скрипте, re-run RC=0, cells bit-eq с v2): addendum к r2 —
-  **VERDICT PASS** (предыдущий FAIL файла — чтение старой версии ревьюера; 956 численных
-  листьев bit-eq; 202/202 строк лога дословно). 1 NIT (manifest-note «run_log = stdout
-  (tracked)» — 1 строка field.py print вне logline()) — принят без реран, зафиксирован в
-  ответке §5.
-- Артефакты (закоммичены): results/AT0/AT0_2b_RA.json (claim, file sha 014bf176246540aa),
-  AT0_2b_manifest.json (a100dcf9), AT0_2b_run.log, store/15ad06bdae5c14c5.json (canonical
-  payload, 4.4M, file sha f8615708). v2 store (b7e90c93, superseded) — на диске, pин по sha
-  в r2b-ревью.
-
-### AT0_2b — r3-ревью: минимальный патч F1–F4/M1–M3 (docs/AT0_2b_review.md заменён на ACCEPT-revю v2/v2.1, 15.11)
-
-Запрос (фиксация): «Косметика, смотри, правь, через петлю субагента». Ревью: v2/v2.1
-ACCEPT по всем заявленным фиксам; «минимальный патч» (§8 ревью) — всё из store, без
-пересчёта клеток: F1 — reachability-декларация (carrier-ветки недостижимы, dh_frac_dc = 0
-в 15/15); F2 — radial-диссоциация (лупо-специфичность) в primary summary; F3 —
-CANCELLED_GEOMETRY до dh-гейта + величина компенсации 1 − share_cross с CI; F4 — per-cell
-identity residual как гейт-число + ratio_of_means + note о неаддитивности медиан; M1 —
-note про skewed sign-flip null (radial-медиана 20–35% ниже 1/N — ожидаемо); M2 —
-p_anti = (#{null ≤ obs}+1)/(B+1) descriptive; M3 — ratio CI только при CI_low(знаменателя) > 0.
-
-- DONE:
-  [x] Верификация чисел ревью по store (всё совпадает; ОБНАРУЖЕНЫ ОШИБКИ ЛЕБЕЛЕЙ у
-  ревью: в таблицах F2/F3/F4 слои перепутаны — «all_96 L11» = loopy L11, «all_96 L23» =
-  all_96 L1, «38× на L23» = на самом деле L1; в F1 «all_96 L1» = L17; значения — настоящие
-  store-строки, подписи неверны → исправленная таблица в ответке). F1-текст ревью написан
-  против v2-порядка; после F3 реализованный вердикт — CANCELLED_GEOMETRY 15/15, не NO_DH_DC.
-  [x] Патч experiments/AT0_2b_ra_split.py (r3): CANCELLED_GEOMETRY до dh-гейта (старая
-  CANCELLED-ветка убрана — поглощена); compensation = 1 − share_cross per cell + пул med/CI95;
-  p_anti в sign_flip_fdc (4-tuple; все call-сайты обновлены); identity_resid per cell +
-  fail-loud гейт ≤ 1e-12 + gate_max[identity]; share mean (ratio_of_means — суммы = 1);
-  M3 ratio-гейт; M1 null_note; claim: round 3, prereg.verdict_rule обновлён + reachability,
-  summary (диссоциация + компенсация, числа из agg), pool_note, manifest round/note.
-  [x] Re-run disk-only (~10 мин CPU, НЕТ новых форвардов; клетки детерминированы сидами);
-  самосверка: клетки bit-identical к v2/v2.1 store 15ad06bdae5c14c5 (480/480, все старые
-  поля; новые: p_fdc_anti, p_fdc_dh_anti, identity_resid, compensation); store
-  623ba0494dca5c32 (canonical sha = имя; file sha d4ca7f10…); claim round 3 (file sha
-  48be4872…); manifest; run.log RC=0 gates ALL PASS (identity max 2.84e-14); вердикты
-  15/15 CANCELLED_GEOMETRY; p_fdc_dh_anti = 0.005 (floor) в 478/478; share means sum = 1
-  во 15/15; промежуточный store 5fc4121379d9265a (r3-атtempt 1 с wrong-headline) удалён.
-  [x] docs/AT0_2b_prereg.md — addendum §9 v3 (scope-коррекция ревью: новый порядок,
-  reachability, compensation, p_anti, M3-правило, identity-гейт; клетки не пересчитаны —
-  детерминированный re-run, без форвардов).
-  [x] docs/AT0_2b_review_r3_answers.md — по пунктам F1–F4/M1–M3 + спор про лейблы таблиц
-  (исправленные таблицы — все числа пересчитаны из store, CI-таблица сверена с claim)
-  + F1-текст после F3 + реализация M2 (re-run null на тех же данных, disk-only —
-  null-выборки в store не хранились).
-  [x] docs/dynamic/AT0_2b_REVIEW_r3_prompt.md — промпт для субагента-ревьюера (12
-  обязательных проверок).
-  [x] Петля субагента: фон-`pi -p` (obleth + ngenix-llm, --name at02b_r3_review) →
-  **VERDICT: PASS_WITH_MINORS, 0 MAJOR** (2 MINOR + 4 NIT; все 12 проверок пройдены,
-  все 4 лейбл-утверждения ответки независимо подтверждены). Фиксы: MINOR-1 (decode_probe
-  skipped = venv-регрессия, не данные — строка в claim.gates.note), MINOR-2 («в 4 из 5
-  луповых слоёв», не «во всех пяти»), NIT-3/4/5 (хедер-вердикты, «ровно 1−sc, sr+sa в
-  пределах identity_resid», окружение в claim.note) — в скрипте; NIT-4/6 — словесно в
-  ответке/пре-реге. Финальный r3-прогон: store f339894ff5e71108 (клетки 480/480 = пред.
-  r3-прогон = v2/v2.1 старые поля), claim 1c49f784…; промежуточный 623ba049 удалён.
-- DOING: [ ] коммит — ПО КОМАНДЕ (явные пути: PLAN.md, docs/AT0_2b_review.md (ревью
-  пользователя), docs/AT0_2b_review_r3_answers.md, docs/AT0_2b_prereg.md,
-  experiments/AT0_2b_ra_split.py, results/AT0/AT0_2b_RA.json, AT0_2b_manifest.json,
-  AT0_2b_run.log, store/f339894ff5e71108.json (force-add), docs/dynamic/AT0_2b_REVIEW_r3_prompt.md;
-  superseded stores b7e90c93 + 15ad06bdae5c14c5 — остаются на диске, sha зафиксированы в
-  ответке (практика r2b: не удалять без команды))
-- Границы (не менять): НЕТ новых форвардов (disk-only re-run на тех же npz, sha данных
-  сверяются скриптом); prism/field.py не трогать (sha в claim); клетки v2/v2.1 —
-  bit-identical (детерминизм сидами); docs/TZ_add_0-3.md не трогать; файлы параллельной
-  сессии не трогать; .trackio не трогать (см. урок trackio в AT0_4-блоке).
-
-### Инцидент: удалён untracked-каталог artifacts/ (15.11 ~16:40)
-
-- Между 16:35 и 16:45 внешним процессом удалён untracked-каталог `artifacts/` (старая рабочая
-  область: устаревшие pre-run-доки, старые claim'и, старые версии review-доков). Триаж:
-  rtk-history сессии — ни одного rm/mv/find-delete; cron'ов нет; kaggle_daemon не трогает;
-  машина используется (IDEA crash → hprof 3.4G, pi/pig-сессии, reboot в interactive-истории).
-  Причину однозначно не установить.
-- **Авторитетных данных потеряно НЕ БЫЛО**: все финальные артефакты в git или results/AT0/
-  (canonical store-claim'и AT0_1 закоммичены; AT0_2/AT0_3/AT0_4 — results/AT0/*; AT0_2b v2.1 —
-  results/AT0/ + store, sha совпадает с PASS-ревью). Утраченные файлы — superseded дубликаты.
-- Профилактика (правила на будущее): (1) артефакт (claim/manifest/log/store) коммитить
-  НЕМЕДЛЕННО после PASS-ревью — не держать untracked; (2) не оставлять untracked-каталоги
-  с «каноническим» именем (artifacts/) — риск ложной уверенности; (3) store >10MB — только
-  gz (правило репо), коммитить финальную версию.
-
-## AT0_4 — exec-review r3 (C1–C6, R1–R3), агрегационный патч БЕЗ форвардов (14.11)
-
-- Запрос (фиксация): «добавил ревью ./docs/AT0_4_EXEC_REVIEW.md, читай, думай, исправляй».
-  Ревью: engineering PASS with caveats / scientific REVISE. Ребьюер видел АКТУАЛЬНЫЕ файлы
-  (disk sha a4b7a138 = sha из rebuild-лога; r2 = PASS с 2 КОСМЕТИКА, одно из которых —
-  wording «random order-invariant» — и есть C2).
-- ВЫЯСНЕННО (верификация по коду/артефактам):
-  - C2 подтверждён: P4 6/6 null по медиане, но own_w4 6/6 и own_w0 2/6 ≥ 0.1 — headline
-    «order-invariant» overclaim.
-  - C3 подтверждён ЧИСЛОМ: P3 per-doc 6+/2−, exact sign test p = 0.289 — «confirmed»
-    (знак медианы 0.0158) — overclaim; P5 — точное зеркало (p = 0.289).
-  - C4 ЧАСТИЧНО ОСПОРЕН: «r ~ 1/N» — неверно (для iid-шагов E[r]=1 — это и есть априорный
-    смысл бэнда [0.75,1.5], prereg v3 §5); бэнд НЕ arbitrary; r_max≥1 = low-motion гейт
-    (c0≤4) — уже объявлено a priori в v3.1 (vacuous — наиболее вероятный исход; измерено:
-    3/3 vacuous, c0 13–393, r_max 0.013–0.31). Принято: diagnostics + синтетический нуль.
-  - C5 подтверждён: h = hidden_states[24] (до lm_head) — hidden-state r идентифицирует
-    только input-эмбеддинг; head не входит в hidden-траекторию.
-  - C6.1/C6.2/C6.3 подтверждены кодом: telescope — разница НОРМ (не вектор); ckpt пишет
-    script_sha256, но load_ckpt его НЕ проверяет; `g.get("ok", True)`.
-  - R1: sha-цепочка на диске валидна (пересчитано). R2: старый store 71d3b5d868ed00c7
-    никогда не коммитился (r1: «все файлы untracked») → полный sha НЕвосстановим;
-    16-хекс-префикс = content-addressed идентичность серии. R3: fail-loud — ок.
-  - venv-факт: transformers сломан параллельной сессией (huggingface-hub 2.4.0, требует
-    <2.0) — rebuild не может импортировать модуль напрямую → transformers-stub в rebuild;
-    decode-проба — через `tokenizers` (0.22.2, локальный tokenizer.json), не transformers.
-- DONE: [x] PLAN-секция; [x] верификация всех пунктов C1–C6/R1–R3 по коду/артефактам.
-- DONE: [x] PLAN-секция; [x] верификация всех пунктов C1–C6/R1–R3 по коду/артефактам;
-  [x] AT0_4_mix.py: P3/P5 inference (sign test + bootstrap CI + DELTA_MIN +
-  ladder confirmed/descriptive/null; P5 — mirror), P4 doc_order_flags, P2 rename
-  (tied_embed_contributes_to_r) + cell_note, P1 diagnostics (c0/r_max-распределения,
-  reachable frac, low-motion флаг, синтетический нуль — 4 null-модели, seed 117),
-  vector-telescope (METRICS_VERSION v2), ckpt script-sha check, `g.get("ok") is True`,
-  meta-ноты (mix-перестановка fixed; scope: own-doc pilot, профиль описательно,
-  corpus open), docstring-scope (C1);
-  [x] AT0_4_rebuild_r3.py (БЕЗ форвардов, transformers-стуб, decode через tokenizers):
-  новый store 4c0a1db2e7984621 (full 4c0a1db2e798462138aba970ec636634b2d96ff6f994e99762
-  d45d3bc09d13d0), claim/manifest пересобраны, sha-цепочка 4/4, старый store f1cc7265
-  удалён (full sha в provenance.aggregation_rebuild_r3); token_provenance: own_w0/w4 —
-  degenerate (93–94% один токен, min_period 1) — объяснение P4-outliers;
-  [x] ответка docs/AT0_4_EXEC_REVIEW_r3_answers.md (принято/спорю/самокоррекция:
-  C4 «r~1/N» — ревью прав для iid-сферических позиций (телескопирование), E[r]=1 —
-  только для iid-приращений; c0*=4 — граница r_max=1, reach 0.58).
-- NEXT: [ ] коммит (явные пути) — ПО КОМАНДЕ юзера / после ревью-цикла (протокол серии);
-  [ ] смоук AT0_4_mix.py в рабочем venv перед следующим forward-прогоном (текущий venv:
-  transformers сломан параллельной сессией — смоук невозможен; вместо него py_compile +
-  дизайн-тесты + rebuild end-to-end — см. ответку «Не сделано»);
-  [ ] open (ревью §6, требуют форвардов/данных): corpus-клетка T0.4, mix-permutation
-  sensitivity, re-run под METRICS_VERSION v2.
-- Границы: НОЛЬ новых клеток/форвардов в артефакте (review §5 — только агрегация);
-  prereg (docs/AT0_4_prereg.md) — заморожен, НЕ переписывать (исправление scope — в
-  docstring/meta/summary/ответке); meta/per_doc/gates/profiles store — неизменны;
-  venv не трогать (чужой); S5 на текущем артефакте — норма-форма (≤1e-9, PASS);
-  vector-форма аналитически ≤ γ_383·N·√c0_max = 3.2e-10 < 1e-9 — ре-форвард не нужен.
-- Ожидаемые изменения вердиктов (зафиксировано ДО rebuild): P3 confirmed→descriptive,
-  P5 confirmed→descriptive (mirror), P1 vacuous×3 (не меняется) + diagnostics,
-  P2 trunk_carries (не меняется; rename затронул только недостиженную ветку) + note,
-  P4 null×6 (не меняется) + doc_order_flags, summary — перефраз.
-
-### AT0_4 exec-review r4 (docs/AT0_4_EXEC_REVIEW.md, 14.11): «r3 ACCEPT; r — 2-DoF сводка, пороги масштабно-зависимы»
-
-Ревьюер видел актуальный файл (цены сверены с диском). Всё — БЕЗ форвардов, из store
-4c0a1db2e7984621 (UNTRACKED — старый store НЕ удалять, удаление — в коммите).
-
-- §1: r = ‖u_N−u_0‖²/c0, r/r_max = (1−cos(u_0,u_N))/2 — 2-DoF сводка; профиль r не видит.
-  ПРИНЯТО: формула в scope + блок r_decomposition (per-doc/per-instance: r, c0, r_max,
-  endpoint_cos = 1 − r·c0/2) + trained-vs-random (endpoint_cos и c0).
-- §2: порог 0.1 масштабно-зависим (r ∝ 1/c0). ПРИНЯТО как ДИАГНОСТИКА: |Δr|/r и |Δr|/r_max
-  рядом с абсолютным в P2/P4 + scale_note. Вердикт пре-рега НЕ меняется (смена правила
-  вердикта post-hoc — это новый тест; relative-метрика — описательно). Подтверждено из store:
-  clean-доки |Δr|/r ~ 0.05–0.4 (оценка ревью «~20%» верна), degenerate w0/w4: 0.77–0.90.
-- §3: n=8 — p<0.05 только при 8/8 (p=0.0078); 7/1 ⇒ p=0.0703. ПРИНЯТО: sign_test_resolution
-  в P3/P5 + wording в summary.
-- §4: P1 structurally unreachable (c0 median ~260 ≫ 4). WORDING ПРИНЯТ; rename в
-  «coherent_drift» — СПОРЮ: r≈1 = некоррелированные малые шаги (iid_lowmotion null: r_med=1.0017),
-  когерентный дрейф — r≈N (drift_smooth_walk: r_med=191.64, вне бэнда в 130×). Ревьюер повторил
-  r3-C4-конфузию (iid-позиции r≈1/N vs iid-приращения r≈1). Ключ остаётся (пре-рег-имя),
-  добавлен band_meaning с измеренными null'ами.
-- §4 (мелочь): «drift_smooth_walk не гейтится» — СПОРЮ: в rebuild-скрипте ассерты ЕСТЬ
-  (band_frac < 0.01 И r_med > 100; сейчас в AT0_4_rebuild_r5.py:161–162; старые rebuild-
-скрипты r1–r4 удалены — не трекались, в репо только актуальный AT0_4_rebuild_r5.py).
-- §5: G_nd per-doc ok=False не в тестах. ПРИНЯТО: фильтр gnd ok в build_p1/p2/p4 (docs_ok).
-  Эмпирика: w5 fail в 6/6 инстансов (cv 0.029–0.047), w7 — R1_S13, w2 — R2_S13; НИ ОДИН
-  вердикт не меняется (P4 outliers w0/w4 не тронуты; P2 medians ×0.98–1.02; P1 vacuous).
-- §6: w0/w4 — period-1 token loop (max_share 0.93/0.94, min_period_90pct=1). ПРИНЯТО:
-  блок doc_order_provenance (flags × token_provenance × c0 × |Δr| в одной таблице) +
-  wording «вырожденные low-motion доки».
-- §7: R-a NOT REUSABLE в docstring rebuild; R-b S5 — bound (принято); R-c decode_backend
-  в token_provenance_meta (tokenizers, локальный tokenizer.json; transformers venv сломан).
-- §8.3: c0-тест (trained vs random, paired). ПРИНЯТО: блок r_decomposition.trained_vs_random:
-  median ratio 1.5097 [1.4592, 1.5529] (boot 2000, seed 117), 48/48 paired > 1, sign test
-  8/8 × 6 инстансов (p=0.0078). ПОСТ-ХОК (не пре-рег) — так и помечено; effect size = median ratio.
-- Спектр СПОРОВ: (1) «coherent_drift»-rename (см. §4); (2) drift-гейт уже есть; (3) «вся
-  разница r — от c0» — overlap диапазонов endpoint-cos при n≤8 не тест; точные cos в блоке
-  (trained clean: −0.006…0.351; w6 ≈ 0) — утверждение о «совпадении геометрии» не закрепляется.
-- DOING: [x] PLAN-секция; [x] модуль AT0_4_mix.py (gnd-фильтр build_p1/p2/p4, build_p2 →
-  функция, relative-метрики, notes, r_decomposition, doc_order_provenance, summary);
-  [x] дизайн-тесты (синтетические cells: фильтр, вердикты, тождество cos 1e-12,
-  детерминированность bootstrap); [x] rebuild r4 (golden-test на 4c0a1db2, store
-  e852a4bd88c92649; NOT REUSABLE; старый store НЕ удалён — untracked);
-  [x] аудит артефакта (все блоки сверены: c0-test 1.4419 [1.287, 1.656] doc-paired,
-  48/48 pairwise, 8/8×6 p=0.0078; endpoint_cos per-doc; pretest_results бит-неизменен);
-  [x] ответка docs/AT0_4_EXEC_REVIEW_r4_answers.md (принято/спорю/самокоррекция);
-  [x] mixed-script scan (2 зацепа: bэнда/asserтировано/явno — исправлено);
-  [ ] ревью-проход 2 (петля до PASS); коммит — по команде юзера.
-- Споры r4 (в ответке): (1) rename «coherent_drift» отвергнут — r≈1 = некоррелированные
-  малые шаги (null: lowmotion r=1.002 в бэнде; дрейф r=191.6 вне бэнда в 130×);
-  «iid-приращения → r≈1/N» — та же r3-C4-конфузия; ключ пре-рега сохранён + band_meaning.
-  (2) drift_smooth_walk гейтится (2 ассерта; сейчас AT0_4_rebuild_r5.py:161–162). (3) «endpoint-геометрия
-  совпадает» — не зафиксировано: trained cos −0.006…0.351, random medians 0.071…0.249.
-  (4) «либо порог относительный» — пре-рег-вердикты не меняются (пост-хок смена правила
-  = новый тест); relative-метрики — диагностика.
-- NEXT: [ ] ревью-проход 2; [ ] коммит (явные пути: PLAN.md, experiments/at0/AT0_4_mix.py,
-  experiments/AT0_4_rebuild_r4.py, docs/AT0_4_EXEC_REVIEW_r4_answers.md,
-  docs/AT0_4_EXEC_REVIEW.md, results/AT0/AT0_4_MIX.json, results/AT0/AT0_4_manifest.json,
-  logs/AT0/AT0_4_rebuild_r4.log, results/AT0/store/e852a4bd88c92649.json +
-  УДАЛИТЬ results/AT0/store/4c0a1db2e7984621.json после коммита) — по команде юзера.
-  В ПАУЗЕ: AT0_2b r1-фиксы (C1–C7, M1–M3, пререг v2, полный прогон) — после AT0_4 r4.
-- Границы: не менять field.py (пин), данные (read-only), AT0_1/AT0_2/AT0_3/AT0_5; CPU ≤4;
-  пре-рег-вердикты не пересматривать (только диагностика + wording); venv transformers сломан
-  (huggingface-hub 2.4.0) — forward-смоук невозможен, валидация = дизайн-тесты + rebuild.
-
-## AT0_4 — exec-review r5 (docs/AT0_4_EXEC_REVIEW.md, 14.11), «ACCEPT как own-doc r/DC pilot, wording/consistency fixes»
-
-Запрос (фиксация): 7 пунктов БЕЗ новых форвардов: (1) c0-sensitivity all-8/clean-only/G_nd-filtered
-+ post-hoc/pairwise-не-независимые; (2) P2 wording trunk_carries_absolute_scale + relative ~16–18%;
-(3) P1 wording «бэнд не детектор когерентного дрейфа, исторический пре-рег»; (4) own_w5 note
-(period-13 present, order-флаг absent); (5) стратификация clean/period-1/periodic; (6) hash-chain
-подтвердить; (7) mix-permutation note (объявить одну фиксированную перестановку).
-T0.4 corpus/profile — остаётся open. Ответы — отдельным md (протокол серии).
-
-- DONE:
-  [x] AT0_4_mix.py: P1_BAND_MEANING (+r5 C3), P2_SCALE_NOTE (+r5 C2), build_p2
-  (+cell_relative_note, data-driven: S11 0.1736, S12 0.1627, S13 0.1027 — «16–18%» ревью
-  было только S11/S12, записано 0.10–0.17), build_r_decomposition(+token_prov, gnd:
-  sensitivity all_8 8/8 1.4419 / no_period1 6/6 1.3682 / gnd_filtered 7/7 1.4426 (w5
-  исключён, 40/40 пар) / no_periodic 4/4 1.3061 + pairwise_note + status + summary_line),
-  build_doc_order_provenance (per-doc note: w5 period-13 не live (G_nd not-ok во всех 6
-  инстансах), w7 period-16 max |Δr| 0.0017 < 0.1; interp «≈93%/≈94%» по max_share),
-  main (pass tp/gnd; meta.doc_stratification — own_w7 period-16! ревью считало его clean —
-  самокоррекция C5; mix_note — «mix treatment fixed»)
-  [x] AT0_4_rebuild_r5.py: store ab8ec0ed2df2f8c7 (golden test на pinned e852a4bd…;
-  P4/P3/P5 бит-идентичны; pretest_results бит-неизменен; diff = ровно 8 ключей;
-  sensitivity — независимый пересчёт до 1e-15; sha-цепочка 4/4; лог AT0_4_rebuild_r5.log)
-  [x] docs/AT0_4_EXEC_REVIEW_r5_answers.md: C1/C2/C4/C7 — принято; C3 — принято по
-  существу, спор об «arbitrary» (окно = E[r]=1 режим, но не детектор дрейфа); C5 —
-  самокоррекция чистого набора (w7 period-16); C6 — файлы не пустые, transcript
-  верификации (sha256/размеры + цепочка)
-  [x] AT0_4_rebuild_r4.py удалён (в репо только актуальный AT0_4_rebuild_r5.py);
-  цитата r4-ответки на drift-ассерты переключена на r5 (строки 161–162)
-- DOING: [ ] коммит — ПО КОМАНДЕ — теперь покрывает r5+r6 (мастер-список путей — в блоке r6 ниже)
-- Границы (не менять): pretest_results (ни один вердикт: vacuous ×3, same ×3 + trunk_carries,
-  descriptive ×2, null ×6, outliers 2/6+6/6); per_doc/gates/profiles/token_provenance
-  бит-неизменны; METRICS_VERSION/forward-окно (данные из store, пере-форвардов НЕТ);
-  docs/AT0_4_prereg.md (pre-рег v3 — не правим); файлы параллельной сессии (E-40) — не трогать;
-  коммит — ПО КОМАНДЕ (явные пути; old-store e852a4bd… удаляем в коммите, как 4c0a1db2).
-
-## AT0_4 — exec-review r6 (docs/AT0_4_EXEC_REVIEW.md, 15.11), «r5 ACCEPT; один обязательный фикс + M1–M6»
-
-Запрос (фиксация): (1) ОБЯЗАТЕЛЬНО: factor-2 в строке-тождестве «4(1−cos)» → «2(1−cos)»
-(R2DOF_IDENTITY + дубли) — код всегда был прав, строка нет; (2) M1: c0_stats по testable-
-набору (унификация с reach); (3) M2: clean_no_periodic → no_period_ge90pct (own_w2: rep16
-0.6766 < 0.90 — не «clean») + срез no_w2; (4) M3: конвенция манифеста ≠ AT0_1 — не
-переносить инвариант; (5) M4: retired stores — удалить в коммите; (6) M5:
-meta.aggregation_script_sha256; (7) M6: decode_backend/бит-идентичность token_provenance;
-(8) O2: теорема c0 > 4 ⇒ r ≤ 4/c0 < 1 (в артефакт; T0-аддентум — по явной команде). БЕЗ
-форвардов. Ответы — отдельным md (протокол серии).
-
-- DONE:
-  [x] AT0_4_mix.py: factor-2 (R2DOF_IDENTITY + P2_SCALE_NOTE; scope строится из
-  R2DOF_IDENTITY), build_p1 (M1: testable-набор для c0_stats/low_motion/reachable_frac),
-  build_r_decomposition (M2: срез no_w2 + note 0.6766), meta (M5: aggregation_script_sha256;
-  M2: no_period_ge90pct + note), P1_BAND_MEANING (+O2 теорема c0 > 4 ⇒ r ≤ 4/c0 < 1)
-  [x] AT0_4_rebuild_r6.py: store 205a5965cf963eff (golden test на pinned ab8ec0ed…;
-  P4/P3/P5/dop бит-идентичны; pretest_results бит-неизменен; diff = ровно 8 ключей;
-  «4(1−cos» в store только цитата в provenance.reason; no_w2 — независимый пересчёт 3/3
-  pw18/18 med 1.2866; sha-цепочка 4/4; лог AT0_4_rebuild_r6.log md5 73f1c418…)
-  [x] trackio (AGENTS: обязательно для локальных CPU): run at0_4_rebuild_r6 (group CPU):
-  t=0 config (started_at/device/model/log/revision/script_sha/module_sha/seed), 9
-  stage-точек, finish status=ok + log_md5; atexit → status=crash (2 прерванных прогона —
-  assert-баги в самом rebuild — записаны как crash, БД gitignored пересоздана); лог r6 —
-  в реестре CPU_RUNS trackio_migration.py
-  [x] docs/AT0_4_EXEC_REVIEW_r6_answers.md: §2/M1/M2/M5 — принято и сделано; M3/M4 —
-  принято (M4 — в коммите); M6 — уже покрыто (decode_backend в token_provenance_meta с
-  r4 R-c + ассерт бит-идентичности); O2 — теорема в band_meaning; поправка к таблице
-  ревью: обе строки — R1_S13_real (подписаны R2_S13 — опечатка), идентичность в них
-  выполняется (r·c0 = 2(1−cos))
-- DOING: [ ] коммит — ПО КОМАНДЕ (мастер-список, явные пути: PLAN.md, experiments/at0/AT0_4_mix.py,
-  experiments/at0/AT0_4_rebuild_r5.py, experiments/AT0_4_rebuild_r6.py, experiments/trackio_migration.py,
-  docs/AT0_4_EXEC_REVIEW.md, docs/AT0_4_EXEC_REVIEW_r5_answers.md, docs/AT0_4_EXEC_REVIEW_r6_answers.md,
-  results/AT0/AT0_4_MIX.json, results/AT0/AT0_4_manifest.json, logs/AT0/AT0_4_rebuild_r5.log,
-  logs/AT0/AT0_4_rebuild_r6.log, results/AT0/store/205a5965cf963eff.json;
-  УДАЛИТЬ: results/AT0/store/{4c0a1db2e7984621,e852a4bd88c92649,ab8ec0ed2df2f8c7}.json — retired)
-  [ ] trackio_migration --fresh — ПОСЛЕ quiescence параллельной сессии (она пишет в ту же БД)
-- Границы (не менять): pretest_results (ни один вердикт); per_doc/gates/profiles/
-  token_provenance/doc_order_provenance бит-неизменны; forward-окно 12.11 (пере-форвардов
-  НЕТ); docs/AT0_4_prereg.md v3; paper.md/T0-аддентум — без явной команды; файлы
-  параллельной сессии (AT0_5/E-40) — не трогать; .trackio — gitignored кэш, не коммитить,
-  **никогда не rm -rf** (trackio потокобезопасен: ProcessLock+WAL+busy_timeout 30s;
-  дубликаты run name разрешены — crash-ран = честная запись, перепуск тем же именем;
-  регенерация — только migration --fresh после quiescence; моя ошибка r6 — два rm -rf
-  под живым писателем, потерял at05_selftest_tmp).
-
-## AT0_4 — exec-review r6.1 «косметика» (тот же docs/AT0_4_EXEC_REVIEW.md, §3 C1–C5, 15.11)
-
-Запрос (фиксация): вердикт не меняется («AT0_4 можно закрывать как own-doc r/DC pilot»);
-C1: значимость sensitivity-срезов — exact two-sided sign test (n≤4: bootstrap CI95 =
-min–max, не confirmatory); C2: точная формулировка P1-теоремы (net negative
-autocorrelation, lag-1 dip — отдельно) — для T0-аддентума, band_meaning-shorthand остаётся
-(ревью само: «допустимо как shorthand»); C3: таблица sub-90 периодичности no_w2-доков
-(из token_provenance, уже в store); C4: explicit rm retired stores; C5: manifest/rebuild
-«пришли пустыми» — проверить, что файлы на диске не пусты (артефакт экстракции у ревьюера),
-само-проверку приложить в ответку. БЕЗ форвардов, без новых вердиктов.
-
-- DONE:
-  [x] Факты: e852a4bd/4c0a1db2 уже не на диске (untracked, без git-истории; полные sha в
-  provenance r4/r5); ab8ec0ed — tracked (71e9bba) → git rm в коммите; 205a5965 (r6) —
-  untracked, будет заменён r6.1 → rm после прогона; files AT0_4_rebuild_r6.py/AT0_4_mix.py/
-  AT0_4_manifest.json на диске не пусты (31.7K/84K/675 B) — «пустые» = артефакт экстракции.
-  [x] AT0_4_rebuild_r6b.py (post-processor, pinned 205a5965…; БЕЗ импорта AT0_4_mix.py —
-  чистая постобработка store; trackio at0_4_rebuild_r6b, status=ok): C1 significance в каждом
-  срезе (exact sign test: 0.0078125/0.015625/0.03125 significant, 0.125/0.25 descriptive, пины
-  ассертами) + significance_note; C3 periodicity_check в no_w2 (таблица из token_provenance +
-  note: rep16<0.2 срез = {w1,w3,w5,w6} — w5 period-13, no_w2 не сужает); provenance
-  .aggregation_rebuild_r6b; store fd162b9a6e5e03b6 (script sha 547b1841…); chain 4/4;
-  лог AT0_4_rebuild_r6b.log md5 2a478ace…
-  [x] rm 205a5965cf963eff.json (заменён) + git rm ab8ec0ed2df2f8c7.json (tracked) — после
-  прогона, с проверкой sha до удаления; e852a4bd/4c0a1db2 — уже отсутствуют (записано в
-  manifest.retired_stores полными sha + в ответке C4)
-  [x] docs/AT0_4_EXEC_REVIEW_r6_answers.md: «Раунд 6 (r6.1, косметика)» — C1–C5
-  по пунктам (C2 — спор: band_meaning не тронут, точная формулировка для аддентума —
-  в ответке; C5 — sha трёх «пустых» файлов + self-check из логов) + финальное
-  публикуемое formulation c0-headline (с «descriptive»-оговоркой)
-  [x] mixed-script scan правок (grep -nP Cyrillic-Latin/CJK; 1 предсуществующий захват
-  «сensitivity» в §5 — исправлен; остальное — легитимная математика/история)
-- DOING: [ ] коммит r6+r6.1 — ПО КОМАНДЕ (мастер-список: PLAN.md, docs/AT0_4_EXEC_REVIEW.md,
-  docs/AT0_4_EXEC_REVIEW_r6_answers.md, experiments/at0/AT0_4_mix.py, AT0_4_rebuild_r6.py,
-  AT0_4_rebuild_r6b.py, experiments/trackio_migration.py (1 строка — мой),
-  results/AT0/AT0_4_MIX.json, AT0_4_manifest.json, AT0_4_rebuild_r6.log, AT0_4_rebuild_r6b.log,
-  results/AT0/store/fd162b9a6e5e03b6.json (force-add; 205a5965 — удалён r6.1);
-  НЕ КОММИТИТЬ: AGENTS.md/run_one.sh/docs/dynamic/AT0_5/E-40 — параллельная сессия;
-  AT0_4_rebuild_r5.py + r5_answers.md — проверены, оба на диске (28.6K/12.7K)
-- Границы: ни одно число store не меняется (только новые ключи-метки); pretest_results/
-  per_doc/gates/token_provenance/profiles/doc_order_provenance/meta/prereg/verdict —
-  бит-неизменны; band_meaning не трогать (C2 — в ответку); Т0-аддентум/paper.md — по команде.
-
-## AT0_5 — T0.5 «Генеративная проверка (disk-only)» (13.11)
-
-- Запрос (фиксация): «через петлю ревью субагента AT0_5» — серия AT (запрос 12.11:
-  «префикс AT0.x; как пишешь — субагент на ревью, максимально строгое, пока не сойдёмся»).
-  T0.5 (TZ_add_0-3.md §1.5): единственная проверка «модель пути → статистика»:
-  joint (v̂_t, log‖Δh_t‖); v̂ — VAR, норма — AR(1); симуляция → Δh → h → все метрики;
-  PCA r ∈ {8,16,32}, p ∈ {1,2,4}; фит PER-DOC (pooled запрещён — E-56); минимальная
-  модель-соперник (G8): DC+MA(1), (f,a) per-doc; лестница DC+MA(1) → VAR(1) → VAR(2) →
-  VAR(4), BIC per-doc; negative control: blk-shuffle ⇒ плоская кривая; пре-рег: DC+MA(1)
-  воспроизводит дип+плато per-doc ⇒ «три моды» мертвы, T3 остаётся только горб; не
-  воспроизводит ⇒ T3 получает работу. Оба исхода публикуемы.
-- DONE: [x] PLAN-секция; [x] разбор ТЗ: DC+MA(1) = x_t = m + (ε_t − aε_{t−1}), детерминированный
-  mean m (DC-компонент = f_DC): ρ̄(1) = (m²−a)/(m²+1+a²) = f − (1−f)a/(1+a²), ρ̄(k≥2) = f = m²/(m²+1+a²)
-  (безцентр. ACF поле.acf_moments — DC-плато возникает из m²-вклада в c(k); выверено аналитически);
-  [x] якорь поведению: store T0.1 (23281c64cc418ff1.json) хранит per-doc rho (k=1..96, T-norm,
-  N=383, D=1024, obj h_raw) — AT0_5 обязан воспроизвести его ≤1e-12 (гейт S9).
-- DONE: [x] PLAN-секция; [x] разбор ТЗ (модель DC+MA(1): ρ̄(1) = f − (1−f)a/(1+a²), ρ̄(k≥2) =
-  (1−k/N)f; якорь T0.1 store S9); [x] docs/AT0_5_prereg.md (per-cell N/K + D13);
-  [x] experiments/at0/AT0_5_gencheck.py: 480 клеток, ЧАСТИ 1/2/3, гейты G0/G1′/G2/S0–S9/G8;
-  [x] ПЕТЛЯ РЕВЬЮ (3 раунда до прогона): D-мерный null (1-D завышал CI в ~√D — branch1 был
-  предопределён), OOS (fit k=2..48 → тест k=49..96; дип OOS не тестировать — циркулярно);
-  [x] per-cell N/K (краш 1-го запуска: 16 corpus-доков T 83..384, T=95 → N=94<K=96):
-  N_i = min(T_i,384), K_i = min(96,N_i//4) = формула T0.1 (S9-якорь совпадает по лагам),
-  skip K_i<16 (не сработал: все T≥83 ⇒ K_i≥20); OOS только K_i=96;
-  [x] само-аудит + дизайн-тесты: короткая клетка (T=83, k=20: plat_lo/plat_hi/tail None,
-  cov по dip) и средняя (T=255, k=63) end-to-end зелёные; [x] смоук (rc=0).
-- DOING: [ ] ПОЛНЫЙ ПРОГОН (запущен 14.11 03:43, setsid nohup, ~4–8 ч: 480 клеток ×
-  (B1=200 + OOS 200) D-мерных сим + null 5×200 per cell). Старт-гейты ALL PASS:
-  S9 якорь 478/480, max_dev=0.00e+00 (бит-в-бит T0.1), absent = own_w0/own_w4|L1
-  (предсказано пре-регом); D13: S2 tol 2→3·SE (детерминированный seed-гейт упал на 2.81·SE,
-  механизм валиден — зафиксировано ДО перезапуска);
-  [x] **BLK (14.11 ~10:40): прогон умер на G8 negative control (fail-loud, до артефактов):**
-  median |tail_excess|/sd_null = 4.29 > 3.0 и frac_dcma1_cov = 0.091 < 0.90 (n=2400).
-  Триаж: НЕ баг пайплайна (S0 1e-14 / S5 5.9e-16 / S8 2.8e-16 / S9 бит-в-бит — всё ок);
-  причина — СВОЙСТВО blk-null: (а) блочные средние (47 блоков × 1024 dim) дают кросс-блоковую
-  корреляцию на ВСЕХ лагах — sd_null из гладкой DC+MA(1)-симуляции этот член не моделирует;
-  (б) within-block структура k<8 (сохранена по построению) не покрывается гладкой DC+MA(1)
-  (BIC на null сам выбирает p>1 в 917/2400 — что require-текст гейта уже допускает).
-  Гейт предсказывал «плоский» null. → вердикты части 1 НЕ ИНТЕРПРЕТИРОВАТЬ до переспека G8
-  (варианты: null-симуляция с блоковым членом / iid-нуль для дальнего хвоста / b≥16);
-  [ ] PLAN-обновление с числами. (Коммит — по команде юзера, как AT0_1/AT0_2.)
-- Границы AT0_5: read-only данные (gen_layers_qwen.npz, P1_own, P2_corpus, T0 store);
-  не менять field.py (пин bcc607c5) и AT0_1/AT0_2/AT0_3 скрипты; CPU numpy ≤4 тредов;
-  артефакты results/AT0/ (AT0_5_GENCHECK.json — claim); не трогать файлы параллельной сессии.
-
-## Ночь 15.11 — автономка (сессия-лог)
-
-- **G8 AT0_5: v3 → v3.1 (переспека гейта, до перепуска):**
-  - v2 (tail-fit) всё ещё не калиброван: параметрическая DC+MA(1)-sim ЗАНИЖАЕТ флуктуацию
-    null в 1.6–5.5× (измерено на 3 доках: chat_0 L1 sim 0.00011 vs emp 0.00061; math_0 L5
-    1.6×; code_0 L11 4.4×). Причина: реальные строки Δh не гауссовы по колонкам
-    (концентрация row-power) ⇒ дисперсия пар-произведений под блочной перестановкой больше,
-    чем в sim с iid-колонками. Null здоров (200 перестановок: tail_excess сцентрован,
-    simметричен).
-  - v3: масштаб гейта (а) — ЭМПИРИЧЕСКОЕ null-распределение (пул по клеткам); (б) —
-    согласование sim-среднего. БАГ v3 (измерено): sample f_dc sim (field.f_dc(X_b))
-    перегружен шумом СРЕДНЕГО MA(1) по t (≈V/n ≈ 0.001–0.0024 >> fit f ≈ 0.0004) ⇒
-    «excess» sim = plat_hi_sim − fdcs(1−k̄/n) систематически отрицателен
-    (chat_0 L1 seed 1001, B=500: f=0.00043, mean fdcs=0.00117, mean excess=−0.00062 при
-    E[sim tail]=f(1−k/n)>0).
-  - v3.1: (б) — RAW-сравнение |null_stat − sim_mean| ≤ 3·sd_pool_stat (dip/plat_lo/plat_hi);
-    sd_null (reportable) = std(plat_hi_sim − f_fit(1−k̄/n)) (base = КОНСТРУКЦИОННЫЙ f:
-    MA(1) E[u_t u_{t+k}]=0 при k≥2). Ad-dendums: docs/AT0_5_prereg.md (G8-v3, G8-v3.1).
-  - Верификация (8 доков × 5 сидов): (а) med_ratio 0.825 ≤ 3 PASS; (б) dip 1.00 / plat_lo
-    0.95 / plat_hi 0.97–1.00 ≥ 0.90 PASS (на ДО-r5 состоянии файла; re-верификация на
-    финальном файле — в фоне, /tmp/g8v31_verify.log). **RE-ВЕРИФИКАЦИЯ (15.11 ~11:05,
-    финальный файл r5+v3.1, 40 клеток, 1066с): (а) med_ratio 0.840 ≤ 3 PASS; (б) dip
-    1.00 / plat_lo 0.97 / plat_hi 1.00 ≥ 0.90 PASS. Код, который исполняется в их
-    re-прогоне r1, верифицирован.**
-  - Боковой результат (reportable-кандидат): code_0 L11 — РЕАЛЬНЫЙ tail-excess +0.0056
-    (~10× своей null-флуктуации 0.0006): возможная подлинная длинно-лаг структура.
-- **Конфликт параллельных writers (15.11 06:40–07:30):** параллельная сессия (pi, PID
-  267216) вошла в тот же AT0_5_gencheck.py (r5-ревью docs/AT0_5_review.md: C1 CI primary,
-  C2 d_eff, C3 seed-коллизии, M1 M=0 edge, M5 null_cell scores; + AT0_4 r6 + E-40). Мой
-  G8-v3.1 и их r5-рефакторинг (fit_scale, 6-arg dcma1_sim_d_fit, seed (idx,li))
-  сошлись в одном файле; синтаксис сходится (py_compile OK), g8b-блок сохранён. Реагирование:
-  (1) прекратил свои записи в AT0_5_gencheck.py; (2) УБИЛ свой старый AT0_5 full-прогон
-  (PID 3246187, старт 14.11 23:26 на G8-v2 коде; гарантированно умирал бы на G8: 4.29>3;
-  RUN_RC=143); (3) их re-прогон r1 (PID 299773, старт 07:29, trackio активен) — НЕ трогаю;
-  (4) верификацию делаю read-only. Файл стабилен с 07:27:55.
-- **AT0_2 r6: ЗАВЕРШЁН** (~09:40–11:00 15.11): gates ALL PASS, артефакты
-  results/AT0/AT0_2_SHAPE.json (247K), AT0_2_manifest.json, AT0_2_run.log,
-  store/f7cc011ef856a6dc.json. Из логов: v_tangent blk8/16/32/ar1/ar2/ar4 — refuted
-  (Δmean 0.069–0.331, frac(p<α) 0.70–1.00). Дальше по протоколу: само-ревью артефакта →
-  external review → коммит ПО КОМАНДЕ.
-- **trackio-миграция (полный прогон): BLOCKED** — параллельная сессия активна (AT0_5 r1
-  пишет в ту же .trackio БД; quiescence-гейт ТЗ §5.1: mtime артефактов стабилен ≥10 мин +
-  нет живых писателей). Запущу после quiescence (координация: у них в PLAN «trackio_migration
-  --fresh — ПОСЛЕ quiescence параллельной сессии» — кто бьёт, решить с юзером; скрипт
-  идемпотентный, БД потокобезопасна: ProcessLock+WAL).
-- **Kaggle/e51: не трогаю.** Демон (logs/kaggle_daemon.sh) мёртв (~11.11), GPU-квота
-  30 ч/нед исчерпана с 10.11 21:33 (push фейлит каждые 45 мин; e51-кэш 2/64 qwen + 1/64
-  lfm3, процессы умерли). Ресет квоты — rolling 7 дней, первые часы освободятся ~17.11.
-  Перезапуск нецелесообразен до того + CPU занят прогоном r1.
-- Границы (соблюдаю): не трогать файлы паралл. сессии (AT0_4, E-40, AGENTS.md, run_one.sh,
-  docs/dynamic, их store); коммиты — по команде юзера; CPU — один эксперимент (мой вклад
-  только read-only верификация + лёгкие скрипты).
-
-### 15.11 ~12:30, AT0_2 r6: ВНЕШНЕЕ РЕВЬЮ — PASS (0 MAJOR, 2 MINOR)
-- Ревьюер: pi-subagent prism-reviewer (a82f38da), prompt: docs/dynamic/AT0_2_r6_REVIEW_prompt.md,
-  вердикт: docs/dynamic/AT0_2_r6_REVIEW.md. Пересчёты: sha-цепочка (self-hash конвенция подтверждена
-  побайтово), gates (positive control 4.4e-16, invariance 4.6e-15, G8 0), бит-экзактный пересчёт всех
-  81 агрегата, 3 клетки от нуля (real ≤1.3e-15 rel; iid-null bit-exact), log↔claim 162/162, E1–E8/M1–M5 закрыты.
-- MINOR-1: null-иерархия D_null для v_tangent не монотонна (object-dependent; h_raw/du_unit — полная).
-  Reportable-only, verdict не затрагивает. В отчёте: не утверждать иерархию для v_tangent.
-- MINOR-2 (Z1): α=0.05 не в хедере (только код + pre-reg doc) — чинить в следующем run.
-- N6 (раскрыть в отчёте): пулы расходятся для v_tangent (primary 3/3 not_testable Δ<0.05; all_96 refuted)
-  → решающий пул = primary (pre-reg): v_tangent = not_testable.
-- Z3: формулировку «participation ratio» из ревью-промпта в docs не переносить (факт: L1 band-share distance).
-- AT0_5 r1 (299773): S0–S9 пройдены (якорь T0.1 max_dev=0.0, 478 клеток), S11+ идут.
-
-## AT0_8 — T8.1 «Пороговое возбуждение» (multi-observable threshold, TЗ TZ_add_4-8.md §8, 15.11)
-
-- Запрос: «давай AT0_8, через петлю субагентского ревью. kaggle в наличии, если запуск
-  тяжелый — но только после ХОРОШЕГО ревью». AT0_8 := клетка T8.1 (⭐ решает статус «солитона»:
-  пороговое рождение vs генерическое включение компетентности). T8.2 — только при
-  «кандидат жив» (пре-рег TЗ), T8.3 — требует T2.2 (волна 3) + сырые h-вставки E-71B (нет на
-  диске) — оба НЕ в этой клетке.
-- Контракт TЗ §8: сетка 11 точек {0,0.2,0.4,0.5,0.55,0.6,0.65,0.7,0.75,0.85,1.0} (+2 точки
-  T9.1 {0.05,0.1} — ОБЩИЙ прогон 13 точек, «T8.1 и T9.1 — один прогон», §8.3; вердикт T8.1
-  — по 11-точечному подмножеству), 3 сида [11,12,13] (преемство exp71 FIX), ВСЕ параметры
-  рандомизированы при λ=0 (вкл. 1-D), наблюдаемые {dip, hump, plateau, nll_holdout, rep16,
-  loopy, pr_sigma, eff-rank, margin}, правило λ_c: нормированный переход u(λ)=(O(λ)−O(0))/(O(1)−O(0)),
-  λ_c := первое удержанное ≥2 соседних точки пересечение u=0.5, монотонность
-  |Spearman(λ,O)|≥0.9 (seed-avg, ДО прогона), excluded_non_monotone[], overshoot u>1 — флаг,
-  персистентность, бисекция до Δs≤0.02 (≤5 ит.), CI по сидам (разброс >1 шага ⇒ not_resolved),
-  Bonferroni α=0.05/4 (пары dip×{nll,eff-rank,loopy,margin}), семьи {dip,hump,plateau},
-  {pr_sigma,eff-rank}, {rep16,loopy} — согласованность внутри семьи, одиночки (nll_holdout,
-  margin) — только межсемейный (G10).
-- Документы (зафиксированы ДО прогона, пины data/calib_pins): main = первые 6 wiki-доков
-  (pin wiki n16/min64/max256, trunc 256); holdout = math[:2]+code[:1]+chat[:1] (пины n8/min64/
-  max64, 64 ток.), n_holdout=4, disjoint по домену+тексту (assert); prompt генерации = первые
-  32 ток. main[0]; T_gen=256, greedy (T=0), stop по EOS, degenerate_short при T_act<32.
-- Наблюдаемые (определения зафиксированы в пре-реге): dip/hump/plateau = curves_series(h23)
-  (пин e64_gpu.py, sha 8c517e18f801fa87…), документный медиан → кривая по медианам 6 доков;
-  nll_main в каждой записи (гейт-регресс) + nll_holdout (медиана 4 holdout-доков); margin =
-  медиана (top1−top2) по позициям → медиана по докам; pr_sigma = (Σσ²)²/Σσ⁴ и eff-rank =
-  exp(H(σ²/Σσ²)) — SVD h23 [T,1024] (float64) одного дока; rep16 = доля 16-окон (без
-  перекрытия) с <12 distinct, loopy = 1{max k1>0.95} — на генерации (prompt+gen ток., h23).
-- Health ray (§9.6): (dip_band_hinge=|dip(λ)−dip(1)|_seed, loopy, nll_holdout) + человекочитаемый
-  sample (decode генерации) в каждой записи (λ,сид).
-- Вердикты (пре-рег, приоритет V3>V2>V1>V0): V3 PATHOLOGY (u_dip(0.7)>1 ∧ rep16(0.7)>rep16(1)
-  seed-avg); V2 SOLITON_CANDIDATE (λ_c^dip отделён от ≥1 из 4, ≥2 шага + CI не пересекаются);
-  V1 GENERIC_COMPETENCE (все λ_c совпадают в ≤1 шага, CI пересекаются — слово «солитон»
-  снимается); V0 не-вердикт (non_monotone_excluded / not_resolved / no_range на dip).
-- Гейты (до записи): S2 λ=1 побитово = base (sha256 каждого тензора); S2b λ=0 — все тензоры
-  случайны (max|diff|>0, mean≈0, std-отношение ∈[0.8,1.25]); S3 полнота = точное равенство
-  множеств ключей (не truthiness); S4 nll в каждой записи; S5 конечность + pr_sigma≥1,
-  eff_rank≥1; S6 disjoint; S7 sha-пин e64_gpu.py; S8 health-ray+sample в каждой (λ,сид).
-- Прогон: локальный смоук (conda py3.12 torch2.14.1, модель /data/Qwen/Qwen3.5-0.8B — .venv
-  сломан: huggingface_hub 2.4.0, чужой, не чинить — правило серии); полный прогон — КАГЛ
-  (T4 GPU, fp32; CPU-оценка 13×10 док.×3 сида×~87с ≈ 9+ч — тяжелый, user ок). Ядро
-  kaggle_kernel/kernel-at08_threshold.py: flattened (curves/dcurve/vpath инлайном + sha-пин),
-  токены main/holdout/prompt встроены как константы (локально пред-токенизированы, sha в
-  пре-реге) — токенайзер на Kaggle не нужен.
+## Закрытые раунды 11.11–16.11 (свёрнуто 17.11 по user-команде «план почисть от старья»)
+
+Детали — git history (PLAN.md: `git log --oneline --follow PLAN.md`) и карточки `docs/ref-exp.md`.
+
+| раунд | чем закрыт |
+|---|---|
+| Аудит ядра prism/ + P1-фиксы + список на перезапуск (11.11) | правки внесены; перезапуски — в раунде «Перегонки R-очереди» выше |
+| Разбор критики exp_audit.md + Аудиты 2/3/4 (11.11) | ответы — `docs/audits_answers.md` (git history) |
+| Восстановление экспов из git + Реплей артефактов Nov6–10 (11.11) | артефакты в git; E-39m v10-перезапуск «зря» — не чиним (закрыт артефактами) |
+| Аддентум v2 + TZ v1.1 (12.11) | патчи внесены; серия AT запущена по TZ v1.1 |
+| AT0_1 (r7) | PASS, 4 MINOR космет. (карточка ref-exp) |
+| AT0_2 (T0.2) + AT0_2b (T0.2b R/A-split) | закрыты прогонами + ревью (карточки ref-exp) |
+| AT0_4 (T0.4, exec-review r3…r6.1) | ACCEPT как own-doc r/DC pilot, wording/consistency fixes; без форвардов |
+| AT0_5 (T0.5, disk-only генеративная) | закрыта (переспек G8 — в карточке ref-exp) |
+| «Ночь 15.11 — автономка» (сессия-лог) | сессия завершена, итоги в карточках |
+| AT8_1 (бывш. AT0_8, T8.1 threshold) | Kaggle v2, gates S1–S9 PASS, вердикт **V0_NOT_RESOLVED** (dip non_monotone, «горб-долина»; защита пререга сработала). **NEXT (отложено до quiescence):** trackio-backfill (реестр: +at0_8 `logs/AT0_8_run.log`, строка at0_4_rebuild_r6 115/130 → 117/132) |
+| AT2 (T2.1 state-level ridge readout) | **NOT_RESOLVED** (cos по сырым логитам задаёт floor; r2 wall 295.5 с валиден) |
+| AT3 (T3.1 margin-conditional dip) | закрыт r5 (VERDICT gen=(b)/insufficient_power, TF=(b)/weak, r5-поправка TF-resolvability). **NEXT: T3.2 (35-пул)** — dip\|parity×margin-bin |
+
+## AT8_2 — T8.2 «Оконное восстановление + доза» — ревью-раунд r1 (17.11, «docs/AT8_2_review.md, много ВАЖНЫХ утверждений, всё проверить, по необходимости — исправить» + «3 скрипта для одного эксперимента — многовато, сведи в 1»)
+
+- Запрос (фиксация): внешнее ревью `docs/AT8_2_review.md` (16.11, ~300 строк, дисклеймер:
+  «числа выведены аналитически/вручную, не прогоном»). Проверить все утверждения, исправить
+  необходимое; СВЕСТИ 3 скрипта (AT8_2_recovery.py + AT8_2_v2_reanalysis.py + at8_2_analysis.py)
+  в 1. Ревью писалось на актуальную машину v2 (цитирует точный код compute_verdict) — не на
+  r1-машину (это важно для оценки, что уже починено).
+- DONE — верификация P0 (disk-only, из committed store, все подтверждено):
+  - **A1: #recovered(W64) = 4 < 6** → гейт в задуманном чтении (recovered-пары, не l_rec>0)
+    срабатывает: NOT_RESOLVED. Текущая машина считает 19 пар с l_rec>0 (цензурированные
+    засчитаны) → гейт проходит. Лемма ревью (recovered с l_rec=0 невозможен) — верна.
+  - **A4: no_effect = 32 ≥ 7** → majority-гейт на возмущённой популяции (без W=8 — B3):
+    38/58 = 0.655 > 0.5
+    → NOT_RESOLVED (чтение v1/v2 55/116 = 0.474 — промах 3 п.п., ровно как в ревью).
+  - **frac_to_global по W: 0.000/0.125/0.3125/0.650 (W=8/16/32/64)** — растущий профиль,
+    подпись B2/B3 (смесь масштабов); W64-только (корректная популяция, no_effect+W8 исключены)
+    = 0.684 — выше порога DILUTION 0.6. Doc-bootstrap CI95 (возмущённые, W≠8): [0.256, 0.423].
+    Голоса to_global=1 по статусу: recovered=3 (не 0! B1 «структурно всегда 0» —
+    преувеличено), not_recovered=16, no_effect=8 (B6 подтверждено).
+  - **D(n) из nll (ревью §5, формула D(n)=CE(inj)·(T+L_n−1)−CE(ctrl)·(T−1)): средние
+    75.8/80.1/84.4/88.3 nat (n=2/4/8/16), D(2)/D(16) = 0.857, per-token 4.21→0.61 nat/tok**
+    (×8 токенов, ×1.16 дозы) — ось «2×…8× доза» — слабая переменная в натах.
+  - C1: boundary-клеток (pert0 rounding'ом в 0.01) = 0 → фикс C1 не меняет статусов этого store.
+- Итог P0: честный статус r1/v2 на этих данных — **NOT_RESOLVED / below_resolution**, не
+  ELASTIC (оба корректных гейта срабатывают disk-only). Вердикт ELASTIC держался на гейте,
+  который считает провал восстановления восстановлением (главный тезис ревью — подтверждён).
+- DONE — ответка по пунктам (подтверждаю/спорю/самокоррекция): docs/AT8_2_review_r1_answers.md:
+  - подтверждаю: §1 (потолок: медианы 60/39/49/62 — у потолка D_max; 39 = D_max wiki_3),
+    §2 (ось B смещена; 0.233 = подпись перманентного сдвига в калибровке ревью), §3 (знаменатель
+    разбавлен), §4 (W-сглаживание: ℓ_rec при W64 не разрешает восстановление короче ~W/2),
+    §5 (доза в токенах ≠ доза в натах; not_testable по paper §6 п.25), A1/A2/A3/A4, B3/B5/B6,
+    C1–C11, §6.1 (S8 — тавтология, честный кросс-чек = AST-сплайс exp71_soliton.py — P1),
+    §6.8 (87 с/fwd vs замер 3.9 с — сметы очереди завышены ~15–20×).
+  - спорю (с числами): B1 — «все recovered дают структурный ноль в ось B» неверно: 3/29
+    recovered проголосовали to_global=1 (wiki_1 n2 W64 и др.) — смещение есть, тождества нет;
+    C2 — v2-manifest фиксирует sha v2-claim (claim_file_sha256 = 215900e4 = sha артефакта) — уже так;
+    C3 — exp71_soliton.py В GIT (experiments/e71_80/exp71_soliton.py) — утверждение «не в git»
+    неверно; C4 — paper §4.17 уже говорит «возвращается к контролю, не к глобальному
+    разбавлению» — «окно к разбавлению» в доках нет; §6.7 — 42 форварда объяснены (40+2 S8,
+    ревью сам снял вопрос в §D).
+- DONE/DOING/NEXT (машина v3 + слияние + артефакт):
+  - [x] P0-верификация (числа выше) + ответка.
+  - [x] Машина v3 (в AT8_2.py): A1 (n_rec_pairs/n_pos по recovered), A2 (no_effect-нули
+    исключены из основной медианы/ratio; лемма: zero-median недостижим), A3 (l16/l2 None →
+    ratio=None → NOT_RESOLVED), A4 (majority-гейт по возмущённой популяции БЕЗ W=8; старое
+    чтение — diagnostic), B3 (W8_noisy_flag рабочей: W=8 из оси B и majority-гейта), B6
+    (no_effect из оси B), C1 (статус по rounded pert0), C2 (tol 1e-9 в сравнении остатков),
+    C6 (ratio inf → None+флаг), C8 (sys.modules fla=None + attn_impl в setup), C9
+    (SS_tot=0 → r2=None), C10 (assert длин кривых), C11 (G14-координаты object/stat/layer в
+    клетках), NO_EFFECT-исход (большинство no_effect на оси — below_resolution, paper §6 п.25).
+  - [x] Слияние 3→1: experiments/at8/AT8_2.py (run + --reanalysis + --calibrate; frozen v2-
+    машина — git-pinned c73d8f3); AT8_2_recovery.py / AT8_2_v2_reanalysis.py / at8_2_analysis.py
+    удалены (git rm); тесты — импорты на AT8_2.
+  - [x] Калибровка (P0.5 ревью): 4 синтетических store (нуль/упругость/вечный сдвиг/диффузия)
+    → confusion matrix машина v2 (frozen, из git) vs v3 → results/AT8/AT8_2_machine_calibration.json
+    (null → v3 NO_EFFECT / v2 NOT_RESOLVED-без-инфо; elasticity → ELASTIC обе; shift →
+    NOT_RESOLVED обе, ratio=1.0 — вырождение 1 задокументировано; diffusion → DIFFUSION обе,
+    ℓ = 11/23/48/64).
+  - [x] Reanalysis v3 из store → AT8_2_RECOVERY_v3.json + manifest (machine_sha256, C5: gates/
+    prereg — от r1 явно) — **VERDICT NOT_RESOLVED** (гейты: 4 < 6; 38/58); клетки bit-exact vs
+    r1 (0 расхождений; +G14-provenance ключи — документированы) + доковый bootstrap (P0.2):
+    ratio_ci95 [1.0, 1.0333], frac_ci95 [0.256, 0.423].
+  - [x] Тесты: все 4 файла (cells/resume/verdict/defects — 11 pytest-тестов дефектов ревью §E
+    как фиксированное поведение v3 + механизмы) — green.
+  - [x] Доки: ответка (docs/AT8_2_review_r1_answers.md, tz_version v1.3 в артефакте), ref-exp-
+    карта AT8_2 (вердикт NOT_RESOLVED, P0-числа, P1/P2 в очередь), paper §4.17 (только
+    числа/выводы), MARKERS, смета 87 с/fwd → 6.2 с/fwd256 (измерение r1; правка сметы TZ_add_4-8
+    — в ref-exp-пометке, отдельный док).
+  - [x] Чистка PLAN.md от старья (1699 → 387 строк; закрытые раунды 11.11–16.11 свёрнуты в
+    таблицу, активные пункты сохранены: AT8_1 trackio-backfill, AT3→T3.2, AT0_8).
+  - [ ] Коммит (явные пути; рабочее дерево общее с параллельной сессией).
+
+## AT0_8 — T0.8 «v_tangent period-p: локализация T0.1-плато» (17.11, «сделай T 0.8, мы его забыли»)
+
+- Запрос (фиксация): T0.8 — восьмая клетка блока T0, определение согласовано с user 17.11
+  (ask_user_question, вариант «v_tangent period-p»): закрыть висящий вопрос T0.1 — плато
+  v_tangent|L23 при k≥9 (T0.1 P4: избыток +0.00194 над pair-block null, CI [+0.00069,+0.00338],
+  25σ; «локализовать по k — AT0_3, T0.3») НИКОГДА не анализировалось по периодам: T0.3/T0.6/T0.7
+  все — на du_unit или h. Петля субагентов как AT2/AT3 (1 воркер = 1 шаг; маркер + файл =
+  доказательство; SUPERVISOR_FALLBACK — по прецеденту).
+- Ключевой факт (scope-проба 17.11, /tmp/t08_scope_probe.py): P4-пул T0.1 (51 док,
+  nondegen ∩ K=96 на всех 3 объектах) = 100% clean-доков (degen 43 = loopy 41 + 2 remainder
+  {own_w0,own_w4}); т.е. T0.1-плато измерено на НЕ-петлевых доках. Отсюда двухручная клетка:
+  arm A (референс) = 30 loopy-detected T0.3 (p∈7..32, K_vt=96, N_vt=383 у всех);
+  arm B (primary) = P4-пул 51 clean. Остальные 2 clean (cor_w8/cor_w11) — K=32, вне клетки.
+- Объект: v_tangent|L23 = vpath(U, hn) (prism/field.py, file-pinned importlib, как в T0.1/T0.3),
+  U = u/‖u‖. ACF: acf_moments (T-норм, 1-based, K=96). Детектор: detect_period(rho, K, 0.9, 0.81)
+  вербати Т0.3. Null'ы: dir-matched (содержательный, paper §6 п.23: для чистого data-функционала
+  ОБЯЗАТЕЛЕН; operator-null неприменим — оператора нет) + pair-block (механический, T0.1 P4).
 - DONE/DOING/NEXT:
-  [x] PLAN-блок; [x] разведка (ТЗ §8, exp71_soliton.py, пины, e64-функции, conda-env,
-  /data/Qwen/Qwen3.5-0.8B).
-  [x] docs/AT0_8_prereg.md (сетка, доки+sha, определения, правило λ_c, вердикты, гейты,
-  цена, границы: старый артефакт E-71 НЕ на диске — контекст по TЗ §8.2 citation, version
-  break: новый λ=0 = ВСЕ рандом (старый λ=0 — обученные 1-D)).
-  [x] experiments/at0/AT0_8_threshold.py (модель-загрузка/интерполяция/наблюдаемые/генерация/
-  λ_c-машина/бисекция/гейты/store+claim+manifest+log, resume по ключам) + selftest_lam_c
-  (exec точных веток: resolved/non_monotone/no_range/выброс/overshoot/plan/refine).
-  [x] смоук локально (241.8с CPU; все гейты PASS; λ=1: nll_h 2.23, dip −0.179, rep16 0.0,
-  loopy 1 — base реально зациклился; λ=0: nll_h 12.7, dip −0.259, rep16 0.88, loopy 0 —
-  коллапс в повторение; S2 sha-ок; canonical sha store воспроизводится).
-  [x] Петля субагент-ревью (инфра субагентов сломана: ngenix 401, obleth output-кап ~300 ток.,
-  локальных LLM-серверов нет — см. docs/AT0_8_review_r1.md; выполнено 3-проходное
-  структурированное само-ревью с exec-проверками: 1 BLOCKER (нормировка u в бисекции),
-  1 MAJOR (CUDA), 8 MINOR + генератор-корреляция shape-дублей — все закрыты, смоук
-  воспроизведён, selftest расширен; промпты /tmp/at08_r{1,2,3}.md — для свежего контекста,
-  если инфра вернётся). ТОЛЬКО ПОТОМ Kaggle.
-[x] kaggle_kernel/kernel-at08 (build через push_all.py, exp-cell compile OK,
-  main_AT08threshold(**kwargs), results_dir=RES) — **полный прогон v2 COMPLETE**
-  (voroninmichael/prism-at08-threshold, T4 GPU, wall 841.0 s; v1 упал в бисекции на
-  np.mean(dict_values) — TypeError — фикс _bisect_lambda, v2).**Gates S1–S9 ALL PASS.**
-  Вердикт: **V0_NOT_RESOLVED** (dip non_monotone_excluded — seed-avg u: +1.71@0.55,
-  −1.74@0.70, −1.13@0.85, +1.0@1.0 — «горб-долина», не ступенька; защита пререга
-  сработала по назначению). Вторично: nll_holdout resolved λ_c=0.85 (L11/12/13,
-  bisect [0.75,0.85]), margin resolved 0.85/None/0.85. Смок (1 сид CPU, V2_FLAT
-  λ_c≈0.92) по dip НЕ подтвердился.
-  [x] pull + самосверка: все sha перепроверены локально (claim file sha b2923d74324e9180,
-  store canonical 018c3dac90eb1bba, store file 28a0c28d94d98239, manifest self-sha
-  74571c823aa5aa8b — конвенция AT0_2b-v2 C7); S3_complete 42/42; λ_c ∈ гриду.
-  [x] docs/AT0_8_results.md (прогон, вердикт, таблица вторичных, сравнение со смоком).
-  [ ] NEXT: trackio-backfill (AGENTS: Kaggle-прогоны — бэкилл migration-скриптом после pull)
-    — ОТЛОЖЕНО: параллельная сессия активна (общая .trackio БД, quiescence ТЗ §5.1, урок
-    trackio из AT0_4-блока). Реестр: +at0_8 (logs/AT0_8_run.log, «[OK] AT0_8_threshold 841s»)
-    + строка at0_4_rebuild_r6 параллельной сессии — перепуск с обновлённой арифметикой
-    (115/130 → 117/132) после quiescence.
-- Границы: не менять e64_gpu.py/field.py/AT0_1..AT0_6; данные read-only (пины, /data);
-  venv не чинить; коммит — по команде (явные пути). T9.1 — НЕ эта клетка: 13-точечная сетка
-  и точка-данные для T9.1 отчитываются в store, но D-1_own/copy НЕ считаются.
-
-## AT2 — T2.1 «state-level ridge readout» (16.11, «Давай T2 через петлю субагента»; начато как AT0_9)
-
-- Запрос (фиксация): клетка T2.1 (docs/TZ_add_0-3.md §3.5, волна 1, disk-only, 1–2 ч)
-  выполнять петлёй субагентов (headless pig-воркеры, .pig/jobs, DONE-маркеры —
-  AGENTS.md «Субагенты»). Клетка T2 = «слабо наблюдаемое будущее-адресуемое состояние»
-  (§3): подпространства weak-J/top-J/PCA_doc/Haar из C_l^t=(J_l^t)ᵀP J_l^t; state-level
-  ridge из спроецированного h → направление будущего логита/ошибки (один ранг, солвер,
-  регуляризация, CV); lk4 = текстовый baseline (4-грам-lookup, канон
-  experiments/e61_70/exp64_at_battery.py:23); matching по d_eff данных; l ≤ 22 (арх. нуль A1:
-  O_H^fut(L_max)≡0), L23 — только нуль-контроль G9. Пре-рег ТЗ: top-J выигрывает на k=1;
-  weak-J выигрывает на k≥2 сверх PCA/Haar при matched d_eff и над lk4; иначе (b)/(c),
-  T2 понижается.
-- Нумерация: AT2 (правило user 16.11: блок T{N} → AT{N}; прежнее AT0_9 переименовано
-  16.11, git mv + refs, артефакт results/AT2/AT2.json, лог logs/AT2_run.log,
-  trackio legacy at0_9_t21_r1).
-- Петля (1 воркер = 1 шаг, :low thinking, доказательство = маркер + файл на диске):
-  [x] S0: смоук headless-пайплайна (jobs smoke-070937: T21_SMOKE_DONE + файл + RC=0,
-    ~50 с — infra жива, в отличие от раунда AT0_8: ngenix 401 / obleth output-кап).
-    Воркер: pig -p --no-extensions --no-session, obleth/ngenix-llm:low, prompt-файлом.
-  [x] S1: scope-аудит → docs/dynamic/orch/T2_1_scope.md (job t21-s1-071153: T21_SCOPE_DONE
-    + RC=0, ~15 мин). Ключевые факты: кэш /data/prism_kernels/exp27b/results (6 файлов,
-    H — свой слой файла, JR [128,1024], 4096 поз/файл); позиция p=127−t, будущее = t−k;
-    z = H_L23 @ Eᵀ (E — tied embed, KL 4.4e-08, flip-тест 0.288 vs 0.018); rank(C)≤128
-    (eigh через 128×128 Грамиан); lk4-канон + N8 (compound.md:134), hit на пуле 1.6%
-    (65/4096); среда: /opt/miniconda3 base py3.12.9/torch2.14.1, .venv сломан (не чинить),
-    12 ядер/4 тр., RAM 32G avail, /home 98% (артефакты не в репо).
-  [x] S2: пре-рег → docs/AT0_9_T2_1_prereg.md — ЗАПИСАН СУПЕРВИЗОРом (3 попытки
-    воркера погибли на output-кап ~300 ток/ответ: t21-s2-072952, t21-s2b-073407,
-    t21-s2c-074134 — «Response was truncated», RC=1; инфра-лимит, не задача).
-    Содержимое: 12 фиксаций (sl≤22, k{1,2,4,8}, r=32, ε=1e-2, α=1.0, LOO-doc CV,
-    Грамиан P^{1/2}(JRJRᵀ)P^{1/2} + lift, weak-J = weak-сторона + ker-J контроль,
-    z=H@Eᵀ без нормировки, t↔p=127−t, lk4-канон+k-ahead, гейты S1..S9 с sha,
-    verdicts a/b/c, цена 15–45 мин, trackio at0_9_t21_r1).
-  [x] S3: ревью пре-рега → docs/AT0_9_T2_1_review_r1.md. 3 воркера погибли (output-кап ×3,
-    сеть ×2) — fallback (как AT0_8): 3-проходное САМО-ревью супервизором, VERDICT REVISE → PASS
-    после 6 правок (M1: lk4-числа scope 65 невоспроизводимы → канон as-is 90/4096 (8/41/36/5);
-    M2: (c) вердикт по попарным CI; M3: rematching d_eff; M4: S7 exact-set; m1-m3: SMOKE/ker-J/
-    floor-диагностика). Арбитраж — я (Грама = P^{1/2}(JRJR^T)P^{1/2}, weak = слабая сторона +
-    ker-J-контроль — численно верифицировано).
-  [x] S4: реализация experiments/AT0_9_t21.py (sha d522a075); само-аудит: 9 багов поймано до
-    запуска (S3-ориентация, lk4-цель t+1−k, N8-индекс, L23-LOO, SVD-ориентация Vh.T, dtype,
-    bias-в-цели, ker-J-пространство, verdict-направление).
-  [x] S5: код-ревью = S3-ревью + само-аудит по чек-листу AGENTS (см. S4; json.dump — float-касты,
-    trackio — config+stages+crash-fin, guard'ы — гейты fail-loud).
-  [x] S6: смоук (AT0_9_SMOKE=1: L6+2 дока+k=1, 53 с) + полный прогон r1/r2 через setsid nohup
-    (RAM avail 31G; r1 wall 300.5 с — вердикт-артефакт невалиден, D2; r2 wall 295.5 с — ВАЛИДЕН).
-  [x] S7: отчёт docs/AT0_9_T2_1_results.md + sha всех артефактов.
-  ИТОГ (прогон r2): VERDICT NOT_RESOLVED — метрика cos по сырым логитам floor-dominiрована
-  (floor cos(mean_y,y) = 0.945 > все readout 0.929–0.933; R² < 0; Haar ≈ J-базисы; разности
-  ≤0.2 % floor). T2-гипотеза scratchpad НЕ подтверждена disk-only readout'ом; T2 понижён
-  (пре-рег «иначе (b)/(c)»). Следующий шаг: T2.1b — центрированная метрика (отдельный пре-рег,
-  ~5 мин disk-only), НЕ перепуск. Артефакт: results/AT0/AT0_9_T2_1.json (11.8 MB, gitignored
-  results/*.json — sha в отчёте), trackio at0_9_t21_r1 (legacy), лог logs/AT2_run.log.
-- Границы: PLAN.md — только дописывать блок; файлы параллельной сессии (AGENTS.md,
-  AT0_2b*, docs/dynamic/0_E94*, 0_УТРО*) не трогать; кэш/пины /data — read-only;
-  venv не чинить; коммит — только по команде, явные пути; файлы воркеров — через
-  CJK/mixed-script гейт до коммита; trackio — config+stages в скрипте (локальный CPU).
-
-## AT3 — T3.1 «Margin-conditional dip» (16.11, «Давай T3 через петлю субагента»)
-
-- Запрос (фиксация): клетка T3.1 (docs/TZ_add_0-3.md §4.5, disk-only, 1–2 ч) — flagship
-  блока T3 (⭐), петля субагентов как AT2. Объект: условный dip(1) = cos(V_t, V_{t+1})
-  (V — ортогонализованный тангенс, канон prism/field.py vpath) по квантилям margin
-  (top1−top2, точный хэд) и p1, РАЗДЕЛЬНО на TF-чтении (P2_corpus) и генерации (P1_own).
-  Пре-рег ТЗ: boundary-версия — dip|низкая margin существенно глубже dip|высокая;
-  суффикс-карта — слабая зависимость; ни то ни другое → эффект сверх карты (результат).
-  Координаты G14: dip_V,med-семья, per-position квантильный анализ (новый стат —
-  зафиксировать в пре-реге).
-- Нумерация: AT3 (правило 16.11: блок T{N} → AT{N}).
-- Данные (инвентарь супервизора, до scope): results/e64/tpu_v8/P1_own.npz (16 own-gen
-  384×{L1,5,11,17,23}+tok+hn+mg+p1), P2_corpus.npz (16 TF, T=163..255, только состояния?),
-  P1_own/P2_corpus_meta.json (кривые), results/e81/REPLAY.json (gen_p1/gen_ids e81b v3),
-  модель /data/Qwen/Qwen3.5-0.8B (E tied, norm.weight). Канон: prism/field.py (vpath,
-  dcurve), experiments/at0/AT0_1_accounting.py (пересчёт dip_V,med; ANCHOR_LADDER −0.0722).
-- Петля (1 воркер = 1 шаг, доказательство = маркер + файл на диске):
-  - [x] S1: scope-аудит → docs/dynamic/orch/AT3_scope.md (SUPERVISOR_FALLBACK:
-    r1 28 мин hang, r2 25 мин hang — endpoint; факты: npz[j] = состояние,
-    предсказавшее tok[j] (Vo[j] ↔ mg[j]); z=(rmsnorm(h)·w)@Eᵀ cos 0.999 vs real;
-    якорь −0.167138 = ТЗ 5 знаков; TF gate 0.277–0.529 (ТЗ «1.000» не
-    воспроизводится — D1); TF margin med 0.68–0.73 vs gen 8.7–9.5; wall 382 с).
-  - [x] S2: пре-рег → docs/AT3_prereg.md (супервизор, v1; 12 фиксаций, гейты
-    S1–S6, вердикты a/b/c, порог 0.02, trackio at3_margin_r1).
-  - [x] S3: ревью r1 → docs/AT3_review_r1.md (SELF_REVIEW_FALLBACK: воркер 24 мин
-    hang; 3-проходное само-ревью). M1 (MAJOR): щель в партиции вердиктов
-    (CI [−0.07,−0.01] — ни a, ни b, ни c) → (b) = остаток; M2: bin_boundary_frac.
-    REVISE → PASS на r2 (правки внесены до запуска).
-  - [x] S4: experiments/AT3.py (prism/explog.py + prism/nulls_and_stats.py,
-    spec-лоад prism/field.py); само-аудит: 4 бага до смоука (write_to до DONE,
-    deltas-гейт vs SMOKE, bin-boundary np.min, мёртвый код).
-  - [x] S5: смоук 14.7 с ОК (2 дока, verdicts считаются) + полный прогон
-    (setsid nohup 13:25, PID 3496320, /tmp/at3_full.out, RAM 27G).
-  - [x] S6: отчёт docs/AT3_results.md + sha артефактов + trackio at3_margin_r1
-    (2 crash-записи + 1 ok). ИТОГ r1: TF = (b) weak, генерация = (b)
-    insufficient_power (Δ −0.0409). L17-gen — монотонный ОБРАТНЫЙ тренд (описательно).
-  - [ ] РЕВИЗИЯ r2 (ревью user в docs/AT3_review_r1.md, 16.11):
-    F1 ⚠: doc0/doc4 = период-1 лупы (AT0_4: max_share 0.9297/0.9401, min_period_90pct=1
-    — проверено в results/AT0/AT0_4_MIX.json token_provenance), dip +0.53/+0.60 сидят
-    в pooled/monotonic → фильтр DOCS_effective = 16\{0,4} для ВСЕХ агрегатов.
-    F2: хэд. ТЗ §3.4.7/§4.6/§4.7: точный хэд = rms(h)@Eᵀ БЕЗ norm.weight (1.000/0.971).
-    Пробы: TF-состояние предсказывает ids[j+1] (unbiased 0.003≈chance — мой S3-shift
-    ПРАВИЛЕН, ТЗ-индексация row_t→tok[t] = "ток, предсказанный из row_t"); «gate 1.000»
-    = self-consistency хэда (argmax z == свой токен), проверяется на gen через saved tok.
-    Ждём зонд: S4' (nw margin vs saved mg), fidelity w/nw vs tok, flip-rate.
-    → переключить margin на точный хэд (без w), TF-блок пересобрать, D1 закрыть
-    дизамбигуацией (fidelity vs accuracy — разные гейты).
-    F3: проза «слабее порога» — неверно: |Δ|=0.041 = 2.05×THRESH, CI шире порога.
-    СПОР: счёт 10/14 (у меня и в ревью) — в JSON 12/14 отрицательных → sign-test
-    two-sided p = 0.0129 (направление установлено по знаку).
-    F4: СПОР: таблица «TF L23» в ревью — pooled-колонка это L17_tf, mono-колонка L23_tf
-    (смешаны слои). Реальный spread L23 TF = 0.0009–0.0045; реальный spread L23 gen
-    = 0.0297 (Q2) > THRESH — принимает только gen-часть; политика THRESH_r3 = max(0.02, spread).
-    F5: per_doc_bin_n + min-n sensitivity {3,20,50} — принять.
-    F6: tf_p1 передать в side_block, dip по p1-квантилям на обеих сторонах — принять
-    (range-конфаунд L17: gen p1 0.996+ vs tf 0.09–0.33).
-    F7: ±1 margin-shift sensitivity — принять (дискриминатор механизма).
-    Мелкое: bin_boundary_frac из эмпирической ошибки margin; b_suffix_map — переименовать
-    (не утверждать суффикс-карту); sign-test в отчёт.
-    Порядок: зонд хэда (657 с: точный хэд = С w для pre-norm, nw хуже — S4 0.8974;
-    TF state[j] предсказывает ids[j+1] — мой S3-shift правилен) → правка AT3.py →
-    пре-рег r3 → перепуск → отчёт r2 + ответы (спор: F2-fix фальсифицирован
-    числами, F3 счёт 12/14 не 10/14 → p=0.0129, F4 таблица TF смешала слои) → коммит.
-    [x] РЕВИЗИЯ r2 ЗАКРЫТА: прогон 352.5 с (trackio at3_margin_r2: run-1 с багом
-    zip(dict,list) в spread — T=3.15, run-2 валидный), S6 recheck OK, 6 гейтов.
-    ИТОГ: TF = (b) weak (плоско), gen = (b) insufficient_power (Δ −0.0399 = 2×T,
-    CI [−0.0676,−0.0154] целиком < 0, sign 12/14 p=0.0129, spread 0.0085, min-n
-    робастен). F7: эффект на mg[j] (приход), не mg[j+1] (решение) — отражение у
-    границы не подтверждено. F6: range-конфаунд исключён (4 разные dip(p1)-кривые).
-    L17-gen: обратный тренд сохранился (Δ +0.0412, CI [+0.0355,+0.0717]).
-    D1 закрыт (gate 1.000 = self-consistency точного pre-norm хэда, 0.9958).
-  - [x] Ревизия по интерпретационному ревью (user, 16.11, «косметика,
-    интерпретация»: r2 ACCEPT, мои O1–O4 признаны, N1–N8 + минпатч):
-    ответы (AT3_review_answers_r1.md §6, спор: N4 «S3b 0.99» отклонено —
-    exact min 0.9895 < 0.99; S4 — дискриминатор; TF-p1 тоже неразрешима) +
-    пре-рег §7 + патч AT3.py r3 (N1–N8, всё disk-only, +16 matmul L17-local)
-    + перепуск AT3_REVISION=r3 (471.2 с, trackio at3_margin_r3, S6 recheck OK)
-    + отчёт r3. [x] ЗАКРЫТО: вердикты без изменений (TF (b)/weak, gen (b)/
-    insufficient_power). НОВОЕ: N7 gen corr 0.717 → F7 позиционный
-    дискриминатор (коррекция после неуверенного шага, T1-флэвор); N3
-    L17-local Δ +0.0001 CI∋0, corr local/final −0.05 → L17 не локальный
-    механизм (связь с margin финальной политики, cross-layer, описательно);
-    N2 обе p1-оси неразрешимы (описательные); N6 ok-rate 1.0 по бинам
-    (селекции нет); N8 dropped 0; N1 min-n 13–14 доков (робастно); N4 S4 —
-    дискриминатор (0.182 vs 0.021), «0.99» отклонено (exact 0.9895 < 0.99).
-  - [ ] Ревью-очередь (user, 16.11, «уже не косметика»): F1(+F3) → T3.2 →
-    T3.3; F2/F4/F5/F6 — в отчёт AT3 (определения в файле ревью отсутствуют —
-    запрошены). Споры: F1 «вердикт перевернётся от сида» ОТВЕРГНО (MC-шум
-    ci_high: B=1000 ≤0.0022, B=10000 = 0; зазор 0.00465 — не переворачивается);
-    F3 «n=9, 7/9→p=0.18» ОТВЕРГНО (n=13, 11/13, p=0.011 one-sided; min-n20 ==
-    min-n50). Подтверждено: §3(a) фазовый конфаунд (4 even-p дока, even-p
-    стратум — отдельная популяция, но направление смешанное — риск в
-    дисперсии, не в знаке; p=2-дегенерация); §3(b) пул LADDER_V2 (35 no-p,
-    nonwiki nonloopy, u/hn локальны) ≠ AT3-пул (14 own, 11 loopy) — primary
-    T3.2 = 35-пул, −0.0910 — арифметика (2·real−masked), прямой замер —
-    первичный вывод; AT3-страта: no-p = 4 < 12 → descriptive+not_resolved
-    (объявлено ДО прогона). Пре-чеки §4 выполнены (margin-parity ненулевой
-    ⇒ T3.2 обязан считать dip|parity×margin-bin). F1+F3 → r4-патч (ci_stability
-    + sign/IQR в min_n_sens), прогон AT3_REVISION=r4, вердикты без изменений.
-    [x] r4 ЗАКРЫТО (коммит 4124654).
-  - [ ] Ревью r5 (user, 16.11, «B1–B5, REVISE»): r4 ACCEPT по F1/F3/F5/F6;
-    B1–B5 + F2 — все ПЯТЬ подтверждены (B2, B4 — подтверждения логики;
-    B1/B3/B5 — баги/ошибки, найденные и исправлены):
-    - B1: sign-test two-sided off-by-one на ветке негативов-меньшинства
-      (1−P(X≥k) = P(X≤k−1), нужно P(X≤k)) — L17_gen min-n 2/14: 0.00183→
-      0.01294 (7.1×), 2/13: 0.00342→0.02246 (6.6×); фикс — общий
-      sign_test_twosided (первичные sign-test'ы не задеты).
-    - B2: resolvable сравнивал dp1 с min-шириной среднего бина, а статистика
-      — Δ(Q1−Q4) → resolvable_extremes = dp1 < IQR (gen: 0.00092 < 0.00389 →
-      РАЗРЕШЁН; эффект gen p1 Δ=−0.0217 CI [−0.065,−0.0079] <0 восстановлен
-      как положительный результат) + resolvable_all_bins отдельно.
-    - B3: |mgw−saved| (med 1.92) — НЕ fp16-шум (аналитика ≈2e-4), а
-      систематический масштаб: ratio saved/surr 1.313 (p10/p90 1.23/1.43),
-      argmax==tok 99.6% (тот же выбор/позиция), diff при match 2.02, corr
-      (|diff|,mgw) 0.875, регрессия slope 0.217/intercept 0.09≈0 → «масштаб,
-      не шум» (правило-решения ревью). Оговорка «TF низкорешиционный»
-      снята; noise = 2·√D·2⁻¹²·|E|med (|E|med 0.0129 → 2.0e-4) в окна/dp1.
-    - B4: единый критерий (resolution/resolution_local): IQR TF 1.097 и
-      L17-local 0.531 оба ≫ шума → ОБА разрешены (ветка «шум ≪ 1»); N3-вывод
-      сохранён (flat L17-local — контент).
-    - B5: bin_boundary_frac — баг .min(axis=1) на (3,k): минимум по границам
-      (≤3 на группу), не по позициям → 0.026 вместо 0.886 (при окне 2.838);
-      фикс axis=0; новое окно — аналитический шум 2e-4 → frac ≈ 0.0004–0.0007.
-    - F2: flip_threshold в артефакте: gen ci_high −0.015349 (стабилен),
-      вердикт обращается при T < 0.015349; пре-рег 0.02 = +30.3%.
-    Прогон AT3_REVISION=r5 (wall 567.4 с), вердикты без изменений. [x] r5
-    ЗАКРЫТО (коммиты 0b52aa8 + cca4b5f; ревью-файл — финальная версия 190
-    строк, sha 0f306d73; поправка: TF p1 разрешён после B3, δp1 2.9e-5 <
-    IQR 0.239). NEXT: T3.2 (35-пул).
-- Общие модули (указание user 16.11): AT3.py — на prism/explog.py (ExpLog, drop-in
-  для logline) и prism/nulls_and_stats.py (paired_bootstrap, spearman, permutation_test)
-  — НЕ копировать логику в скрипт (рефакторинг 484943b).
-- Границы: файлы параллельной сессии не трогать (commit'ы с явными путями! инцидент
-  16.11: чужой коммит 8e8b11c схватил мои staged-ренеймы); кэши/npz read-only;
-  paper.md не трогать.
+  - [x] S1: scope-факты (P4-пул=51 clean, degen=loopy+2, K_vt=96 у 30 loop, данные
+    gen_layers_qwen.npz + P1_own + P2_corpus, anchor P4: est 0.0019385052599123764,
+    CI [0.0006869265851350281, 0.003384692508133957], null E −0.0022211325679422143,
+    p_perm 0.01639344262295082, n_docs 51; T0.3: 30/41 det, p_values 7..32,
+    AT0_3_AREA.json sha16 8fe61affb13b443f) → docs/dynamic/orch/AT0_8_scope.md.
+  - [x] S2: пре-рег r1 → docs/AT0_8_prereg.md (супервизор). Ревьюер r1 умер по
+    таймауту 30 мин БЕЗ файла (headless-death, RC-маркера нет) — S3 не закрыт.
+    Смоук драфта нашёл дизайн-баг r1 (frac_narrow инверсна: отношение средних,
+    плоское плато → ≈1, линия → ≫1; смок-loopy 240) → ревизия r2: primary =
+    детект-рейт (binomial vs dir-matched FDR) + line_ratio (descriptive/guard),
+    peak3/p_peak убраны из estimand'ов → docs/AT0_8_prereg.md (r2).
+  - [x] S3: ревью пре-рега r2 — **SELF_REVIEW_FALLBACK** (docs/AT0_8_review_r1.md,
+    VERDICT PASS + маркер). Три запуска внешнего ревьюера умерли по 30-мин таймауту
+    БЕЗ файла (342a84f4/60524939/b3da411a — headless-death); запуск 3 до смерти
+    прогнал ВСЕ числовые сверки раздела A — все PASS (артефакт:
+    docs/dynamic/orch/AT0_8_review_r1_external_partial.log). Причина смерти 2:
+    устаревший pin field.py → воркер ковал git-историю; корень зафиксирован
+    (pin bcc607c5 = G1' T0.1 + гейт G5b + стоп-правило в промте).
+    Само-ревью: G1 bit-eq (diff 0); G1b bit-eq (diff 4.3e-19, сиды по pool5=53
+    nondegen — T0.1 verbatim, ANCHOR = T0_ACCOUNTING.json NNULL=199, store-null
+    — старый r4-снимок); G3 bit-eq ACF (3 дока); detect_period/perm_stat/s_doc
+    вербати; щель партиции (B_sig ∧ fB<5) → NOT_RESOLVED задекларирована §6;
+    binom-края, trackio, _clean — OK.
+  - [x] S4: experiments/at0/AT0_8_vtanp.py (r2) + само-аудит — смоук OK (30–35 с),
+    полное само-ревью закрыто (см. S3); 5 исправлений до прогона (см. review-файл).
+  - [x] S5: полный прогон (wall 1312.1 с, CPU; trackio at0_8_vtanp_r2). **VERDICT:
+    a_LOOP_CHANNEL** — arm A (30 loopy): det 25/30, fdr 0.0000, p=0.0000, median
+    line_ratio_A = 221.8 (≥ 5); arm B (51 clean, P4-пул): det 0/51, p=1.0000. T0.1-плато
+    (v_tangent|L23, k≥9) локализуется в петлевой канал: периодичность есть в loopy-
+    докуах, в clean-пуле — нет. Гейты G1–G6 + G3/G5b — bit-eq (anchor T0.1: est
+    0.001938505259912, CI [0.0006869265851350281, 0.003384692508133957]; pair-block null
+    arm B: E −0.002227763, p_perm 0.005000 — оба bit-eq с якорем). Артефакты:
+    results/AT0/AT0_8_VTANP.json (+_store, _manifest), log logs/AT0_8_run.log.
+  - [ ] S6: отчёт docs/AT0_8_results.md + sha + внешнее ревью результата + коммит (явные
+    пути) — после этого раунда (user: «AT0_8-учёт — после этого раунда»).
+- Границы: не менять prism/field.py, AT0_1..AT0_7, AT8_1-скрипты (AT8_2-скрипты — в этом раунде, по команде user «сведи в 1»); данные (npz, /data) —
+  read-only; коммит — явные пути (рабочее дерево общее с параллельной сессией); paper.md не трогать;
+  файлы воркеров — CJK/mixed-script гейт до коммита; trackio — config+stages+crash-finish.

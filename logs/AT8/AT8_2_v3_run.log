@@ -1,0 +1,11 @@
+AT8_2 r3 (T8.2) disk-only reanalysis start 2026-11-17T15:10:12.885735+00:00 py=3.13.14 np=2.5.2 (machine v3, без модели/перепрогона)
+sha-верификация: store 69f32421a22d7fba / r1-claim 779008c46a770b0c — совпадает с manifest (r1 прогон не тронут)
+ячейки: 128 (measurable=120) — пересчёт == r1-claim (0 расхождений; +G14-provenance ключи в 120 клетках — документировано, C11)
+ось A (W=64, возмущённая популяция, v3): lrec={2: 60.0, 4: 51.5, 8: 49.0, 16: 62.0} ratio=1.0333 b=0.3587 r2=0.1226
+  censored_excluded (вторичный): lrec={2: 61.5, 4: 0.0, 8: 49.0, 16: 62.0}
+ось B (v3): frac_to_global=0.3276 (n=58; legacy pooled=0.2328)
+diag: {'n_rec_pairs': 4, 'n_pos': 3, 'n_notrec_perturbed': 38, 'n_perturbed': 58, 'nr_share_perturbed': 0.6552, 'n_no_effect': 32, 'ne_share_axis': 0.05, 'notrecovered_share_full': 0.4741, 'axis_W64_notrecovered_share': 0.75}
+VERDICT: NOT_RESOLVED (match_pre_reg=False): ℓ_rec слабо зависит от n (ratio=1.0333, W=64, возмущённая популяция), окно к контролю (frac_to_global=0.3276) (мало восстановленных пар (doc,n) на W=64: 4 < 6; провал (цензурированный) не засчитывается восстановлением — A1) (большинство not_recovered по возмущённой популяции: 38/58 — A4)
+bootstrap (доковый, 2000 resamples, seed 0): ratio_ci95=[1.0, 1.0333] frac_ci95=[0.2558, 0.4231] lrec_ci95_by_n={2: [39.0, 63.0], 4: [28.5, 64.0], 8: [39.0, 64.0], 16: [39.0, 64.0]}
+written: /home/survivor/work/prism/results/AT8/AT8_2_RECOVERY_v3.json (sha 9fd42ccac0d1b6e1), /home/survivor/work/prism/results/AT8/AT8_2_v3_manifest.json
+AT8_2_V3_DONE verdict=NOT_RESOLVED match_pre_reg=False (wall 0.7s)

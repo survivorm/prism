@@ -9,7 +9,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from at8_2_analysis import N_DOSE, resume_plan
+from AT8_2 import N_DOSE, resume_plan
 
 names = [f"wiki_{i}" for i in range(8)]
 res = {
