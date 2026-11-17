@@ -1,0 +1,39 @@
+{
+ "what": "AT2c arm-swap smoke (TZ §11): swapped control обязан FAIL (lower < 0)",
+ "assembled_at": "2026-11-17T04:14:21.013265",
+ "config": {
+  "layer": 6,
+  "k": 0,
+  "n_docs": 32,
+  "boot_b": 1000,
+  "seed": 0,
+  "r_final": 7,
+  "metric": "weighted cos (primary)",
+  "script_sha": "ea645493b94cbe76a8eef96ebd08f9104fd6ef75dfd0a58f3457bbf777111ea9"
+ },
+ "swapped_control_CI_top_minus_weak": [
+  -0.4570743370071824,
+  -0.3966018200257209
+ ],
+ "swapped_control_CI_unweighted": [
+  -0.4091550890537016,
+  -0.3567949060938745
+ ],
+ "s8_anchor_L6": {
+  "got_mean": 0.2925798086059347,
+  "got_ci": [
+   0.27130855793557396,
+   0.31440423884281526
+  ],
+  "got_cos_median_top": 0.7082353144912066,
+  "got_cos_median_weak": 0.400085309799909,
+  "ref_mean": 0.2925798086059347,
+  "ref_ci": [
+   0.27130855793557396,
+   0.31440423884281526
+  ],
+  "max_diff": 0.0
+ },
+ "ok_swap": true,
+ "wall_sec": 95.9
+}

@@ -1,0 +1,30 @@
+[05:17:32] AT2c (T2.1c) start 2026-11-17T05:17:32.306671 py=3.12.9 torch=2.14.1+cu130 smoke=False prerun=False armswap=False
+[05:17:33] trackio: run at2c_t21c_r4 init ok
+[05:17:50] S1 sha-гейт: 7/7 OK
+[05:17:54] E loaded: (248320, 1024)
+[05:18:23] S2 z-маршрут: mean KL (2 дока) = 1.885e-08 all32 = 5.229e-09 OK
+[05:18:26] S3 ориентация (exploratory): hi 0.381/0.490 lo 0.014/0.017 OK
+[05:18:27] S4 lk4: total 90/4096 per-домен { wiki 8, math 41, code 36, chat 5 } OK
+[05:18:44] pass1 L6: eigh per (d,t) + d_eff done
+[05:19:00] pass1 L12: eigh per (d,t) + d_eff done
+[05:19:18] pass1 L18: eigh per (d,t) + d_eff done
+[05:19:35] pass1 L22: eigh per (d,t) + d_eff done
+[05:19:35] d_eff rematching: max/min = 2.13 > 1.2 -> r = 7
+[05:19:35] S5a r_final = 7 (rematched=True) -> OK
+[05:19:58] pass2 L6: stationary basis (top/weak-tail/weak_mid) + S5b + anchor + proj done
+[05:20:24] pass2 L12: stationary basis (top/weak-tail/weak_mid) + S5b + anchor + proj done
+[05:20:53] pass2 L18: stationary basis (top/weak-tail/weak_mid) + S5b + anchor + proj done
+[05:21:19] pass2 L22: stationary basis (top/weak-tail/weak_mid) + S5b + anchor + proj done
+[05:21:19] S5b eig-закрытость Gagg: max per L = { L6: 2.326e-12, L12: 2.579e-13, L18: 5.489e-14, L22: 4.106e-14 } -> OK
+[05:21:19] S8 diagnostic anchor: L6 max|diff|=0.000e+00 L12 max|diff|=0.000e+00 L18 max|diff|=0.000e+00 L22 max|diff|=0.000e+00 (tol 1e-06) -> OK
+[05:21:22] ridge L6 done
+[05:21:24] ridge L12 done
+[05:21:26] ridge L18 done
+[05:21:28] ridge L22 done
+[05:21:29] ridge L23 done
+[05:21:29] S6 P-zero (weights, centered): True
+[05:21:29] S6b R2-floor (TSS_c > 0, R2_c = 0): True
+[05:21:29] S6c centering: ybar_max per k = { k0: 6.69e-06, k1: 6.56e-06, k2: 6.37e-06, k4: 6.53e-06, k8: 6.58e-06 }; dcos worst (gated J) = 1.44e-02 (≤ 2e-2); pairwise confounding max (wmean) = 7.60e-03 (≤ DELTA_MIN=0.01); maxd-pairwise report = 1.03e-02 -> OK
+[05:21:35] VERDICT: NOT_RESOLVED (control_ok=True, metric=weighted cos)
+[05:21:36] S7 exact-set: expected 540000, got 540000, set_eq=True
+[05:21:37] AT2c (T2.1c) DONE wall=244.8s verdict=NOT_RESOLVED

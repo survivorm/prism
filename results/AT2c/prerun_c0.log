@@ -1,0 +1,26 @@
+[03:10:31] AT2c (T2.1c) start 2026-11-17T03:10:31.316038 py=3.12.9 torch=2.14.1+cu130 smoke=False prerun=True armswap=False
+[03:10:47] S1 sha-гейт: 7/7 OK
+[03:10:51] E loaded: (248320, 1024)
+[03:11:18] S2 z-маршрут: mean KL (2 дока) = 1.885e-08 all32 = 5.229e-09 OK
+[03:11:22] S3 ориентация (exploratory): hi 0.381/0.490 lo 0.014/0.017 OK
+[03:11:23] S4 lk4: total 90/4096 per-домен { wiki 8, math 41, code 36, chat 5 } OK
+[03:11:40] pass1 L6: eigh per (d,t) + d_eff done
+[03:11:59] pass1 L12: eigh per (d,t) + d_eff done
+[03:12:18] pass1 L18: eigh per (d,t) + d_eff done
+[03:12:39] pass1 L22: eigh per (d,t) + d_eff done
+[03:12:39] d_eff rematching: max/min = 2.13 > 1.2 -> r = 7
+[03:12:39] S5a r_final = 7 (rematched=True) -> OK
+[03:13:06] pass2 L6: stationary basis (top/weak-tail/weak_mid) + S5b + anchor + proj done
+[03:13:44] pass2 L12: stationary basis (top/weak-tail/weak_mid) + S5b + anchor + proj done
+[03:14:07] pass2 L18: stationary basis (top/weak-tail/weak_mid) + S5b + anchor + proj done
+[03:14:32] pass2 L22: stationary basis (top/weak-tail/weak_mid) + S5b + anchor + proj done
+[03:14:32] S5b eig-закрытость Gagg: max per L = { L6: 2.326e-12, L12: 2.579e-13, L18: 5.489e-14, L22: 4.106e-14 } -> OK
+[03:14:32] S8 diagnostic anchor: L6 max|diff|=0.000e+00 L12 max|diff|=0.000e+00 L18 max|diff|=0.000e+00 L22 max|diff|=0.000e+00 (tol 1e-06) -> OK
+[03:14:32] ridge L6 done
+[03:14:32] ridge L12 done
+[03:14:32] ridge L18 done
+[03:14:32] ridge L22 done
+[03:14:32] S6 P-zero (weights, centered): True
+[03:14:32] S6b R2-floor (TSS_c > 0, R2_c = 0): True
+[03:14:32] S6c centering: ybar_max per k = { k0: 6.69e-06 }; dcos worst (gated J) = 3.17e-08 (≤ 2e-2); pairwise confounding max = 2.07e-08 (≤ DELTA_MIN=0.01) -> OK
+[03:14:33] PRE-RUN DONE: control_ok_all_l=True wall=241.9s

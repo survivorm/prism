@@ -1,0 +1,16 @@
+[04:12:45] AT2c (T2.1c) start 2026-11-17T04:12:45.080110 py=3.12.9 torch=2.14.1+cu130 smoke=False prerun=False armswap=True
+[04:13:03] S1 sha-гейт: 7/7 OK
+[04:13:07] E loaded: (248320, 1024)
+[04:13:35] S2 z-маршрут: mean KL (2 дока) = 1.885e-08 all32 = 5.229e-09 OK
+[04:13:39] S3 ориентация (exploratory): hi 0.381/0.490 lo 0.014/0.017 OK
+[04:13:40] S4 lk4: total 90/4096 per-домен { wiki 8, math 41, code 36, chat 5 } OK
+[04:13:57] pass1 L6: eigh per (d,t) + d_eff done
+[04:13:57] S5a r_final = 7 (rematched=False) -> OK
+[04:14:20] pass2 L6: stationary basis (top/weak-tail/weak_mid) + S5b + anchor + proj done
+[04:14:20] S5b eig-закрытость Gagg: max per L = { L6: 2.326e-12 } -> OK
+[04:14:20] S8 diagnostic anchor: L6 max|diff|=0.000e+00 (tol 1e-06) -> OK
+[04:14:20] ridge L6 done
+[04:14:20] S6 P-zero (weights, centered): True
+[04:14:20] S6b R2-floor (TSS_c > 0, R2_c = 0): True
+[04:14:20] S6c centering: ybar_max per k = { k0: 6.69e-06 }; dcos worst (gated J) = 3.17e-08 (≤ 2e-2); pairwise confounding max = 1.94e-08 (≤ DELTA_MIN=0.01) -> OK
+[04:14:21] ARMSWAP_DONE: swapped control lower=-0.4571 < 0 — логика гейта проверена (wall=95.9s)
