@@ -499,6 +499,7 @@ def run_main(mode="full"):
     docs_all, pool_meta = load_pool(tk)
     # тексты филлеров всегда из пула (filler_map ссылается только на доки пула)
     texts_by_name = {d["name"]: d["text"] for d in docs_all}
+    docs = docs_all
     if mode == "smoke":
         docs = [d for d in docs_all if d["domain"] == "wiki"][:2]
         pool_meta = dict(pool_meta, smoke=True,
