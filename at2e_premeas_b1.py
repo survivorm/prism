@@ -43,9 +43,14 @@ for cell_id, L_IDX in ((0, 11), (1, 12)):
     Hc = hL.double() - hL.double().mean(0, keepdim=True)
     vh = np.linalg.svd(Hc.numpy(), full_matrices=False)[2]   # [1024, 128]
     top8 = vh[:8]; bot8 = vh[119:127]
-    # reduced QR for (16,1024): Q (16,16), R (16,1024) — ортонормальные направления = СТРОКИ R
-    _q, rmat = np.linalg.qr(np.random.RandomState(SEED + cell_id).standard_normal((16, 1024)))
-    gqr = rmat / np.linalg.norm(rmat, axis=1, keepdims=True)
+    # gQR (r3, N2 fix): A (16,1024) Gaussian; directions = COLUMNS of QR(A^T) (1024x16):
+    # unit + orthonormal, Stiefel-Haar. (Rows of R from wide reduced QR — NOT unit/orthonormal,
+    # verified numerically: norms ~30-33, cos ~0.07 — excluded.)
+    A = np.random.RandomState(SEED + cell_id).standard_normal((16, 1024))
+    q16 = np.linalg.qr(A.T)[0]                     # (1024, 16), columns = directions
+    gqr = q16.T                                    # (16, 1024), rows = unit orthonormal directions
+    gqr_check = float(np.abs(gqr @ gqr.T - np.eye(16)).max())
+    gqr_norm_check = float(np.abs(np.linalg.norm(gqr, axis=1) - 1.0).max())
     b0 = np.vstack([top8, bot8, gqr]).astype(np.float32)
     b0 = b0 / np.linalg.norm(b0, axis=1, keepdims=True)
     pt = torch.softmax(z0[T_POS], dim=0).double().numpy()
@@ -81,6 +86,7 @@ for cell_id, L_IDX in ((0, 11), (1, 12)):
         return float(a[f] + (a[c] - a[f]) * (k - f))
     out[f"L{L_IDX}"] = {
         "hnorm_t32": hnorm, "a_small": a_small, "zmax_t": zmax_t, "pmax_t": pmax_t,
+        "gqr_orth_max_dev": gqr_check, "gqr_norm_max_dev": gqr_norm_check,
         "q_t": {"min": min(qts), "p25": pct(qts, 25), "median": pct(qts, 50),
                 "p75": pct(qts, 75), "max": max(qts), "sorted": qts_s},
         "qbar_fut": {"min": min(qfuts), "median": pct(qfuts, 50), "max": max(qfuts)},
