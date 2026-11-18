@@ -19,8 +19,7 @@
 // ЧЕГО ЭТО НЕ ДАЁТ: это не проверка планировщика GPU, не проверка раскладки
 // памяти устройства и не измерение скорости. Это проверка ЛОГИКИ ядер.
 //
-// Сборка:  g++ -std=c++20 -O2 -fPIC -shared -Iprobe/sycl_cpu src/prism_sycl.cpp \
-//              -o build/libprism_sycl_cpu.so
+// Сборка:  g++ -std=c++20 -O2 -fPIC -shared -Iprobe/sycl_cpu src/prism_sycl.cpp -o build/libprism_sycl_cpu.so
 #pragma once
 #include <atomic>
 #include <barrier>
@@ -234,51 +233,13 @@ template <class T> class accessor<T, 2> {
     T& operator[](std::size_t j) const { return p_[j]; }
   };
   T* p_ = nullptr;
-  std::size_t n_ = 0;
+  std::size_t w_ = 0;  // ширина строки (последнее измерение, SYCL: рядности по s_[D-1])
   accessor() = default;
-  accessor(T* p, range<2> r) : p_(p), n_(r.s_[0] * r.s_[1]) {}
-  accessor(T* p, range<2> r, const handler&) : p_(p), n_(r.s_[0] * r.s_[1]) {}
-  row operator[](std::size_t i) const { return row{p_ + i * n_, n_}; }
-  row operator[](id<1>) const { return row{p_, n_}; }
-  T& operator[](id<2> i) const { return p_[i[0] * n_ + i[1]]; }
-};
-
-template <class T, int D> class local_accessor;
-
-template <class T> class local_accessor<T, 1> {
- public:
-  int slot_ = -1;
-  std::size_t bytes_ = 0;
-  local_accessor(range<1> r, handler& h) {
-    slot_ = h.next_local_slot();
-    bytes_ = r.size() * sizeof(T);
-  }
-  T& operator[](std::size_t i) const {
-    return ((T*)detail::resolve_slot(slot_, bytes_))[i];
-  }
-};
-
-template <class T> class local_accessor<T, 2> {
- public:
-  struct row {
-    T* p_;
-    std::size_t n_;
-    T& operator[](std::size_t j) const { return p_[j]; }
-  };
-  int slot_ = -1;
-  std::size_t n_ = 0;
-  std::size_t bytes_ = 0;
-  local_accessor(range<2> r, handler& h) {
-    slot_ = h.next_local_slot();
-    n_ = r.s_[0] * r.s_[1];
-    bytes_ = n_ * sizeof(T);
-  }
-  row operator[](std::size_t i) const {
-    return row{(T*)detail::resolve_slot(slot_, bytes_) + i * n_, n_};
-  }
-  row operator[](id<1>) const {
-    return row{(T*)detail::resolve_slot(slot_, bytes_), n_};
-  }
+  accessor(T* p, range<2> r) : p_(p), w_(r.s_[1]) {}
+  accessor(T* p, range<2> r, const handler&) : p_(p), w_(r.s_[1]) {}
+  row operator[](std::size_t i) const { return row{p_ + i * w_, w_}; }
+  row operator[](id<1>) const { return row{p_, w_}; }
+  T& operator[](id<2> i) const { return p_[i[0] * w_ + i[1]]; }
 };
 
 /* ---------------- buffer ---------------- */
@@ -320,26 +281,44 @@ class handler {
   }
 
   template <int D, class F> void parallel_for(nd_range<D> nr, F f) {
+    // Семантика SYCL nd_range: группа (g0..g{D-1}), g_d ∈ [0, G_d/L_d);
+    // тред (l0..l{D-1}) внутри группы; gid_d = g_d * L_d + l_d.
+    // (Старый flat-картинг «flat = gi*lsz + l → row-major по ГЛОБАЛЬНОМУ
+    //  диапазону» верен только для D=1: при D=2 треды одной группы
+    //  рассредоточивались по всему измерению и топтали общий local-буфер
+    //  чужими чанками B (гонка в gemm).)
     const std::size_t lsz = nr.l_.size();
-    const std::size_t gsz = nr.g_.size();
-    const std::size_t groups = lsz ? gsz / lsz : 0;
-    for (std::size_t gi = 0; gi < groups; ++gi) {
+    std::size_t ngroups[D];
+    std::size_t group_total = 1;
+    for (int d = 0; d < D; ++d) {
+      ngroups[d] = nr.g_.s_[d] / nr.l_.s_[d];
+      group_total *= ngroups[d];
+    }
+    for (std::size_t g = 0; g < group_total; ++g) {
+      std::size_t gidx[D];
+      std::size_t remg = g;
+      for (int d = D - 1; d >= 0; --d) {
+        gidx[d] = remg % ngroups[d];
+        remg /= ngroups[d];
+      }
       detail::GroupCtx ctx;
       ctx.bar = std::make_unique<std::barrier<>>(lsz);
       std::vector<std::thread> th;
       th.reserve(lsz);
       for (std::size_t l = 0; l < lsz; ++l) {
-        th.emplace_back([&, gi, l, lsz]() {
+        th.emplace_back([&, gidx, l]() {
           detail::tls_ctx = &ctx;
           detail::tcache_ctx = nullptr;
           detail::tcache_slot = -1;
           id<D> gid, lid;
-          std::size_t rem = gi * lsz + l;
+          // flat l -> local id (row-major по nr.l_)
+          std::size_t rem2 = l;
           for (int d = D - 1; d >= 0; --d) {
-            gid.v_[d] = rem % nr.g_.s_[d];
-            rem /= nr.g_.s_[d];
+            lid.v_[d] = rem2 % nr.l_.s_[d];
+            rem2 /= nr.l_.s_[d];
           }
-          for (int d = 0; d < D; ++d) lid.v_[d] = (d == 0) ? l : 0;
+          // gid_d = g_d * L_d + l_d
+          for (int d = 0; d < D; ++d) gid.v_[d] = gidx[d] * nr.l_.s_[d] + lid.v_[d];
           nd_item<D> it(gid, lid);
           f(it);
           detail::tls_ctx = nullptr;
@@ -380,6 +359,44 @@ class event {
  public:
   void wait() {}
   void wait_and_throw() {}
+};
+
+template <class T, int D> class local_accessor;
+
+template <class T> class local_accessor<T, 1> {
+ public:
+  int slot_ = -1;
+  std::size_t bytes_ = 0;
+  local_accessor(range<1> r, handler& h) {
+    slot_ = h.next_local_slot();
+    bytes_ = r.size() * sizeof(T);
+  }
+  T& operator[](std::size_t i) const {
+    return ((T*)detail::resolve_slot(slot_, bytes_))[i];
+  }
+};
+
+template <class T> class local_accessor<T, 2> {
+ public:
+  struct row {
+    T* p_;
+    std::size_t n_;
+    T& operator[](std::size_t j) const { return p_[j]; }
+  };
+  int slot_ = -1;
+  std::size_t w_ = 0;   // ширина строки (последнее измерение)
+  std::size_t bytes_ = 0;
+  local_accessor(range<2> r, handler& h) {
+    slot_ = h.next_local_slot();
+    w_ = r.s_[1];
+    bytes_ = r.s_[0] * r.s_[1] * sizeof(T);
+  }
+  row operator[](std::size_t i) const {
+    return row{(T*)detail::resolve_slot(slot_, bytes_) + i * w_, w_};
+  }
+  row operator[](id<1>) const {
+    return row{(T*)detail::resolve_slot(slot_, bytes_), w_};
+  }
 };
 
 class queue {

@@ -72,6 +72,7 @@ class _DeviceInfo(ctypes.Structure):
 
 
 _lib = None
+_new_ops_error = None
 _load_error = None
 
 
@@ -133,6 +134,33 @@ def _load():
                               ctypes.c_int64, c_i64, ctypes.c_int64, c_d]
             bind("perm_lags_f32", [c_p] + perm_lags_args[1:])
             bind("perm_lags_f16", [ctypes.POINTER(ctypes.c_uint16)] + perm_lags_args[1:])
+            # AT0_3 (TZ_sycl_new_ops v5): gemm + eigtop/eigbot/eigjac —
+            # мягкая привязка: если символов нет (старый .so), старые операции
+            # продолжают работать, новые — понятная ошибка «пересоберите».
+            _missing_new_ops = []
+            for _nm, _args in (
+                ("gemm_f32", [c_p, c_p, ctypes.c_int64, ctypes.c_int64,
+                              ctypes.c_int64, c_p]),
+                ("eigtop", [c_p, ctypes.c_int64, ctypes.c_int64, ctypes.c_int64,
+                            ctypes.c_int64, c_d, c_p, c_d]),
+                ("eigbot", [c_p, c_p, ctypes.c_int64, ctypes.c_int64,
+                            ctypes.c_int64, ctypes.c_int64, c_d, c_p, c_d]),
+                ("eigjac", [c_p, ctypes.c_int64, ctypes.c_int64, ctypes.c_int64,
+                            ctypes.c_double, c_d, c_p, c_d, c_d,
+                            ctypes.c_int64]),
+            ):
+                try:
+                    bind(_nm, _args)
+                except AttributeError:
+                    _missing_new_ops.append(_nm)
+            global _new_ops_error
+            if _missing_new_ops:
+                _new_ops_error = (
+                    "операции AT0_3 не привязаны (символы не найдены в .so: "
+                    + ", ".join(_missing_new_ops) + ") — старая библиотека; "
+                    "пересоберите: cmake --build build")
+            else:
+                _new_ops_error = None
             _lib = lib
             return _lib
         except OSError as e:  # pragma: no cover
@@ -383,6 +411,302 @@ def ra_closure(u, hn):
     )
     _check(rc)
     return float(cl[0]), float(cr[0])
+
+
+# --------------------- AT0_3: gemm / eigtop / eigbot / eigjac / svd_top ---------------------
+
+def _contig32(x, name: str) -> np.ndarray:
+    """f32-массив с проверкой contiguous (TZ: не-contiguous — понятное исключение)."""
+    a = _np(x)
+    if a.dtype != np.float32:
+        raise RuntimeError(
+            f"prism_sycl: {name}: только fp32-вход (получено {a.dtype}); "
+            f"явный каст: np.asarray(x, dtype=np.float32) / .astype(np.float32)")
+    if not a.flags["C_CONTIGUOUS"]:
+        raise RuntimeError(
+            f"prism_sycl: {name}: вход должен быть C-contiguous "
+            f"(получен view с шагом {a.strides}); "
+            f"исправление: np.ascontiguousarray(x)")
+    return a
+
+
+def gemm(A, B):
+    """C[M,N] = A[M,K] @ B[K,N] — fp32, row-major, GPU (TZ_sycl_new_ops §2.1).
+
+    Tейлованное ядро (конфиг зафиксирован тюнингом, probe/RESULTS_tuning.md),
+    N-чанкинг внутри вызова: каждый launch ≤ 32 GFLOP (hang-check драйвера).
+    Детерминизм: in_order-очередь, порядок чанков фиксирован (бит-в-бит
+    повторный запуск).
+
+    A — [M, K] float32 (1<=M<=65536, 1<=K<=4096);
+    B — [K, N] float32 (1<=N<=262144); не-fp32 → ошибка (PS_ERR_ARG).
+    Возвращает C — [M, N] float32.
+    """
+    a = _contig32(A, "gemm:A")
+    b = _contig32(B, "gemm:B")
+    if a.ndim != 2 or b.ndim != 2 or a.shape[1] != b.shape[0]:
+        raise ValueError(f"prism_sycl: gemm: формы {a.shape} @ {b.shape} — нужен [M,K]@[K,N]")
+    M, K = a.shape
+    N = b.shape[1]
+    if not (1 <= M <= 65536 and 1 <= K <= 4096 and 1 <= N <= 262144):
+        raise RuntimeError(f"prism_sycl: gemm: PS_ERR_ARG — ограничения размеров "
+                           f"(1<=M<=65536, 1<=K<=4096, 1<=N<=262144), получено {M}x{K}x{N}")
+    if _is_reference():
+        return (a.astype(np.float64) @ b.astype(np.float64)).astype(np.float32)
+    lib = _load()
+    if lib is None:
+        raise RuntimeError(f"prism_sycl: {_load_error}")
+    if _new_ops_error is not None:
+        raise RuntimeError(f"prism_sycl: gemm: {_new_ops_error}")
+    C = np.empty((M, N), dtype=np.float32)
+    rc = lib.prism_sycl_gemm_f32(
+        a.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        b.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.c_int64(M), ctypes.c_int64(K), ctypes.c_int64(N),
+        C.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+    )
+    _check(rc)
+    return C
+
+
+def eigtop(A, r, max_iter=512):
+    """r верхних собственных пар батча (power iteration + MGS, TZ §2.2).
+
+    A — [batch, n, n] float32 (1<=batch<=65536, 1<=n<=1024, 1<=r<=32, r<n,
+    1<=max_iter<=512).
+    Возвращает (vals, vecs, resid):
+      vals  — f64 [batch, r] — Rayleigh-значения λ_j = ⟨v_j, A v_j⟩ (хост f64);
+      vecs  — f32 [batch, n, r] — столбцы — собственные векторы (ортогональность
+              ~eps благодаря двойному MGS, n-14);
+      resid — f64 [batch] — подпространственный остаток
+              ‖AV − V(VᵀAV)‖_F/‖A‖_F на последней итерации — ЧЕСТНЫЙ отчёт,
+              НЕ критерий остановки (стоп — max_iter).
+    """
+    a = _contig32(A, "eigtop")
+    if a.ndim != 3 or a.shape[1] != a.shape[2]:
+        raise ValueError(f"prism_sycl: eigtop: форма {a.shape} — нужен батч [b,n,n]")
+    batch, n, _ = a.shape
+    if _is_reference():
+        return ref.eig_top(a.astype(np.float64), int(r))
+    lib = _load()
+    if lib is None:
+        raise RuntimeError(f"prism_sycl: {_load_error}")
+    vals, vecs, resid = _eig_call("eigtop", lib=lib, a=a, r=r, max_iter=max_iter,
+                                  batch=batch, n=n, L=None)
+    return vals, vecs, resid
+
+
+def eigbot(A, r, max_iter=512):
+    """r нижних собственных пар батча (inverse iteration, TZ §2.2).
+
+    A — [batch, n, n] float32, должен быть SPD после сдвига (jcache-Граимиан
+    таков; вырожденный вход ⇒ host-Cholesky упадёт громко — это сигнал).
+    Внутри: L = chol(A + μI) на ХОСТЕ (f64, batched), μ = 1e-12·‖A‖_F по
+    матрице (TZ: сдвиг 1e-12·‖A‖F; inverse iteration сходится даже на тесном
+    нижнем кластере, где сдвиг S·I−A не сходится). L кастится в f32 (ядро
+    fp32).
+    Возвращает (vals, vecs, resid) — как у eigtop.
+    """
+    a = _contig32(A, "eigbot")
+    if a.ndim != 3 or a.shape[1] != a.shape[2]:
+        raise ValueError(f"prism_sycl: eigbot: форма {a.shape} — нужен батч [b,n,n]")
+    batch, n, _ = a.shape
+    if _is_reference():
+        return ref.eig_bottom(a.astype(np.float64), int(r))
+    mu = 1e-12 * np.linalg.norm(a.astype(np.float64), axis=(1, 2))
+    I = np.eye(n, dtype=np.float64)
+    try:
+        L = np.linalg.cholesky(a.astype(np.float64) + mu[:, None, None] * I)
+    except np.linalg.LinAlgError as e:
+        raise RuntimeError(
+            f"prism_sycl: eigbot: host-Cholesky(A + μI) не сошёлся: {e} "
+            f"(вход должен быть SPD после сдвига — TZ §2.2)") from e
+    L32 = np.ascontiguousarray(L.astype(np.float32))
+    lib = _load()
+    if lib is None:
+        raise RuntimeError(f"prism_sycl: {_load_error}")
+    vals, vecs, resid = _eig_call("eigbot", lib=lib, a=a, r=r, max_iter=max_iter,
+                                  batch=batch, n=n, L=L32)
+    return vals, vecs, resid
+
+
+def _eig_call(op, lib, a, r, max_iter, batch, n, L):
+    if not (1 <= batch <= 65536 and 1 <= n <= 1024 and 1 <= r <= 32 and r < n
+            and 1 <= max_iter <= 512):
+        raise RuntimeError(
+            f"prism_sycl: {op}: PS_ERR_ARG — ограничения (1<=batch<=65536, "
+            f"1<=n<=1024, 1<=r<=32, r<n, 1<=max_iter<=512), получено "
+            f"batch={batch} n={n} r={r} max_iter={max_iter}")
+    # local-бюджет (C++ проверит тоже; ранняя понятная ошибка):
+    local_bytes = 2 * n * r * 4 + r * r * 4 + 64 * 4
+    if local_bytes > 65536:
+        raise RuntimeError(
+            f"prism_sycl: {op}: PS_ERR_LOCAL — 2*n*r*4 + r*r*4 + 64*4 = "
+            f"{local_bytes} > 65536 (n=1024: r<=7)")
+    if _new_ops_error is not None:
+        raise RuntimeError(f"prism_sycl: {op}: {_new_ops_error}")
+    vals = np.empty((batch, r), dtype=np.float64)
+    vecs = np.empty((batch, n, r), dtype=np.float32)
+    resid = np.empty(batch, dtype=np.float64)
+    fn = lib.prism_sycl_eigtop if op == "eigtop" else lib.prism_sycl_eigbot
+    if op == "eigtop":
+        rc = fn(a.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+                ctypes.c_int64(batch), ctypes.c_int64(n), ctypes.c_int64(r),
+                ctypes.c_int64(max_iter),
+                vals.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                vecs.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+                resid.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
+    else:
+        rc = fn(a.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+                L.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+                ctypes.c_int64(batch), ctypes.c_int64(n), ctypes.c_int64(r),
+                ctypes.c_int64(max_iter),
+                vals.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                vecs.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+                resid.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
+    _check(rc)
+    return vals, vecs, resid
+
+
+def eigjac(A, max_sweeps=12, tol=1e-5, curve=None):
+    """Полный спектр симметричного батча (cyclic Jacobi, TZ §2.3, v5.3).
+
+    A — [batch, n, n] float32, симметричный (1<=batch<=65536, 1<=n<=256,
+    1<=max_sweeps<=64, 1e-6<=tol<=1e-3).
+    Возвращает (vals, vecs, offdiag):
+      vals    — f64 [batch, n] — ПО ВОЗРАСТАНИЮ (порядок torch);
+      vecs    — f32 [batch, n, n] — столбцы — собственные векторы
+                (host-MGS f64, write-back в f32: ‖VᵀV−I‖ ≈ 3e-7 при n=128);
+      offdiag — f64 [batch] — относительное ‖offdiag(A)‖_F/‖A‖_F на остановке
+                (ЧЕСТНЫЙ отчёт сходимости; при стопе по max_sweeps БЕЗ tol —
+                не тихий мусор).
+    curve (v5.2, контракт v5.3 F3, опционально) — numpy f64 1D C-contiguous,
+    size >= max_sweeps: ЗАПОЛНЯЕТСЯ НА МЕСТЕ — curve[s−1] = offdiag_rel
+    матрицы 0 после sweep s (s=1..k, k = число реально выполненных sweep'ов);
+    если k < size — curve[k..size) = offdiag[0] (явный fill до конца буфера).
+    Возврат НЕ меняется (3-тupl, как без curve). Без curve — NULL/0.
+    reference-режим (numpy): curve → ValueError (понятие sweep отсутствует —
+    ЧЕСТНО, не тихий нул-буфер).
+    """
+    a = _contig32(A, "eigjac")
+    if a.ndim != 3 or a.shape[1] != a.shape[2]:
+        raise ValueError(f"prism_sycl: eigjac: форма {a.shape} — нужен батч [b,n,n]")
+    batch, n, _ = a.shape
+    if not (1 <= batch <= 65536 and 1 <= n <= 256 and 1 <= max_sweeps <= 64
+            and 1e-6 <= tol <= 1e-3):
+        raise RuntimeError(
+            f"prism_sycl: eigjac: PS_ERR_ARG — ограничения (1<=batch<=65536, "
+            f"1<=n<=256, 1<=max_sweeps<=64, 1e-6<=tol<=1e-3), получено "
+            f"batch={batch} n={n} max_sweeps={max_sweeps} tol={tol}")
+    c_arr = None
+    if curve is not None:
+        c_arr = np.asarray(curve, dtype=np.float64)
+        if c_arr.ndim != 1 or c_arr.size < max_sweeps:
+            raise ValueError(
+                f"prism_sycl: eigjac: curve — f64 1D, size >= max_sweeps "
+                f"({max_sweeps}), получено shape={c_arr.shape}")
+        if not c_arr.flags["C_CONTIGUOUS"]:
+            raise RuntimeError(
+                f"prism_sycl: eigjac: curve должен быть C-contiguous "
+                f"(исправление: np.ascontiguousarray(curve))")
+    if _is_reference():
+        if c_arr is not None:
+            raise ValueError(
+                "prism_sycl: eigjac: reference-режим (numpy) не поддерживает "
+                "curve (понятие sweep отсутствует) — curve=None")
+        vals, vecs = ref.eig(a.astype(np.float64))
+        return vals, vecs.astype(np.float32), np.zeros(batch, dtype=np.float64)
+    lib = _load()
+    if lib is None:
+        raise RuntimeError(f"prism_sycl: {_load_error}")
+    if _new_ops_error is not None:
+        raise RuntimeError(f"prism_sycl: eigjac: {_new_ops_error}")
+    vals = np.empty((batch, n), dtype=np.float64)
+    vecs = np.empty((batch, n, n), dtype=np.float32)
+    offdiag = np.empty(batch, dtype=np.float64)
+    if c_arr is not None:
+        c_ptr = c_arr.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+        c_len = ctypes.c_int64(c_arr.size)
+    else:
+        c_ptr = None
+        c_len = ctypes.c_int64(0)
+    rc = lib.prism_sycl_eigjac(
+        a.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.c_int64(batch), ctypes.c_int64(n), ctypes.c_int64(max_sweeps),
+        ctypes.c_double(tol),
+        vals.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        vecs.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        offdiag.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        c_ptr, c_len,
+    )
+    _check(rc)
+    # curve (c_arr) — заполнена на месте (тот же буфер, что передал пользователь;
+    # не-contiguous отклонён выше — копий нет).
+    return vals, vecs, offdiag
+
+
+def svd_top(A, r):
+    """top-r SVD A [m,n] fp32 (host-композиция ps.gemm + ps.eigjac, TZ §2.4).
+
+    Нового ядра НЕТ. m<n (случай AT2c): G = A·Aᵀ (gemm); (λ, U) = eigjac(G) —
+    r последних (λ по возрастанию); σ_i = 0 при λ_i ≤ 1e-12·λ_max, иначе
+    √λ_i (clamp ДО sqrt: fp32-шум G даёт λ_i ≤ 0); V = Aᵀ·U_r/σ (gemm,
+    деление по колонке; σ=0 ⇒ V_i = 0-вектор — явный сигнал). m>n — зеркально
+    через G = AᵀA.
+    Порядок выхода — конвенция torch (S descending): после выбора r последних
+    строки U/S/Vh REVERSE-ятся.
+
+    Oграничения: 1<=m<=1024, 1<=n<=1024, 1<=r<=min(m,n) (r > rank — НЕ ошибка:
+    вырожденные σ ниже).
+    Возвращает (U f32 [m,r], S f64 [r], Vh f32 [r,n]) — Vh = Vᵀ (конвенция torch).
+    """
+    a = _contig32(A, "svd_top")
+    if a.ndim != 2:
+        raise ValueError(f"prism_sycl: svd_top: форма {a.shape} — нужен [m,n]")
+    m, n = a.shape
+    if not (1 <= m <= 1024 and 1 <= n <= 1024 and 1 <= r <= min(m, n)):
+        raise RuntimeError(
+            f"prism_sycl: svd_top: PS_ERR_ARG — ограничения (1<=m<=1024, "
+            f"1<=n<=1024, 1<=r<=min(m,n)), получено {m}x{n}, r={r}")
+    if _is_reference():
+        return ref.svd_top(a.astype(np.float64), int(r))
+    at = np.ascontiguousarray(a.T)
+    if m < n:
+        G = gemm(a, at)                                    # [m,m]
+        lam, U, _ = eigjac(G, max_sweeps=64, tol=1e-6)
+        lam1, U1 = lam[0], U[0]
+        l_asc = lam1[m - r:]                               # r последних (по возрастанию)
+        U_r = U1[:, m - r:]
+        lam_max = float(l_asc[-1])
+        sigma = np.where(l_asc <= 1e-12 * lam_max, 0.0,
+                         np.sqrt(np.maximum(l_asc, 0.0)))
+        S = sigma[::-1].astype(np.float64)
+        U_out = U_r[:, ::-1].astype(np.float32)
+        V = np.zeros((n, r), dtype=np.float32)
+        nz = sigma > 0.0
+        if nz.any():
+            Vn = gemm(at, U_r[:, nz])
+            V[:, nz] = Vn / sigma[nz][None, :]
+        Vh_out = V[:, ::-1].T
+        return U_out, S, Vh_out
+    # m >= n: зеркально (G = AᵀA — правые сингулярные V; U = A·V_r/σ)
+    G = gemm(at, a)                                        # [n,n]
+    lam, Vm, _ = eigjac(G, max_sweeps=64, tol=1e-6)
+    lam1, Vm1 = lam[0], Vm[0]
+    l_asc = lam1[n - r:]
+    V_r = Vm1[:, n - r:]
+    lam_max = float(l_asc[-1])
+    sigma = np.where(l_asc <= 1e-12 * lam_max, 0.0,
+                     np.sqrt(np.maximum(l_asc, 0.0)))
+    S = sigma[::-1].astype(np.float64)
+    U = np.zeros((m, r), dtype=np.float32)
+    nz = sigma > 0.0
+    if nz.any():
+        Un = gemm(a, V_r[:, nz])
+        U[:, nz] = Un / sigma[nz][None, :]
+    U_out = U[:, ::-1]
+    Vh_out = V_r[:, ::-1].T.astype(np.float32)
+    return U_out, S, Vh_out
 
 
 # ------------------------- перестановочный null-слой -------------------------

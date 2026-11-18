@@ -180,3 +180,55 @@ def perm_stat(x: np.ndarray, f: float, seed: int, blk: int = 2, K: int = 96):
         ck = float(np.einsum("ij,ij->i", xp[: n - k], xp[k:]).sum())
         vals.append(ck / float(S[n - 1 - k]))
     return float(np.mean(vals)) - f, e3, e4
+
+
+# --------------------- AT0_3 (TZ_sycl_new_ops v5): numpy-эталон f64 ---------------------
+
+def gemm(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """C = A @ B (f64-эталон, row-major)."""
+    a = np.asarray(a, dtype=np.float64)
+    b = np.asarray(b, dtype=np.float64)
+    return a @ b
+
+
+def eig(a: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Полный спектр симметричного батча (f64): (vals по возрастанию [b,n],
+    vecs [b,n,n] — столбцы). Эталон eigjac."""
+    a = np.asarray(a, dtype=np.float64)
+    vals, vecs = np.linalg.eigh(a)   # vals уже по возрастанию (порядок torch)
+    return vals, vecs
+
+
+def _eig_subspace_resid(a: np.ndarray, v: np.ndarray) -> np.ndarray:
+    """‖AV − V(VᵀAV)‖_F/‖A‖_F по батчу (a [b,n,n], v [b,n,r])."""
+    w = a @ v
+    p = v.transpose(0, 2, 1) @ w
+    r = w - v @ p
+    return np.linalg.norm(r, axis=(1, 2)) / np.maximum(np.linalg.norm(a, axis=(1, 2)), 1e-300)
+
+
+def eig_top(a: np.ndarray, r: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """r верхних собственных пар (f64): (vals [b,r], vecs [b,n,r] — столбцы,
+    resid [b] — подпространственный остаток). Эталон eigtop."""
+    a = np.asarray(a, dtype=np.float64)
+    vals, vecs = np.linalg.eigh(a)
+    r = int(r)
+    return vals[:, -r:], vecs[:, :, -r:], _eig_subspace_resid(a, vecs[:, :, -r:])
+
+
+def eig_bottom(a: np.ndarray, r: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """r нижних собственных пар (f64): (vals [b,r], vecs [b,n,r], resid [b]).
+    Эталон eigbot."""
+    a = np.asarray(a, dtype=np.float64)
+    vals, vecs = np.linalg.eigh(a)
+    r = int(r)
+    return vals[:, :r], vecs[:, :, :r], _eig_subspace_resid(a, vecs[:, :, :r])
+
+
+def svd_top(a: np.ndarray, r: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """top-r SVD (f64, конвенция torch: S descending): (U [m,r], S [r], Vh [r,n]).
+    Эталон ps.svd_top."""
+    a = np.asarray(a, dtype=np.float64)
+    U, S, Vh = np.linalg.svd(a, full_matrices=False)
+    r = int(r)
+    return U[:, :r], S[:r], Vh[:r, :]

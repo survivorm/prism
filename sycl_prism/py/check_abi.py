@@ -96,6 +96,16 @@ def parse_python_bindings(path: Path) -> dict[str, int]:
         r"lib\.(prism_sycl_\w+)\.argtypes\s*=\s*\[(.*?)\]", src, flags=re.S
     ):
         out.setdefault(m.group(1), count_argtypes("[" + m.group(2) + "]"))
+
+    # AT0_3 (TZ_sycl_new_ops v5): мягкая привязка — кортежи ("name", [argtypes])
+    # в цикле for _nm, _args in (...) с динамическим bind(_nm, _args): статично
+    # невидимы для scan_calls("bind"), но обязаны сверяться с заголовком (иначе
+    # смена сигнатуры C — тихий расхождение: старый .so + новый argtypes).
+    for m in re.finditer(
+        r"\(\s*[\"']([A-Za-z0-9_]+)[\"']\s*,\s*\[([^\]]+)\]\s*\)", src
+    ):
+        out.setdefault("prism_sycl_" + m.group(1),
+                       count_argtypes("[" + m.group(2) + "]"))
     return out
 
 

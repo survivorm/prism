@@ -39,7 +39,7 @@ extern "C" {
  * Печатается при загрузке (поле src_rev) и позволяет ОДНОЗНАЧНО установить,
  * какая именно версия собрана — это закрывает ошибку «собралась старая копия».
  * Правило: при любом изменении кода прибора эту строку поднимать. */
-#define PRISM_SYCL_SRC_REV "v17-20261117-waitfix"
+#define PRISM_SYCL_SRC_REV "v18-20261117-newops"
 
 #define PRISM_SYCL_ABI_VERSION 2
 
@@ -133,6 +133,54 @@ int  prism_sycl_perm_lags_f32(const float* x, int64_t N, int64_t D,
 int  prism_sycl_perm_lags_f16(const uint16_t* x, int64_t N, int64_t D,
                                const int32_t* perm_idx, int64_t n_perm,
                                const int64_t* ks, int64_t nk, double* c_out);
+
+/* --- gemm: C[M,N] = A[M,K] @ B[K,N], row-major, ТОЛЬКО fp32 --------------
+ * AT0_3 (TZ_sycl_new_ops §2.1): тейлованное ядро, конфиг зафиксирован тюнингом
+ * (probe/RESULTS_tuning.md: 128x64, WG=256, KC=16, double-buffer, SLM=24KB).
+ * Чанкинг по hang-check драйвера: один launch ≤ 32 GFLOP (N режется на блоки,
+ * сигнатура НЕ меняется — чанкинг внутри). Ограничения: 1≤M≤65536, 1≤K≤4096,
+ * 1≤N≤262144, иначе PS_ERR_ARG. Local-бюджет — PS_ERR_LOCAL.
+ */
+int  prism_sycl_gemm_f32(const float* A, const float* B,
+                         int64_t M, int64_t K, int64_t N, float* C);
+
+/* --- eigtop / eigbot: r пар собственных (n ≤ 1024) ------------------------
+ * A [batch,n,n] f32, row-major. eigtop — power iteration + MGS (верхние r);
+ * eigbot — inverse iteration с Cholesky (нижние r): L — фактор Холецкого
+ * (A + μI) = L·Lᵀ, считается НА ХОСТЕ (numpy) и приходит аргументом.
+ * Выход: vals[batch,r] f64 (Rayleigh по A), vecs[batch,n,r] f32 (столбцы —
+ * собственные векторы), resid[batch] f64 (подпространственный остаток
+ * ‖AV − V(VᵀAV)‖_F/‖A‖_F на последней итерации — ЧЕСТНЫЙ отчёт, не критерий
+ * остановки). Ограничения: 1≤batch≤65536, 1≤n≤1024, 1≤r≤32 (r<n),
+ * 1≤max_iter≤512, иначе PS_ERR_ARG. Local-бюджет (2·n·r·4 + r·r·4 + 64·4)
+ * ≤ 65536, иначе PS_ERR_LOCAL.
+ */
+int  prism_sycl_eigtop(const float* A, int64_t batch, int64_t n, int64_t r,
+                       int64_t max_iter, double* vals, float* vecs, double* resid);
+int  prism_sycl_eigbot(const float* A, const float* Lfac, int64_t batch, int64_t n,
+                       int64_t r, int64_t max_iter, double* vals, float* vecs,
+                       double* resid);
+
+/* --- eigjac: полный спектр симметричного батча, cyclic Jacobi (n ≤ 256) ---
+ * A [batch,n,n] f32, симметричный. Выход: vals[batch,n] f64 (ПО ВОЗРАСТАНИЮ —
+ * сортировка на хосте, порядок torch), vecs[batch,n,n] f32 (столбцы,
+ * host-MGS f64 — write-back в f32), offdiag[batch] f64 (относительное
+ * ‖offdiag(A)‖_F/‖A‖_F на остановке — ЧЕСТНЫЙ отчёт сходимости).
+ * Ограничения: 1≤batch≤65536, 1≤n≤256, 1≤max_sweeps≤64, 1e-6≤tol≤1e-3,
+ * иначе PS_ERR_ARG. Local-бюджет — PS_ERR_LOCAL (v5.3: локальной памяти НЕТ,
+ * проверка — форма единообразия с eigtop/eigbot).
+ * offdiag_curve/curve_len (v5.2, контракт v5.3 F3): опциональны (NULL/0 —
+ * без кривой). curve[s−1] = offdiag_rel матрицы 0 после sweep s (s=1..k,
+ * k = число реально выполненных sweep'ов); если k < curve_len —
+ * curve[k..curve_len) = offdiag[0] (явный fill до конца буфера).
+ * Batch-чанкинг (v5.3 F1): 1 sweep = ⌈batch/C⌉ запусков, каждый ≤ C матриц
+ * (C = EIGJAC_CHUNK — фиксация тюнинга AT0_3, начальное 1024; t_sweep(C) ≤ 4с
+ * — твёрдый тест-гейт §2.7, 5×-запас к hang-check ~20с).
+ * Типы (v5.3 F7): max_sweeps/curve_len — int64_t, tol — double. */
+int  prism_sycl_eigjac(const float* A, int64_t batch, int64_t n,
+                       int64_t max_sweeps, double tol,
+                       double* vals, float* vecs, double* offdiag,
+                       double* offdiag_curve, int64_t curve_len);
 
 #ifdef __cplusplus
 }

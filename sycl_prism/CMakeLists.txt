@@ -37,6 +37,7 @@ add_library(prism_sycl SHARED src/prism_sycl.cpp)
 target_compile_options(prism_sycl PRIVATE
   -fsycl
   -O3
+  -Wall -Wextra   # n-22: предупреждения — видны на сборке (не молчим)
   -fno-math-errno
 )
 if(PRISM_SYCL_TARGETS)
