@@ -1,0 +1,7 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<06:52,  1.29s/it]Loading weights:  25%|██▍       | 79/320 [00:01<00:03, 75.20it/s]Loading weights:  53%|█████▎    | 169/320 [00:01<00:00, 170.56it/s]Loading weights:  69%|██████▉   | 222/320 [00:01<00:00, 216.12it/s]Loading weights:  85%|████████▌ | 272/320 [00:02<00:00, 183.53it/s]Loading weights:  97%|█████████▋| 309/320 [00:02<00:00, 134.46it/s]Loading weights: 100%|██████████| 320/320 [00:02<00:00, 121.60it/s]
+wiki/0: L11: t32=1.7633 t96=2.2548 hook_dev=0.00e+00  L12: t32=2.1614 t96=2.4189 hook_dev=0.00e+00
+math/0: L11: t32=1.9431 t96=1.8358 hook_dev=0.00e+00  L12: t32=2.1244 t96=2.0443 hook_dev=0.00e+00
+code/0: L11: t32=2.2369 t96=2.1576 hook_dev=0.00e+00  L12: t32=2.4288 t96=2.3295 hook_dev=0.00e+00
+chat/0: L11: t32=2.1663 t96=2.2701 hook_dev=0.00e+00  L12: t32=2.4433 t96=2.5259 hook_dev=0.00e+00
+CANON_HNORM_DONE
