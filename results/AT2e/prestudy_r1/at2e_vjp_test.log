@@ -1,0 +1,5 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:40,  7.87it/s]Loading weights:  73%|███████▎  | 234/320 [00:00<00:00, 1194.25it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 997.81it/s] 
+forward(no-grad): 4.33s | RSS_peak=5.12GB | logits (1, 128, 248320)
+forward(grad): 4.08s | VJP-backward: 8.41s | RSS_peak=10.92GB
+‖J^T P w‖ = 4.244 | VJP/fwd ratio = 1.94

@@ -1,0 +1,10 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:41,  7.78it/s]Loading weights:  80%|████████  | 257/320 [00:00<00:00, 1334.46it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1121.42it/s]
+/home/survivor/.local/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+measuring J-norms...
+L12 t=32: ‖h_t‖=1.76 | k=1: 45.204 | k=2: 26.831 | k=4: 24.867 | k=8: 20.532
+L12 t=96: ‖h_t‖=2.25 | k=1: 50.940 | k=2: 28.022 | k=4: 3.917 | k=8: 2.984
+L19 t=32: ‖h_t‖=6.78 | k=1: 18.504 | k=2: 6.685 | k=4: 5.663 | k=8: 6.230
+L19 t=96: ‖h_t‖=6.68 | k=1: 20.394 | k=2: 8.135 | k=4: 2.125 | k=8: 0.576
+total 45 s; DONE_JNORM

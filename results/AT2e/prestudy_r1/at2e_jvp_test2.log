@@ -1,0 +1,13 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:  22%|██▎       | 72/320 [00:00<00:00, 719.88it/s]Loading weights:  70%|███████   | 225/320 [00:00<00:00, 1196.18it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 1183.62it/s]
+/home/survivor/.local/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+model loaded 1s, n_layers=24
+JVP ok: True 
+   t+k |       ‖fd‖ |      ‖jvp‖ | rel_err jvp vs fd | rel_err fd vs 0-проверка
+    64 |   43.33036 |   43.36029 |        1.132e-02 |
+    65 |   30.26761 |   30.18685 |        1.788e-02 |
+    67 |   26.67501 |   26.55272 |        2.532e-02 |
+    71 |    9.07613 |    9.06674 |        5.786e-02 |
+hook-invariant max|z0 - z_nopatch|: 0.0
+DONE_JVP_TEST

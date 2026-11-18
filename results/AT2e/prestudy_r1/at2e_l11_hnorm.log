@@ -1,0 +1,14 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:39,  8.04it/s]Loading weights:  61%|██████    | 195/320 [00:00<00:00, 1040.18it/s]Loading weights:  97%|█████████▋| 310/320 [00:00<00:00, 994.04it/s] Loading weights: 100%|██████████| 320/320 [00:00<00:00, 905.66it/s]
+/tmp/at2e_l11_hnorm.py:16: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  n32 = float(h[0,32].norm()); n96 = float(h[0,96].norm())
+wiki/0 L11: ‖h_32‖=1.777 ‖h_96‖=2.199
+wiki/0 L12: ‖h_32‖=1.763 ‖h_96‖=2.255
+math/0 L11: ‖h_32‖=2.053 ‖h_96‖=1.770
+math/0 L12: ‖h_32‖=1.943 ‖h_96‖=1.836
+code/0 L11: ‖h_32‖=2.298 ‖h_96‖=2.316
+code/0 L12: ‖h_32‖=2.237 ‖h_96‖=2.158
+chat/0 L11: ‖h_32‖=2.061 ‖h_96‖=2.348
+chat/0 L12: ‖h_32‖=2.166 ‖h_96‖=2.270
+DONE_L11_HNORM

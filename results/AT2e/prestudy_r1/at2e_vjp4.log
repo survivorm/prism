@@ -1,0 +1,6 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:52,  6.13it/s]Loading weights:  69%|██████▉   | 221/320 [00:00<00:00, 1030.00it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 913.31it/s] 
+e_0: Ov VJP=0.003543 FD=0.003529 rel=3.93e-03 | Cv VJP=-0.034640 FD=-0.038189 rel=9.29e-02
+e_512: Ov VJP=-0.000305 FD=-0.000249 rel=2.28e-01 | Cv VJP=0.007516 FD=0.007742 rel=2.91e-02
+v: Ov VJP=0.012358 FD=0.012385 rel=2.19e-03 | Cv VJP=0.303082 FD=0.290832 rel=4.21e-02
+DONE_VJP4

@@ -1,0 +1,10 @@
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:59,  5.39it/s]Loading weights:  69%|██████▉   | 220/320 [00:00<00:00, 953.26it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 816.24it/s]
+FD pair: 8.18s
+A) bwd dense-9pos no-retain: 8.94s  | Ov·v=0.012314
+B) bwd1 retain: 8.06s | bwd2: 8.08s | sum: 16.14s
+C) повтор retain: bwd1 7.85s | bwd2 7.96s
+Ov: VJP·u=0.000667 FD·u=0.000634 rel=5.28e-02
+Cv: VJP·u=0.032533 FD·u=0.028855 rel=1.27e-01
+RSS_peak=13.87GB
+DONE_VJP3
