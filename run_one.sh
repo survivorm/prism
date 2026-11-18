@@ -13,6 +13,8 @@ for i in $(seq 1 240); do
   echo "WAIT mem: avail=${A}G <10G (poll 60s)"; sleep 60
 done
 export OMP_NUM_THREADS=6 MKL_NUM_THREADS=6 OPENBLAS_NUM_THREADS=6
+# trackio (AGENTS.md): локальная БД в репо, gitignored; скрипты экспериментов не задают сами
+export TRACKIO_DIR="${TRACKIO_DIR:-/home/survivor/work/prism/.trackio}"
 : > "/tmp/${name}.log"
 setsid nohup bash -c "cd /home/survivor/work/prism && nice -n 10 $* >> /tmp/${name}.log 2>&1; echo RUN_RC=\$? >> /tmp/${name}.log; rm -f /tmp/run_one_${name}.pid" </dev/null >/dev/null 2>&1 &
 echo $! > /tmp/run_one_${name}.pid

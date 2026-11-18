@@ -1,0 +1,44 @@
+[12:33:59] AT2d (T2.2) start 2026-11-18T12:33:59.762643 py=3.12.9 torch=2.14.1+cu130 smoke=True rev=r6
+[12:34:17] S1 sha-гейт: 7/7 OK
+[12:34:17] G2a pool-структура: 4x8x128 OK
+[12:34:20] G2b pool_fp: 4/4 доменов совпадают ({'wiki': '0cc16ec344e2', 'math': 'e71cc282c85d', 'code': '209e83b1898b', 'chat': '2afac288344a'})
+[12:34:20] layer_types: full на [3, 7, 11, 15, 19, 23]
+[12:34:22] model sha256[:16] = 04b1c301231dd422
+[12:34:29] L6: J/gbar-базисы готовы (gbar full: 256 (d,t))
+[12:34:29] L6: ortho f64 max|VᵀV−I| = 1.998e-15
+[12:34:29] L6: базисы + дозы готовы (30s)
+[12:34:35] L23: J/gbar-базисы готовы (gbar full: 256 (d,t))
+[12:34:35] L23: ortho f64 max|VᵀV−I| = 1.998e-15
+[12:34:35] L23: базисы + дозы готовы (36s)
+[12:34:42] model loaded: qwen3_5_text, n_layers=24
+[12:36:12] doc 1/2 done (90s, G1 max|Δlogits| = 0.000e+00)
+[12:38:23] doc 2/2 done (221s, G1 max|Δlogits| = 0.000e+00)
+[12:38:23] G1 hook no-op: max|Δlogits| = 0.000e+00 OK
+[12:38:23] G2c state provenance: cos_min = 1.000000 median = 1.000000 OK
+[12:38:23] Ortho f64: max|VᵀV−I| = 1.998e-15 OK
+[12:38:23] G-zero L23: max|Δlogits[64..126]| = 0.000e+00, max|ΔCE| = 0.000e+00 OK
+[12:38:23] G-zero (smoke): полный гейт — main (здесь 2 дока, отчёт)
+[12:38:23] G4' sham plumbing: 1/1 клеток > 0 DEAD_CELL (флаг)
+[12:38:23] G5 ladder positive control: 1/1 клеток |ΔCE(d4)| >= 0.005 OK
+[12:38:23] VERDICT: NOT_RESOLVED — DEAD_CELL (G4'=False / G5=True): вердикт принуждён, фиксация в артефакте
+[12:38:23]   signal=0 refuted=0 softening=0 (weak); gbar: signal=0 refuted=0; g4_ok=False g5_ok=True
+[12:38:23] SMOKE DS1=True DS2=True DS3_r=[2.38, 7.19] DS4=True DS5=True Gzero=True
+[12:38:23] S9 run 1: det md5 = cb67e30b92cf14ca6966b212ddba8988
+[12:40:39] doc 1/2 done (136s, G1 max|Δlogits| = 0.000e+00)
+[12:42:56] doc 2/2 done (273s, G1 max|Δlogits| = 0.000e+00)
+[12:42:56] G1 hook no-op: max|Δlogits| = 0.000e+00 OK
+[12:42:56] G2c state provenance: cos_min = 1.000000 median = 1.000000 OK
+[12:42:56] Ortho f64: max|VᵀV−I| = 1.998e-15 OK
+[12:42:56] G-zero L23: max|Δlogits[64..126]| = 0.000e+00, max|ΔCE| = 0.000e+00 OK
+[12:42:56] G-zero (smoke): полный гейт — main (здесь 2 дока, отчёт)
+[12:42:56] G4' sham plumbing: 1/1 клеток > 0 DEAD_CELL (флаг)
+[12:42:56] G5 ladder positive control: 1/1 клеток |ΔCE(d4)| >= 0.005 OK
+[12:42:56] VERDICT: NOT_RESOLVED — DEAD_CELL (G4'=False / G5=True): вердикт принуждён, фиксация в артефакте
+[12:42:56]   signal=0 refuted=0 softening=0 (weak); gbar: signal=0 refuted=0; g4_ok=False g5_ok=True
+[12:42:56] SMOKE DS1=True DS2=True DS3_r=[2.38, 7.19] DS4=True DS5=True Gzero=True
+[12:42:56] S9 run 2: det md5 = cb67e30b92cf14ca6966b212ddba8988
+[12:42:56] S9: OK (md5 дет-под-артефакта бит-в-бит)
+[12:42:56] artifact (pass 1): /home/survivor/work/prism/results/AT2d_smoke/AT2d_smoke.json (22 KB)
+[12:42:56] smoke det (S9): /home/survivor/work/prism/results/AT2d_smoke/AT2d_smoke_det.json (17 KB)
+[12:42:56] AT2d (T2.2) DONE wall=537.0s verdict=NOT_RESOLVED
+[12:42:56] AT2D_SMOKE_DONE

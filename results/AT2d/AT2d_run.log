@@ -1,0 +1,68 @@
+[00:29:39] AT2d (T2.2) start 2026-11-18T00:29:39.988473 py=3.12.9 torch=2.14.1+cu130 smoke=False rev=r5.1
+[00:29:41] trackio: run at2d_t22_r1 init ok
+[00:30:00] S1 sha-гейт: 7/7 OK
+[00:30:00] G2a pool-структура: 4x8x128 OK
+[00:30:02] G2b pool_fp: 4/4 доменов совпадают ({'wiki': '0cc16ec344e2', 'math': 'e71cc282c85d', 'code': '209e83b1898b', 'chat': '2afac288344a'})
+[00:30:02] layer_types: full на [3, 7, 11, 15, 19, 23]
+[00:30:04] model sha256[:16] = 04b1c301231dd422
+[00:30:41] L6: J/gbar-базисы готовы (gbar full: 4096 (d,t))
+[00:30:41] L6: ortho f64 max|VᵀV−I| = 5.960e-07
+[00:30:43] L6: базисы + дозы готовы (63s)
+[00:30:45] P128_RAW L12 vs L6: max|Δ| = 0.000e+00
+[00:31:19] L12: J/gbar-базисы готовы (gbar full: 4096 (d,t))
+[00:31:21] L12: ortho f64 max|VᵀV−I| = 5.960e-07
+[00:31:22] L12: базисы + дозы готовы (103s)
+[00:31:54] L18: J/gbar-базисы готовы (gbar full: 4096 (d,t))
+[00:31:56] L18: ortho f64 max|VᵀV−I| = 7.153e-07
+[00:31:57] L18: базисы + дозы готовы (138s)
+[00:32:34] L22: J/gbar-базисы готовы (gbar full: 4096 (d,t))
+[00:32:36] L22: ortho f64 max|VᵀV−I| = 7.153e-07
+[00:32:38] L22: базисы + дозы готовы (178s)
+[00:33:15] L19: J/gbar-базисы готовы (gbar full: 4096 (d,t))
+[00:33:16] L19: ortho f64 max|VᵀV−I| = 7.153e-07
+[00:33:18] L19: базисы + дозы готовы (219s)
+[00:33:54] L23: J/gbar-базисы готовы (gbar full: 4096 (d,t))
+[00:33:55] L23: ortho f64 max|VᵀV−I| = 7.153e-07
+[00:33:57] L23: базисы + дозы готовы (257s)
+[00:34:02] model loaded: qwen3_5_text, n_layers=24
+[00:40:57] doc 1/32 done (416s, G1 max|Δlogits| = 0.000e+00)
+[00:47:30] doc 2/32 done (809s, G1 max|Δlogits| = 0.000e+00)
+[00:52:51] doc 3/32 done (1129s, G1 max|Δlogits| = 0.000e+00)
+[00:58:14] doc 4/32 done (1452s, G1 max|Δlogits| = 0.000e+00)
+[01:03:36] doc 5/32 done (1774s, G1 max|Δlogits| = 0.000e+00)
+[01:08:40] doc 6/32 done (2078s, G1 max|Δlogits| = 0.000e+00)
+[01:13:44] doc 7/32 done (2383s, G1 max|Δlogits| = 0.000e+00)
+[01:18:47] doc 8/32 done (2686s, G1 max|Δlogits| = 0.000e+00)
+[01:23:51] doc 9/32 done (2990s, G1 max|Δlogits| = 0.000e+00)
+[01:28:49] doc 10/32 done (3288s, G1 max|Δlogits| = 0.000e+00)
+[01:33:53] doc 11/32 done (3591s, G1 max|Δlogits| = 0.000e+00)
+[01:38:51] doc 12/32 done (3889s, G1 max|Δlogits| = 0.000e+00)
+[01:43:50] doc 13/32 done (4189s, G1 max|Δlogits| = 0.000e+00)
+[01:49:04] doc 14/32 done (4502s, G1 max|Δlogits| = 0.000e+00)
+[01:53:57] doc 15/32 done (4795s, G1 max|Δlogits| = 0.000e+00)
+[01:58:55] doc 16/32 done (5093s, G1 max|Δlogits| = 0.000e+00)
+[02:03:52] doc 17/32 done (5390s, G1 max|Δlogits| = 0.000e+00)
+[02:08:57] doc 18/32 done (5695s, G1 max|Δlogits| = 0.000e+00)
+[02:14:05] doc 19/32 done (6003s, G1 max|Δlogits| = 0.000e+00)
+[02:19:05] doc 20/32 done (6304s, G1 max|Δlogits| = 0.000e+00)
+[02:24:05] doc 21/32 done (6604s, G1 max|Δlogits| = 0.000e+00)
+[02:29:07] doc 22/32 done (6906s, G1 max|Δlogits| = 0.000e+00)
+[02:34:11] doc 23/32 done (7210s, G1 max|Δlogits| = 0.000e+00)
+[02:39:19] doc 24/32 done (7517s, G1 max|Δlogits| = 0.000e+00)
+[02:44:21] doc 25/32 done (7820s, G1 max|Δlogits| = 0.000e+00)
+[02:49:29] doc 26/32 done (8128s, G1 max|Δlogits| = 0.000e+00)
+[02:54:34] doc 27/32 done (8432s, G1 max|Δlogits| = 0.000e+00)
+[02:59:32] doc 28/32 done (8731s, G1 max|Δlogits| = 0.000e+00)
+[03:04:42] doc 29/32 done (9041s, G1 max|Δlogits| = 0.000e+00)
+[03:09:55] doc 30/32 done (9353s, G1 max|Δlogits| = 0.000e+00)
+[03:15:02] doc 31/32 done (9660s, G1 max|Δlogits| = 0.000e+00)
+[03:20:11] doc 32/32 done (9969s, G1 max|Δlogits| = 0.000e+00)
+[03:20:11] G1 hook no-op: max|Δlogits| = 0.000e+00 OK
+[03:20:11] G2c state provenance: cos_min = 1.000000 median = 1.000000 OK
+[03:20:11] Ortho f64: max|VᵀV−I| = 7.153e-07 OK
+[03:20:11] G-zero L23: max|Δlogits[64..126]| = 0.000e+00, max|ΔCE| = 0.000e+00 OK
+[03:20:11] G4 sham responsiveness: 0/10 клеток >= 0.005 DEAD_CELL (флаг)
+[03:20:12] VERDICT: NOT_RESOLVED — DEAD_CELL (G4): вердикт принуждён, фиксация в артефакте
+[03:20:12]   signal=0 refuted=10 softening=9 (weak); gbar: signal=0 refuted=10; g4_ok=False
+[03:20:13] artifact: /home/survivor/work/prism/results/AT2d/AT2d.json (1624 KB)
+[03:20:13] AT2d (T2.2) DONE wall=10233.6s verdict=NOT_RESOLVED

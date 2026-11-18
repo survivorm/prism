@@ -1,6 +1,8 @@
-# AT2d (T2.2) — пре-рег r4: причинная (интервенционная) state-клетка
+# AT2d (T2.2) — пре-рег r6: причинная (интервенционная) state-клетка
 
-**Статус: ТЗ r4 — на внешнее ревью.** История ревизий: r1 — внутренний
+**Статус: ТЗ r5.3 — правки по ревью раунда 5 (F1–F6, m1–m9) внесены в код r6;
+reanalysis (AT2d_v2.json) механизирован; VERDICT = REFUTED (см. docs/AT2d_results.md).
+История ревизий: r1 — внутренний
 черновик (воркер умер на output-limit без файла/маркера, зафиксировано).
 r2 — внешнее ревью (4 блокера + M5–M9 + m1–m8) → r3 — редизайн
 (ответка docs/AT2d_review_r2_answers.md, P0-замеры §8). **r3 — внешнее
@@ -9,7 +11,55 @@ r2 — внешнее ревью (4 блокера + M5–M9 + m1–m8) → r3 �
 P0'-замеры (disk-only) — §8.** r4 — редизайн по ревью r3: residual-аппарат
 (ĉ/excess_res/S-energy) снят, заменён per-doc амплитудным матчингом +
 температурным sham; REFUTED — non-superiority; L23 — G-zero; окно —
-вариант A (63 значения); gbar — полная конструкция.
+вариант A (63 значения); gbar — полная конструкция. **r5 — внешнее
+ревью раунда 4 (docs/AT2d_review.md, sha 37255bb7): все 5 блокеров/8
+мажорных подтверждены структурно; 1 содержательный фикс ДО кода —
+расчёт достижимости REFUTED (я путал точечную оценку с CI_upper: при
+δ_min = 0.010 = 1.96·SE ветка мёртва, P(все 10|H₀) ≈ 10⁻³) →
+**δ_min = 0.020 = 3.92·SE** (P(все 10) ≈ 0.78; с двумя ко-первичными
+эстимандами 0.59–0.78) + 5 мелочей (явный приоритет веток, лестница =
+отчёт, n<8 пар блокирует SIGNAL, n_matched по армам, FWER 0.028%);
+ответка docs/AT2d_review_r4_answers.md.**
+**r5.1 — smoke-стадия (до main): найдена ошибка pre-study CE — off-by-one
+(self-conditional: logit-позиция i+1 предсказывает ids[i+1], сам себя в контексте),
+в то время как метрика ТЗ §5 — стандартная next-token (позиция i → ids[i+1]).
+Затронуты только числа pre-study, полученные из CE (п.5–6 §8: «softening»/
+отрицательный ΔCE_P — другая величина); DS1 (сырой state), энергии, L23 —
+не затронуты. δ_min = 0.020 ПЕРЕПРОВЕРЕН исправленной power-аналитикой
+(32 дока, правильная CE, pf-окно: se(weak4−rand4) = 0.0051 → 3.92·SE =
+0.0200) — значение НЕ изменено. DS2-гейт переписан как plumbing-проверка
+(знак pre-study был измерен на другой величине). Ответка:
+docs/AT2d_smoke_fixes.md.**
+
+**r5.2 — post-run (main выполнен, RUN_RC=0, 10233 с): G4-порог 0.005
+перекалиброван (он был калиброван на pre-study J-draw sham, а r3-дизайн —
+изотропный Гаусс-sham, эффект которого по определению ≈0; observed
+|ΔCE_randG| = 1.3e-5..1.5e-3). Новый G4: |ΔCE_P_future(randG4, α=1)| > 0
+(строго ненулевой — мёртвый хук даёт бит-идентичный ноль, логика G1) на
+≥4 из 10 (L,k); observed: 10/10 → pass. Переоценка вердикта из артефакта
+(без перепуска): G4-принуждение снято, дерево — n_sig=0, n_ref=10 →
+**REFUTED**. Все остальные гейты/пороги/данные — без изменений. См.
+docs/AT2d_results.md §G4.**
+
+**r5.3 — ревью раунда 5 (docs/AT2d_review.md, F1–F6 + m1–m9; код r6,
+ответка docs/AT2d_review_r5_answers.md): (F1) G4' механизирован в коде +
+режим --reanalysis: frozen raw-артефакт → AT2d_v2.json + manifest + log c
+маркером (без форвардов); raw НЕ меняется. (F2) α/FWER согласованы: CI
+2.5/97.5 = односторонний per-cell α = 0.025, FWER(≥2 из 10) ≈ 2.5% (старое
+«0.0025/0.028%» снято — было несогласовано с кодом). (F3) dose-формула
+канонизирована: g = 1 + weight (Qwen3_5RMSNorm.forward = (x/rms)·(1+w),
+взвес init=0), radial ПЕРВЫМ, diag(g) ПОТОМ; r5.1-баг (g = w, gain первым)
+фиксирован в r6; диск-реанализ (без форвардов) пересчитал old/new dose —
+см. AT2d_v2.json dose_correction_F3 и docs/AT2d_results.md §F3. (F4) базисы
+f64, ortho-гейт действительно f64 (r5.1-прогон был f32 под f64-меткой —
+пересчитано в reanalysis). (F5/F6) достигнутая граница (max CI_upper = 0.0082)
+вынесена как headline; фактический SE клеток (CI/3.92 = 0.00023…0.0019) —
+3–22× меньше power-SE 0.0051 (power: нематченный α=1, J-draw — §8); δ_min =
+0.020 консервативен (10–87 факт. SE) — не флиппит, REFUTED более устойчив
+под H₀, чем пре-регистрация. Lестница α=4 — positive control первичного
+режима (новый гейт G5, флаг); G4' — plumbing (строго > 0). (m6/m7) артефакт
+dвухпроходный + manifest, маркер — в лог-файл. (m5) refuted требует n≥8.
+(m8) PFR_REF guard. Остаток m1/m4/m9 — см. ответку.**
 
 Связь с цепочкой T2: T2.1 (readout r1, floor-dominiрована) → T2.1b (AT2b,
 SUBSPACE_CONTROL_FAIL: intercept-конфаунд per-doc базисов) → T2.1c (AT2c,
@@ -114,11 +164,18 @@ AT2c-коду (experiments/at2/AT2c.py: строки 440–484; G32/HAAR 366–3
   порядке ⇒ doses {0.25, 1, 4, 16}×D_randG). Лестница — прямой тест
   softening-канала без рычага и R² (заменяет S-energy гейт).
 
-**Доза (M1)**: функциональная пертурбация — **post-norm dose**
-D(арм, док) = mean_{pos 0..63} ‖(I−û_t û_tᵀ)·(δh_t/√mean(h_t²))·g‖²,
-δh_t = −VVᵀh_t (α=1), û_t = h_t/‖h_t‖, **g = weight input_layernorm
+**Доза (M1; r6 — F3 ревью r5)**: функциональная пертурбация — **post-norm dose**
+D(арм, док) = mean_{pos 0..63} ‖diag(g)·(I−û_t û_tᵀ)·(δh_t/√mean(h_t²))‖²,
+δh_t = −VVᵀh_t (α=1), û_t = h_t/‖h_t‖, **g = 1 + weight input_layernorm
 СЛЕДУЮЩЕГО слоя** (model.model.layers[L+1].input_layernorm.weight — первый
-преобразующий норм после хука; L23 → final norm). Первый порядок по
+преобразующий норм после хука; L23 → final norm; канон: Qwen3_5RMSNorm
+.forward = (x/rms(x))·(1+weight), weight init = 0 → при инициализации
+g ≡ 1; проверено по исходнику transformers). Порядок: радиальная проекция
+(I−ûûᵀ) ПЕРВЫМ, diag(g) ПОТОМ (paper §2.5: ∂y/∂x = (1/r)·diag(g)·(I−ûûᵀ),
+diag — СЛЕВА; не коммутируют). **r5.1-баг (F3): код считал g = w и gain
+первым — dose ~37× меньше канона** (fingerprint: D(r5.1)/D(g≡1) ≈ mean(w²)
+≈ 0.027); пересчёт old/new без форвардов — AT2d_v2.json
+(dose_correction_F3) + docs/AT2d_results.md §F3. Первый порядок по
 RMSNorm (изменение знаменателя не учитывается — оговорка). Raw E
 (mean ‖Vᵀh‖²/‖h‖²) и **KL_pred = ½ mean_{pos} ‖√P128_RAW·(JR·δh)‖²**
 (pooled-Fisher; P128_RAW — субстохастический row полного распределения) —
@@ -238,6 +295,20 @@ dCE_correct, dCE_wrong, α, bins5).
    фиксацией в артефакте (защита от тихого plumbing-срыва; НЕ жёсткий гейт).
    Количество отчитывается. (0.005 — пре-регистрация из pre-study-оценки
    |ΔCE_P_future(randG)| ≈ 0.02–0.06.)
+   **r5.2 (post-run)**: 0.005 калиброван на pre-study J-draw sham; r3-шам —
+   изотропный Гаусс (эффект по определению ≈0; observed 1.3e-5..1.5e-3,
+   мёртвый хук = бит-ноль, логика G1). Порог: > 0 на ≥4 из 10 клеток
+   (plumbing-чек, без магнитуды). Observed: 10/10 → pass; вердикт
+   переоценён из артефакта (история r5.2 выше; docs/AT2d_results.md).
+   **r5.3 (F1 r5)**: G4' механизирован в коде (режим --reanalysis;
+   AT2d_v2.json + manifest + log c маркером; raw-артефакт frozen). Новый
+   гейт **G5 (positive control первичного режима, F6 r5)**: верхняя ступень
+   лестницы randG (α=4, 16× dose): pass, если |ΔCE_P_future| ≥ 0.005 на
+   **≥1 из 10** (L,k) (observed: 5/10 — L6k4 0.01229, L6k8 0.02353, L12k4
+   0.01151, L12k8 0.00928, L18k8 0.00633; L18k4/L19/L22 ниже порога —
+   более слабая dose-ответность на глубоких слоях); провал — флаг
+   DEAD_CELL, вердикт принуждён NOT_RESOLVED (аналог G4'). Магнитуда
+   отклика — на лестнице; G4' — только «жив/мёртв».
 3. **G-zero (L23, ревью r3 B4/B5 — новый)**: L23 = последний слой; после
    него — только final-norm + head (per-position) ⇒ ΔCE_P_future(L23) ≡ 0
    бит-в-бит для любого арма (проверено по архитектуре, §1.3). Гейт: на
@@ -252,39 +323,67 @@ dCE_correct, dCE_wrong, α, bins5).
    64 форварда. Отчёт: ΔCE, KL, excess_match. Ожидание (не гейт):
    |ΔCE_P(top4)| > |ΔCE_P(randG4)| — клетка direction-specific.
 
-## 5. Дерево вердиктов (r4 — по первичному P_future, variant A)
+## 5. Дерево вердиктов (r5 — по первичному P_future, variant A)
 
 Предварительно: S1, G1, G2a, G2b, G2c, G3, S9, Ortho, **G-zero**, G4 —
 по гейтам. Иначе — артефакта нет, стоп (G4 — флаг, не стоп).
 Все ветки — по **excess_match(weak_Gagg) И excess_cal(weak_Gagg)** per (L,k),
 10 клеток (5 L × 2 k), doc-bootstrap CI.
 
+**Приоритет веток (явный, ревью r4 §3.1): SIGNAL > REFUTED >
+SOFTENING_DOMINATED > GBAR > NOT_RESOLVED** — оцениваются сверху вниз,
+первое попавшееся условие = вердикт (пересечения накрываются приоритетом).
+
 - **H1-causal → `WEAK_CAUSAL_SIGNAL`** (M7 r2 + M3 r3): **≥2 из 10 клеток**:
   CI_lower(excess_match(weak)) > 0 И CI_lower(excess_cal(weak)) > 0
-  (односторонние 97.5%, per-cell α = 0.025/10 = 0.0025, Bonferroni;
-  FWER ≥2 ложных ≈ C(10,2)·0.0025² ≈ 0.3%) И на той же клетке парные
-  per-doc CI_lower (excess_match(weak) − excess_match(pca)) > 0 И
-  (excess_match(weak) − excess_match(haar)) > 0 (том же α; пара считается
-  на доках, где ОБА арма матчнуты; n < 8 — пара не оценивается на клетке,
-  отчёт) И **точечная excess_match(weak, correct-позиции) > 0** на той же
-  клетке (CI отчёт; M3: пул confidently-wrong не вердикт сам по себе).
+  (CI = перцентили 2.5/97.5 кода ⇒ односторонний upper-α = 0.025 на
+  клетку; FWER (P(≥2 ложных из 10 клеток)) ≈ 2.5% — **r5.3, F2 r5**: старое
+  «per-cell α = 0.025/10 = 0.0025, Bonferroni; FWER ≈ 0.028%» было
+  несогласовано с кодом (односторонняя 97.5% ≠ 0.0025) и снято; δ_min =
+  3.92·SE согласован с 97.5%; эффективный per-cell FP ниже 0.025 —
+  конъюнкция em, ec, двух пар — оговорка) И на той же
+  клетке парные per-doc CI_lower (excess_match(weak) − excess_match(pca))
+  > 0 И (excess_match(weak) − excess_match(haar)) > 0 (том же α; пара
+  считается на доках, где ОБА арма матчнуты; **n < 8 — пара не оценивается
+  ⇒ клетка НЕ может удовлетворить SIGNAL (консервативно, ревью r4 §3.3)**;
+  n_matched по парам/армам — в отчёте, §13) И **точечная
+  excess_match(weak, correct-позиции) > 0** на той же клетке (CI отчёт;
+  M3: пул confidently-wrong не вердикт сам по себе).
   → «weak-сторона mean-J спектра causally специфична (не лучше по dose,
   лучше по функции); readout (T2.1c) негативен, causal-контраст
   положительный». (Согласие ОБОИХ эстимандов — консервативная
   пре-регистрация; риск разжижения задекларирован: два независимых
   механизма (sham-контраст и temp-sham) обязаны сказать одно.)
-- **`WEAK_CAUSAL_REFUTED_MEANJ`** (ревью r3 B3 — non-superiority, ветка
-  достижима под нулём): на **ВСЕХ 10 клетках**: CI_upper(excess_match(
-  weak)) < δ_min И CI_upper(excess_cal(weak)) < δ_min (односторонние 97.5%,
-  **δ_min = 0.010 — фиксирован ДО прогона**; вывод: 1.96·SE, SE ≈
+- **`WEAK_CAUSAL_REFUTED_MEANJ`** (ревью r3 B3 — non-superiority;
+  достижимость — расчёт ревью r4): на **ВСЕХ 10 клетках**: CI_upper(
+  excess_match(weak)) < δ_min И CI_upper(excess_cal(weak)) < δ_min
+  (односторонние 97.5%, **δ_min = 0.020 — фиксирован ДО прогона**; **r5.3
+  m5: дополнительно n_matched(em) ≥ 8 И n_matched(ec) ≥ 8** — симметрия с
+  SIGNAL-парами; на данных n = 32) — вывод: δ_min = 3.92·SE, SE ≈
   0.029/√32 ≈ 0.0051 — pre-study per-doc sd ΔCE(weak4); P0' noise-флора
   контраста не даёт (требует форвардов) — фактическая SE отчитывается
   прогоном, δ_min не пересматривается post-hoc). → «weak-сторона mean-J
-  спектра causally НЕ специфична (эффект меньше различимого)».
-  Достигаемость под H₀: P(cell) = Φ(0.010/0.0051) ≈ 0.977 → P(все 10) ≈ 0.8.
+  спектра causally НЕ специфична (эффект меньше δ_min — на границе
+  разрешения детектируемости; осознанный компромисс для закрытия T2,
+  зафиксирован, ревью r4 §2)». **r5.3 (F5, post-run): фактический SE
+  клеток = CI_half/3.92 ∈ [0.00023, 0.0019] — 3–22× МЕНЬШЕ power-SE 0.0051
+  (power-анализ: нематченный контраст α=1 с J-draw sham — §8-нота); δ_min =
+  0.020 = 10–87 факт. SE ⇒ REFUTED под H₀ гарантированнее, чем пре-
+  зарегистрированные 0.78 (консервативно); достигнутая граница max
+  CI_upper = 0.0082 — headline-отчёт (docs/AT2d_results.md).**
+  **Достигаемость под H₀ (правильная формула, ревью r4 §2):** условие
+  ветки — CI_upper = point + 1.96·SE < δ_min ⟺ point < δ_min − 1.96·SE,
+  hence P(cell) = Φ((δ_min − 1.96·SE)/SE); при δ_min = 3.92·SE:
+  P(cell) = Φ(1.96) ≈ 0.975 → P(все 10, один эстиманд) ≈ 0.78;
+  с двумя ко-первичными эстимандами: 0.59–0.78 (от зависимости их
+  корреляции). (В r4 было ошибочно P(cell) = Φ(δ_min/SE) ≈ 0.977 —
+  это P(point < δ_min), а не P(CI_upper < δ_min); при δ_min = 0.010
+  = 1.96·SE ветка была бы мёртва: P(все 10) ≈ 10⁻³.)
 - **`SOFTENING_DOMINATED`** (заменяет ENERGY_DOMINATED; ревью r3 B1 — без
   рычага/R²/порога): **≥4 из 10 клеток**: CI95(excess_match(weak))
-  накрывает 0 (direction неразличим с random-направлением той же dose).
+  накрывает 0 (direction неразличим с random-направлением той же dose;
+  **в вердикт идёт excess_match при α=1; α-лестница — отчёт/диагностика
+  нелинейности, не условие**, ревью r4 §3.2).
   Отчёт: положение точки weak (matched) на α-лестнице randG per клетка
   (dose–response). → «клетка мерит амплитуду возмущения (softening-канал),
   не направление; excess-контрасты — ноль в пределах CI». T2 этой клеткой
@@ -354,13 +453,24 @@ dCE_correct, dCE_wrong, α, bins5).
   (дословно AT2c S9).
 - **Ortho (f64)**: ‖VᵀV − I‖ < 1e-6 на всех (L,k,арм,док), f64 (замер:
   f64 ≤ 2e-15; ‖VVᵀ−I‖₂=1 всегда — не тот норм). Стоп при провале.
+  **r5.3 (F4): базисы хранятся и проверяются в f64 (eigh/SVD/QR в f64;
+  хук кастует в f32 при использовании — те же биты, что f32-базис r5.1).
+  r5.1-прогон: 7.15e-7, но считалось в f32 под f64-меткой — пересчёт в
+  reanalysis (AT2d_v2.json gates.ortho_f64).**
 - **G-zero (новый, §4.3)**: L23 P_future max|Δlogits[t≥64]| ≤ 1e-6 И
   |ΔCE| ≤ 1e-6 (64 runs). Стоп при провале.
-- **G4 (§4.2)**: флаг (не стоп): ≥4/10 клеток |ΔCE_P_future(randG4)| ≥ 0.005.
+- **G4' (§4.2; r5.3 F1)**: флаг (не стоп): ≥4/10 клеток |ΔCE_P_future(
+  randG4, α=1)| > 0 (строго ненулевой — мёртвый хук = бит-ноль, логика G1;
+  порог 0.005 r5 был мискалиброван на J-draw sham — §4.2 r5.2-нота).
+- **G5 (лестница-контроль; r5.3 F6)**: флаг (не стоп): ≥1 из 10 клеток
+  |ΔCE_P_future(randG4, α=4)| ≥ 0.005 (positive control первичного
+  режима: окно 64..126 отвечает на абляцию 0..63 при 16× dose;
+  observed: 5/10 — L18k4/L19/L22 ниже порога). G4'/G5 — оба провалились ⇒
+  вердикт принуждён NOT_RESOLVED (DEAD_CELL).
 - **G3 (trackio)**: run **at2d_t22_r1** (первый main-прогон клетки; TZ-r4 в
   config): t=0 config (started_at, device=cpu, revision="TZ-r4", script_sha,
   seed=0, k, layers, n_docs=32, boot_b=1000, model, venv, log, delta_min=
-  0.010) + stage-точки (load / prov / gbar_full / forwards-L{…} /
+  0.020) + stage-точки (load / prov / gbar_full / forwards-L{…} /
   l23_control / ladder / temp_sham / bootstrap / artifact) + финальная (t =
   duration, finished_at, status: ok|crash|interrupted, log_md5 — в
   finally/atexit; crash — НЕ молча).
@@ -401,6 +511,32 @@ P0'): sham-дисперсия (per-t rel 26–33%, window-средняя вто�
 energy-фит c=−12.93 R²=0.804 (pre-study 6 точек — single-c уже не плотен),
 R/P=4.00/4.17, gbar-энергии (неправильное окно), per-doc sd E(weak4).
 
+**r5.1-НОТА (smoke-стадия) — pre-study CE off-by-one**: все pre-study
+скрипты (hooktest2/pos/power) считали CE как −log p(ids[i+1] | logit-позиция
+i+1) — self-conditional (токен в своём контексте), а не стандартную
+next-token (logit-позиция i → ids[i+1]). Затронуты: п.5 (CE_plain = 14.7 —
+другая величина; правильная CE_plain(wiki,0) = 2.80 nats) и п.6
+(«отрицательный ΔCE_P» и «softening» — артефакт; под метрикой ТЗ
+ΔCE_P(top4) положителен). НЕ затронуты: DS1 (max|Δh| — сырой state),
+скорости, детерминизм, G2c, L23, энергии (disk-only, без CE). **δ_min =
+0.020 ПЕРЕПРОВЕРЕН** исправленной power-аналитикой (32 дока, правильная CE,
+pf-окно: se(weak4−rand4) = 0.0051 → 3.92·SE = 0.0200) — значение НЕ
+изменено. См. docs/AT2d_smoke_fixes.md.
+
+**r5.3-НОТА (F5) — power-SE vs фактический SE**: power-анализ r5.1 мерил
+per-doc sd контраста **без матчинга (α=1 у обоих армов) и с J-draw sham**
+(случайное направление из J-подпространства): se(weak4−rand4) = 0.0051.
+Фактические клетки main: excess_match = weak(α-matched per док) −
+randG(α=1, изотропный) — dose-матчинг гасит doc-вариацию dose (основной
+шум), и фактический SE = CI_half/3.92 ∈ [0.00023, 0.0019] (L22k4 —
+минимум, L6k8 — максимум) — 3–22× меньше 0.0051. Это НЕ ошибка: δ_min =
+0.020 (3.92·0.0051) — верхняя граница, калиброванная на более шумном
+контрасте; при факт. SE он консервативен (10–87 SE). Достижимость REFUTED
+под H₀ выше пре-регистрированных 0.78. Честное чтение (F5): дизайн
+исключает лишь грубую специфичность (weak в разы сильнее sham при той же
+dose); специфичность ~2× дала бы excess ≈ 0.001 — ниже разрешения
+(масштаб sham-эффекта 1.35e-5…1.51e-3).
+
 **P0' раунда 3 (disk-only, /tmp/at2d_p0r_diag.py, /tmp/at2d_p0r.json,
 P0R_DIAG_DONE; ПРАВИЛЬНОЕ окно 0..63, обе половины, full-gbar, dose,
 KL_pred)** — основа r4:
@@ -434,15 +570,20 @@ KL_pred)** — основа r4:
   0.02–0.36 (L19); **α_gbar4 = √(D_randG/D_gbar): mean 0.398 [0.295–0.551]
   L6, 0.317 L12, 0.301 L18, 1.679 [1.147–2.486] L22, 0.314 L19**; dose(
   weak4) 0.11–1.32 ≈ dose(randG4) 0.11–1.58 — **weak_Gagg по dose
-  согласован с sham'ом даже при α=1**. δ_min = 0.010 (1.96·SE, SE ≈
-  0.029/√32 — pre-study per-doc sd ΔCE(weak4); P0' noise-флора контраста
-  не даёт — требует форвардов; фиксирован ДО прогона, факт. SE — отчёт).
+  согласован с sham'ом даже при α=1**. δ_min = 0.020 (3.92·SE — расчёт
+  ревью r4: P(CI_upper < δ_min | H₀) = Φ((δ_min − 1.96·SE)/SE); при
+  0.010 ветка недостижима, P(все 10) ≈ 10⁻³; SE ≈ 0.029/√32 — pre-study
+  per-doc sd ΔCE(weak4); P0' noise-флора контраста не даёт — требует
+  форвардов; фиксирован ДО прогона, факт. SE — отчёт).
 
 ## 9. Ожидания (не гейты)
 
 1. **excess_match(top) ≈ 0** на большинстве (L,k) (top не специфичен per
    dose; см. §5).
-2. **|ΔCE_P_future(randG4, α=1)| ≈ 0.02–0.06** — клетка откликается (G4).
+2. **|ΔCE_P_future(randG4, α=1)| ≈ 0.02–0.06 — НЕДЕЙСТВИТЕЛЬНО (r5.3, m3)**:
+   оценка из pre-study (off-by-one CE + J-draw sham); observed в main:
+   1.35e-5…1.51e-3 (изотропный Гаусс-sham — эффект ≈0 по построению).
+   Клетка откликается — по G5 (лестница α=4 ≥ 0.005, observed 0.0015…0.0183).
 3. **α-лестница**: ΔCE(randG, α) монотонно (в 1-м порядке ∝ α²) — отчёт;
    отклонение = нелинейный канал.
 4. **excess_cal(weak)**: без обязательства (сигнал либо non-superiority).
@@ -480,13 +621,16 @@ KL_pred)** — основа r4:
 2. **G1 (hook no-op)**: max|Δlogits| = 0 (стоп иначе).
 3. **DS1 (хук действует)**: max|Δh| на выходе хука (P_future, top4, per док)
    ≥ 0.1 (pre-study: 0.18) — стоп иначе.
-4. **DS2 (plumbing + softening; ревью r3 M5 — на P, где знаки измерены)**:
-   mean по 2 smoke-докам **ΔCE_P(top4) < −0.03** (pre-study −0.150±0.157,
-   full-window — знак измерен) — стоп иначе. ΔCE_P(randG4) и ВСЕ
-   P_future-значения — report-only (знак future не установлен — ложный
-   STOP исключён).
+4. **DS2 (plumbing; r5.1: знак-ожидание снято — pre-study-знак измерен на
+   off-by-one CE, см. §8-ноту)**: на 2 smoke-доках ΔCE_P(top4) конечен,
+   ОДНОЗНАКОВЫЙ по докам И |ΔCE_P(top4)| ≥ 0.01 (эффект измерим, не
+   no-op) — стоп иначе. ΔCE_P(randG4) и ВСЕ P_future-значения — report-only.
+   (r5: «mean < −0.03, pre-study −0.150±0.157» — снято: знак pre-study
+   измерен на off-by-one CE; под метрикой ТЗ ΔCE_P(top4) положителен.)
 5. **DS3 (квадратичность, диагностика, НЕ стоп)**: R/P (top4, 2 дока) —
-   отчёт, ожидание 2..6 (pre-study 4.0); отклонение = нелинейный канал.
+   отчёт, ожидание 2..6 — **НЕДЕЙСТВИТЕЛЬНО (r5.3, m2)**: калибровано на
+   pre-study R/P = 4.00/4.17 (off-by-one CE); observed [3.19, 10.8].
+   Отклонение = нелинейный канал (диагностика без обязательства).
 6. **DS4 (temp-sham plumbing, НОВЫЙ, НЕ стоп)**: на smoke-доках τ*(top4)
    найден (бисекция сходится, τ* ∈ [0.1, 10]) И excess_cal(top4) −
    excess_match(top4) отчитан (два механизма дают сопоставимые значения —
@@ -542,7 +686,7 @@ KL_pred)** — основа r4:
           gbar_full: {ts:"4096", docs:32, dtype:f64},
           window: {ablate:"0..63", metric_pos:"64..126", targets:"65..127",
                    n:63, bins_targets:[65-77,78-90,91-103,104-116,117-127]},
-          delta_min:0.010},
+          delta_min:0.020},
  "gates": {S1: {file: sha}, G1_hook_noop: {max_logit_diff, per_doc, ok},
            G2a_pool_ids: {...}, G2b_pool_fp: {...},
            G2c_state_prov: {cos_min_all_pos, cos_median, worst, ok},
@@ -558,7 +702,7 @@ KL_pred)** — основа r4:
  "arms": {"L{L}k{k}": {"P_future": {"<арм>": {per_doc:[32]: {dCE, D,
           E_raw, KL_pred, KL, excess_match, excess_cal, tau_star, alpha,
           dose_residual, dCE_correct, dCE_wrong, bins5:[5]}},
-          mean, ci95, excess_match_mean, excess_match_ci95,
+          n_matched, mean, ci95, excess_match_mean, excess_match_ci95,
           excess_cal_mean, excess_cal_ci95,
           excess_match_correct_mean, excess_match_correct_ci95}},
           "ladder": {per_doc α∈{0.5,1,2,4}: dCE},
@@ -578,9 +722,16 @@ KL_pred)** — основа r4:
 
 Smoke-артефакт: results/AT2d_smoke/AT2d_smoke{,_det}.json (S9-пара).
 Артефакт ~0.5–1 MB (per-doc × бины × стратификация × лестница) — в git.
+**r5.3 (m6/m7)**: артефакт — **двухпроходная запись**: pass-1 (до финиша),
+потом лог (маркер AT2D_MAIN_DONE/AT2D_SMOKE_DONE ДО записи файла — маркер
+виден marker-сканом), потом pass-2 с finished_at/log_md5/trackio_run внутри
++ **manifest** (results/AT2d/AT2d_manifest.json: sha256 артефакта, log,
+log_md5, run, revision, verdict, finished_at, script_sha). Reanalysis:
+results/AT2d/AT2d_v2.json (+_manifest.json, AT2d_v2_reanalysis.log с
+маркером AT2D_REANALYSIS_DONE); raw-артефакт frozen (не меняется).
 
 ## 14. Коммит-план
 
-Код, ТЗ (r1–r4), ревью-файлы (docs/AT2d_review.md + ответки r2/r3),
-results (лог + артефакт + smoke) — в git явными путями. CJK-гейт,
-маркеры ревью — по AGENTS.
+Код (r6), ТЗ (r1–r6), ревью-файлы (docs/AT2d_review.md + ответки r2–r5),
+results (лог + артефакт + AT2d_v2.json/manifest + smoke) — в git явными
+путями. CJK-гейт, маркеры ревью — по AGENTS.

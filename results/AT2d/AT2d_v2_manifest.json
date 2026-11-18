@@ -1,0 +1,14 @@
+{
+ "artifact": "/home/survivor/work/prism/results/AT2d/AT2d_v2.json",
+ "artifact_sha256": "caf82b709c36e4aaec072b8e7c3ca7dffd0f0f4bbbe43af542ce0f521b62f575",
+ "raw_artifact": "/home/survivor/work/prism/results/AT2d/AT2d.json",
+ "raw_artifact_sha256": "db3ada0c0b7c42a8df56c6ede7273f254be99f9e1a81e07c3d43120f721a274e",
+ "log": "/home/survivor/work/prism/results/AT2d/AT2d_v2_reanalysis.log",
+ "log_md5": "d1bc2bb42dd3612c7d8464d6b7294cda",
+ "run": "at2d_t22_r1_reanalysis",
+ "revision": "r6",
+ "verdict": "WEAK_CAUSAL_REFUTED_MEANJ",
+ "raw_verdict": "NOT_RESOLVED",
+ "finished_at": "2026-11-18T11:58:55.241601",
+ "script_sha": "2261d5a2e400ed49ab23d913a0d83293fe1df9f7d40942249bc8b2263758dcb1"
+}

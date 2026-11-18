@@ -1,0 +1,14 @@
+[11:54:53] reanalysis: raw = /home/survivor/work/prism/results/AT2d/AT2d.json sha256[:16]=db3ada0c0b7c42a8
+[11:54:53] reanalysis: raw verdict = NOT_RESOLVED (DEAD_CELL (G4): вердикт принуждён, фиксация в артефакте)
+[11:55:33] reanalysis: L6 done (41s)
+[11:56:16] reanalysis: L12 done (84s)
+[11:57:01] reanalysis: L18 done (129s)
+[11:57:42] reanalysis: L22 done (169s)
+[11:58:19] reanalysis: L19 done (207s)
+[11:58:55] reanalysis: L23 done (242s)
+[11:58:55] reanalysis sanity: old-формула dose == артефакт (1600 значений, max_rel_diff = 1.898e-08)
+[11:58:55] reanalysis: ortho f64 max|VᵀV−I| = 3.997e-15
+[11:58:55] reanalysis VERDICT: WEAK_CAUSAL_REFUTED_MEANJ — все 10/10 клеток refuted (CI_upper < δ_min)
+[11:58:55]   signal=0 refuted=10 soft=9 (weak); gbar: sig=0 ref=10; g4'=True (10/10) g5=True (5/10)
+[11:58:55] AT2d reanalysis DONE wall=242.2s verdict=WEAK_CAUSAL_REFUTED_MEANJ
+[11:58:55] AT2D_REANALYSIS_DONE

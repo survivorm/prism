@@ -1,0 +1,11 @@
+{
+ "artifact": "/home/survivor/work/prism/results/AT2d_smoke/AT2d_smoke.json",
+ "artifact_sha256": "d7dd67be891bf325704153809bd6236f6fcdb9dc00db7936aa88ba5608755cc9",
+ "log": "/home/survivor/work/prism/results/AT2d_smoke/AT2d_smoke_run.log",
+ "log_md5": "f8798241945a8c41aef5973b2fdc1cfc",
+ "run": "at2d_smoke",
+ "revision": "r6",
+ "verdict": "NOT_RESOLVED",
+ "finished_at": "2026-11-18T12:42:56.714186",
+ "script_sha": "0821019de27cb19ff0428ae8b98f52480a7e0c2c5c8fe28228dcb101fd8e0bc4"
+}
