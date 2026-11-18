@@ -117,6 +117,17 @@ Per-doc (near/far, n=16, L23):
   (phrase_token_check, finite_gate, config_fp_check, inside_rule,
   filler_source, docs_sha256, pool_fps), delta_calibration и e_generic_note
   добавлены. Все числа bit-идентичны (seed 0).
+- D6 (ревью r3, 18.11): машина r2c — 5 TZ↔код-расхождений закрыты без изменения
+  вердикта: e_generic по первичной дозе (scans по дозам убран из решения),
+  e_generic_note честный (вторичный вердиктный контраст ветки GENERIC, нуль не
+  калиброван, индикативно), n_fwd в reanalysis-манифесте — факт (log \bCE= +
+  store, assert == expected) + wall_source, machine_subrevision="r2c" в claim и
+  манифестах, pool_rule/pool_per_domain в claim (фактический пул 14: 4/2/4/4),
+  NO_LOOP-причина += популяц. калибровка (near(16)=0.1020 vs null-mean CI95
+  [0.0669, 0.1024], внутри CI — на границе). TZ: superseded-пометки §6/§8/§13/§15,
+  ссылка §20 исправлена, §22 — сводка r2c + зафиксированный спор (тезис
+  «пул запрещён финальным правилом» неверен). Все числа bit-идентичны (seed 0),
+  синтетика 6/6, store sha неизменен.
 
 ## Артефакты
 
@@ -127,5 +138,5 @@ Per-doc (near/far, n=16, L23):
 - `results/AT8/AT8_2_R2_store.json` (12.2 MB, gitignored, бэкап /data)
 - `results/AT8/AT8_2_R2_series.npz` (10.8 MB, gitignored, бэкап /data)
 - `logs/AT8/AT8_2_R2_run.log`, trackio `at8_2_r2_r1`
-- Скрипт: `experiments/at8/AT8_2_R2.py` (машина r2; `--reanalysis`
+- Скрипт: `experiments/at8/AT8_2_R2.py` (машина r2/r2c; `--reanalysis`
   воспроизводит вердикт disk-only)

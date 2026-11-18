@@ -4,8 +4,11 @@
 
 ТЗ (пре-рег): docs/AT8_2_R2_TZ.md v1.0. Черновик: docs/AT8_2_review.md.
 Машина: r1 (форварды) + r2 (анализ, ревизия по ревью-раунду 1:
-docs/AT8_2_R2_review_r1_answers.md, F1–F7/M1–M7) + аудиторские правки по
-ревью-раунду 2 (18.11, там же, §3.1–3.7/8): primary dose n=16 (F2),
+docs/AT8_2_R2_review_r1_answers.md, F1–F7/M1–M7) + r2c (аудиторские правки по
+ревью-раундам 2–3, 18.11, там же, §3.1–3.7/8 и раунд 3: e_generic по первичной
+дозе, честный e_generic_note, n_fwd из лога/стора с ассертом, machine_subrevision,
+pool_rule/pool_per_domain в claim, популяционная калибровка в NO_LOOP-причине):
+primary dose n=16 (F2),
 δ_near/δ_far через ту же near/far-статистику (F4), CI-правила вердиктов (F3),
 парный G_inside (F5), слой-теги без LAYER_INCONSISTENT (F6), DOMAINS_MIN=4 (F7),
 phrase-token-check (F1), finite-гейт (M5), token-sha (M4), npz из store (M7),
@@ -86,6 +89,10 @@ SEED = 0
 B_BOOT = 2000
 RUN_REVISION = "r1"                        # форварды (store fingerprint)
 MACHINE_REVISION = "r2"                    # анализ по ревью-раунду 1
+MACHINE_SUBREVISION = "r2c"                 # аудиторские правки р2 (3.1-3.7/8) +
+                                            # ревью-раунд 3 (18.11): mg primary,
+                                            # e_generic_note, n_fwd из лога/стора,
+                                            # pool_rule, калибровка в reason
 
 OUT_DIR = os.path.join(ROOT, "results", "AT8")
 CLAIM = os.path.join(OUT_DIR, "AT8_2_R2.json")
@@ -348,7 +355,7 @@ def _boot(arr2col):
 
 def compute_verdict(ci, dmin_near, dmin_far, near, far, near_generic,
                     near_by_layer, dmin_near_layer, inside_pass, n_docs,
-                    i_loop, n_domains, gates_ok=True):
+                    i_loop, n_domains, gates_ok=True, dcal=None):
     """Чистая функция; дерево машины r2 (ревью r1, F2–F4, F6):
     первичная доза = PRIMARY_DOSE; значимость — по CI (CI_low > δ той же
     статистики); слой-тег без LAYER_INCONSISTENT.
@@ -397,28 +404,39 @@ def compute_verdict(ci, dmin_near, dmin_far, near, far, near_generic,
                            f"[{fci['ci_low']:.4f}, {fci['ci_high']:.4f}], "
                            f"δ_far={dmin_far:.4f}")
     else:
-        mg = max(c["ci_low"] for c in gci.values())
+        # r2c (ревью r3, 2.2): e_generic — по первичной дозе, та же логика, что
+        # и e_spec (F2); скан по дозам в решение не идёт
+        mg = gci[pn]["ci_low"]
         if mg > dmin_near:
             v = "GENERIC_INSERTION_EFFECT"
             reasons = [f"primary dose n={pn}: CI95(near)=[{nci['ci_low']:.4f}, "
                        f"{nci['ci_high']:.4f}] — CI_low ≤ δ_near={dmin_near:.4f} "
                        f"(специфический эффект незначим); e_generic значим "
-                       f"(max CI_low={mg:.4f} > δ_near) — эффект от вставки "
+                       f"(primary CI_low={mg:.4f} > δ_near) — эффект от вставки "
                        f"как таковой, не специфичный луп"]
         else:
             v = "NO_LOOP_SPECIFIC_EFFECT"
             all_low = max(ci[n]['near']['ci_low'] for n in ci)
             whole_ci = (" (здесь весь CI первичной дозы ниже δ)"
                         if nci["ci_high"] <= dmin_near else "")
+            cal = ""
+            if dcal and pn in dcal:
+                lo, hi = dcal[pn]["near"]["ci_low"], dcal[pn]["near"]["ci_high"]
+                pos = ("внутри null-mean CI — на границе различимости"
+                       if lo <= near[pn] <= hi else "вне null-mean CI")
+                cal = (f"; популяционная калибровка (filler null-mean, n={pn}): "
+                       f"near={near[pn]:.4f} vs null-mean CI95 [{lo:.4f}, {hi:.4f}] "
+                       f"({pos}); отсутствие эффекта не доказано "
+                       f"(ревью r3, 5.6-5.7)")
             reasons = [f"primary dose n={pn}: CI95(near)=[{nci['ci_low']:.4f}, "
                        f"{nci['ci_high']:.4f}] — CI_low ≤ δ_near={dmin_near:.4f}, "
                        f"не значимо выше филлер-нуля{whole_ci} (по всем дозам "
                        f"max CI_low={all_low:.4f}); e_generic не значим по "
-                       f"нижней границе (max CI_low={mg:.4f} ≤ δ_near; верхние "
+                       f"первичной дозе (CI_low={mg:.4f} ≤ δ_near; верхние "
                        f"границы отдельных доз могут превышать δ — см. "
                        f"delta_calibration) — специфического локального отклика "
                        f"на луп нет (ниже разрешения консервативного per-doc "
-                       f"филлер-нуля)"]
+                       f"филлер-нуля){cal}"]
     # слой-тег (F6): значимость — near_layer > δ_near_layer (та же статистика)
     sig = [L for L in LAYERS
            if near_by_layer[pn][str(L)] > dmin_near_layer[str(L)]]
@@ -549,13 +567,14 @@ def analyze(store, doses=None):
         seam[str(n)] = float(np.mean(vals))
     v = compute_verdict(boot, dmin_near, dmin_far, near, far, near_generic,
                         near_by_layer, dmin_near_layer, inside_pass, n_docs,
-                        i_loop, n_domains)
+                        i_loop, n_domains, dcal=dcal)
     return dict(dmin_near=dmin_near, dmin_far=dmin_far,
                 dmin_near_layer=dmin_near_layer, dmin_far_layer=dmin_far_layer,
                 delta_calibration=dcal,
                 near=near, far=far, near_generic=near_generic,
                 near_by_layer=near_by_layer, bootstrap=boot,
                 inside_pass=inside_pass, inside_abs_pass=abs_pass,
+                pool_per_domain=dict(Counter(store[k]["domain"] for k in docs)),
                 seam=seam, i_loop=i_loop, verdict=v,
                 n_docs=n_docs, n_domains=n_domains, docs=docs,
                 store_config=store.get("__config__", {}))
@@ -572,7 +591,8 @@ def _write_artifacts(an, manifest, mode):
     n_fwd = an["n_docs"] * (1 + 3 * len(an["bootstrap"]))  # ctrl + 3 условия × дозы
     claim = dict(
         experiment="AT8_2-R2", tz="docs/AT8_2_R2_TZ.md",
-        run_revision=RUN_REVISION, machine=MACHINE_REVISION, mode=mode,
+        run_revision=RUN_REVISION, machine=MACHINE_REVISION,
+        machine_subrevision=MACHINE_SUBREVISION, mode=mode,
         verdict=v,
         delta_min=dict(
             near_L23=round(an["dmin_near"], 6), far_L23=round(an["dmin_far"], 6),
@@ -583,10 +603,14 @@ def _write_artifacts(an, manifest, mode):
         near={k: round(x, 6) for k, x in an["near"].items()},
         far={k: round(x, 6) for k, x in an["far"].items()},
         near_generic={k: round(x, 6) for k, x in an["near_generic"].items()},
-        e_generic_note=("exploratory/диагностика: e_generic = fillerA − ctrl, а его "
-                        "сравниваемый нуль (fillerA − fillerB) не тождествен его "
-                        "собственному нулю (эффект вставки не компенсируется); "
-                        "в вердикте используется e_spec (ревью r2, 3.5)"),
+        e_generic_note=("e_generic = fillerA − ctrl — вторичный ВЕРДИКТНЫЙ контраст "
+                        "(ветка GENERIC): при незначимом e_spec он выбирает между "
+                        "GENERIC_INSERTION_EFFECT и NO_LOOP_SPECIFIC_EFFECT — т.е. не "
+                        "чистая диагностика. Его сравниваемый нуль (fillerA − fillerB) "
+                        "не тождествен его собственному нулю (эффект вставки не "
+                        "компенсируется) — нуль не калиброван; решение — по первичной "
+                        "дозе n=16, симметрично e_spec (r2c, ревью r3 2.2). Читается "
+                        "как индикативный, не как строгий тест"),
         delta_calibration={
             k: dict(
                 near_null_mean=round(d["near"]["mean"], 6),
@@ -620,6 +644,11 @@ def _write_artifacts(an, manifest, mode):
         layers=LAYERS, primary_layer=PRIMARY_LAYER,
         primary_dose=PRIMARY_DOSE,
         n_docs=an["n_docs"], n_domains=an["n_domains"],
+        pool_rule=("все 4 домена обязательны, >=2 дока на домен (machine r2, F7); "
+                   "гейт G_inside: ceil(0.75*n_docs) (F5) — фактический пре-рег "
+                   "(TZ §6 '16 доков' — план на момент отбора, superseded; "
+                   "ревью r3 2.1)"),
+        pool_per_domain=an["pool_per_domain"],
         n_fwd=n_fwd,
         gates={
             "phrase_token_check": bool(scfg.get("phrase_ids") == list(PHRASE_IDS)),
@@ -837,7 +866,7 @@ def run_main(mode="full"):
     an = analyze(store)
     manifest = dict(
         generated_by="AT8_2_R2.py", run_revision=RUN_REVISION,
-        machine=MACHINE_REVISION,
+        machine=MACHINE_REVISION, machine_subrevision=MACHINE_SUBREVISION,
         script_sha256=sha256_file(os.path.abspath(__file__)),
         store_file_sha256=sha256_file(STORE),
         series_npz_sha256=sha256_file(SERIES),
@@ -884,22 +913,34 @@ def reanalysis_main():
     if "__config__" not in store:
         raise SystemExit("store без __config__ — не R2-store")
     an = analyze(store, doses=store["__config__"]["n_dose"])
-    # провенанс полного прогона (ревью r2, 3.1/3.2): лог — source of truth;
-    # манифест полного прогона в git не попадал (реанализ перезаписал до коммита)
+    # провенанс полного прогона (ревью r2, 3.1/3.2 + r3, 2.3): лог — source of
+    # truth; n_fwd — факт (лог + стор), а не вывод из ожидаемой сетки
+    log_text = open(RUNLOG).read() if os.path.exists(RUNLOG) else None
+    n_fwd_log = len(re.findall(r"\bCE=", log_text)) if log_text is not None else None
+    n_fwd_store = sum(1 + 3 * len([k for k in store[dn] if k.startswith("n")])
+                      for dn in store if dn != "__config__")
+    n_fwd_expected = an["n_docs"] * (1 + 3 * len(an["bootstrap"]))
+    assert n_fwd_log == n_fwd_store == n_fwd_expected, (
+        f"n_fwd mismatch: log={n_fwd_log} store={n_fwd_store} "
+        f"expected={n_fwd_expected} (ревью r3 2.3: факт, а не ожидание)")
     full_run = dict(
         log=RUNLOG,
         log_sha256=sha256_file(RUNLOG) if os.path.exists(RUNLOG) else None,
-        n_fwd=an["n_docs"] * (1 + 3 * len(an["bootstrap"])),
+        n_fwd=n_fwd_expected,
+        n_fwd_log=n_fwd_log,
+        n_fwd_store=n_fwd_store,
         wall_s=None,
+        wall_source="absent",
     )
-    if os.path.exists(RUNLOG):
+    if log_text is not None:
         m = re.search(r"AT8_2_R2_DONE verdict=\S+ mode=\S+ \(wall (\d+)s\)",
-                      open(RUNLOG).read())
+                      log_text)
         if m:
             full_run["wall_s"] = int(m.group(1))
+            full_run["wall_source"] = "log"
     manifest = dict(
         generated_by="AT8_2_R2.py --reanalysis", run_revision=RUN_REVISION,
-        machine=MACHINE_REVISION,
+        machine=MACHINE_REVISION, machine_subrevision=MACHINE_SUBREVISION,
         script_sha256=sha256_file(os.path.abspath(__file__)),
         store_file_sha256=sha256_file(STORE),
         series_npz_sha256=sha256_file(SERIES) if os.path.exists(SERIES) else None,

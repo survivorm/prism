@@ -2,16 +2,20 @@
  "generated_by": "AT8_2_R2.py --reanalysis",
  "run_revision": "r1",
  "machine": "r2",
- "script_sha256": "21ed1277ba7ab1de9ca184a1bdfc189f7aaf58c18a86f7cb34c39bc366fe1224",
+ "machine_subrevision": "r2c",
+ "script_sha256": "4bb0c92cd612ff7495659f3fe7fd5a17dfac7ff836add54f938f5226cb10fd18",
  "store_file_sha256": "78419a69a2edbc767248b3a8f9512e1961ea82c154970772c66c35e2a42b16c0",
  "series_npz_sha256": "f834c620616aaf987ab6d8745f57a367f95df4323a4175ccc3b3536a5491b25e",
  "mode": "reanalysis",
- "claim_sha256": "c6bf88a472d28f63143756b76befdeb2a457d0265d3c36510305db12660056f9",
+ "claim_sha256": "dfb07662bdaebb8bd99364a0ccb457d8faaefdb9d8fb5487325266c89ef6bd02",
  "full_run": {
   "log": "/home/survivor/work/prism/logs/AT8/AT8_2_R2_run.log",
   "log_sha256": "30a67aba287df099270b8042747df9cb69b3333b2dbb272c75f1a16b0620a3cb",
   "n_fwd": 182,
-  "wall_s": 2596
+  "n_fwd_log": 182,
+  "n_fwd_store": 182,
+  "wall_s": 2596,
+  "wall_source": "log"
  },
- "wall_s": 0.8
+ "wall_s": 1.3
 }
