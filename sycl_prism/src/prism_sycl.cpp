@@ -1552,12 +1552,12 @@ static int eigjac_impl(sycl::queue& q, const float* hA, int64_t batch, int64_t n
       if (!(off64[b] < tol)) { all_ok = false; break; }
     if (all_ok) { stop_sw = sw; break; }
   }
-  if (hCurve != nullptr && stop_sw > 0) {
-    // F3: финальное значение = offdiag[0]; fill от индекса stop_sw до конца
-    // буфера (при стопе по max_sweeps цикл выше записал [0..max_sweeps),
-    // остаток [max_sweeps..curve_len) — тоже финальное).
-    const int64_t last = std::min<int64_t>(stop_sw, max_sweeps);
-    for (int64_t sw = last; sw < curve_len; ++sw) hCurve[sw] = off64[0];
+  if (hCurve != nullptr) {
+    // F3: k = число реально выполненных sweep'ов (стоп по tol: stop_sw; стоп по
+    // max_sweeps: max_sweeps — луп завершён без break). Позиции [0..k-1] —
+    // per-sweep (записаны в лупе), fill [k..curve_len) = offdiag[0].
+    const int64_t k = (stop_sw > 0) ? stop_sw : max_sweeps;
+    for (int64_t sw = k; sw < curve_len; ++sw) hCurve[sw] = off64[0];
   }
   /* Д2Х: диагональ (f32→f64) и V (f32). offdiag[batch] — значение на
      остановке (f64, хост). */

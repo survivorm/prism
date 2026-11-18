@@ -181,12 +181,18 @@ def _eigjac_jcache_layer(L: int) -> dict:
                                    max_sweeps=64, tol=1e-5)
         lam, vecs, off = lam[0], vecs[0], off[0]
         # rel(λ): рассеянные ≤ 1e-3, кластерные ≤ 1e-2 (n-33):
-        # кластерный λ_i — если сосед (по спектру) в пределах 5% от |λ_i|
-        order = np.argsort(lam_ref)
+        # кластерный λ_i — если сосед (по спектру) в пределах 10% от |λ_i|
+        # (TZ §2.7; порог 10% — замер: пара L23 d1t0 λ[46]/λ[47] = 1.15e-5/
+        # 1.22e-5 (раздел 5.9%) даёт f32-пол 1.12e-3 rel независимо от tol
+        # (почти-вырожденная пара: абсолютное возмущение ~1e-9 ⇒ относительное
+        # ~1e-3) — 5%-порог ложно классифицировал её «рассеянной» → fail по
+        # 1e-3. Баг классификации код-аудита r2: было |λ_j|/|λ_i| < 0.05 —
+        # отношение амплитуд, а не расстояние по спектру (кластеры вне нуля
+        # классифицировались как рассеянные).
         worst = 0.0
         for i in range(len(lam_ref)):
             j = np.argsort(np.abs(lam_ref - lam_ref[i]))[1]
-            clustered = abs(lam_ref[j]) / max(abs(lam_ref[i]), 1e-300) < 0.05
+            clustered = abs(lam_ref[j] - lam_ref[i]) / max(abs(lam_ref[i]), 1e-300) < 0.10
             tol = 1e-2 if clustered else 1e-3
             d_i = abs(lam[i] - lam_ref[i]) / max(abs(lam_ref[i]), 1e-300)
             worst = max(worst, d_i)
@@ -259,8 +265,11 @@ def test_eigjac_curve():
     for i in range(1, 64):
         assert curve[i] <= curve[i - 1] + 1e-15, \
             f"eigjac curve: рост на позиции {i}: {curve[i-1]} → {curve[i]}"
-    # k = первый индекс с curve < tol (стоп после sweep k+1)
-    k = int(np.argmax(curve < tol)) if (curve < tol).any() else 64
+    # k = число sweep'ов до стопа: первый ИНДЕКС i с curve[i] < tol — это
+    # offdiag после sweep i+1 ⇒ стоп после sweep k = i+1 (curve[k-1] == off[0],
+    # fill [k..64)). (Оффс-один код-аудита r1.2: было k = i — проверяло
+    # curve[i-1] против финала.)
+    k = int(np.argmax(curve < tol)) + 1 if (curve < tol).any() else 64
     # offdiag[0] — финальное; curve[k-1] == offdiag[0]; curve[k..64) == offdiag[0]
     assert abs(curve[k - 1] - off[0]) < 1e-15, \
         f"eigjac curve: curve[{k-1}]={curve[k-1]} != offdiag[0]={off[0]}"
@@ -269,7 +278,46 @@ def test_eigjac_curve():
     # без curve — 3-тupl, как прежде
     r0 = ps.eigjac(A, max_sweeps=64, tol=tol)
     assert r0[0].shape == (1, 128) and r0[1].shape == (1, 128, 128)
-    print(f"[eigjac curve] k={k}, curve[0]={curve[0]:.2e}, финал={off[0]:.2e}, fill OK")
+    # регрессия (код-аудит r1 + ревью r2 C5/C6): fill [k..size) = offdiag[0]
+    # (НЕ мусор/не перепись) в ОБАХ режимах стопа:
+    # (1) стоп по tol: A*50 с tol=1e-6 сходится ровно на sweep 8 — k=8,
+    #     curve[0..7] per-sweep, curve[8..64) fill;
+    # (2) ИСТИННЫЙ стоп по max_sweeps (stop_sw=0, cpp:1559-1560): max_sweeps=4 —
+    #     off после 4 sweep'ов ≈ 3.7e-4 >> tol=1e-6 ⇒ стоп по max_sweeps, fill
+    #     [4..64). Именно эта комбинация (curve != nullptr + stop_sw==0) рождала
+    #     мусорный хвост в HEAD (нет fill вовсе) — designed-ассерт off >= tol
+    #     делает тест немёртвым (если матрица сойдёт быстрее — громкий fail).
+    A_big_off = (A[0] * 50.0)[None, :, :].astype(np.float32)
+    # (1) стоп по tol (sweep 8 == max_sweeps)
+    curve2 = np.full(64, -1.0)
+    vals2, vecs2, off2 = ps.eigjac(A_big_off, max_sweeps=8, tol=1e-6, curve=curve2)
+    assert np.all(curve2[8:] == off2[0]), \
+        f"curve fill [8..64) не финальным: {curve2[8:12]} vs off={off2[0]}"
+    assert curve2[0] > 0 and curve2[7] >= curve2[8] - 1e-15
+    # код-ревью r1 C2 (MINOR): тест обязан видеть баг «fill [0..curve_len) = off[0]»
+    # (перепись per-sweep позиций финальным значением): off — ОТНОСИТЕЛЬНОЕ
+    # ‖offdiag‖_F/‖A‖_F (cpp:1444); после sweep 1 off ≈ O(0.1), после sweep 8 —
+    # O(1e-7) ⇒ curve[0] СТРОГО больше финального. При переписи curve2[0]==off2[0]
+    # → fail.
+    assert curve2[0] > off2[0], \
+        (f"curve-регрессия (1): curve[0]={curve2[0]} <= offdiag[0]={off2[0]} — per-sweep "
+         f"позиции [0..8) затёрты финальным значением (fill-баг) или сходимость "
+         f"за 1 sweep (нереально для A*50)")
+    # (2) истинный стоп по max_sweeps: max_sweeps=4 — off НЕ ниже tol (≈3.7e-4)
+    curve3 = np.full(64, -1.0)
+    vals3, vecs3, off3 = ps.eigjac(A_big_off, max_sweeps=4, tol=1e-6, curve=curve3)
+    assert off3[0] >= 1e-6, \
+        (f"curve-регрессия (2): off={off3[0]} < tol=1e-6 — матрица сошлась быстрее "
+         f"max_sweeps=4, designed-сценарий «стоп по max_sweeps» не реализован: "
+         f"усилить A (или поднять max_sweeps), тест немёртвый")
+    assert np.all(curve3[4:] == off3[0]), \
+        f"curve fill [4..64) (стоп по max_sweeps) не финальным: {curve3[4:8]} vs off={off3[0]}"
+    assert curve3[0] > off3[0], \
+        (f"curve-регрессия (2): curve[0]={curve3[0]} <= offdiag[0]={off3[0]} — per-sweep "
+         f"позиции [0..4) затёрты финальным значением (fill-баг в ветке stop_sw=0)")
+    print(f"[eigjac curve] k={k}, curve[0]={curve[0]:.2e}, финал={off[0]:.2e}, "
+          f"fill OK (стоп по tol: curve[8..64)=off; стоп по max_sweeps: curve[4..64)=off, "
+          f"curve[0]>off в обоих)")
 
 
 def test_eigjac_sweep_time_guard():
@@ -380,33 +428,63 @@ def test_eigjac_random_spd():
     assert np.all(off < 1e-4), f"eigjac random-SPD: offdiag={off}"
 
 
+def test_eigjac_zero_and_curve_size():
+    """Код-ревью r1 C3 (NIT) — designed-тесты guard'ов без покрытия:
+    (a) нулевая матрица — tot = 0: sweep 1 даёт off = 0 (offdiag — относительное
+        sqrt(off2/tot) с guard (tot > 0.f), cpp:1444; при нулевой матрице guard
+        срабатывает ⇒ ровно 0.0, NaN невозможно) < tol ⇒ стоп после 1 sweep,
+        vals = 0, vecs — базис;
+    (b) curve.size < max_sweeps → ValueError на python-стороне (до C)."""
+    _skip_nogpu()
+    A = np.zeros((1, 16, 16), dtype=np.float32)
+    vals, vecs, off = ps.eigjac(A, max_sweeps=16, tol=1e-5)
+    assert not np.any(np.isnan(vals)) and not np.any(np.isnan(vecs)), \
+        "eigjac zero: NaN в выходe"
+    assert off[0] == 0.0, f"eigjac zero: off={off[0]} (ожидалось 0)"
+    assert np.allclose(vals[0], 0.0, atol=0.0), f"eigjac zero: vals={vals[0]}"
+    assert np.allclose(vecs[0], np.eye(16), atol=1e-6), \
+        f"eigjac zero: vecs не базис: ortho={np.linalg.norm(vecs[0].T @ vecs[0] - np.eye(16))}"
+    with pytest.raises(ValueError, match="curve"):
+        ps.eigjac(A, max_sweeps=16, tol=1e-5, curve=np.empty(3))
+    print("[eigjac zero/curve-size] (a) zero-matrix off=0 без NaN + (b) ValueError: OK")
+
+
 def test_eigjac_convergence_jcache():
-    """m-28: ЧИСЛО sweep'ов до tol на 2–3 реальных jcache (→ артефакт)."""
+    """TZ §2.7 m-28 (v5.2): замер сходимости — ОДИН прогон max_sweeps=16 с
+    буфером offdiag_curve (§2.3), 2 реальных jcache (L6 d0t0, L23 d0t0) — в
+    артефакт (валидирует оценку §2.3: 4–6 sweep'ов до 1e-5); assert:
+    sweeps_to(1e-5) ≤ 16 на обоих (сходится в бюджете, не «< 1e-4 на 64»)."""
     _skip_nogpu()
     res = {}
     for L in (6, 23):
         dc = _jcache(L)
         JRt, Pt = dc["JR"], dc["P128"]
-        for (d, t) in DT_SET[:2]:
-            g64 = _gram64(JRt[(DOMAIN, d, t)], Pt[(DOMAIN, d, t)])
-            g32 = g64.astype(np.float32)[None, :, :]
-            curve = {}
-            for k in (1, 2, 4, 8, 16, 32, 64):
-                t0 = time.time()
-                _, _, off = ps.eigjac(g32, max_sweeps=k, tol=1e-6)
-                curve[k] = {"offdiag": float(off[0]), "wall_s": round(time.time() - t0, 3)}
-            sweeps_to_tol = next((k for k in (1, 2, 4, 8, 16, 32, 64)
-                                  if curve[k]["offdiag"] < 1e-5), None)
-            res[f"L{L}_{d}_{t}"] = {"curve": curve, "sweeps_to_1e-5": sweeps_to_tol}
-            print(f"[eigjac L{L} d{d}t{t}] sweeps до 1e-5: {sweeps_to_tol}; "
-                  f"curve: " + " ".join(f"{k}:{v['offdiag']:.1e}" for k, v in curve.items()))
+        g64 = _gram64(JRt[(DOMAIN, 0, 0)], Pt[(DOMAIN, 0, 0)])
+        g32 = g64.astype(np.float32)[None, :, :]
+        curve = np.empty(16)
+        t0 = time.time()
+        _, _, off = ps.eigjac(g32, max_sweeps=16, tol=1e-5, curve=curve)
+        wall = time.time() - t0
+        conv = curve < 1e-5
+        sweeps_to = int(np.argmax(conv)) + 1 if conv.any() else None
+        assert sweeps_to is not None and sweeps_to <= 16, \
+            (f"m-28: L{L} d0t0: сходимости до 1e-5 за 16 sweep'ов нет "
+             f"(curve: {' '.join(f'{v:.1e}' for v in curve[:8])} ...)")
+        res[f"L{L}_d0t0"] = {
+            "sweeps_to_1e-5": sweeps_to,
+            "wall_s": round(wall, 3),
+            "offdiag_final": float(off[0]),
+            "curve_per_sweep": [float(v) for v in curve[:sweeps_to]],
+        }
+        print(f"[eigjac m-28 L{L} d0t0] sweeps_to(1e-5)={sweeps_to} ≤ 16; "
+              f"off_final={off[0]:.2e}; wall={wall:.2f}s; "
+              f"curve: {' '.join(f'{v:.1e}' for v in curve[:sweeps_to])}")
     _jcache_cache.clear()
     gc.collect()
     RESULTS.mkdir(parents=True, exist_ok=True)
     (RESULTS / "eigjac_convergence.json").write_text(json.dumps(res, indent=2))
-    # честная проверка: хотя бы один из замеров обязан сойтись в 64 sweep'ах (TZ: < 1e-4)
-    for key, v in res.items():
-        assert v["curve"][64]["offdiag"] < 1e-4, f"{key}: 64 sweep'а не дали < 1e-4"
+    # TZ §2.3 оценка: 4–6 sweep'ов до 1e-5 на всех 6 реальных jcache —
+    # артефакт валидирует её (отчёт; твёрдый assert — только ≤ 16 по m-28)
 
 
 # ----------------------------- SVD_TOP -----------------------------
