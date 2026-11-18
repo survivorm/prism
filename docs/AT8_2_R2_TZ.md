@@ -361,3 +361,23 @@ gate_inside_block: CE_loop_block < 1.0 И CE_fillerA_block ≥ 2.0, ≥12/16
 `NO_LOOP_SPECIFIC_EFFECT` (near(16) CI_low 0.0844 ≤ δ_near 0.1480;
 near_generic max CI_low 0.1160 ≤ 0.1480; парный гейт 14/14; DOSE_FLAT).
 Финальный вердикт — машина r2. Отчёт: `docs/AT8_2_R2_results.md`.
+
+## 21. Машина r2b — аудиторские правки по ревью-раунду 2 (18.11, `docs/AT8_2_review.md`)
+
+Ревью-раунд 2 (sha256 `fc3e7893add4…`): F1–F7/M* закрыты, вердикт валиден;
+закрыты аудиторские дефекты 3.1–3.7/8 **без изменения правил решения и чисел**
+(вердикт `NO_LOOP_SPECIFIC_EFFECT` и все числа bit-идентичны, seed 0):
+
+| # | Правка | Где |
+|---|---|---|
+| 3.1 | реанализ-манифест: `mode="reanalysis"` + `full_run`-блок (sha лога, n_fwd, wall из лога — source of truth); манифест полного прогона в git не попадал (перезаписан до коммита) | `reanalysis_main` |
+| 3.2 | 98 → **182** форварда = 14 × (1 ctrl + 3 условия × 4 дозы); n_fwd в claim и full_run | докстринг, results, claim |
+| 3.3 | тексты причин: только первичная доза (пре-рег F2), «CI_low ≤ δ» вместо «≤ δ», e_generic — «не значим по нижней границе» | `compute_verdict` |
+| 3.4 | `delta_calibration` в claim: null-mean + CI95 + per_doc_p95 per доза (диагностика; при null-mean калибровке near(16)=0.1020 на границе CI [0.0669, 0.1024]) | `analyze`, claim |
+| 3.5 | `e_generic_note`: exploratory, нуль не тождествен (вставка не компенсируется) | claim |
+| 3.6 | ответки → `docs/AT8_2_R2_review_r1_answers.md` (раньше ссылка вела на v3-ответки A1–C11) | докстринг, results |
+| 3.7 | `gates` в claim: phrase_token_check, finite_gate, config_fp_check, inside_rule, filler_source, docs_sha256, pool_fps | `_write_artifacts` |
+| 8 | `match_pre_reg` удалён (константа; у R2-пре-рега нет предсказанного вердикта — дерево исчерпывающее) | `compute_verdict` |
+
+Правила решения (δ per-doc p95, primary dose 16, дерево веток) — без изменений;
+усиление «all doses ci_high ≤ δ» отклонено как post-hoc тюнинг (ответка, §3.3).

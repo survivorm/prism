@@ -6,14 +6,13 @@
  "mode": "reanalysis",
  "verdict": {
   "value": "NO_LOOP_SPECIFIC_EFFECT",
-  "match_pre_reg": false,
   "n_star": "16",
   "tags": {
    "layer": null,
    "dose": "DOSE_FLAT"
   },
   "reasons": [
-   "CI95(near) \u2264 \u03b4_near=0.1480 \u043d\u0430 \u0432\u0441\u0435\u0445 \u0434\u043e\u0437\u0430\u0445 (max CI_low=0.0844) \u0418 e_generic \u2264 \u03b4_near (max CI_low=0.1160) \u2014 \u0441\u043f\u0435\u0446\u0438\u0444\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u0433\u043e \u043e\u0442\u043a\u043b\u0438\u043a\u0430 \u043d\u0430 \u043b\u0443\u043f \u043d\u0435\u0442 (\u043d\u0438\u0436\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043d\u0438\u044f)"
+   "primary dose n=16: CI95(near)=[0.0844, 0.1197] \u2014 CI_low \u2264 \u03b4_near=0.1480, \u043d\u0435 \u0437\u043d\u0430\u0447\u0438\u043c\u043e \u0432\u044b\u0448\u0435 \u0444\u0438\u043b\u043b\u0435\u0440-\u043d\u0443\u043b\u044f (\u0437\u0434\u0435\u0441\u044c \u0432\u0435\u0441\u044c CI \u043f\u0435\u0440\u0432\u0438\u0447\u043d\u043e\u0439 \u0434\u043e\u0437\u044b \u043d\u0438\u0436\u0435 \u03b4) (\u043f\u043e \u0432\u0441\u0435\u043c \u0434\u043e\u0437\u0430\u043c max CI_low=0.0844); e_generic \u043d\u0435 \u0437\u043d\u0430\u0447\u0438\u043c \u043f\u043e \u043d\u0438\u0436\u043d\u0435\u0439 \u0433\u0440\u0430\u043d\u0438\u0446\u0435 (max CI_low=0.1160 \u2264 \u03b4_near; \u0432\u0435\u0440\u0445\u043d\u0438\u0435 \u0433\u0440\u0430\u043d\u0438\u0446\u044b \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u044b\u0445 \u0434\u043e\u0437 \u043c\u043e\u0433\u0443\u0442 \u043f\u0440\u0435\u0432\u044b\u0448\u0430\u0442\u044c \u03b4 \u2014 \u0441\u043c. delta_calibration) \u2014 \u0441\u043f\u0435\u0446\u0438\u0444\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u0433\u043e \u043e\u0442\u043a\u043b\u0438\u043a\u0430 \u043d\u0430 \u043b\u0443\u043f \u043d\u0435\u0442 (\u043d\u0438\u0436\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043d\u0438\u044f \u043a\u043e\u043d\u0441\u0435\u0440\u0432\u0430\u0442\u0438\u0432\u043d\u043e\u0433\u043e per-doc \u0444\u0438\u043b\u043b\u0435\u0440-\u043d\u0443\u043b\u044f)"
   ],
   "diagnostics": {
    "n_docs": 14,
@@ -59,6 +58,66 @@
   "8": 0.138771,
   "16": 0.138623
  },
+ "e_generic_note": "exploratory/\u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430: e_generic = fillerA \u2212 ctrl, \u0430 \u0435\u0433\u043e \u0441\u0440\u0430\u0432\u043d\u0438\u0432\u0430\u0435\u043c\u044b\u0439 \u043d\u0443\u043b\u044c (fillerA \u2212 fillerB) \u043d\u0435 \u0442\u043e\u0436\u0434\u0435\u0441\u0442\u0432\u0435\u043d \u0435\u0433\u043e \u0441\u043e\u0431\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u043c\u0443 \u043d\u0443\u043b\u044e (\u044d\u0444\u0444\u0435\u043a\u0442 \u0432\u0441\u0442\u0430\u0432\u043a\u0438 \u043d\u0435 \u043a\u043e\u043c\u043f\u0435\u043d\u0441\u0438\u0440\u0443\u0435\u0442\u0441\u044f); \u0432 \u0432\u0435\u0440\u0434\u0438\u043a\u0442\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f e_spec (\u0440\u0435\u0432\u044c\u044e r2, 3.5)",
+ "delta_calibration": {
+  "2": {
+   "near_null_mean": 0.089615,
+   "near_null_mean_ci95": [
+    0.072858,
+    0.108119
+   ],
+   "far_null_mean": 0.015092,
+   "far_null_mean_ci95": [
+    0.013131,
+    0.017443
+   ],
+   "near_per_doc_p95": 0.152638,
+   "far_per_doc_p95": 0.021914
+  },
+  "4": {
+   "near_null_mean": 0.073196,
+   "near_null_mean_ci95": [
+    0.063148,
+    0.082343
+   ],
+   "far_null_mean": 0.016814,
+   "far_null_mean_ci95": [
+    0.013778,
+    0.020246
+   ],
+   "near_per_doc_p95": 0.102073,
+   "far_per_doc_p95": 0.026201
+  },
+  "8": {
+   "near_null_mean": 0.093369,
+   "near_null_mean_ci95": [
+    0.075051,
+    0.111447
+   ],
+   "far_null_mean": 0.020083,
+   "far_null_mean_ci95": [
+    0.016961,
+    0.02443
+   ],
+   "near_per_doc_p95": 0.143737,
+   "far_per_doc_p95": 0.030528
+  },
+  "16": {
+   "near_null_mean": 0.083987,
+   "near_null_mean_ci95": [
+    0.066934,
+    0.10244
+   ],
+   "far_null_mean": 0.023237,
+   "far_null_mean_ci95": [
+    0.019114,
+    0.028293
+   ],
+   "near_per_doc_p95": 0.132818,
+   "far_per_doc_p95": 0.038096
+  }
+ },
+ "delta_calibration_note": "\u03b4-\u043a\u0430\u043b-\u0431\u0440\u043e\u0432\u043a\u0430 (\u0440\u0435\u0432\u044c\u044e r2, 3.4): per-doc p95 = \u043f\u0440\u0435-\u0440\u0435\u0433 (F4, \u043a\u043e\u043d\u0441\u0435\u0440\u0432\u0430\u0442\u0438\u0432\u043d\u043e \u2014 \u0445\u0432\u043e\u0441\u0442 \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u043e\u0433\u043e \u0434\u043e\u043a\u0443); null-mean CI \u2014 \u043f\u043e\u043f\u0443\u043b\u044f\u0446\u0438\u043e\u043d\u043d\u0430\u044f \u0430\u043b\u044c\u0442\u0435\u0440\u043d\u0430\u0442\u0438\u0432\u0430, \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430",
  "near_by_layer": {
   "2": {
    "6": 0.05355,
@@ -235,5 +294,35 @@
  "primary_layer": 23,
  "primary_dose": 16,
  "n_docs": 14,
- "n_domains": 4
+ "n_domains": 4,
+ "n_fwd": 182,
+ "gates": {
+  "phrase_token_check": true,
+  "finite_gate": "pass (analyze: _finite_gate \u2014 ce/cos/norm_delta/e_*)",
+  "config_fp_check": true,
+  "inside_rule": "paired: loop_ce < fillerA_ce AND loop_ce < fillerB_ce, pass >= 75% docs (F5)",
+  "filler_source": "same_pool_cross_doc (filler_map \u0432 store __config__)",
+  "docs_sha256": {
+   "wiki_0": "26ce48a649884531",
+   "wiki_1": "f6803e68e694bddc",
+   "wiki_2": "f380fe0e3b3f579e",
+   "wiki_3": "0eca66b2624744eb",
+   "math_0": "3983aba899c928fa",
+   "math_1": "aba024b3787f2739",
+   "code_0": "879b0c8af4a74340",
+   "code_1": "a5258aaa271ed9e3",
+   "code_2": "042e9f8487cf5810",
+   "code_3": "4bb01bc03f8955ac",
+   "chat_0": "d5fbb7262e03d06c",
+   "chat_1": "c30f0508420fb3e9",
+   "chat_2": "15f9d95288547d21",
+   "chat_3": "75fb2525c3ee03f4"
+  },
+  "pool_fps": {
+   "wiki": "34e1b144f06a2402",
+   "math": "305336b9eea02e2f",
+   "code": "a9a2731226ec7b93",
+   "chat": "b5c57da738fd1111"
+  }
+ }
 }

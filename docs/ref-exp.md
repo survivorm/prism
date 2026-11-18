@@ -2080,17 +2080,25 @@ E-34/E-37/E-39-suppl на 4.7 п.п.); KL-леваш на настоящем н�
   позиционные контрасты e_spec/e_generic/e_null, primary h_raw / lag-1 cos(Δh) / L23,
   14 доков × 4 домена, n=2/4/8/16, H=64. Прегон: ТЗ-пре-рег `docs/AT8_2_R2_TZ.md`
   (все утверждения черновика верифицированы, таблица §19) + смоук SMOKE_PASS.
-  Прогон: 98 форвардов CPU, wall 2596 s (17.11), store 12.2 MB (gitignored,
+  Прогон: 182 форварда CPU = 14 × (1 ctrl + 3 условия × 4 дозы), wall 2596 s
+  (17.11; «98» в TZ — устаревшая смета), store 12.2 MB (gitignored,
   бэкап /data/prism_backups/at8_2_r2/). **Ревью r1 (`docs/AT8_2_review.md`,
   F1–F7/M1–M7) — все 7 флипперов подтверждены, фиксы в машине r2** (δ через ту же
   near/far-статистику, CI-правила, primary dose 16, парный G_inside, phrase-token-check,
-  finite-гейт, DOMAINS_MIN=4, npz из store); ответка `docs/AT8_2_review_r1_answers.md`.
+  finite-гейт, DOMAINS_MIN=4, npz из store); ответки `docs/AT8_2_R2_review_r1_answers.md`
+  (раунды 1–2). **Ревью r2 (18.11): флипперов нет, вердикт подтверждён;
+  закрыты аудиторские дефекты 3.1–3.7/8 (машина r2b: манифест + full_run-блок
+  из лога, 98→182, тексты причин, delta_calibration, e_generic-пометка, гейты
+  в claim, −match_pre_reg); числа и вердикт bit-идентичны (seed 0).**
   **Вердикт: r1-машина `LOOP_RESPONSE_DECAYS` → машина r2 `NO_LOOP_SPECIFIC_EFFECT`**
   (flip — артефакт мискалиброванного δ: 0.0823 позиц. vs 0.1480 per-doc той же
-  статистики; near(16) 0.1020, CI95 [0.0844, 0.1197] ≤ δ_near). Смысл: луп-специфичного
-  локального отклика на разрешении филлер-вариативности нет; есть затухающий локальный
-  эффект **вставки как таковой** (near_generic 0.105–0.139 vs δ_near 0.148); I_loop
-  DOSE_FLAT (59.2→64.6 nat). Отчёт: `docs/AT8_2_R2_results.md`; код
+  статистики; near(16) 0.1020, CI95 [0.0844, 0.1197] ≤ δ_near). Смысл (формулировка
+  р2-ревью): нет значимого луп-специфичного эффекта **относительно выбранного
+  консервативного филлер-нуля и фиксированного разрешения δ** (не «доказано
+  отсутствие эффекта»; при null-mean калибровке near(16) на границе CI
+  [0.0669, 0.1024] — delta_calibration); есть затухающий локальный эффект
+  **вставки как таковой** (near_generic 0.105–0.139 vs δ_near 0.148, exploratory);
+  I_loop DOSE_FLAT (59.2→64.6 nat). Отчёт: `docs/AT8_2_R2_results.md`; код
   `experiments/at8/AT8_2_R2.py` (run/reanalysis/smoke/test-synth, синтетика 6/6);
   артефакты `results/AT8/AT8_2_R2{,_store,_manifest}.json` + series.npz +
   `logs/AT8/AT8_2_R2_run.log` (trackio at8_2_r2_r1).

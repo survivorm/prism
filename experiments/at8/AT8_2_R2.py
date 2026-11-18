@@ -4,14 +4,16 @@
 
 ТЗ (пре-рег): docs/AT8_2_R2_TZ.md v1.0. Черновик: docs/AT8_2_review.md.
 Машина: r1 (форварды) + r2 (анализ, ревизия по ревью-раунду 1:
-docs/AT8_2_review_r1_answers.md, F1–F7/M1–M7): primary dose n=16 (F2),
+docs/AT8_2_R2_review_r1_answers.md, F1–F7/M1–M7) + аудиторские правки по
+ревью-раунду 2 (18.11, там же, §3.1–3.7/8): primary dose n=16 (F2),
 δ_near/δ_far через ту же near/far-статистику (F4), CI-правила вердиктов (F3),
-parный G_inside (F5), слой-теги без LAYER_INCONSISTENT (F6), DOMAINS_MIN=4 (F7),
+парный G_inside (F5), слой-теги без LAYER_INCONSISTENT (F6), DOMAINS_MIN=4 (F7),
 phrase-token-check (F1), finite-гейт (M5), token-sha (M4), npz из store (M7),
 filler_source в манифесте (M3), шовный инкремент — диагностика, option A (M1).
 
 Моды:
-  (нет флага)     полный прогон (14 доков, n=2/4/8/16; 98 форвардов)
+  (нет флага)     полный прогон (14 доков, n=2/4/8/16;
+                  182 форварда = 14 × (1 ctrl + 3 условия × 4 дозы))
   --smoke         wiki × 2 дока × n=2 (8 форвардов) + якоря (TZ §14)
   --reanalysis    disk-only: store → verdict + JSON (машина r2, TZ §12)
   --test-synth    синтетические тесты вердикт-машины (без модели)
@@ -28,6 +30,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import sys
 import time
 import importlib.util
@@ -313,6 +316,17 @@ def _dose_tag(i_loop):
     return "DOSE_MONOTONIC"
 
 
+def _mean_ci(vals):
+    """doc-bootstrap CI95 среднего (ревью r2, 3.4 — популяционная калибровка δ)."""
+    a = np.asarray(vals, dtype="float64")
+    rng = np.random.default_rng(seed=SEED)
+    n = a.shape[0]
+    boots = [float(a[rng.integers(0, n, size=n)].mean()) for _ in range(B_BOOT)]
+    return dict(mean=float(a.mean()),
+                ci_low=float(np.percentile(boots, 2.5)),
+                ci_high=float(np.percentile(boots, 97.5)), B=B_BOOT)
+
+
 def _boot(arr2col):
     """doc-bootstrap CI95 пары колонок (near, far, near-far, near_generic)."""
     a = np.asarray(arr2col, dtype="float64")
@@ -350,11 +364,11 @@ def compute_verdict(ci, dmin_near, dmin_far, near, far, near_generic,
     gci = {n: ci[n]["near_generic"] for n in ci}
 
     if not gates_ok:
-        return dict(value="NOT_RESOLVED", match_pre_reg=False, n_star=pn,
+        return dict(value="NOT_RESOLVED", n_star=pn,
                     tags=dict(layer=None, dose=dose_tag),
                     reasons=["gates failed"], diagnostics=diag)
     if inside_pass < int(math.ceil(INSIDE_PASS_FRAC * n_docs)):
-        return dict(value="INSENSITIVE_CELL", match_pre_reg=False, n_star=pn,
+        return dict(value="INSENSITIVE_CELL", n_star=pn,
                     tags=dict(layer=None, dose=dose_tag),
                     reasons=[f"G_inside (парный) {inside_pass}/{n_docs} < "
                              f"ceil(0.75×{n_docs}) — клетка не видит стимул"],
@@ -386,16 +400,25 @@ def compute_verdict(ci, dmin_near, dmin_far, near, far, near_generic,
         mg = max(c["ci_low"] for c in gci.values())
         if mg > dmin_near:
             v = "GENERIC_INSERTION_EFFECT"
-            reasons = [f"CI95(near) ≤ δ_near={dmin_near:.4f} на всех дозах; "
-                       f"e_generic значим (max CI_low={mg:.4f} > δ_near) — эффект "
-                       f"от вставки как таковой, не специфичный луп"]
+            reasons = [f"primary dose n={pn}: CI95(near)=[{nci['ci_low']:.4f}, "
+                       f"{nci['ci_high']:.4f}] — CI_low ≤ δ_near={dmin_near:.4f} "
+                       f"(специфический эффект незначим); e_generic значим "
+                       f"(max CI_low={mg:.4f} > δ_near) — эффект от вставки "
+                       f"как таковой, не специфичный луп"]
         else:
             v = "NO_LOOP_SPECIFIC_EFFECT"
-            reasons = [f"CI95(near) ≤ δ_near={dmin_near:.4f} на всех дозах "
-                       f"(max CI_low={max(ci[n]['near']['ci_low'] for n in ci):.4f}) "
-                       f"И e_generic ≤ δ_near (max CI_low={mg:.4f}) — "
-                       f"специфического локального отклика на луп нет (ниже "
-                       f"разрешения)"]
+            all_low = max(ci[n]['near']['ci_low'] for n in ci)
+            whole_ci = (" (здесь весь CI первичной дозы ниже δ)"
+                        if nci["ci_high"] <= dmin_near else "")
+            reasons = [f"primary dose n={pn}: CI95(near)=[{nci['ci_low']:.4f}, "
+                       f"{nci['ci_high']:.4f}] — CI_low ≤ δ_near={dmin_near:.4f}, "
+                       f"не значимо выше филлер-нуля{whole_ci} (по всем дозам "
+                       f"max CI_low={all_low:.4f}); e_generic не значим по "
+                       f"нижней границе (max CI_low={mg:.4f} ≤ δ_near; верхние "
+                       f"границы отдельных доз могут превышать δ — см. "
+                       f"delta_calibration) — специфического локального отклика "
+                       f"на луп нет (ниже разрешения консервативного per-doc "
+                       f"филлер-нуля)"]
     # слой-тег (F6): значимость — near_layer > δ_near_layer (та же статистика)
     sig = [L for L in LAYERS
            if near_by_layer[pn][str(L)] > dmin_near_layer[str(L)]]
@@ -407,7 +430,7 @@ def compute_verdict(ci, dmin_near, dmin_far, near, far, near_generic,
         lt = "INTERNAL_ONLY"
     else:
         lt = None
-    return dict(value=v, match_pre_reg=False, n_star=pn,
+    return dict(value=v, n_star=pn,
                 tags=dict(layer=lt, dose=dose_tag), reasons=reasons,
                 diagnostics=diag)
 
@@ -464,6 +487,21 @@ def analyze(store, doses=None):
         dmin_far_layer[str(L)] = float(np.percentile(fn, 95))
     dmin_near = dmin_near_layer[str(PRIMARY_LAYER)]
     dmin_far = dmin_far_layer[str(PRIMARY_LAYER)]
+    # калибровка δ (ревью r2, 3.4 — диагностика, вердикт не меняет): per-doc p95
+    # (пре-рег, консервативно) против null-среднего с doc-bootstrap CI
+    dcal = {}
+    for n in doses:
+        nn, fn = [], []
+        for dn in docs:
+            en = store[dn][f"n{n}"]["e_null"][str(PRIMARY_LAYER)]
+            nn.append(_near(en))
+            fn.append(_far(en))
+        dcal[str(n)] = dict(near=_mean_ci(nn), far=_mean_ci(fn),
+                            near_per_doc_p95=float(np.percentile(nn, 95)),
+                            far_per_doc_p95=float(np.percentile(fn, 95)))
+    dcal["note"] = ("δ-кал-бровка (ревью r2, 3.4): per-doc p95 = пре-рег (F4, "
+                    "консервативно — хвост отдельного доку); null-mean CI — "
+                    "популяционная альтернатива, только диагностика")
     # пер-доковые near/far/generic + bootstrap по докам (4 колонки)
     near, far, near_generic = {}, {}, {}
     near_by_layer = {}
@@ -514,11 +552,13 @@ def analyze(store, doses=None):
                         i_loop, n_domains)
     return dict(dmin_near=dmin_near, dmin_far=dmin_far,
                 dmin_near_layer=dmin_near_layer, dmin_far_layer=dmin_far_layer,
+                delta_calibration=dcal,
                 near=near, far=far, near_generic=near_generic,
                 near_by_layer=near_by_layer, bootstrap=boot,
                 inside_pass=inside_pass, inside_abs_pass=abs_pass,
                 seam=seam, i_loop=i_loop, verdict=v,
-                n_docs=n_docs, n_domains=n_domains, docs=docs)
+                n_docs=n_docs, n_domains=n_domains, docs=docs,
+                store_config=store.get("__config__", {}))
 # ----------------------------- артефакты (TZ §12) -----------------------------
 
 
@@ -528,6 +568,8 @@ def _round_ci(c):
 
 def _write_artifacts(an, manifest, mode):
     v = an["verdict"]
+    scfg = an.get("store_config", {})
+    n_fwd = an["n_docs"] * (1 + 3 * len(an["bootstrap"]))  # ctrl + 3 условия × дозы
     claim = dict(
         experiment="AT8_2-R2", tz="docs/AT8_2_R2_TZ.md",
         run_revision=RUN_REVISION, machine=MACHINE_REVISION, mode=mode,
@@ -541,6 +583,22 @@ def _write_artifacts(an, manifest, mode):
         near={k: round(x, 6) for k, x in an["near"].items()},
         far={k: round(x, 6) for k, x in an["far"].items()},
         near_generic={k: round(x, 6) for k, x in an["near_generic"].items()},
+        e_generic_note=("exploratory/диагностика: e_generic = fillerA − ctrl, а его "
+                        "сравниваемый нуль (fillerA − fillerB) не тождествен его "
+                        "собственному нулю (эффект вставки не компенсируется); "
+                        "в вердикте используется e_spec (ревью r2, 3.5)"),
+        delta_calibration={
+            k: dict(
+                near_null_mean=round(d["near"]["mean"], 6),
+                near_null_mean_ci95=[round(d["near"]["ci_low"], 6),
+                                     round(d["near"]["ci_high"], 6)],
+                far_null_mean=round(d["far"]["mean"], 6),
+                far_null_mean_ci95=[round(d["far"]["ci_low"], 6),
+                                    round(d["far"]["ci_high"], 6)],
+                near_per_doc_p95=round(d["near_per_doc_p95"], 6),
+                far_per_doc_p95=round(d["far_per_doc_p95"], 6),
+            ) for k, d in an["delta_calibration"].items() if k != "note"},
+        delta_calibration_note=an["delta_calibration"]["note"],
         near_by_layer={n: {k: round(x, 6) for k, x in m.items()}
                        for n, m in an["near_by_layer"].items()},
         bootstrap={n: {k: _round_ci(c) for k, c in m.items()}
@@ -562,6 +620,21 @@ def _write_artifacts(an, manifest, mode):
         layers=LAYERS, primary_layer=PRIMARY_LAYER,
         primary_dose=PRIMARY_DOSE,
         n_docs=an["n_docs"], n_domains=an["n_domains"],
+        n_fwd=n_fwd,
+        gates={
+            "phrase_token_check": bool(scfg.get("phrase_ids") == list(PHRASE_IDS)),
+            "finite_gate": "pass (analyze: _finite_gate — ce/cos/norm_delta/e_*)",
+            "config_fp_check": all(k in scfg for k in ("model", "layers",
+                                                       "n_dose", "pool_fps",
+                                                       "docs_sha256", "phrase_ids",
+                                                       "revision", "mode")),
+            "inside_rule": ("paired: loop_ce < fillerA_ce AND loop_ce < fillerB_ce, "
+                            f"pass >= {int(INSIDE_PASS_FRAC * 100)}% docs (F5)"),
+            "filler_source": ("same_pool_cross_doc (filler_map в store "
+                              "__config__)"),
+            "docs_sha256": scfg.get("docs_sha256"),
+            "pool_fps": scfg.get("pool_fps"),
+        },
     )
     json.dump(claim, open(CLAIM, "w"), indent=1)
     manifest["claim_sha256"] = sha256_file(CLAIM)
@@ -811,6 +884,19 @@ def reanalysis_main():
     if "__config__" not in store:
         raise SystemExit("store без __config__ — не R2-store")
     an = analyze(store, doses=store["__config__"]["n_dose"])
+    # провенанс полного прогона (ревью r2, 3.1/3.2): лог — source of truth;
+    # манифест полного прогона в git не попадал (реанализ перезаписал до коммита)
+    full_run = dict(
+        log=RUNLOG,
+        log_sha256=sha256_file(RUNLOG) if os.path.exists(RUNLOG) else None,
+        n_fwd=an["n_docs"] * (1 + 3 * len(an["bootstrap"])),
+        wall_s=None,
+    )
+    if os.path.exists(RUNLOG):
+        m = re.search(r"AT8_2_R2_DONE verdict=\S+ mode=\S+ \(wall (\d+)s\)",
+                      open(RUNLOG).read())
+        if m:
+            full_run["wall_s"] = int(m.group(1))
     manifest = dict(
         generated_by="AT8_2_R2.py --reanalysis", run_revision=RUN_REVISION,
         machine=MACHINE_REVISION,
@@ -818,6 +904,7 @@ def reanalysis_main():
         store_file_sha256=sha256_file(STORE),
         series_npz_sha256=sha256_file(SERIES) if os.path.exists(SERIES) else None,
         mode="reanalysis", claim_sha256=None,
+        full_run=full_run,
         wall_s=round(time.time() - t0, 1),
     )
     v = an["verdict"]
