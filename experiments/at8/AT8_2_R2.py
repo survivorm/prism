@@ -89,7 +89,10 @@ SEED = 0
 B_BOOT = 2000
 RUN_REVISION = "r1"                        # форварды (store fingerprint)
 MACHINE_REVISION = "r2"                    # анализ по ревью-раунду 1
-MACHINE_SUBREVISION = "r2c"                 # аудиторские правки р2 (3.1-3.7/8) +
+MACHINE_SUBREVISION = "r2d"                 # аудиторские правки р2 (3.1-3.7/8) +
+#                                           r2c (ревью r3) + r2d (ревью r4 18.11,
+#                                           sha 7310ab50: гигиена, TZ-синхронизация;
+#                                           правила решения не менялись)
                                             # ревью-раунд 3 (18.11): mg primary,
                                             # e_generic_note, n_fwd из лога/стора,
                                             # pool_rule, калибровка в reason
@@ -313,6 +316,11 @@ def _dose_tag(i_loop):
     vals = [i_loop.get(str(n)) for n in N_DOSE]
     if any(v is None for v in vals):
         return "DOSE_NOT_RESOLVED"
+    if any(not np.isfinite(v) for v in vals):
+        # r2d (ревью r4, 2.3): прямая гигиена; на практике NaN не проходят
+        # M5 finite-гейт (i_loop считается из ce), но защита не должна быть
+        # только непрямой (NaN в бинарном сравнении → False → DOSE_MONOTONIC)
+        return "DOSE_NOT_RESOLVED"
     if any(b <= a for a, b in zip(vals, vals[1:])):
         return "DOSE_NOT_RESOLVED"
     r2, r8 = vals[3] / vals[0], vals[3] / vals[2]
@@ -405,7 +413,9 @@ def compute_verdict(ci, dmin_near, dmin_far, near, far, near_generic,
                            f"δ_far={dmin_far:.4f}")
     else:
         # r2c (ревью r3, 2.2): e_generic — по первичной дозе, та же логика, что
-        # и e_spec (F2); скан по дозам в решение не идёт
+        # и e_spec (F2); скан по дозам в решение не идёт. r2d (ревью r4, 2.2):
+        # если CI_low вторичной дозы превысит δ — в причине reported max по всем
+        # дозам (диагностика, не правило; вердикт — по первичной дозе).
         mg = gci[pn]["ci_low"]
         if mg > dmin_near:
             v = "GENERIC_INSERTION_EFFECT"
@@ -599,7 +609,10 @@ def _write_artifacts(an, manifest, mode):
             near_by_layer={k: round(x, 6) for k, x in an["dmin_near_layer"].items()},
             far_by_layer={k: round(x, 6) for k, x in an["dmin_far_layer"].items()},
             note="95th pct per-doc null near/far (F4: та же статистика, что и "
-                 "сравниваемые near/far e_spec)"),
+                 "сравниваемые near/far e_spec). r2d (ревью r4, 2.1): e_generic "
+                 "сравнивается с тем же δ_near (нуль e_spec) — design choice, "
+                 "не теорема: собственный нуль e_generic (fillerA−ctrl при "
+                 "отсутствии эффекта) не калиброван в дизайне"),
         near={k: round(x, 6) for k, x in an["near"].items()},
         far={k: round(x, 6) for k, x in an["far"].items()},
         near_generic={k: round(x, 6) for k, x in an["near_generic"].items()},
@@ -985,6 +998,12 @@ def _synth_store(kind, n_docs=14):
                               for L in LAYERS}
                 cell[cond]["ce"] = [3.0] * (256 + L_n)
                 cell[cond]["ce_block"] = 0.5 if cond == "loop" else 4.0
+                # r2d (ревью r4, 2.6/2.7): i_loop/ce_block — заглушка на всех
+                # условиях (формат совпадает с реальным store: line 812 пишет
+                # оба поля каждому условию); читается только loop (analyze).
+                # ce_block 0.5/4.0 хардкод → inside-гейт на синтетике всегда
+                # проходит: ветка INSENSITIVE_CELL проверяется прямым вызовом
+                # compute_verdict(inside_pass=3) в test_synth_main.
                 cell[cond]["i_loop"] = float(2.06 + 0.38 * (L_n - 9))
             es = {str(L): [] for L in LAYERS}
             eg = {str(L): [] for L in LAYERS}
