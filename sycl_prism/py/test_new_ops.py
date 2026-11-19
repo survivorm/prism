@@ -10,7 +10,7 @@ PRISM_SYCL_BACKEND=reference — тесты идут по numpy, CI без GPU).
     подпространства top/bottom-32 ≤ 5e-2; ортогональность ≤ 1e-4; offdiag < 1e-4
     (ЯВНО max_sweeps=64, m-28);
   - svd_top H-доки: σ rel ≤ 1e-3, подпространства U/V ≤ 1e-3;
-  - Gagg-композиция: подпространства ≤ 1e-3, S5b-аналог ≤ 1e-5 (f64, хост);
+  - Gagg-композиция: подпространства ≤ 1e-3, S5b-аналог (норм. ‖G‖·‖v‖) ≤ 1e-4 (f64, хост);
   - eigtop/eigbot random-SPD: relλ ≤ 1e-3, subdist ≤ 1e-3; jcache top/bottom-7:
     подпространство ≤ 5e-2 + Ritz-max ≥/≤ λ_r(1∓1e-3); ортогональность ≤ 1e-5.
 """
@@ -96,13 +96,24 @@ def _rel_eig(lam: np.ndarray, lam_ref: np.ndarray) -> float:
 # ----------------------------- GEMM -----------------------------
 
 def _gemm_check(A: np.ndarray, B: np.ndarray, tag: str) -> float:
+    """Сверка с f64-эталоном. Эталон — ПОСТРОЧНЫМИ БЛОКАМИ колонок (f64 GEMM
+    column-parallel: точка-по-точечное произведение по K идентично полному;
+    память ~M*K*8 + K*BLK*8 + M*BLK*8 вместо ~M*N*8 — TZ n-17: wide-формы
+    не влезают в память при целом Cref)."""
     C = ps.gemm(A, B)
-    Cref = (A.astype(np.float64) @ B.astype(np.float64))
-    rel = float(np.max(np.abs(C - Cref)) / np.max(np.abs(Cref)))
+    A64 = A.astype(np.float64)
+    BLK = 8192
+    err_max = 0.0
+    ref_max = 0.0
+    for c0 in range(0, B.shape[1], BLK):
+        Cref_b = A64 @ B[:, c0:c0 + BLK].astype(np.float64)
+        err_max = max(err_max, float(np.max(np.abs(C[:, c0:c0 + BLK] - Cref_b))))
+        ref_max = max(ref_max, float(np.max(np.abs(Cref_b))))
+        del Cref_b
+        gc.collect()
+    rel = err_max / ref_max
     print(f"[gemm {tag}] {A.shape} @ {B.shape}: max|Δ|/max|C| = {rel:.3e}")
     assert rel <= 1e-4, f"gemm {tag}: rel={rel} > 1e-4"
-    del Cref
-    gc.collect()
     return rel
 
 
@@ -321,17 +332,40 @@ def test_eigjac_curve():
 
 
 def test_eigjac_sweep_time_guard():
-    """TZ §2.7 (v5.3 F1/F9): sweep-time guard — ТЮНИНГ-шаг (таблица
-    (n, chunk)→t_sweep в артефакт) + твёрдые гейты: 1 launch (n=128, чанк
-    C=1024) ≤ 4с И 1 launch (n=256, чанк C/4=256) ≤ 4с (5×-запас к hang-check
-    ~20с; n=256 — стоимость ×4.02) И C ≥ 256 (иначе громкий fail — не тихое
-    замедление)."""
+    """TZ §2.7 (v5.3 F1/F9, дельта 19.11 + перетюнинг 19.11-день): sweep-time guard —
+    ТЮНИНГ-шаг (таблица (n, chunk)→t_sweep в артефакт) + твёрдые гейты: 1 launch
+    (n=128, чанк C=64) ≤ 4с И 1 launch (n=256, чанк C/16=4) ≤ 4с (запас к hang-check
+    ~20с) И C_measured ≥ C_FIXED (консервативная фиксация, v5.4: iGPU-состояние
+    нестабильно — деградация/восстановление 1.5–1.9× зафиксированы 19.11; C_FIXED
+    выбрано под ХУЖОЕ из измеренных состояний. GPU быстрее — C_measured > C_FIXED —
+    остаёмся на C_FIXED (стоимость на матрицу при c64/c256 идентична в замерах,
+    14.8/15.0 мс); GPU медленнее — C_measured < C_FIXED — громкий fail, C_FIXED
+    больше не безопасно). Перетюнинг: состояние
+    iGPU 19.11-день тунинга — t_sweep(n=128, c256) ≈ 4.3–6.9с > 4с (мин. 4.32) —
+    C=256 недостижим; c64 ≈ 1.0–1.9с ≤ 4с; n=256: c1 ≈ 2.4с (фикс. оверхед),
+    c4 ≈ 2.7–3.4с ≤ 4с (замеры: /tmp/AT0_3_tsweep_reps.json). 19.11-день
+    восстановления: c256 = 3.843с ≤ 4с → C_measured=256 — консервативно остаёмся на 64.
+
+    ТЮНИНГ-луп — hang-check-гард: следующий (больший) чанк НЕ запускается, если
+    монотонная оценка 4·t(prev)−0.3с > 4с — больший медленнее по определению
+    (C выше не поднимется) и ближе к hang-окну драйвера: замер 19.11 —
+    launch chunk=1024 (t≈11с+) — драйвер убил compute-команду
+    (UR_RESULT_ERROR_DEVICE_LOST, error 20), состояние устройства ломается на
+    весь процесс (все последующие malloc'и падают)."""
     _skip_nogpu()
     CHUNKS = (1, 16, 64, 256, 1024, 4096)
-    C_FIXED = 1024  # = EIGJAC_CHUNK в src/prism_sycl.cpp (фиксация тюнинга)
+    C_FIXED = 64  # = EIGJAC_CHUNK в src/prism_sycl.cpp (перетюнинг 19.11-день: c256 ≥ 4.3с > 4с)
     rng = np.random.default_rng(51)
     table = {}
+    C_measured = 1
+    prev_med = None
+    prev_chunk = None
     for chunk in CHUNKS:
+        if prev_med is not None and 4.0 * prev_med - 0.3 > 4.0:
+            print(f"[eigjac tuning] n=128 chunk={chunk:>5} — ПРОПУСК: монотонность "
+                  f"(4·t(c{prev_chunk}) − 0.3с = {4.0 * prev_med - 0.3:.2f}с > 4с — C выше не "
+                  f"поднимется; запуск — близко к hang-окну драйвера (DEVICE_LOST 19.11))")
+            break
         M = rng.standard_normal((chunk, 128, 128))
         A = (M @ M.transpose(0, 2, 1) + 128 * np.eye(128)).astype(np.float32)
         # прогрев + 3 замера (медиана; max_sweeps=1 — ровно 1 sweep)
@@ -344,10 +378,17 @@ def test_eigjac_sweep_time_guard():
         med = float(np.median(ts))
         table[f"n128_c{chunk}"] = med
         print(f"[eigjac tuning] n=128 chunk={chunk:>5}: t_sweep(med3)={med:.3f}с")
+        if med <= 4.0:
+            C_measured = chunk
+        else:
+            break   # C = предыдущий чанк (наибольшее с t ≤ 4с)
+        prev_med = med
+        prev_chunk = chunk
         del A, M
         gc.collect()
-    # F9: n=256, чанк C/4 (стоимость sweep на матрицу ×4.02 к n=128)
-    C256 = C_FIXED // 4
+    # F9 (дельта 19.11 + перетюнинг): n=256, чанк C/16 (замер 19.11-день:
+    # n=256 c1 ≈ 2.4с — фикс. оверхед, c4 ≈ 2.7–3.4с ≤ 4с; /tmp/AT0_3_tsweep_reps.json)
+    C256 = C_FIXED // 16
     M = rng.standard_normal((C256, 256, 256))
     A = (M @ M.transpose(0, 2, 1) + 256 * np.eye(256)).astype(np.float32)
     ps.eigjac(A, max_sweeps=1, tol=1e-6)
@@ -363,18 +404,25 @@ def test_eigjac_sweep_time_guard():
     gc.collect()
     RESULTS.mkdir(parents=True, exist_ok=True)
     (RESULTS / "eigjac_tuning.json").write_text(json.dumps(table, indent=2))
-    # твёрдые гейты (TZ §2.7 v5.3):
-    assert table[f"n128_c{C_FIXED}"] <= 4.0, \
-        f"eigjac F1: t_sweep(n=128, чанк {C_FIXED})={table[f'n128_c{C_FIXED}']:.2f}с > 4с — " \
+    # твёрдые гейты (TZ §2.7 v5.3 + дельта 19.11):
+    assert "n128_c64" in table, \
+        "eigjac F1: t_sweep(n=128, чанк 64) > 4с ещё до замера (монотонный пропуск) — " \
+        "GPU медленнее расчёта (C < 64 недостижим) — громкий fail, не тихое замедление"
+    assert table["n128_c64"] <= 4.0, \
+        f"eigjac F1: t_sweep(n=128, чанк {C_FIXED})={table['n128_c64']:.2f}с > 4с — " \
         f"hang-check-риск; понизить EIGJAC_CHUNK и пересобрать"
     assert table[f"n256_c{C256}"] <= 4.0, \
-        f"eigjac F9: t_sweep(n=256, чанк {C256})={table[f'n256_c{C256}']:.2f}с > 4с — " \
+        f"eigjac F9: t_sweep(n=256, чанк {C256})={med256:.2f}с > 4с — " \
         f"hang-check-риск для n=256; понизить EIGJAC_CHUNK и пересобрать"
-    assert table["n128_c256"] <= 4.0, \
-        f"eigjac F1: t_sweep(n=128, чанк 256)={table['n128_c256']:.2f}с > 4с — GPU " \
-        f"медленнее расчёта (C < 256 недостижим) — громкий fail, не тихое замедление"
+    assert C_measured >= C_FIXED, \
+        f"eigjac F1: тюнинг дал C={C_measured} < EIGJAC_CHUNK={C_FIXED} — GPU медленнее " \
+        f"худшего зафиксированного состояния: C_FIXED больше не безопасно, " \
+        f"понизить константу и пересобрать (громкий fail, не тихое замедление)"
+    if C_measured > C_FIXED:
+        print(f"[eigjac F1] консервативная фиксация: тюнинг дал C={C_measured} (GPU быстрее), "
+              f"остаёмся на EIGJAC_CHUNK={C_FIXED} (v5.4)")
     print(f"[eigjac F1/F9] гейты пройдены: n=128 c{C_FIXED}="
-          f"{table[f'n128_c{C_FIXED}']:.3f}с; n=256 c{C256}={med256:.3f}с; c256={table['n128_c256']:.3f}с — все ≤ 4с")
+          f"{table['n128_c64']:.3f}с; n=256 c{C256}={med256:.3f}с — все ≤ 4с")
 
 
 def test_eigjac_fudge_guard():
@@ -557,12 +605,13 @@ def _gagg_check(L: int) -> dict:
     w_np = w.cpu().numpy()
     order = torch.argsort(lam, descending=True).cpu().numpy()
     lammax = float(lam_np.max())
+    Gnrm = float(np.linalg.norm(Gagg))   # для масштабно-инвариантного S5b-остатка
     nz = np.where(lam_np > 1e-12 * lammax)[0]
     top_idx = order[:R]                               # сильнейшие (убыв.)
     weak_idx = nz[:min(R, len(nz))]                   # слабейшие НЕ-нулевые
     weakmid_idx = order[R:2 * R]                      # позиции r..2r (C1c)
     # sycl-путь: Gsmall + eigjac + lift
-    Gsmall = ps.gemm(Jagg32, Jagg32.T)                # [128,128] f32
+    Gsmall = ps.gemm(Jagg32, np.ascontiguousarray(Jagg32.T))  # [128,128] f32 (Jagg32.T — view, gemm требует C-contiguous)
     lam_s, U_s, _ = ps.eigjac(Gsmall[None, :, :], max_sweeps=64, tol=1e-6)
     lam_s, U_s = lam_s[0], U_s[0]                     # по возрастанию
     res = {}
@@ -573,7 +622,7 @@ def _gagg_check(L: int) -> dict:
         for li in idx:
             d = np.abs(lam_s - lam_np[li]) / max(abs(lam_np[li]), 1e-300)
             j = int(np.argmin(d))
-            assert d < 1e-3, f"gagg L{L} {name}: λ не совпал (rel={d})"
+            assert d[j] < 1e-3, f"gagg L{L} {name}: λ не совпал (rel={d[j]:.2e})"
             u_cols.append(U_s[:, j])
         u_sel = np.stack(u_cols, axis=1)
         # lift v = Jaggᵀ u / √λ (f64, на хосте — аналог _lift_arr AT2c)
@@ -583,14 +632,20 @@ def _gagg_check(L: int) -> dict:
         vref = w_np[:, idx]
         d_sp = _subspace_dist(v, vref)
         assert d_sp <= 1e-3, f"gagg L{L} {name}: subdist={d_sp}"
-        # S5b-аналог: max_j ‖Gagg v_j − λ_j v_j‖/|λ_j| (f64, хост)
+        # S5b-аналог (TZ §2.7): макс. j ‖Gagg v_j − λ_j v_j‖/(‖G‖·‖v_j‖) (f64, хост) —
+        # масштабно-инвариантный собственный остаток. ВАЖНО: нормировка /|λ_j| здесь
+        # НЕГОДНА (замер 19.11): квант f32-данных Jagg32 доминирует на слабых λ —
+        # эталон «f64-математика на f32-данных» (eig точный) уже даёт s5b(|λ|-норм.) =
+        # 1.35e-2 на L6 weak (λ_мин ~ 0.4, λ_max ~ 2.8e3), т.е. раздувание 1/λ^1.5 —
+        # свойства данных, не ядра. Геометрический контракт — subdist (≤ 1e-3).
         s5b = 0.0
         for j in range(len(idx)):
-            rj = np.linalg.norm(Gagg @ v[:, j] - lam_sel[j] * v[:, j]) / abs(lam_sel[j])
+            rj = (np.linalg.norm(Gagg @ v[:, j] - lam_sel[j] * v[:, j])
+                  / (Gnrm * np.linalg.norm(v[:, j])))
             s5b = max(s5b, float(rj))
-        assert s5b <= 1e-5, f"gagg L{L} {name}: S5b={s5b} > 1e-5"
-        res[name] = {"subdist": d_sp, "s5b_max": s5b}
-        print(f"[gagg L{L} {name}] subdist={d_sp:.2e} s5b={s5b:.2e}")
+        assert s5b <= 1e-4, f"gagg L{L} {name}: S5b_rel={s5b} > 1e-4"
+        res[name] = {"subdist": d_sp, "s5b_rel_max": s5b}
+        print(f"[gagg L{L} {name}] subdist={d_sp:.2e} s5b_rel={s5b:.2e}")
     return res
 
 
@@ -608,15 +663,29 @@ def test_gagg_composition():
 # ----------------------------- EIGTOP / EIGBOT -----------------------------
 
 def test_eigtop_eigbot_random_spd():
+    """TZ §2.7: random-SPD, РАССЕЯННЫЙ спектр (relλ ≤ 1e-3, subdist ≤ 1e-3).
+    Рассеянность по конструкту: крайние 8 собственных значений — геометрическая
+    прогрессия с ratio 0.8. Выведение: сходимость (λ_{r+1}/λ_r)^max_iter ≤ 1e-3
+    ⇔ ratio ≤ 0.987; случайное wishart-спектр (M@Mᵀ+128I) даёт ratio 0.987–0.994
+    для top-7 — 512 итераций недостаточно ДАЖЕ В F64 (замер: subdist 2.6e-3…
+    8.1e-3). Случайный ортогональный Q (QR гаусса) × фиксированные λ ⇒ случайная
+    SPD-матрица с отделёнными крайними. Спектры сравниваются ПОСЛЕ сортировки:
+    контракт TZ §2.2 — λ_j = Rayleigh колонки j (порядок колонок = динамика MGS,
+    не гарантируется)."""
     _skip_nogpu()
     rng = np.random.default_rng(31)
-    M = rng.standard_normal((6, 128, 128))
-    A = M @ M.transpose(0, 2, 1) + 128 * np.eye(128)   # рассеянный спектр
+    G = rng.standard_normal((6, 128, 128))
+    Q, _ = np.linalg.qr(G)                            # случайные ортогональные
+    top = 128.0 * 0.8 ** np.arange(8)                # top-8 (убыв.): 128…26.8
+    mid = 20.0 * (18.0 / 20.0) ** (np.arange(112) / 111.0)  # 112 средних: 20…18
+    bot = 16.0 * 0.8 ** np.arange(8)[::-1]           # bottom-8 (убыв.): 16…3.03
+    lam = np.concatenate([top, mid, bot])            # 128 убывающих, [3.03, 128]
+    A = (Q * lam[None, :, None]) @ Q.transpose(0, 2, 1)   # f64, случайная SPD
     A32 = A.astype(np.float32)
-    vals, vecs, resid = ps.eigtop(A32, R, max_iter=512)
     lam_ref, vecs_ref = np.linalg.eigh(A)
+    vals, vecs, resid = ps.eigtop(A32, R, max_iter=512)
     for b in range(6):
-        rel = _rel_eig(vals[b], lam_ref[b, -R:])
+        rel = _rel_eig(np.sort(vals[b]), np.sort(lam_ref[b, -R:]))
         assert rel <= 1e-3, f"eigtop random batch {b}: relλ={rel}"
         d = _subspace_dist(vecs[b], vecs_ref[b, :, -R:])
         assert d <= 1e-3, f"eigtop random batch {b}: subdist={d}"
@@ -625,7 +694,7 @@ def test_eigtop_eigbot_random_spd():
     # eigbot — ТОЛЬКО на full-rank SPD
     vals_b, vecs_b, resid_b = ps.eigbot(A32, R, max_iter=512)
     for b in range(6):
-        rel = _rel_eig(vals_b[b], lam_ref[b, :R])
+        rel = _rel_eig(np.sort(vals_b[b]), np.sort(lam_ref[b, :R]))
         assert rel <= 1e-3, f"eigbot random batch {b}: relλ={rel}"
         d = _subspace_dist(vecs_b[b], vecs_ref[b, :, :R])
         assert d <= 1e-3, f"eigbot random batch {b}: subdist={d}"
@@ -693,7 +762,8 @@ def test_degradation():
         ps.eigtop(rng.standard_normal((1, 8, 8)).astype(np.float32), 8)
     with pytest.raises(RuntimeError, match="PS_ERR_ARG"):
         ps.eigbot(rng.standard_normal((1, 8, 8)).astype(np.float32), 8)
-    # local-бюджет: n=1024, r=8 ⇒ 66048 > 65536 → PS_ERR_LOCAL (m-12b)
+    # local-бюджет: n=1024, r=8 ⇒ 2*n*r*4 + (WG+1)*4 = 65796 > 65536 → PS_ERR_LOCAL
+    # (m-12b; m3 r4: формула = фактический состав ядра, члена r²*4 в ядре нет)
     with pytest.raises(RuntimeError, match="PS_ERR_LOCAL"):
         ps.eigtop(rng.standard_normal((1, 1024, 1024)).astype(np.float32), 8)
     # eigjac: n > 256 → PS_ERR_ARG
@@ -705,6 +775,81 @@ def test_degradation():
     # gemm: размеры вне ограничений → PS_ERR_ARG
     with pytest.raises(RuntimeError, match="PS_ERR_ARG"):
         ps.gemm(np.ones((1, 4097), dtype=np.float32), np.ones((4097, 8), dtype=np.float32))
+
+
+def test_svd_top_output_contract():
+    """M1/M2 (само-аудит r4): выходы БЕЗ отрицательных шагов (потребитель
+    Backend.svd_top → torch.from_numpy не принимает отриц. шаги; канарейка в
+    tests/test_backend.py::test_sycl_svd_top была КРАСНОЙ) + лимит min(m,n)<=256.
+
+    Отрицательные шаги ловятся по .strides, не по C_CONTIGUOUS: у вырожденных
+    осей (shape (1,1), (1,r)) numpy считает view «contiguous» и
+    ascontiguousarray не копирует ⇒ флаговая проверка баг ПРОПУСКАЕТ.
+    """
+    _skip_nogpu()
+    rng = np.random.default_rng(101)
+    cases = (((8, 12), 4), ((12, 8), 4), ((1, 1), 1), ((1, 6), 1), ((6, 1), 1),
+             ((16, 16), 16), ((16, 16), 3))
+    for shape, r in cases:
+        A = rng.standard_normal(shape).astype(np.float32)
+        U, S, Vh = ps.svd_top(A, r)
+        for nm, arr in (("U", U), ("S", S), ("Vh", Vh)):
+            assert all(s >= 0 for s in arr.strides), \
+                f"svd_top {shape} r={r}: {nm} отрицательные шаги {arr.strides}"
+            assert arr.flags["C_CONTIGUOUS"], \
+                f"svd_top {shape} r={r}: {nm} не C-contiguous ({arr.strides})"
+        # документированный потребитель: без копии
+        torch.from_numpy(U); torch.from_numpy(S); torch.from_numpy(Vh)
+        Sr = np.linalg.svd(A.astype(np.float64), full_matrices=False)[1][:r]
+        rel = float(np.abs(S - Sr).max() / max(Sr.max(), 1e-30))
+        assert rel <= 1e-3, f"svd_top {shape} r={r}: σ rel={rel}"
+        assert np.all(np.diff(S) <= 0.0), f"svd_top {shape} r={r}: S не descending: {S}"
+        if r == min(shape):   # полный набор ⇒ реконструкция обязана сойтись
+            recon = float(np.abs(A - (U @ np.diag(S) @ Vh)).max() / np.abs(A).max())
+            assert recon <= 1e-3, f"svd_top {shape}: recon rel={recon}"
+    # M2: граница по min(m,n): 256 — работает; 257 — PS_ERR_ARG НА УРОВНЕ svd_top.
+    # Важно: большая сторона >256 ДОПУСТИМА (257x40: малая 40 ⇒ eigjac(n=40) OK).
+    U, S, Vh = ps.svd_top(rng.standard_normal((256, 40)).astype(np.float32), 3)
+    assert S.shape == (3,) and np.all(S > 0)
+    U, S, Vh = ps.svd_top(rng.standard_normal((257, 40)).astype(np.float32), 3)
+    assert S.shape == (3,), "svd_top 257x40: законен (малая сторона 40 <= 256)"
+    with pytest.raises(RuntimeError, match=r"svd_top.*min\(m,n\)=257"):
+        ps.svd_top(rng.standard_normal((257, 300)).astype(np.float32), 3)
+
+
+def test_eigjac_curve_onplace_contract():
+    """m1 (само-аудит r4): curve заполняется НА МЕСТЕ ⇒ только ndarray(f64).
+    f32-буфер/список раньше молча заполняли КОПИЮ (no-op для пользователя)."""
+    _skip_nogpu()
+    rng = np.random.default_rng(202)
+    A = rng.standard_normal((2, 16, 16)).astype(np.float32)
+    A = (A + np.transpose(A, (0, 2, 1))) / 2
+    for bad in (np.zeros(16, dtype=np.float32), [0.0] * 16):
+        with pytest.raises(ValueError, match=r"ndarray\(float64\)"):
+            ps.eigjac(A, max_sweeps=16, tol=1e-6, curve=bad)
+    c = np.zeros(16, dtype=np.float64)
+    ps.eigjac(A, max_sweeps=16, tol=1e-6, curve=c)
+    assert c[0] > 0.0, "eigjac curve: буфер не заполнен (контракт «на месте»)"
+
+
+def test_guards_small_n_and_mem():
+    """n6/n7/m2 (само-аудит r4): явные ошибки вместо тихого NaN (band при K<9)
+    и вместо поз-днего молчаливого OOM (комбинированный объём буферов)."""
+    _skip_nogpu()
+    rng = np.random.default_rng(303)
+    # n6: band = mean(лаги 9..K) не определён — БЫЛ band=[nan nan] + RuntimeWarning
+    with pytest.raises(ValueError, match=r"K=3.*< 9"):
+        ps.permutation_null(rng.standard_normal((4, 2)).astype(np.float32),
+                            0.1, [1], blk=1, K=96)
+    # n7: тот же тип/смысл ошибки, что в reference (был RuntimeError из C)
+    with pytest.raises(ValueError, match="вне диапазона"):
+        ps.acf_moments(np.zeros((5, 2), dtype=np.float32), 8)
+    # m2: guard комбинированного объёма (per-dim лимиты его не ловят)
+    budget = ps._mem_budget_bytes()
+    assert budget > 0, "бюджет памяти не определён (device_info)"
+    with pytest.raises(RuntimeError, match="PS_ERR_MEM"):
+        ps._check_mem("gemm", budget + 1, "тест")
+    ps._check_mem("gemm", budget // 4, "тест")       # в бюджете — молча
 
 
 if __name__ == "__main__":

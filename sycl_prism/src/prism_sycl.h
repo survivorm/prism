@@ -152,8 +152,9 @@ int  prism_sycl_gemm_f32(const float* A, const float* B,
  * собственные векторы), resid[batch] f64 (подпространственный остаток
  * ‖AV − V(VᵀAV)‖_F/‖A‖_F на последней итерации — ЧЕСТНЫЙ отчёт, не критерий
  * остановки). Ограничения: 1≤batch≤65536, 1≤n≤1024, 1≤r≤32 (r<n),
- * 1≤max_iter≤512, иначе PS_ERR_ARG. Local-бюджет (2·n·r·4 + r·r·4 + 64·4)
- * ≤ 65536, иначе PS_ERR_LOCAL.
+ * 1≤max_iter≤512, иначе PS_ERR_ARG. Local-бюджет (2·n·r·4 + (WG+1)·4, WG=64;
+ * m3 само-аудит r4: состав ядра eig_iterate — lv/lw по n·r + sh=65, члена
+ * r²·4 нет) ≤ 65536, иначе PS_ERR_LOCAL.
  */
 int  prism_sycl_eigtop(const float* A, int64_t batch, int64_t n, int64_t r,
                        int64_t max_iter, double* vals, float* vecs, double* resid);

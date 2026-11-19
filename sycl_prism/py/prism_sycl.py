@@ -45,6 +45,10 @@ _LIB_CANDIDATES = [
     str(_HERE.parent / "build" / "prism_sycl.so"),
 ]
 
+# WG — размер work-group всех редукций (cpp:41, "constexpr unsigned WG = 64");
+# нужен на хосте для ТОЧНОЙ сверки local-бюджета (sh = WG+1 элементов).
+_WG = 64
+
 _ERR = {
     -1: "нет SYCL-устройства",
     -2: "исключение в SYCL",
@@ -270,6 +274,40 @@ def device_info() -> dict:
     }
 
 
+_MEM_BUDGET: int | None = None
+
+
+def _mem_budget_bytes() -> int:
+    """Бюджет памяти на ОДИН вызов (само-аудит r4, m2).
+
+    iGPU: global_mem — доля системной RAM, разделяемая с хостом ⇒ берём 0.5
+    (остальное нужно хосту под сами входы/выходы и под копии в numpy). Кэш:
+    probe создаёт device (мс), в циклах по слоям это была бы заметная цена.
+    0 — «узнать не удалось» (не мешаем: malloc_device скажет своё).
+    """
+    global _MEM_BUDGET
+    if _MEM_BUDGET is None:
+        if _is_reference():
+            _MEM_BUDGET = 1 << 62
+        else:
+            try:
+                _MEM_BUDGET = int(0.5 * device_info()["global_mem_bytes"])
+            except Exception:  # pragma: no cover — нет устройства/старый .so
+                _MEM_BUDGET = 0
+    return _MEM_BUDGET
+
+
+def _check_mem(op: str, need_bytes: int, what: str) -> None:
+    """Численный guard комбинированного объёма (per-dim лимиты его не ловят:
+    M=65536 x N=262144 проходит по M и N по отдельности, но это ~68 GiB)."""
+    budget = _mem_budget_bytes()
+    if budget and need_bytes > budget:
+        raise RuntimeError(
+            f"prism_sycl: {op}: PS_ERR_MEM — {what} требует "
+            f"{need_bytes / 2**30:.1f} GiB > бюджета {budget / 2**30:.1f} GiB "
+            f"(0.5·global_mem: iGPU делит RAM с хостом); уменьшите размерность")
+
+
 def use_reference() -> None:
     """Явно переключиться на numpy-эталон (для сверки и для CI без GPU)."""
     os.environ["PRISM_SYCL_BACKEND"] = "reference"
@@ -345,6 +383,11 @@ def acf_moments(x, K):
     """Моментный ACF: словарь как в prism.field.acf_moments (rho/rho_Tk — на хосте)."""
     x_a = _f32(x)
     N, D = x_a.shape
+    # n7 (само-аудит r4): та же проверка, что в reference (был разнобой: SYCL —
+    # RuntimeError «неверные аргументы» из C, ref — ValueError с диапазоном).
+    if not (0 < int(K) <= N - 1):
+        raise ValueError(f"prism_sycl: acf_moments: K={K} вне диапазона "
+                         f"[1, {N - 1}] для N={N}")
     if _is_reference():
         return ref.acf_moments(x_a.astype(np.float64), K)
     lib = _load()
@@ -430,6 +473,19 @@ def _contig32(x, name: str) -> np.ndarray:
     return a
 
 
+def _pos_strides(a: np.ndarray) -> np.ndarray:
+    """C-contiguous копия без ОТРИЦАТЕЛЬНЫХ шагов (M1, само-аудит r4).
+
+    torch.from_numpy не принимает отрицательные шаги ДАЖЕ у вырожденных осей:
+    для U0[:, ::-1] с shape (1,1) numpy считает массив C-contiguous (шаг оси
+    длины 1 несуществен) и ascontiguousarray возвращает ТОТ ЖЕ view с strides
+    (4, -4) ⇒ ValueError в потребителе. Поэтому проверка по шагам, а не по флагу.
+    """
+    if any(s < 0 for s in a.strides):
+        return np.array(a, dtype=a.dtype, order="C", copy=True)
+    return np.ascontiguousarray(a)
+
+
 def gemm(A, B):
     """C[M,N] = A[M,K] @ B[K,N] — fp32, row-major, GPU (TZ_sycl_new_ops §2.1).
 
@@ -451,6 +507,9 @@ def gemm(A, B):
     if not (1 <= M <= 65536 and 1 <= K <= 4096 and 1 <= N <= 262144):
         raise RuntimeError(f"prism_sycl: gemm: PS_ERR_ARG — ограничения размеров "
                            f"(1<=M<=65536, 1<=K<=4096, 1<=N<=262144), получено {M}x{K}x{N}")
+    # m2 (само-аудит r4): device dA+dC = M*K + M*N, dB = K*N; плюс хост-копия C.
+    _check_mem("gemm", 4 * (M * K + K * N + 2 * M * N),
+               f"A{M}x{K}@B{K}x{N}")
     if _is_reference():
         return (a.astype(np.float64) @ b.astype(np.float64)).astype(np.float32)
     lib = _load()
@@ -511,6 +570,11 @@ def eigbot(A, r, max_iter=512):
     if a.ndim != 3 or a.shape[1] != a.shape[2]:
         raise ValueError(f"prism_sycl: eigbot: форма {a.shape} — нужен батч [b,n,n]")
     batch, n, _ = a.shape
+    _eig_check_args("eigbot", batch, n, r, max_iter)   # ДО host-Cholesky (TZ §2.2)
+    # m2 (само-аудит r4): host-Cholesky в f64 — a.astype + μ·I + сумма + L ≈ 4
+    # копии batch*n²*8, плюс L32 (f32) и device-копия L.
+    _check_mem("eigbot", 4 * batch * n * n * 8 + 2 * 4 * batch * n * n,
+               f"host-Cholesky(f64) батча [{batch},{n},{n}]")
     if _is_reference():
         return ref.eig_bottom(a.astype(np.float64), int(r))
     mu = 1e-12 * np.linalg.norm(a.astype(np.float64), axis=(1, 2))
@@ -530,19 +594,29 @@ def eigbot(A, r, max_iter=512):
     return vals, vecs, resid
 
 
-def _eig_call(op, lib, a, r, max_iter, batch, n, L):
+def _eig_check_args(op, batch, n, r, max_iter):
+    """PS_ERR_ARG / PS_ERR_LOCAL (TZ §2.2). Для eigbot вызывается ДО host-Cholesky:
+    невалидный r/n не должен давать «Matrix is not positive definite» вместо
+    PS_ERR_ARG. C++ eig_impl дублирует guard — финальный backstop."""
     if not (1 <= batch <= 65536 and 1 <= n <= 1024 and 1 <= r <= 32 and r < n
             and 1 <= max_iter <= 512):
         raise RuntimeError(
             f"prism_sycl: {op}: PS_ERR_ARG — ограничения (1<=batch<=65536, "
             f"1<=n<=1024, 1<=r<=32, r<n, 1<=max_iter<=512), получено "
             f"batch={batch} n={n} r={r} max_iter={max_iter}")
-    # local-бюджет (C++ проверит тоже; ранняя понятная ошибка):
-    local_bytes = 2 * n * r * 4 + r * r * 4 + 64 * 4
+    # local-бюджет (C++ проверит тоже; ранняя понятная ошибка). m3 (само-аудит
+    # r4): формула = ФАКТИЧЕСКИЙ состав ядра eig_iterate — lv,lw по n*r каждый
+    # (2*n*r*4) + sh = WG+1 элементов; члена r²*4 в ядре НЕТ (раньше был в
+    # формуле: консервативно, но в доках выдавался за точный).
+    local_bytes = 2 * n * r * 4 + (_WG + 1) * 4
     if local_bytes > 65536:
         raise RuntimeError(
-            f"prism_sycl: {op}: PS_ERR_LOCAL — 2*n*r*4 + r*r*4 + 64*4 = "
+            f"prism_sycl: {op}: PS_ERR_LOCAL — 2*n*r*4 + (WG+1)*4 = "
             f"{local_bytes} > 65536 (n=1024: r<=7)")
+
+
+def _eig_call(op, lib, a, r, max_iter, batch, n, L):
+    _eig_check_args(op, batch, n, r, max_iter)
     if _new_ops_error is not None:
         raise RuntimeError(f"prism_sycl: {op}: {_new_ops_error}")
     vals = np.empty((batch, r), dtype=np.float64)
@@ -600,7 +674,16 @@ def eigjac(A, max_sweeps=12, tol=1e-5, curve=None):
             f"batch={batch} n={n} max_sweeps={max_sweeps} tol={tol}")
     c_arr = None
     if curve is not None:
-        c_arr = np.asarray(curve, dtype=np.float64)
+        # m1 (само-аудит r4): контракт «заполняется НА МЕСТЕ». Прежний
+        # np.asarray(curve, f64) для f32-массива/списка создавал КОПИЮ ⇒ буфер
+        # пользователя молча оставался нулевым (тихий no-op). Теперь — только
+        # готовый f64-ndarray, иначе явная ошибка (как для C-contiguity).
+        if not isinstance(curve, np.ndarray) or curve.dtype != np.float64:
+            raise ValueError(
+                "prism_sycl: eigjac: curve должен быть np.ndarray(float64) и "
+                "заполняется НА МЕСТЕ (f32/список = копия = тихий no-op); "
+                f"получено {type(curve).__name__}")
+        c_arr = curve
         if c_arr.ndim != 1 or c_arr.size < max_sweeps:
             raise ValueError(
                 f"prism_sycl: eigjac: curve — f64 1D, size >= max_sweeps "
@@ -609,6 +692,8 @@ def eigjac(A, max_sweeps=12, tol=1e-5, curve=None):
             raise RuntimeError(
                 f"prism_sycl: eigjac: curve должен быть C-contiguous "
                 f"(исправление: np.ascontiguousarray(curve))")
+    # m2 (само-аудит r4): device dA+dVT = 2*batch*n², хост: vt32, vecs, out_vecs.
+    _check_mem("eigjac", 5 * 4 * batch * n * n, f"батч [{batch},{n},{n}]")
     if _is_reference():
         if c_arr is not None:
             raise ValueError(
@@ -656,11 +741,21 @@ def svd_top(A, r):
     Порядок выхода — конвенция torch (S descending): после выбора r последних
     строки U/S/Vh REVERSE-ятся.
 
-    Oграничения: 1<=m<=1024, 1<=n<=1024, 1<=r<=min(m,n) (r > rank — НЕ ошибка:
-    вырожденные σ ниже).
-    Возвращает (U f32 [m,r], S f64 [r], Vh f32 [r,n]) — Vh = Vᵀ (конвенция torch).
+    Oграничения: 1<=m<=1024, 1<=n<=1024, min(m,n)<=256, 1<=r<=min(m,n)
+    (r > rank — НЕ ошибка: вырожденные σ ниже). min(m,n)<=256 — потому что
+    МАЛАЯ сторона идёт в eigjac (его лимит n<=256), большая — в gemm (<=1024):
+    A[128,1024] OK, A[300,400] — нет (TZ §1: «выбирать малую сторону + lift»).
+    f64-вход принимает — с явным кастом в f32 (_f32):
+    точность ~1e-7·cond, для 1e-3-совпадения OK (TZ §5).
+    Возвращает (U f32 [m,r], S f64 [r], Vh f32 [r,n]) — Vh = Vᵀ (конвенция torch),
+    ВСЕ три C-contiguous (потребитель: torch.from_numpy — отрицательные шаги
+    он не принимает, поэтому REVERSE делается через ascontiguousarray).
     """
-    a = _contig32(A, "svd_top")
+    # svd_top — host-композиция (не low-level gemm): принимает любой f32-расклад
+    # (тест TZ §2.7 передаёт Hc32.T — view). _f32: f64→f32-каст + C-контигуация
+    # (сам по себе несущий: результат маски-indexing'а U_r[:, nz] не-
+    # contiguous — явный ascontiguousarray перед gemm ниже).
+    a = _f32(A)
     if a.ndim != 2:
         raise ValueError(f"prism_sycl: svd_top: форма {a.shape} — нужен [m,n]")
     m, n = a.shape
@@ -668,12 +763,21 @@ def svd_top(A, r):
         raise RuntimeError(
             f"prism_sycl: svd_top: PS_ERR_ARG — ограничения (1<=m<=1024, "
             f"1<=n<=1024, 1<=r<=min(m,n)), получено {m}x{n}, r={r}")
+    # M2 (само-аудит r4): малая сторона уходит в eigjac, у которого n<=256.
+    # Проверка на уровне svd_top: иначе падение приходит из чужого слоя
+    # («eigjac: PS_ERR_ARG ... n=300») вопреки объявленному лимиту.
+    if min(m, n) > 256:
+        raise RuntimeError(
+            f"prism_sycl: svd_top: PS_ERR_ARG — min(m,n)={min(m, n)} > 256: "
+            f"малая сторона идёт в eigjac (его лимит n<=256), большая в gemm "
+            f"(<=1024); получено {m}x{n}. Диагонализация 1024x1024 не делается "
+            f"(TZ §1: lift через МАЛУЮ сторону)")
     if _is_reference():
         return ref.svd_top(a.astype(np.float64), int(r))
     at = np.ascontiguousarray(a.T)
     if m < n:
         G = gemm(a, at)                                    # [m,m]
-        lam, U, _ = eigjac(G, max_sweeps=64, tol=1e-6)
+        lam, U, _ = eigjac(G[np.newaxis, ...], max_sweeps=64, tol=1e-6)   # батч [1,m,m] (контракт eigjac)
         lam1, U1 = lam[0], U[0]
         l_asc = lam1[m - r:]                               # r последних (по возрастанию)
         U_r = U1[:, m - r:]
@@ -681,17 +785,22 @@ def svd_top(A, r):
         sigma = np.where(l_asc <= 1e-12 * lam_max, 0.0,
                          np.sqrt(np.maximum(l_asc, 0.0)))
         S = sigma[::-1].astype(np.float64)
-        U_out = U_r[:, ::-1].astype(np.float32)
-        V = np.zeros((n, r), dtype=np.float32)
         nz = sigma > 0.0
+        # σ=0: собственный вектор произвольный → явный 0-вектор (оба выхода)
+        U0 = np.zeros((m, r), dtype=np.float32)
+        U0[:, nz] = U_r[:, nz]          # U_r уже f32 (n5: astype был лишней копией)
+        U_out = _pos_strides(U0[:, ::-1])            # M1: без отрицательных шагов
+        V = np.zeros((n, r), dtype=np.float32)
         if nz.any():
-            Vn = gemm(at, U_r[:, nz])
+            # np 2.5: маска-индексация по не-contiguous слайсу возвращает
+            # T-view (стрейды (4, 512)) — gemm требует C-contiguous: явный каст
+            Vn = gemm(at, np.ascontiguousarray(U_r[:, nz]))
             V[:, nz] = Vn / sigma[nz][None, :]
-        Vh_out = V[:, ::-1].T
+        Vh_out = _pos_strides(V[:, ::-1].T)          # M1
         return U_out, S, Vh_out
     # m >= n: зеркально (G = AᵀA — правые сингулярные V; U = A·V_r/σ)
     G = gemm(at, a)                                        # [n,n]
-    lam, Vm, _ = eigjac(G, max_sweeps=64, tol=1e-6)
+    lam, Vm, _ = eigjac(G[np.newaxis, ...], max_sweeps=64, tol=1e-6)      # батч [1,n,n] (контракт eigjac)
     lam1, Vm1 = lam[0], Vm[0]
     l_asc = lam1[n - r:]
     V_r = Vm1[:, n - r:]
@@ -702,10 +811,15 @@ def svd_top(A, r):
     U = np.zeros((m, r), dtype=np.float32)
     nz = sigma > 0.0
     if nz.any():
-        Un = gemm(a, V_r[:, nz])
+        # np 2.5: маска-индексация по не-contiguous слайсу возвращает
+        # T-view (стрейды (4, 512)) — gemm требует C-contiguous: явный каст
+        Un = gemm(a, np.ascontiguousarray(V_r[:, nz]))
         U[:, nz] = Un / sigma[nz][None, :]
-    U_out = U[:, ::-1]
-    Vh_out = V_r[:, ::-1].T.astype(np.float32)
+    # σ=0: собственный вектор произвольный → явный 0-вектор (оба выхода)
+    V0 = np.zeros((n, r), dtype=np.float32)
+    V0[:, nz] = V_r[:, nz]          # V_r уже f32 (n5)
+    U_out = _pos_strides(U[:, ::-1])              # M1: без отрицательных шагов
+    Vh_out = _pos_strides(V0[:, ::-1].T)          # M1
     return U_out, S, Vh_out
 
 
@@ -734,6 +848,14 @@ def permutation_null(x, fdc, seeds, blk: int = 2, K: int = 96):
     if not seeds:
         return {"band": np.zeros(0), "e3": np.zeros(0), "e4": np.zeros(0)}
     f = float(fdc)
+    # n6 (само-аудит r4): ks = [3,4] + range(9,K+1) — при K<9 среднее по лагам
+    # 9..K не существует ⇒ был тихий band=NaN + RuntimeWarning. Явная ошибка
+    # ДО ветвления (общая для SYCL и reference).
+    K = min(int(K), N - 1)
+    if K < 9:
+        raise ValueError(
+            f"prism_sycl: permutation_null: K={K} (после ограничения N-1={N - 1}) "
+            f"< 9 — band = mean(лаги 9..K) не определён; нужно N >= 10")
 
     if _is_reference():
         res = [ref.perm_stat(x_a.astype(np.float64), f, s, blk=blk, K=K) for s in seeds]
@@ -747,7 +869,6 @@ def permutation_null(x, fdc, seeds, blk: int = 2, K: int = 96):
 
     idx = np.stack([ref.permutation_indices(N, s, blk) for s in seeds]).astype(np.int32)
     idx_c = np.ascontiguousarray(idx)
-    K = min(K, N - 1)
     ks = np.array([3, 4] + list(range(9, K + 1)), dtype=np.int64)
     ks_c = np.ascontiguousarray(ks)
     nk = len(ks)

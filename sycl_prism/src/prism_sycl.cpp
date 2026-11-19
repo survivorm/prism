@@ -938,7 +938,7 @@ namespace prism_sycl_detail {
 template <size_t TR, size_t TC, size_t WGR, size_t WGC, size_t KC, bool DB>
 static void gemm_tile(sycl::queue& q, const Dev<float>& dA, const Dev<float>& dB,
                       Dev<float>& dC, size_t M, size_t K, size_t Nfull, size_t Nc,
-                      size_t B_off) {
+                      size_t c0) {
   constexpr size_t CPT = TR / WGR;
   static_assert(TR % WGR == 0, "TR кратно WGR");
   static_assert(WGR * WGC <= 512, "WG > max 512");
@@ -948,7 +948,7 @@ static void gemm_tile(sycl::queue& q, const Dev<float>& dA, const Dev<float>& dB
   constexpr size_t RB  = (KC * TC + NT - 1) / NT;
   static_assert(RA >= 1 && RB >= 1);
   const float* A = dA.p;
-  const float* B = dB.p + B_off;   // старт N-чанка (ширина Nc)
+  const float* B = dB.p + c0;     // старт N-чанка: элемент (0, c0); B row-major [K, N]
   float* C = dC.p;
   const size_t numM = (M + TR - 1) / TR;
   const size_t numN = (Nc + TC - 1) / TC;
@@ -985,7 +985,7 @@ PRISM_UNROLL
               if (e < KC * TC) {
                 size_t rb = e / TC, cb = e % TC;
                 tb[rb][cb] = (k0 + rb < K && col0 + cb < Nc)
-                                 ? B[(k0 + rb) * Nc + col0 + cb] : 0.f;
+                                 ? B[(k0 + rb) * Nfull + col0 + cb] : 0.f;
               }
             }
           };
@@ -1026,7 +1026,7 @@ PRISM_UNROLL
           }
           for (size_t r = 0; r < CPT; ++r) {
             const size_t row = row0 + lr + r * WGR;
-            if (row < M && col0 + lc < Nfull) C[row * Nfull + col0 + lc] = acc[r];
+            if (row < M && col0 + lc < Nc) C[row * Nfull + c0 + col0 + lc] = acc[r];
           }
         });
   }).wait_and_throw();
@@ -1059,8 +1059,11 @@ static int gemm_impl(sycl::queue& q, const float* hA, const float* hB,
   Dev<float> dB(q, (size_t)K * (size_t)N);
   Dev<float> dC(q, (size_t)M * (size_t)N);
   if (!dA.p || !dB.p || !dC.p) {
-    set_err("gemm: malloc_device failed (M=" + std::to_string(M) +
-            " K=" + std::to_string(K) + " N=" + std::to_string(N) + ")");
+    const double need = 4.0 * (double)((size_t)M * K + (size_t)K * N +
+                                       (size_t)M * N) / 1073741824.0;
+    set_err("gemm: malloc_device failed (device-буферы " + std::to_string(need) +
+            " GiB; M=" + std::to_string(M) + " K=" + std::to_string(K) +
+            " N=" + std::to_string(N) + ")");
     return PS_ERR_EXC;
   }
   q.memcpy(dA.p, hA, (size_t)M * (size_t)K * 4).wait();
@@ -1076,7 +1079,7 @@ static int gemm_impl(sycl::queue& q, const float* hA, const float* hB,
   for (size_t c0 = 0; c0 < (size_t)N; c0 += nch) {
     const size_t Nc = std::min(nch, (size_t)N - c0);
     gemm_tile<GEMM_TR, GEMM_TC, GEMM_WGR, GEMM_WGC, GEMM_KC, true>(
-        q, dA, dB, dC, (size_t)M, (size_t)K, (size_t)N, Nc, c0 * (size_t)K);
+        q, dA, dB, dC, (size_t)M, (size_t)K, (size_t)N, Nc, c0);
   }
   q.wait();
   q.memcpy(hC, dC.p, (size_t)M * (size_t)N * 4).wait();
@@ -1264,7 +1267,9 @@ static void eig_postprocess(const float* hA, const float* hV, int64_t batch,
         for (int64_t i2 = 0; i2 < r; ++i2) s -= (double)Vb[i * r + i2] * P[i2 * r + j];
         res2 += s * s;
       }
-    hResid[b] = (nrmA > 0.0) ? std::sqrt(res2) / nrmA : 0.0;
+    // NaN в A → NaN в resid (честный сигнал): guard (nrmA != 0.0) — NaN != 0.0 = true
+    // (раньше (nrmA > 0.0): NaN > 0 = false ⇒ NaN глушился в 0.0).
+    hResid[b] = (nrmA != 0.0) ? std::sqrt(res2) / nrmA : 0.0;
     for (int64_t j = 0; j < r; ++j) {
       double s = 0.0;
       for (int64_t i = 0; i < n; ++i) s += (double)Vb[i * r + j] * W[i * r + j];
@@ -1285,11 +1290,13 @@ static int eig_impl(sycl::queue& q, const float* hA, const float* hL,
             " max_iter=" + std::to_string(max_iter));
     return PS_ERR_ARG;
   }
-  /* Явный хост-бюджет local memory (TZ: 2·n·r·4 + r²·4 + 64·4 ≤ 65536;
-     n=1024: r ≤ 7, r=8 ⇒ 66048 > 65536 — m-12b). */
-  const size_t local_bytes = (size_t)2 * n * r * 4 + (size_t)r * r * 4 + 64 * 4;
+  /* Явный хост-бюджет local memory (m3, само-аудит r4): формула = ФАКТИЧЕСКИЙ
+     состав ядра eig_iterate — lv,lw по n*r (2·n·r·4) + sh = WG+1 элементов.
+     Члена r²·4 в ядре НЕТ (раньше был в формуле: консервативно, но в доках
+     выдавался за точный). n=1024: r ≤ 7 (r=8 ⇒ 65796 > 65536) — m-12b. */
+  const size_t local_bytes = (size_t)2 * n * r * 4 + (size_t)(WG + 1) * 4;
   if (local_bytes > 65536) {
-    set_err(std::string(op) + ": local memory budget 2*n*r*4 + r*r*4 + 64*4 = " +
+    set_err(std::string(op) + ": local memory budget 2*n*r*4 + (WG+1)*4 = " +
             std::to_string(local_bytes) + " > 65536 (n=1024: r<=7)");
     return PS_ERR_LOCAL;
   }
@@ -1297,7 +1304,13 @@ static int eig_impl(sycl::queue& q, const float* hA, const float* hL,
   Dev<float> dL(q, inverse ? (size_t)batch * n * n : 0);
   Dev<float> dV(q, (size_t)batch * n * r);
   if (!dA.p || (inverse && !dL.p) || !dV.p) {
-    set_err(std::string(op) + ": malloc_device failed (batch=" + std::to_string(batch) +
+    // inverse=false (eigtop): dL намеренно нулевого размера (Dev(q,0).p == nullptr) —
+    // проверять его НЕЛЬЗЯ (каскадный баг само-аудита r4: без guard'а "inverse &&"
+    // eigtop падал «malloc_device failed» на всех размерах).
+    const double need = 4.0 * (double)((size_t)batch * n * n * (inverse ? 2 : 1) +
+                                       (size_t)batch * n * r) / 1073741824.0;
+    set_err(std::string(op) + ": malloc_device failed (device-буферы " +
+            std::to_string(need) + " GiB; batch=" + std::to_string(batch) +
             " n=" + std::to_string(n) + " r=" + std::to_string(r) + ")");
     return PS_ERR_EXC;
   }
@@ -1322,8 +1335,9 @@ static int eig_impl(sycl::queue& q, const float* hA, const float* hL,
 //
 // Изменения v5.3 vs драфт v5.2:
 //  (1) F1: batch-чанкинг — каждый launch ≤ EIGJAC_CHUNK матриц (hang-check
-//      ~20с; t_sweep(C) ≤ 4с — твёрдый тест-гейт §2.7, C фиксируется тюнингом
-//      AT0_3, начальное 1024);
+//      ~20с; t_sweep(C) ≤ 4с — твёрдый тест-гейт §2.7, C фиксирован тюнингом
+//      AT0_3; замер 19.11: C=256, перетюнинг 19.11-день: C=64 — см. комментарий
+//      у EIGJAC_CHUNK);
 //  (2) fp64-аспекта на iGPU НЕТ ⇒ device-буферы offdiag/diag — f32
 //      (4·batch B); f64 — только на хосте (TZ v5.2 «8·batch B» — несовместимо);
 //  (3) curve: явный контракт F3 — curve[s−1] = off[b=0] после sweep s (s=1..k);
@@ -1349,11 +1363,20 @@ static int eig_impl(sycl::queue& q, const float* hA, const float* hL,
  * одиночных матрицах (batch=1) — без чанкинга batch=16384 (AT2c) / 65536
  * выходил за hang-check. */
 
-/* C — фиксация тюнинга AT0_3 (замер t_sweep по чанкам {1..4096}, n=128, iGPU;
-   правило: C = наибольшее чанк с t_sweep(C) ≤ 4с). Начальное: 1024.
-   n > 128 (F9): чанк = C/4 — стоимость sweep на матрицу ∝ n(n−1)/2: для
-   n=256 это ×4.02 к n=128 — тот же 5×-запас к hang-check ~20с. */
-constexpr int64_t EIGJAC_CHUNK = 1024;
+/* EIGJAC_CHUNK — фиксация тюнинга AT0_3 (19.11, iGPU, векторизованный sweep).
+   n2 (само-аудит r4): здесь был ДУБЛЬ двух взаимоисключающих блоков (верхний
+   утверждал «правило TZ ⇒ C=256»); оставлен один — фактический.
+   тунинг 1 (01:13): t_sweep(n=128): c1=0.27с c16=0.40 c64=0.74 c256=2.88с;
+   c1024 — DEVICE_LOST (hang-check драйвера, окно < ~12с под нагрузкой).
+   ПЕРЕТЮНИНГ 19.11 (день, iGPU медленнее ~1.5–1.9×, AC/100% batt):
+   t_sweep(n=128): c1≈0.35 c16≈0.52–0.71 c64≈1.0–1.9 c256≈4.3–6.9с (> 4с)
+   ⇒ C=256 недостижим (TZ §2.7: «понизить EIGJAC_CHUNK и пересобрать») ⇒ C=64.
+   n > 128 (F9): чанк = C/16 — стоимость sweep n=256 ≈ ×9.5 к n=128
+   (bandwidth-contention): t_sweep c4≈2.7–3.4с (≤ 4с), c16=3.6–6.3с.
+   Консервативность: C=64 держится и при «быстром» GPU — цена на матрицу у
+   c64 и c256 одинакова (14.8 vs 15.0 мс, замер 19.11), а деградация iGPU
+   документирована (1.5–1.9×) ⇒ фиксация на медленном режиме ничего не теряет. */
+constexpr int64_t EIGJAC_CHUNK = 64;
 
 static void eigjac_v_init(sycl::queue& q, Dev<float>& dV, int64_t batch, int64_t n) {
   float* dV_p = dV.p;
@@ -1372,20 +1395,27 @@ static void eigjac_v_init(sycl::queue& q, Dev<float>& dV, int64_t batch, int64_t
 }
 
 // 1 launch = ЧАНК [b0, b0+chunk) матриц; work-item — своя матрица.
-static void eigjac_sweep_chunk(sycl::queue& q, Dev<float>& dA, Dev<float>& dV,
-                               Dev<float>& dOff, Dev<float>& dDiag,
+// A — row-major [n,n] (строки i,j float4-векторизованы; колонки i,j — скаляр,
+// с шагом n — симметрия A[k,i]=A[i,k] обязана держаться на живом A);
+// VT — Vᵀ (строки = собственные векторы — float4 как строки A).
+// float4-группы: чистые ([k,k+3] ∩ {i,j} = ∅) + выравнивание
+// (b·n² + i·n) % 4 == 0 (база USM 64B-выровнена); остальное — скаляр.
+// Детерминизм: per-element вычисления неизменны (те же операции на элемент).
+static void eigjac_sweep_chunk(sycl::queue& q, Dev<float>& dA,
+                               Dev<float>& dVT, Dev<float>& dOff, Dev<float>& dDiag,
                                int64_t b0, int64_t chunk, int64_t n) {
   float* dA_p = dA.p;
-  float* dV_p = dV.p;
-  float* dOff_p = dOff.p;
+  float* dVT_p = dVT.p;
+  float* dOff_p = dOff.p;      /* eigjac-чанк: f32 offdiag */
   float* dDiag_p = dDiag.p;
   q.submit([&](sycl::handler& h) {
-    float* pA = dA_p; float* pV = dV_p; float* pOff = dOff_p; float* pDiag = dDiag_p;
+    float* pA = dA_p; float* pVT = dVT_p;
+    float* pOff = dOff_p; float* pDiag = dDiag_p;
     h.parallel_for(sycl::range<1>((size_t)chunk), [=](sycl::id<1> id) {
       const int64_t b = b0 + (int64_t)id[0];
       const int64_t n64 = n;
       float* A_ = pA + (size_t)b * n64 * n64;
-      float* V_ = pV + (size_t)b * n64 * n64;
+      float* VT_ = pVT + (size_t)b * n64 * n64;
       // Циклический порядок: d = 1..n-1, i = 0..n-1-d, j = i+d.
       for (int64_t d = 1; d < n64; ++d) {
         for (int64_t i = 0; i + d < n64; ++i) {
@@ -1404,30 +1434,71 @@ static void eigjac_sweep_chunk(sycl::queue& q, Dev<float>& dA, Dev<float>& dV,
               : copysignf(1.0f, tt) / (fabsf(tt) + sqrtf(1.0f + tt * tt));
           const float c = 1.0f / sqrtf(1.0f + th * th);
           const float s = th * c;
-          // A: кросс-строки/колонки i,j (симметрия: строка = колонка).
-          for (int64_t k = 0; k < n64; ++k) {
-            if (k == i || k == j) continue;
-            const float ai = A_[i * n64 + k];
-            const float aj = A_[j * n64 + k];
-            const float ni = c * ai - s * aj;
-            const float nj = s * ai + c * aj;
-            A_[i * n64 + k] = ni;
-            A_[j * n64 + k] = nj;
-            A_[k * n64 + i] = ni;
-            A_[k * n64 + j] = nj;
+          // Обновление пары (i,j): A — строки i,j + колонки i,j (симметрия),
+          // VT — строки i,j (= колонки V). float4 — чистые группы
+          // ([k,k+3] ∩ {i,j} = ∅) + выравнивание (b·n²+i·n)%4==0; остальное — скаляр.
+          // Детерминизм: per-element вычисления неизменны (те же операции на элемент).
+          const bool v4ok = ((size_t)(b * n64 * n64 + (size_t)i * n64) % 4 == 0) &&
+                            ((size_t)(b * n64 * n64 + (size_t)j * n64) % 4 == 0);
+          const int64_t klo = std::min(i, j), khi = std::max(i, j);
+          const int64_t n4 = n64 / 4;
+          auto k_scalar = [&](int64_t k) {
+            if (k != i && k != j) {   // A: кросс-элементами {i,j}×{i,j} явные (rt1/rt2)
+              const float ai = A_[i * n64 + k];
+              const float aj = A_[j * n64 + k];
+              const float ni = c * ai - s * aj;
+              const float nj = s * ai + c * aj;
+              A_[i * n64 + k] = ni;
+              A_[j * n64 + k] = nj;
+              A_[k * n64 + i] = ni;
+              A_[k * n64 + j] = nj;
+            }
+            // VT: ВКЛЮЧАЯ блок {i,j}×{i,j} (баг-фикс драфта v5.2: пропуск ломал V).
+            // Строки VT = векторы: обновляются строки i,j (VT[i,k], VT[j,k]).
+            const float vi = VT_[i * n64 + k];
+            const float vj = VT_[j * n64 + k];
+            VT_[i * n64 + k] = c * vi - s * vj;
+            VT_[j * n64 + k] = s * vi + c * vj;
+          };
+          if (v4ok) {
+            for (int64_t k4 = 0; k4 < n4; ++k4) {
+              const int64_t k = k4 * 4;
+              if (k + 3 < klo || k > khi) {   // чистая группа (i,j вне [k,k+3])
+                const sycl::float4 ai4 = *reinterpret_cast<const sycl::float4*>(A_ + i * n64 + k);
+                const sycl::float4 aj4 = *reinterpret_cast<const sycl::float4*>(A_ + j * n64 + k);
+                sycl::float4 ni4, nj4;
+                ni4.x() = c * ai4.x() - s * aj4.x(); ni4.y() = c * ai4.y() - s * aj4.y();
+                ni4.z() = c * ai4.z() - s * aj4.z(); ni4.w() = c * ai4.w() - s * aj4.w();
+                nj4.x() = s * ai4.x() + c * aj4.x(); nj4.y() = s * ai4.y() + c * aj4.y();
+                nj4.z() = s * ai4.z() + c * aj4.z(); nj4.w() = s * ai4.w() + c * aj4.w();
+                *reinterpret_cast<sycl::float4*>(A_ + i * n64 + k) = ni4;
+                *reinterpret_cast<sycl::float4*>(A_ + j * n64 + k) = nj4;
+                // A-колонки i,j (strided — скаляр; симметрия: A[k,i] = A[i,k])
+                A_[(k + 0) * n64 + i] = ni4.x(); A_[(k + 1) * n64 + i] = ni4.y();
+                A_[(k + 2) * n64 + i] = ni4.z(); A_[(k + 3) * n64 + i] = ni4.w();
+                A_[(k + 0) * n64 + j] = nj4.x(); A_[(k + 1) * n64 + j] = nj4.y();
+                A_[(k + 2) * n64 + j] = nj4.z(); A_[(k + 3) * n64 + j] = nj4.w();
+                const sycl::float4 vi4 = *reinterpret_cast<const sycl::float4*>(VT_ + i * n64 + k);
+                const sycl::float4 vj4 = *reinterpret_cast<const sycl::float4*>(VT_ + j * n64 + k);
+                sycl::float4 wvi4, wvj4;
+                wvi4.x() = c * vi4.x() - s * vj4.x(); wvi4.y() = c * vi4.y() - s * vj4.y();
+                wvi4.z() = c * vi4.z() - s * vj4.z(); wvi4.w() = c * vi4.w() - s * vj4.w();
+                wvj4.x() = s * vi4.x() + c * vj4.x(); wvj4.y() = s * vi4.y() + c * vj4.y();
+                wvj4.z() = s * vi4.z() + c * vj4.z(); wvj4.w() = s * vi4.w() + c * vj4.w();
+                *reinterpret_cast<sycl::float4*>(VT_ + i * n64 + k) = wvi4;
+                *reinterpret_cast<sycl::float4*>(VT_ + j * n64 + k) = wvj4;
+              } else {
+                k_scalar(k); k_scalar(k + 1); k_scalar(k + 2); k_scalar(k + 3);
+              }
+            }
+            for (int64_t k = n4 * 4; k < n64; ++k) k_scalar(k);
+          } else {
+            for (int64_t k = 0; k < n64; ++k) k_scalar(k);
           }
           A_[i * n64 + i] = a - th * bq;   // rt1 (диагональ)
           A_[j * n64 + j] = dd + th * bq;  // rt2 (диагональ)
           A_[i * n64 + j] = 0.0f;
           A_[j * n64 + i] = 0.0f;
-          // V: колонки i,j (V' = V·M) — ВКЛЮЧАЯ блок {i,j}×{i,j}
-          // (баг-фикс драфта v5.2: пропуск k==i/j в блоке V ломал V).
-          for (int64_t k = 0; k < n64; ++k) {
-            const float vi = V_[k * n64 + i];
-            const float vj = V_[k * n64 + j];
-            V_[k * n64 + i] = c * vi - s * vj;
-            V_[k * n64 + j] = s * vi + c * vj;
-          }
         }
       }
       // offdiag_rel (f32 на устройстве — iGPU без fp64-aspect; фиксированный
@@ -1441,7 +1512,8 @@ static void eigjac_sweep_chunk(sycl::queue& q, Dev<float>& dA, Dev<float>& dV,
         }
         pDiag[(size_t)b * n64 + (size_t)i] = A_[i * n64 + i];
       }
-      pOff[b] = (tot > 0.f) ? sqrtf(off2 / tot) : 0.f;
+      // NaN в A → NaN в offdiag (не тихий ноль): (tot != 0.f) — NaN != 0 = true
+      pOff[b] = (tot != 0.f) ? sqrtf(off2 / tot) : 0.f;
     });
   });
 }
@@ -1484,7 +1556,14 @@ static void sort_eigpairs_f64_host(const double* hVals64, float* hVecs32,
     std::vector<int64_t> idx(n);
     for (int64_t i = 0; i < n; ++i) idx[i] = i;
     std::stable_sort(idx.begin(), idx.end(), [&](int64_t i, int64_t j) {
-      return hVals64[(size_t)b * n + (size_t)i] < hVals64[(size_t)b * n + (size_t)j];
+      const double a = hVals64[(size_t)b * n + (size_t)i];
+      const double c = hVals64[(size_t)b * n + (size_t)j];
+      // n4 (само-аудит r4): NaN (вход с NaN) нарушает strict weak ordering —
+      // формально UB для std::stable_sort. NaN уводим в конец ДЕТЕРМИНИРОВАННО;
+      // выход всё равно NaN-честный (λ/V уже содержат NaN), важен лишь порядок.
+      const bool na = std::isnan(a), nc = std::isnan(c);
+      if (na || nc) return (!na && nc);
+      return a < c;
     });
     for (int64_t i = 0; i < n; ++i) {
       hOutVals[(size_t)b * n + (size_t)i] = hVals64[(size_t)b * n + (size_t)idx[i]];
@@ -1512,37 +1591,35 @@ static int eigjac_impl(sycl::queue& q, const float* hA, int64_t batch, int64_t n
             " (буфер кривой должен держать все sweep'ы)");
     return PS_ERR_ARG;
   }
-  /* v5.3: локальной памяти НЕТ (один work-item на матрицу); форма проверки
-     сохранена для единообразия с eigtop/eigbot (TZ: 0 ≤ 65536). */
-  const size_t local_bytes = 0;
-  if (local_bytes > 65536) {
-    set_err("eigjac: local memory budget " + std::to_string(local_bytes) + " > 65536");
-    return PS_ERR_LOCAL;
-  }
+  /* v5.3: локальной памяти НЕТ (один work-item на матрицу) — n3 (само-аудит r4):
+     мёртвая ветка `local_bytes = 0; if (> 65536)` убрана (всегда false). */
   Dev<float> dA(q, (size_t)batch * n * n);
-  Dev<float> dV(q, (size_t)batch * n * n);
+  Dev<float> dVT(q, (size_t)batch * n * n);  /* Vᵀ: строки = собственные векторы */
   Dev<float> dOff(q, (size_t)batch);      /* f32 (iGPU без fp64-aspect) */
   Dev<float> dDiag(q, (size_t)batch * n); /* f32 (λ — f64 только на хосте) */
-  if (!dA.p || !dV.p || !dOff.p || !dDiag.p) {
-    set_err("eigjac: malloc_device failed (batch=" + std::to_string(batch) +
-            " n=" + std::to_string(n) + ")");
+  if (!dA.p || !dVT.p || !dOff.p || !dDiag.p) {
+    const double need = 4.0 * (double)(2 * (size_t)batch * n * n +
+                                       (size_t)batch * n + (size_t)batch) / 1073741824.0;
+    set_err("eigjac: malloc_device failed (device-буферы " + std::to_string(need) +
+            " GiB; batch=" + std::to_string(batch) + " n=" + std::to_string(n) + ")");
     return PS_ERR_EXC;
   }
   q.memcpy(dA.p, hA, (size_t)batch * n * n * 4).wait();
-  eigjac_v_init(q, dV, batch, n);
+  eigjac_v_init(q, dVT, batch, n);
   /* Sweep-луп на хосте (v5.3 F1: 1 sweep = ⌈batch/C⌉ запусков чанков; между
      sweep'ами хост читает offdiag (4·batch B, f32) и останавливается, когда
      ВСЕ матрицы < tol (иначе — max_sweeps). curve (F3): curve[s−1] =
      offdiag_rel матрицы 0 после sweep s; curve[k..curve_len) = offdiag[0]. */
   std::vector<float> off32((size_t)batch);
   std::vector<double> off64((size_t)batch);
-  // F9: n > 128 — чанк C/4 (стоимость sweep на матрицу ×4.02 к n=128).
-  const int64_t chunk_max = (n > 128) ? EIGJAC_CHUNK / 4 : EIGJAC_CHUNK;
+  // F9 (19.11-замер): n > 128 — чанк C/16 (стоимость sweep на матрицу ×9.5
+  // к n=128 — bandwidth-contention; оценка TZ ×4.02/C/4 не подтверждена).
+  const int64_t chunk_max = (n > 128) ? EIGJAC_CHUNK / 16 : EIGJAC_CHUNK;
   int64_t stop_sw = 0;
   for (int64_t sw = 1; sw <= max_sweeps; ++sw) {
     for (int64_t b0 = 0; b0 < batch; b0 += chunk_max) {
       const int64_t chunk = std::min<int64_t>(chunk_max, batch - b0);
-      eigjac_sweep_chunk(q, dA, dV, dOff, dDiag, b0, chunk, n);
+      eigjac_sweep_chunk(q, dA, dVT, dOff, dDiag, b0, chunk, n);
     }
     q.memcpy(off32.data(), dOff.p, off32.size() * 4).wait();
     for (int64_t b = 0; b < batch; ++b) off64[b] = (double)off32[b];
@@ -1565,8 +1642,15 @@ static int eigjac_impl(sycl::queue& q, const float* hA, int64_t batch, int64_t n
   q.memcpy(diag32.data(), dDiag.p, diag32.size() * 4).wait();
   std::vector<double> diag64(diag32.size());
   for (size_t i = 0; i < diag32.size(); ++i) diag64[i] = (double)diag32[i];
-  std::vector<float> vecs32((size_t)batch * n * n);
-  q.memcpy(vecs32.data(), dV.p, vecs32.size() * 4).wait();
+  std::vector<float> vt32((size_t)batch * n * n);
+  q.memcpy(vt32.data(), dVT.p, vt32.size() * 4).wait();
+  /* VT (строки = собственные векторы) → vecs (столбцы = собственные векторы, контракт TZ). */
+  std::vector<float> vecs32(vt32.size());
+  for (int64_t b = 0; b < batch; ++b)
+    for (int64_t i2 = 0; i2 < n; ++i2)
+      for (int64_t j2 = 0; j2 < n; ++j2)
+        vecs32[(size_t)b * (size_t)n * (size_t)n + (size_t)i2 * (size_t)n + (size_t)j2] =
+            vt32[(size_t)b * (size_t)n * (size_t)n + (size_t)j2 * (size_t)n + (size_t)i2];
   std::vector<float> out_vecs(vecs32.size());
   sort_eigpairs_f64_host(diag64.data(), vecs32.data(), batch, n, hVals, out_vecs.data());
   eigjac_mgs_host(out_vecs.data(), batch, n);

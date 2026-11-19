@@ -8,6 +8,7 @@
 #                      (без icpx и без GPU) + сверка C ABI ↔ ctypes
 #   2. СБОРКА SYCL    — icpx -fsycl ⇒ build/libprism_sycl.so  (нужен для C-ABI пути)
 #   3. ПАРИТЕТ ПРИБОРА— numpy-эталон vs SYCL (если библиотека собралась)
+#   3b. NEW-OPS ТЕСТЫ — pytest py/test_new_ops.py (gemm/eigjac/eigtop/svd_top/gagg)
 #   4. БЕНЧМАРКИ      — стоимость прибора и нулевого слоя (numpy-база)
 #   5. ЗОНД XPU       — dense-путь E-45 на iGPU + аналитический контроль E-45c
 #
@@ -269,6 +270,14 @@ fi
 say "3. ПАРИТЕТ ПРИБОРА (numpy-эталон ↔ SYCL)"
 if [ -f build/libprism_sycl.so ]; then
     "$PY" py/test_parity.py || echo "!!! паритет не пройден"
+else
+    echo "нет build/libprism_sycl.so — пропуск (соберите на шаге 2)"
+fi
+
+say "3b. NEW-OPS ТЕСТЫ (pytest py/test_new_ops.py — gemm/eigjac/eigtop/svd_top/gagg)"
+# DEVICE_OK-guard — внутри тестов (_skip_nogpu): без устройства/GPU — тихий skip
+if [ -f build/libprism_sycl.so ]; then
+    "$PY" -m pytest py/test_new_ops.py -q || echo "!!! new-ops тесты упали"
 else
     echo "нет build/libprism_sycl.so — пропуск (соберите на шаге 2)"
 fi
