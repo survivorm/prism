@@ -284,5 +284,25 @@
   "note": "S4pp v7 — бэкап канона на момент r12-ревью (совпадает с S4pp.json в git HEAD, sha 33a6e708a151ef4c); трейл v7→v10.",
   "sha256_16": "6aa6bc764e0bb93b",
   "size": 65523
+ },
+ "at2e_t4": {
+  "canary": [
+   {
+    "bytes": 1151,
+    "file": "AT2e_t4_canary_pulled/at2e_t4_canary.json",
+    "mtime": "2026-11-19",
+    "sha256_16": "27495673793ebc8a",
+    "note": "T4 canary PASS (VRAM 4.71GB, det, L11+L12 FOUND), kernel v2, code 2137a7f9"
+   }
+  ],
+  "main": [
+   {
+    "bytes": 2789338,
+    "file": "AT2e_t4_main_pulled/at2e_s1_r3.json",
+    "mtime": "2026-11-19",
+    "sha256_16": "34836e22b7bfd870",
+    "note": "T4 main (39.1 min, 16 клеток, global NOT_RESOLVED), kernel v1, code 2137a7f9"
+   }
+  ]
  }
 }

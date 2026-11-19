@@ -100,8 +100,24 @@ worst-case 9894→9926. Вызов: `nonlin_probe_1c(fwd_c, ctx1c, b0_c, vstar_c
    - Первый прогон (v1) упал на `NameError: __file__` — envVars-metadata в kaggle_run.sh оказался
      непроверенным механизмом (at16-паттерн: хардкод /kaggle/working); фикс: bootstrap ставит
      `PRISM_KAGGLE_ROOT` сам (setdefault), v2 — PASS.
-5. **T4-main запущен**: `voroninmichael/prism-at2e-t4-main` (RUNNING на момент записи; тот же код
-   2137a7f9, dataset pool, jcache off, cext_ref — CPU-follow-up по §6b).
+5. **T4-main — COMPLETE (PASS)**: `voroninmichael/prism-at2e-t4-main`, 39.1 мин (2345 с),
+   status ok, script_sha=2137a7f9 = коммит 1. Артефакт: `results/AT2e_t4_main_pulled/at2e_s1_r3.json`
+   (2.7M; log_md5 совпадает; в git: commit 2).
+   - **Все гейты ок**: S1 (pool True, jcache_l12=False — T4-skip, E-m1), S1b=None (jcache
+     отсутствует — по дизайну), G_floor (16 уникальных, floor_global=1.33e-11), G_b0_ortho
+     (все ~1e-15), G_vjp_fd (rel_ov=0.011, rel_cv=7.6e-4, ok), G_pos_spec_ref (8 клеток,
+     n_ref=16, все finite), G-zero (max_dz_fut=0.0, gate_ok), 8 инвариантов все True.
+   - **Пер-селл (16)**: FOUND: c0(wiki L11 t32), c8(wiki L12 t32) — **2**; NOT_TESTABLE: c1,c9,
+     c3,c11,c12,c13,c6 — 7; POSITION_GENERIC: c2,c10,c4,c7 — 4; NOT_FOUND: c5,c14 — 2;
+     SHORT_HORIZON_ONLY: c15 — 1.
+   - **Глобальный вердикт: NOT_RESOLVED** (SCRATCHPAD_CANDIDATE требует n_found_sho≥4 И
+     found≥2 И docs_found≥2; здесь 3 / 2 / 1 док (wiki) — не хватает и по числу, и по
+     мульти-доковости; остальные глобальные метки требуют n_found_sho=0 — нет). Это
+     **результат эксперимента** (интерпретация — следующий раунд TZ, не этот).
+   - **Условные стадии**: secondary K2 — 4 клетки (ранний стоп gnorm<1e-8 — отчёт); 1c
+     nonlin-probe — 4 клетки (v*-слот на месте — U2 в реальном артефакте); stage1b (null) —
+     НЕ запущена (триггер: trained_global = SCRATCHPAD_CANDIDATE, факт NOT_RESOLVED —
+     по дизайну §5); cext_ref — T4-skip (CPU-follow-up §6b).
 
 ---
 
@@ -153,16 +169,27 @@ sha256 = 32be3df1b1a51a6ab366e26ffd5faac689f505cd72a383c8efb21a60cc1a687c, VERDI
 CPU-пути и правила решения; ключевые утверждения response_r5 подтверждены исполнением
 точных фрагментов, не чтением. Единственное замечание — текстовое (F4), применено.
 
-## 5. Canary-лог-порядок (собственный дефект, пойман при верификации маркеров)
+## 5. Follow-up-фиксы (ревью-ноты + canary-лог-порядок; код 4c229edc)
 
-Первый canary-артефакт: маркер `AT2E_T4_CANARY_DONE` был в kernel-stdout, но **не в логе**
-(я писал лог-файл до маркерной logline — main()-порядок: маркер → лог). Фикс в canary_mode:
-маркерная logline ПЕРЕД записью лога. **Фикс применён во время T4-main прогона (код
-2137a7f9); ветка canary_mode в main не берётся** (main: dispatch → main-ветка, canary_mode
-не вызывается) — по AGENTS п.7 зафиксировано, перепуск main не требуется. Провенанс:
-- коммит 1: AT2e.py = **2137a7f9** (точно тот код, что дали смоук/canary/T4-main — sha
-  в трёх артефактах; сверен с builder-кейлом: встроенный текст = файл, ASSERT билдера);
-- коммит 2 (follow-up): + canary-log-order фикс + E-м1 + A-минор (косметика отчётных блоков).
+Применены ПОСЛЕ запуска T4-main (ветки в main не берутся — зафиксировано по AGENTS п.7;
+артефакты main несут 2137a7f9 = коммит 1):
+
+1. **Canary-лог-порядок** (собственный дефект, пойман при верификации маркеров): в
+   canary_mode лог-файл писался ДО маркерной logline — маркер был только в kernel-stdout.
+   Фикс: маркер ПЕРЕД записью (main()-порядок). Следующий canary-прогон несёт маркер в логе.
+2. **E-m1**: `gates["S1_sha"]["jcache_l12"] = None` при T4-skip (вместо False).
+   **Микро-тест**: exec точного фрагмента gates-строки из файла, 3 сценария
+   (skip→None, sha совпал→True, не совпал→False) — PASS.
+3. **A-minor**: below_floor-ветка verify_vstar — дубль цикла κ-флагов убран
+   (`kappa_flags` — тот же объект, что `kappa_flags_hi`).
+   **Микро-тест**: below_floor-режим (q(a_lo)=9.9·floor, q(a_hi)≫floor, κ=0) →
+   mode=denom_below_floor, `kappa_flags is kflags_hi` = True, гейт бьёт (kfail=True, ok=False) — PASS.
+
+Кейлы пересобраны (builder: sha 4c229edc встроен; ASSERT встроенного текста = файла).
+Следующий T4-прогон (если понадобится) — на 4c229edc.
+
+Провенанс: коммит 1 = 2137a7f9 (точно тот код, что дали смоук/canary/T4-main; сверен с
+builder-кейлом: встроенный текст = файл, ASSERT билдера); коммит 2 = 4c229edc (+фиксы 1–3).
 
 ## 6. Что изменилось с момента PASS-вердикта
 

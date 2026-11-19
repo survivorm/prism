@@ -26,7 +26,7 @@ _t4os.environ["AT2E_JCACHE"] = "/data/prism_kernels/exp27b/results/exp27b_jcache
 _t4os.environ["AT2E_DEVICE"] = "cuda"
 _t4os.environ["AT2E_TRACKIO"] = "0"
 _t4os.environ["AT2E_NO_JCACHE"] = "1"
-_t4os.environ["AT2E_SCRIPT_SHA"] = "2137a7f912e719d0be17f7c5ccf47323012f9384e22cbce16c34c2db05c9efd2"
+_t4os.environ["AT2E_SCRIPT_SHA"] = "4c229edcfa0bfe69705b728df1d392fec4e447a32cad6c471446477c9e14b64b"
 _t4sys.argv = ["at2e_t4", "--canary"]
 print(f"[t4-bootstrap] ready in {_t4time.time()-_T4_T0:.1f}s; mode={'canary' if '--canary' in _t4sys.argv else 'main'}", flush=True)
 # ==== конец T4 bootstrap ====
@@ -651,16 +651,13 @@ def verify_vstar(fwd, cell, vstar, floor_q):
         L1n = abs(r_lo - r_hi) / max(abs(r_lo + r_hi) / 2.0, 1e-30)
         L2n = (np.log(max(hi["qbar_K1"], 1e-30) / max(lo["qbar_K1"], 1e-30))
                / np.log(A_HI_REL / A_LO_REL))
-        # kappa-флаги (при a_hi): |2k - q|/max(q, floor) > 0.5 -> срабатывание
-        kflags = {}
-        for k in range(H + 1):
-            qk = hi["q"][str(k)]
-            kflags[str(k)] = abs(2.0 * hi["kappa"][str(k)] - qk) / max(qk, floor_q) > 0.5
-        kfail = any(kflags.values())
+        # r5.2.1 (A-minor): κ-флаги — переиспользуем kflags_hi (считан выше,
+        # та же формула при a_hi) — дубль цикла убран
+        kfail = any(kflags_hi.values())
         linear_ok = bool(L1n <= 0.10 and 1.9 <= L2n <= 2.1 and not kfail)
         out["linear"] = {"L1_num": float(L1n), "L2_num": float(L2n),
                          "qbar_fut_report": {"a_lo": lo["qbar_fut"], "a_hi": hi["qbar_fut"]},
-                         "kappa_flags": kflags, "kappa_fail": bool(kfail), "ok": linear_ok,
+                         "kappa_flags": kflags_hi, "kappa_fail": bool(kfail), "ok": linear_ok,
                          "mode": "L1_num+L2_num+kappa (denom_below_floor, K1-объект, TZ r5.2 V5)"}
     # fallback-режим (сетка {1e-3, 3e-3}) — НЕ реализована (TZ r5.2 §3.5: правило ->
     # NOT_TESTABLE); flag — отчёт
@@ -1794,7 +1791,9 @@ def main():
 
     # ---- агрегированный gates-блок (M3 r5.2, схема TZ §13)
     gates = {
-        "S1_sha": {"pool": pool_sha == POOL_SHA, "jcache_l12": jc_sha == JCACHE_SHA,
+        # r5.2.1 (E-m1): T4-skip — None («SKIP»), не False («провал»)
+        "S1_sha": {"pool": pool_sha == POOL_SHA,
+                   "jcache_l12": (None if no_jcache else (jc_sha == JCACHE_SHA)),
                    "fla_guard": guard_ok},
         "S1b_pool_fp": pool_fp_ok,
         "G_floor": {"n_unique": len(floor_map), "floor_global": floor_global,
@@ -2134,14 +2133,18 @@ def canary_mode():
         json.dump(_san(artifact), f, ensure_ascii=False, indent=1)
     logline(f"canary: vram_peak={vram_peak:.2f}GB (<=12: {ok_vram}) det={ok_det} "
             f"cells_ok={ok_cells} -> {'PASS' if canary_ok else 'FAIL'}")
+    if canary_ok:
+        logline("AT2E_T4_CANARY_DONE")
+    else:
+        logline("AT2E_T4_CANARY_FAIL")
+    # r3-fix (ревью-нота canary-r1): маркер ДО записи лога (main-порядок;
+    # canary-r1 лог писался до маркерной logline — маркер был только в stdout)
     log_content = "\n".join(_LOG) + "\n"
     with open(os.path.join(RESULTS, "at2e_t4_canary.log"), "w") as f:
         f.write(log_content)
     if canary_ok:
-        logline("AT2E_T4_CANARY_DONE")
         trackio_finish("ok")
     else:
-        logline("AT2E_T4_CANARY_FAIL")
         trackio_finish("interrupted")
         raise SystemExit(1)
 
