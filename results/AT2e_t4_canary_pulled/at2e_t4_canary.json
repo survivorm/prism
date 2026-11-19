@@ -1,0 +1,53 @@
+{
+ "header": {
+  "run": "at2e_t4_canary",
+  "script_sha": "2137a7f912e719d0be17f7c5ccf47323012f9384e22cbce16c34c2db05c9efd2",
+  "device": "cuda",
+  "model": "/data/Qwen/Qwen3.5-0.8B",
+  "started_at": "2026-11-19T15:23:34.023949",
+  "finished_at": "2026-11-19T15:28:59.704441",
+  "duration_s": 325.7,
+  "vram_peak_gb": 4.711,
+  "vram_after_baselines_gb": 3.433,
+  "fwd_s": 0.202,
+  "vjp_s": 0.678,
+  "status": "ok"
+ },
+ "config": {
+  "device": "cuda",
+  "model": "/data/Qwen/Qwen3.5-0.8B",
+  "revision": "r3",
+  "tz": "r5.2 (canary)",
+  "script_sha": "2137a7f912e719d0be17f7c5ccf47323012f9384e22cbce16c34c2db05c9efd2",
+  "seed": 0,
+  "started_at": "2026-11-19T15:23:34.023949",
+  "canary": true
+ },
+ "gates": {
+  "vram_peak_le_12gb": true,
+  "gpu_det": true,
+  "both_cells_ascent": true
+ },
+ "cells": [
+  {
+   "cell_id": 0,
+   "L": 11,
+   "verdict": "FOUND",
+   "eps0": 7.973159401852135,
+   "ascent": {
+    "vstar_argmax": 5,
+    "lambda_vstar": 1.3604413692739743
+   }
+  },
+  {
+   "cell_id": 8,
+   "L": 12,
+   "verdict": "FOUND",
+   "eps0": 5.025865914826676,
+   "ascent": {
+    "vstar_argmax": 8,
+    "lambda_vstar": 1.5994765221419966
+   }
+  }
+ ]
+}

@@ -1,4 +1,15 @@
-# AT2e (T2.2b) — пре-рег r5: каноническая клетка T2 — подъём отношения O_H^fut/(C+εI) per (l,t)
+# AT2e (T2.2b) — пре-рег r5.2.1: каноническая клетка T2 — подъём отношения O_H^fut/(C+εI) per (l,t)
+
+**r5.2 (ревью кода r2: C2/C3/C4, V1–V6, минорные — все приняты; C1 — не воспроизведено, evidence в
+
+**r5.2.1 (ревью кода r4, F4): текст-синхронизация — worst-case хвосты 9.91k/9910 → 9926 (шапка + §6b; 5686+1856+1856+528). Код и tz-лейбл артефактов НЕ меняются (r5.2, код 2137a7f9).**
+
+`docs/AT2e_response_r2.md`)**: правки ниже помечены `r3`: (а) ref-семь — shared per (док, слой)
+(§3.6); (б) floor — 16 замеров × 2 forward = 32 (смета §6); (в) linear-гейты — на K1-объекте
+(§3.5); (г) fallback-сетка объявлена нереализованной (правило → NOT_TESTABLE, §3.5); (д) CPU —
+основной путь, T4 — тонкая обёртка с явным `AT2E_DEVICE=cuda` (§6b); (е) смок: 1d безусловно
+(`force_1d`, S13); (ж) схема артефакта: gates-блок, resume/partial, новые поля (V6) (§13); (з)
+null-поиск — идентичный, без force-обхода ранга/companion (§4/стадия 1b).
 
 Теория: docs/AT2e_theory.md. Ответ на ревью теории: docs/AT2e_response.md (приняты все 4 дефекта,
 D1–D3 с правками; r2 — ответ на ревью TZ r1: 5 блокеров B1–B5 + 5 мажорных M1–M5, все приняты;
@@ -68,8 +79,8 @@ AT2b/AT2c/AT2d). CPU, eager, **fla отключён guard'ом** (инвариа
                  верификация, random N=8, pos-spec скрин (16 направлений в t'), 1d-проход (S13),
                  VJP↔FD-проверка, G-zero, floor (оба t), PCA/gQR, ε₀, rank, двойной прогон md5) —
                  ≈ 380 forward ≈ 27 мин (номинально, r5: +S13);
-  (без флагов) : main-прогон at2e_s1_r1 (trackio; стадия 1 ≈ 5.7k ф.-э. ≈ 6.8 ч CPU; стадии 1d/1b/1c —
-                 условные/отчётные, в том же прогоне ≈ +5.1 ч максимум; worst case ≈ 9.9k ф.-э. ≈ 11.9 ч);
+  (без флагов) : main-прогон at2e_s1_r3 (trackio; стадия 1 ≈ 5.69k ф.-э. ≈ 6.85 ч CPU; стадии 1d/1b/1c —
+                 условные/отчётные, в том же прогоне ≈ +5.1 ч максимум; worst case ≈ 9926 ф.-э. ≈ 12 ч, r5.2.1 F4);
   --reanalysis : диск-реанализ frozen raw-артефакта БЕЗ форвардов (если понадобится).
 
 ---
@@ -219,17 +230,25 @@ J_s = ∂z_s/∂h_l^t: J_0 (позиция t — текущий, знамена�
 - 2 амплитуды (**a_lo = 3e-4·‖h_t‖, a_hi = 1e-3·‖h_t‖ — первичная сетка, явные имена r5 R3**;
   **подтверждена pre-meas B1, pre-study r2 §8**;
   **fallback-сетка {a_lo = 1e-3·‖h_t‖, a_hi = 3e-3·‖h_t‖} — правило: медиана по B₀ q_t(a_lo)/floor < 100
-  → сдвиг сетки ДО main; при активации: L1/L2 → отчёт, линейность судится κ-флагами при a_lo,
-  a_hi = 3e-3 — на границе нелинейности, явное признание (r2 B1)**) × центральные (2 forward) → q_t,
+  → клетка NOT_TESTABLE (r3: СЕТКА НЕ РЕАЛИЗОВАНА — объявлено, G10-соседство; pre-meas r3: запас
+  3.3e3, активация не ожидается; консервативно: правило → NOT_TESTABLE, а не сдвиг сетки)**) ×
+  центральные (2 forward) → q_t,
   q̄_fut, λ_ε(τ) per τ per амплитуда;
 - **linear-гейты (первичная сетка, q_t(v*) > 10·floor — «normal»-режим)**:
-  L1: |λ(a_lo) − λ(a_hi)|/λ ≤ 0.10 (согласие λ — правка r1);
-  L2: slope(q) = log(q(a_hi)/q(a_lo))/log(1e-3/3e-4) ∈ [1.9, 2.1];
+  **r3 (V5): гейт — на том же объекте, что вердикт (K1)**:
+  L1: |λ^{K1}(a_lo) − λ^{K1}(a_hi)|/λ^{K1} ≤ 0.10 (согласие λ^{K1} — правка r1; полный λ_ε —
+  отчёт `lambda_full_report`, НЕ гейтится — объект ранг-теста и вердикта — λ^{K1});
+  L2: slope(q) = log(q(a_hi)/q(a_lo))/log(1e-3/3e-4) ∈ [1.9, 2.1] (знаменатель — общий, без окна);
+  **r3 (U1): + κ-флаги (|2κ_s−q_s|/max(q_s,floor) ≤ 0.5, все s = t..t+H, при a_hi) — ГЕЙТ в
+  normal-режиме (0 доп. forward, κ уже посчитан; симметрия с below_floor): K2-окно (k=4,8) не
+  остаётся непроверенным — FOUND не может опираться на нелинейное K2-откликовое окно**.
 - **linear-гейты (первичная сетка, q_t(v*) ≤ 10·floor — режим denom_below_floor, r3 N5)**:
   линейность — по ЧИСЛИТЕЛЮ (знаменатель ε-доминирован по построению, его линейность нерелевантна;
   L1 на λ мог бы провалиться от шума знаменателя, убивая кандидата):
-  L1_num: |q̄_fut(a_lo)/a_lo² − q̄_fut(a_hi)/a_hi²| / mean ≤ 0.10; L2_num: slope(q̄_fut)
-  = log(q̄_fut(a_hi)/q̄_fut(a_lo))/log(1e-3/3e-4) ∈ [1.9, 2.1]; L1/L2 на λ → отчёт;
+  **r3 (V5): на q̄_{K1} — числителе объекта вердикта** (companion-гейт тоже по K1):
+  L1_num: |q̄_{K1}(a_lo)/a_lo² − q̄_{K1}(a_hi)/a_hi²| / mean ≤ 0.10; L2_num: slope(q̄_{K1})
+  = log(q̄_{K1}(a_hi)/q̄_{K1}(a_lo))/log(1e-3/3e-4) ∈ [1.9, 2.1]; q̄_fut — отчёт
+  (`qbar_fut_report`), полный λ — отчёт;
 - **linear-гейты (fallback-сетка, r2 B1)**: L1/L2/L1_num/L2_num → отчёт (a_hi = 3e-3·‖h_t‖ — на
   границе нелинейности); линейность — κ-флаги при a_lo (в fallback-сетке a_lo = 1e-3·‖h_t‖):
   FOUND требует отсутствие срабатывающих
@@ -250,7 +269,12 @@ J_s = ∂z_s/∂h_l^t: J_0 (позиция t — текущий, знамена�
   показывает режим: q_t-доминирование vs ε-доминирование).
 
 ### 3.6 Random-референс (per cell, 128 forward)
-- N = 64 гауссовых направления: A_ref = RandomState(SEED + cell_id + 1000).standard_normal(64, 1024);
+- N = 64 гауссовых направления: A_ref = RandomState(SEED + (L_idx·8 + doc_idx·2) + 1000).standard_normal(64, 1024);
+  **r3 (B4): seed — shared per (док, слой) пара, БЕЗ t-индекса** — t32- и t96-клетки одного (док, L)
+  делят ОДИН фрейм 64 направлений ⇒ pos-spec-референс (§3.10) — ПАРНЫЙ (то же направление, замеренное
+  в t и в t'; цена 0 — повторные 256 forward для t96 не нужны). Независимость клеток: разные (док, L) —
+  разные фреймы (16 фреймов на 16 клеток); обмениваемость rank-теста при H₀ не меняется (r3 N3/M5 —
+  подъём, не состав B₀).
   направления = **столбцы QR(A_refᵀ)** (1024×64 unit-ортонормальная кадра, Stiefel-Haar; r3 N2 —
   строки R из wide-QR не unit/не ортогональны) — то же семейство ансамбля, что gQR-часть B₀
   (r2 B3; per-cell seed — независимость клеток); r3 N3/M5: обмениваемость rank-теста при H₀
@@ -289,15 +313,20 @@ J_s = ∂z_s/∂h_l^t: J_0 (позиция t — текущий, знамена�
   (L11/L12 × 2 дока, t=32) — 4×8×6.5 = 208 ф.-э. (0.25 ч) — входит в стадию 1 как отчётный блок.
 
 ### 3.8 G-zero (L23, 2 forward)
-Патч выхода слоя 23 в позиции t (±a_hi, wiki/0, t=32): после layers[23] только per-position
+Патч выхода слоя 23 в позиции t (wiki/0, t=32): после layers[23] только per-position
 final-norm + head → логиты t+k (k≥1) НЕ зависят от позиции t (свойство графа, не эвристика —
 теория §VI). Гейт: max_k ‖Δz_{t+k}‖ ≤ 1e-6 (дет-нуль; протечка окна/пропагации).
+**r3 (оговорка, инвариант 12): амплитуда патча — a_hi клетки L12 (1e-3·‖h_{12}‖), НЕ
+ε·‖h_{23}‖** — для бит-нулевого теста безразлично (любой ненулевой патч проходит граф),
+зафиксировано, чтобы не читать как относительную амплитуду для L23.
 
-### 3.9 Числовой пол (floor_q, 16 forward)
+### 3.9 Числовой пол (floor_q, 16 замеров = 32 forward)
 a_floor = 1e-9·‖h_t‖ (Δz ниже fp32-разрешения логитов ~4e-6): q(a_floor) = уровень fp32-шума.
-**16 forward: 4 дока × 2 слоя × t ∈ {32, 96} (r3 M3: q_quant зависит от позиции — max|z_t| и p_max
-в t=96 другие; floor_q = max по 16 — верхняя граница для обеих позиций, слово «консервативно»
-убрано, замена на явный max по обоим t).**
+**16 замеров × 2 forward (центральные) = 32 forward: 4 дока × 2 слоя × t ∈ {32, 96} — pre-pass
+ДО клеток, дедупликация: каждый (док,L,t) меряется ОДИН раз (в r5 — дважды: как t и как t'
+соседа; бит-идентично, r3 M6). (r3 M3: q_quant зависит от позиции — max|z_t| и p_max в t=96
+другие; floor_q = max по 16 — ГЛОБАЛЬНАЯ верхняя граница для ВСЕХ гейтов стадии 1; стадия 1d
+использует per-(док,L,t') значение (§3.11.5), НЕ глобальный max).**
 **r2 (M4): floor_q := max(floor_measured, q_quant), q_quant = (2⁻²³·max|z_t|)²·p_max** — при
 a_floor центральная разность двух fp32-логитов часто побитово равна → floor_measured = 0, и
 companion-гейт не вырождается в хардкод 1e-12, а опирается на явную границу квантования
@@ -411,7 +440,7 @@ fail → **POSITION_GENERIC** (финальный вердикт клетки: �
 | κ-флаги (2κ ≈ q) | §3.2 | 0 (из тех же forward) |
 | split-half по k ({1,2}→{4,8}) | §3.7 | 0 (из тех же forward); secondary 208 ф.-э. |
 | random direction (N=64, gQR-семейство, r2 B3/N2; rank-скрин, M5) | §3.6 | 2048 ф.-э. |
-| random weights × real text (null) | стадия 1b, УСЛОВНАЯ | ≤ 1856 ф.-э. (2.2 ч: 1248 + null-1d 464 + null pos-spec 144, r5 U1) |
+| random weights × real text (null) | стадия 1b, УСЛОВНАЯ (**r3 V4: идентичный поиск — weak-скрин/1d только для клеток-кандидатов, без force-обхода rank/companion; null floor pre-pass на null-модели — 8 замеров**) | ≤ 1856 ф.-э. (2.2 ч: 1248 + null-1d 464 + null pos-spec 144, r5 U1) |
 | позиционная специфичность (weak-скрин, r2 M5; фикс. ε + парный референс r3 N4/M1; эстиматор/амплитуда запинены r5 R2) | §3.10 | 64 (v*+v₀ в t', центральные a_hi) + 256 (референс 16 напр. × 8 пар × 2) ф.-э. |
 | **transfer-gap (стадия 1d, со-первичный дискриминатор, r5 R1)** | §3.11 | ≤ 1856 ф.-э. (116/кандидат: B₀(t')-проба 64 + подъём 52) — условная стадия |
 | тип слоя (L11 full vs L12 GDN) | design | 0 (оба в сетке) |
@@ -433,8 +462,10 @@ SHORT_HORIZON_ONLY → POSITION_GENERIC → REDUNDANT → NOT_FOUND (перва�
 - **NOT_TESTABLE**: провал линейного гейта (единое определение §3.5: normal — L1+L2;
   denom_below_floor — L1_num+L2_num+κ; fallback — κ-флаги) ИЛИ denom-гейта клетки
   (медиана по B₀ q_t(a_lo) ≤ 10·floor_q, r5 R3) ИЛИ companion-гейта (q̄_fut^{K1}(v*) < 10·floor,
-  по K1 — r4 m4) ИЛИ 1d-тест-стража (λ(v*_{t'};t') ≤ 10·floor_q(t'), §3.11.5 — клетка сохраняет
-  стадию-1-метку, без FOUND-промоушена) → «не тестирована», НЕ refuted (теория §V.0, r2 B1).
+  по K1 — r4 m4) ИЛИ 1d-тест-стража (λ(v*_{t'};t') ≤ 10·floor_q(t'), §3.11.5 — вердикт клетки
+  NOT_TESTABLE (единая метка §3.11.5/§5, r5-гигиена; r3: синхронизировано — формулировка
+  «сохраняет стадию-1-метку» убрана), клетка НЕ считается в ≥8 для NOT_FOUND_IN_SUBSPACE) →
+  «не тестирована», НЕ refuted (теория §V.0, r2 B1).
 - **FOUND** (финальный, после 1d): 1d-кандидат + rank-1 ≥2/3 τ (K2) + линейность (по §3.5)
   + **1d-гейт пройден** (§3.11.4: λ(v*;t') ≤ max(10·floor_q(t'), 0.3·λ(v*_{t'};t'))).
   p90_ref — перцентиль ρ(v*) в распределении ρ 64 random-референсов (r2 B5: референс измеренный,
@@ -474,8 +505,9 @@ DEAD_WEIGHT → NOT_FOUND_IN_SUBSPACE → NOT_RESOLVED (r5 R4: POSITION_GENERIC_
 - **REDUNDANT_DOMINANT**: 0 FOUND/SHORT_HORIZON_ONLY, и ≥8 клеток REDUNDANT (per-cell, выше;
   r2 B5: ρ-rank по измеренному референсу, ноль доп. форвардов). **r3 M2: декларативная ветка
   на этом дизайне** (под H₀ недостижимо — см. r3 ответ); существует для полноты дерева.
-- **DEAD_WEIGHT**: ≥8 клеток с q_t И q̄_fut ниже пола для всех v ∈ B₀ ∪ {v*} → в B₀ нечего
-  нести. **r3 M2: недостижима на этом дизайне** (pre-meas r3: q_t/floor ~ 1e5); декларативна
+- **DEAD_WEIGHT**: **0 FOUND/SHORT_HORIZON_ONLY** (r3: приоритет — FOUND-ветви первее) И ≥8
+  клеток с q_t И q̄_fut ниже пола для всех v ∈ B₀ ∪ {v*} (при a_hi) → в B₀ нечего нести.
+  **r3 M2: недостижима на этом дизайне** (pre-meas r3: q_t/floor ~ 1e5); декларативна
   для полноты дерева.
 - **NOT_FOUND_IN_SUBSPACE**: 0 FOUND/SHORT_HORIZON_ONLY, И **r4 m7: denom-гейт клетки пройден
   И companion OK на ≥ 8 из 16 клеток** (NOT_TESTABLE-клетки — не считаются, §3.11.5), И
@@ -494,7 +526,9 @@ DEAD_WEIGHT → NOT_FOUND_IN_SUBSPACE → NOT_RESOLVED (r5 R4: POSITION_GENERIC_
   8 ит., тот же 1d, тот же weak-скрин — «идентичный поиск» = полный пайплайн; без скрина
   null МЕНЕЕ строг: возможен «скрин провален + 1d пройден» — FOUND на null при
   POSITION_GENERIC на trained; смещение в сторону ARCHITECTURE объявлено, r5 U1),
-  НЕ по полному per-cell вердикту; ARCHITECTURE = «null-поиск нашёл кандидата тем же
+  **по FOUND/SHO идентичного пайплайна (r3: V4 — пайплайны trained/null идентичны, force-обхода
+  нет, ⇒ смещения нет; код проверяет вердикты FOUND/SHORT_HORIZON_ONLY null-клеток — это и есть
+  «не по полному per-cell вердикту»)**; ARCHITECTURE = «null-поиск нашёл кандидата тем же
   усилием, включая 1d и скрин», НЕ «null прошёл все гейты».
 - **NULL_NOT_TESTABLE**: отклик null в шумовом поле (пред-замер ‖h_t‖/‖PΔz‖ ниже пола; масштаб
   ε_a_null до 0.1 включительно; всё равно ниже пола) — честный исход, не «спектра нет» (response §4.2).
@@ -553,27 +587,35 @@ DEAD_WEIGHT → NOT_FOUND_IN_SUBSPACE → NOT_RESOLVED (r5 R4: POSITION_GENERIC_
 - triton 3.8.0: CPU-driver отсутствует; fla 0.5.x — CUDA-only; без guard'а прямой forward крашится
   (triton GDN-l2norm) — инвариант 13 обязателен.
 
-### 6b. Окружение исполнения (T4 main, CPU fallback)
+### 6b. Окружение исполнения (CPU — основной путь; T4 — тонкая обёртка, r3 M1/C3)
 
-- **Main (стадия 1 + условные 1b/1c) — Kaggle T4**: kernel через `kaggle_run.sh` (push→poll→pull),
-  fp32, eager, fla-guard (инвариант 13 — тот же численный путь, что CPU; на T4 triton/fla могли бы
-  работать — их избегаем осознанно для консистентности пути).
+- **Main (стадия 1 + условные 1b/1c) — CPU (r3 M1: ОСНОВНОЙ ПУТЬ)**: один ночной прогон через
+  run_one.sh (смета §6: 5686–9926 ф.-э. ≈ 6.85–12 ч; watchdog, avail ≥ 10 GB; чекпойнт per-cell +
+  --resume — поздний краш не теряет ночь, r3 B2/V3). fp32, eager, fla-guard (инвариант 13).
+  Тонкий путь GPU: `AT2E_DEVICE=cuda` — ТОЛЬКО явно (r3 C3: автоселект GPU удалён — он делал
+  DEVICE-ловушкой любую машину с GPU); код — тот же, device-абстракция (r3 C3: .cpu() перед .numpy(),
+  device=DEVICE во всех as_tensor). T4-kernel (если нужен): тот же скрипт через `kaggle_run.sh`
+  (push→poll→pull), `AT2E_DEVICE=cuda`, `AT2E_TRACKIO=0` (trackio в kernel не пишется — JSON-лог,
+  бэкилл `experiments/trackio_migration.py`); на T4 triton/fla избегаются осознанно (консистентность
+  численного пути).
 - Модель в kernel'е: `huggingface_hub.snapshot_download("Qwen/Qwen3.5-0.8B")` (паттерн kaggle_at16);
   интернет в kernel включён.
 - **Пулы доков — константой в скрипте** (12.9 KB; 4 дока × 128 tok) + sha-гейт на встроенные токены
   (те же sha, что §1). Jcache L12 (2 GB) **не грузится на GPU** → cext_ref вынесен из T4-main в
   CPU-follow-up (report-only; исполняется, если кандидат найден).
-- **T4-canary ДО main** (10–15 мин, тот же код, wiki/0, t=32, ОБЕ клетки L11+L12): (1)
-  retain-двойной backward на каждой клетке — полный подъёмный проход (2 FD + 1 grad-fwd + 2 bwd,
-  dense 9-позиционный cotangent); **VRAM_peak max ≤ 12 GB — явный fallback-порог (r2 M3):** CPU-
-  замер с градиентом = 13.9 GB RSS; 16 GB T4 — впритык; порог оставляет 4 GB запаса; провал =
-  OOM-риск в середине main после часов работы; (2) детерминизм на GPU — двойной forward md5;
-  (3) wall-цена forward/backward → фиксация T4-бюджета. Провал canary (VRAM > 12 GB ИЛИ det) →
-  CPU fallback (бюджет §6 выше, один ночной прогон, watchdog; avail ≥ 10G до лонча).
+- **T4-canary — только если main гоняется на T4 (r3: опциональный путь)**: (10–15 мин, тот же
+  код, wiki/0, t=32, ОБЕ клетки L11+L12): (1) retain-двойной backward на каждой клетке — полный
+  подъёмный проход (2 FD + 1 grad-fwd + 2 bwd, dense 9-позиционный cotangent); **VRAM_peak
+  max ≤ 12 GB — явный fallback-порог (r2 M3):** CPU-замер с градиентом = 13.9 GB RSS; 16 GB T4 —
+  впритык; порог оставляет 4 GB запаса; провал = OOM-риск в середине main после часов работы;
+  (2) детерминизм на GPU — двойной forward md5; (3) wall-цена forward/backward → фиксация
+  T4-бюджета. Провал canary (VRAM > 12 GB ИЛИ det) → CPU-прогон (основной путь, §6). Для CPU-main
+  canary не нужен (смета §6 — из замеров pre-study r1/r3, гейты S5/S9 — в смоке).
 - **trackio в kernel НЕ пишется** (правило проекта: локальная БД, лишний канал отказа) — JSON-лог с
   маркерами (stages, started_at/finished_at, forward_s/vjp_s замеренные в canary), бэкилл
   `experiments/trackio_migration.py` после pull. Числа — из лога артефакта, не из trackio.
-- Worst case wall: T4 ≈ 30–90 мин (canary-замер, 1d ≈ 2 с — пренебрежимо); CPU ≈ 6.8–11.9 ч (ночь).
+- Worst case wall: **CPU ≈ 6.85–11.9 ч (ночь, ОСНОВНОЙ путь, r3)**; T4 (опционально) ≈ 30–90 мин
+  (canary-замер, 1d ≈ 2 с — пренебрежимо).
 
 Смета стадии 1 (ф.-э. = forward-эквиваленты, 4.33 s CPU; VJP = 1.94× учтён в итерации):
 
@@ -587,11 +629,11 @@ DEAD_WEIGHT → NOT_FOUND_IN_SUBSPACE → NOT_RESOLVED (r5 R4: POSITION_GENERIC_
 | random-референс (N=64) | 16 × 64 × 2 | 2048 |
 | split-half secondary (4 кл.) | 4 × 8 × 6.5 | 208 |
 | cext_ref (L12, t32, 4 дока × 16 × 2) — **УСЛОВНЫЙ** (r5 гигиена: на T4 = 0, CPU follow-up, §6b) | 128 (CPU) / 0 (T4) | 128 (CPU) |
-| G-zero + floor (оба t, r3 M3) | 2 + 16 | 18 |
+| G-zero + floor (16 замеров × 2 forward, pre-pass, r3 M6) | 2 + 32 | 34 |
 | pos-spec парный референс (16 напр. × 8 пар × 2, r3 M1) | 256 | 256 |
 | positional specificity (weak-скрин, максимум): v* в t' | 16 × 2 | 32 |
 | **pos-spec v₀ в t' (r4 N-new-1; центральные a_hi, r5 R2)** | 16 × 2 | 32 |
-| **итого стадия 1** | | **5670 ≈ 6.8 ч CPU (T4: 5542 — cext_ref не в T4-main, §6b)** |
+| **итого стадия 1 (r3: floor 16→32)** | | **5686 ≈ 6.85 ч CPU (T4: 5558 — cext_ref не в T4-main, §6b)** |
 
 Стадия 1d (transfer-gap, УСЛОВНО — только для 1d-кандидатов, r5 R1, §3.11):
 ≤ 16 клеток × (32×2 + 8×6.5 = **116**) = **1856 ≈ 2.2 ч** (B₀(t')-проба 64 + независимый подъём
@@ -606,11 +648,13 @@ DEAD_WEIGHT → NOT_FOUND_IN_SUBSPACE → NOT_RESOLVED (r5 R4: POSITION_GENERIC_
 128 = random 64×2 амплитуды; 144 = null pos-spec: (v*+v₀) в t' 2×2 forward + 16 реф.
 × 2 × 2).
 Стадия 1c (nonlinearity-probe, отчёт): 4 кл. × 2 доп. амплитуды (3e-3, 1e-2) × 32 × 2 =
-**512 ≈ 0.6 ч** (±a-пары: асимметрия q(±a) — сигнатура нелинейности).
+**512 ≈ 0.6 ч** (±a-пары: асимметрия q(±a) — сигнатура нелинейности) **+ 4 кл. × v* × 2 ампл. ×
+2 = 16 (r3 U2: q(a)-кривая v* — единственный вектор вердикта обязан иметь её за пределами a_hi)**
+≈ 0.62 ч.
 
-**Worst case: ≈ 9894 ф.-э. ≈ 11.9 ч CPU** (5670+1856+1856+512) — либо один ночной прогон через
-run_one.sh (порядок: main → 1d → глобальный вердикт → 1b (включая null-1d) → 1c), либо **Kaggle T4**
-(§6b: canary → main ≈ 30–90 мин wall; 1d ≈ 2 с — пренебрежимо).
+**Worst case: ≈ 9926 ф.-э. ≈ 12 ч CPU (r3: 5686+1856+1856+528, +16 = v* из U2)** — один ночной прогон через
+run_one.sh (порядок: main → 1d → глобальный вердикт → det_main ДО 1b (r3 B5) → 1b (включая null-1d)
+→ 1c; чекпойнт per-cell + --resume, r3 B2/V3). T4 — тонкая обёртка (§6b, r3: не основной путь).
 
 ## 7. Инварианты (18; «оптимизация» любого = другая клетка)
 
@@ -774,7 +818,8 @@ Thread-pinning (OMP/OPENBLAS/MKL=4 ДО импортов, torch 4 тр.) — д�
 - S10: κ-флаги — |2κ−q|/max(q,floor) вычислим (значения отчёт).
 - S11: двойной прогон подмножества артефакта (B₀-пробы + верификация) — md5 идентичны (дет-гейт).
 - S12: JSON-артефакт валиден (numpy-типы/NaN sanitize), schema-покрытие, статус ok.
-- S13 (r5 R1): **стадия 1d на смок-клетке** (t'=96, wiki/0): B₀(t')-проба (32×2 = 64 forward,
+- S13 (r5 R1; **r3 M2: в смоке 1d гоняется БЕУСЛОВНО — `force_1d`**, гейт проверяет пайплайн,
+  не научный исход скрина): **стадия 1d на смок-клетке** (t'=96, wiki/0): B₀(t')-проба (32×2 = 64 forward,
   центральные a_hi, фикс. ε), подъём в t' 2 итерации (смок-режим, как S6), v*_{t'}-траектория
   не NaN, **gap = λ(v*;t')/λ(v*_{t'};t') вычислим** (значения отчёт; гейт 0.3 — только в main),
   floor_q(t') вычислим. (~77 forward ≈ 6 мин.)
@@ -796,28 +841,31 @@ Thread-pinning (OMP/OPENBLAS/MKL=4 ДО импортов, torch 4 тр.) — д�
   (копия в results/AT2e/prestudy_r3/); скрипт at2e_premeas_b1.py (gqr-фикс + orth-чек в лог).
 - AT2d: raw-артефакт results/AT2d/AT2d.json + AT2d_v2.json (REFUTED, frozen) — контекст, не вход.
 
-## 13. Схема артефакта (results/AT2e/AT2e_s1_r1.json)
+## 13. Схема артефакта (results/AT2e/at2e_s1_r3.json; чекпойнт at2e_s1_r3_partial.json, r3 B2/V3)
 
 ```
-header: {run, run_revision r1 (TZ r5), script_sha, seed, device=cpu|t4-kaggle, model,
-         transformers_version,
-         grid_mode: primary|fallback (r2 B1),
-         canary: {vram_peak_gb per layer, det_md5_ok, fwd_s, bwd_s} (если T4), started_at,
-         finished_at, status, log_md5, forward_s=4.33, vjp_s=8.41}
-gates: {S1_sha_pool, S1_sha_jcache, S1b_pool_fp, G_det (md5 baseline double),
-        G_zero (max|Δz|), G_floor (floor_q per (d,L,t): {measured, quant, used}; max по 16, r3 M3),
-        G_vjp_fd (rel err per j, Ov^{K1}+Cv, N1), G_denom per cell {median_b0_qt_over_floor, vstar_qt_over_floor},
-        G_linear per cell {L1, L2, L1_num, L2_num, mode: {grid: primary|fallback,
-            denom: normal|below_floor}, kappa_flags} (N5),
-        G_pos_spec_ref per cell {ref_ratios [16], p10} (r3 M1),
-        G_b0_ortho per cell {max_dev_norm, max_dev_G_minus_I per group} (r3 N2/N3)}
+header: {run, run_revision r3 (TZ r5.2), script_sha, seed, device=cpu (дефолт; cuda — только
+         явное AT2E_DEVICE=cuda, r3 C3), model, transformers_version (r3 V6),
+         canary: null (CPU-run; T4-canary — только в T4-обёртке, §6b, r3 V6),
+         started_at, finished_at, status: ok|ok_det_warn (r3: det_main.all_ok=False) |
+         smoke|smoke_fail, log_md5, forward_s=4.33, vjp_s=8.41 (провенанс pre-study r1)}
+gates (агрегированный блок, r3 M3; схема = реальные ключи кода r3):
+  {S1_sha: {pool, jcache_l12, fla_guard}, S1b_pool_fp (main-only; смоке jcache не грузится),
+   G_floor: {n_unique=16, floor_global, per_cell {c{id}: used}},
+   G_b0_ortho: per cell {top_orth_max_dev, bot_orth_max_dev, gqr_orth_max_dev,
+        norm_max_dev, norm_f32_max_dev (r3 M7: f32→f64)},
+   G_denom: per cell {cell: denom_gate_cell, vstar: denom_gate_vstar},
+   G_linear: per cell {linear.ok} (режимы/значения — в cells.verify.linear, r3 V5: на K1-объекте),
+   G_vjp_fd: {rel_ov, rel_cv, ok} (main: канон. FD-сверка VJP, 5 ф.-э., §4),
+   G_pos_spec_ref: per cell {n_ref, ratios_finite} (r3 M1/V2: конечные после M5-фильтра)}
 config: {eps_a: {a_lo: 3e-4*||h_t||, a_hi: 1e-3*||h_t||} (primary) | {a_lo: 1e-3*||h_t||,
          a_hi: 3e-3*||h_t||} (fallback) (явные имена, r5 R3), taus: [1e-3, 1e-2, 5e-2],
          tau_primary: 1e-2, H_windows: [[1,2],[4,8],[1..8]], N_random: 64,
          ascent: {iters 8, window: K1 (N1), eta0 0.2, eta_min 0.01, adaptive: halve/double x1.5,
                   gnorm_stop 1e-8, tol 1e-3}, a_floor_rel: 1e-9, floor_quant: 2^-23*max|z_t|^2*p_max (M4),
-         gqr: {construction: cols_qr(A.T) Stiefel-Haar (N2), b0_seed_offset: 0, ref_seed_offset: 1000,
-               per_cell_seed: SEED + cell_id},
+         gqr: {construction: cols_qr(A.T) Stiefel-Haar (N2), b0_seed: SEED + cell_id,
+               ref_seed: SEED + (L_idx*8 + doc_idx*2) + 1000 — shared per (док, слой), БЕЗ t
+               (r3 B4: парный pos-spec-референс, §3.6)},
          cell_ids: [0..15] = L_idx*8 + doc_idx*2 + t_idx (r3 M4, список в артефакте),
          pos_spec: {n_ref: 16, subset: first 16 cols of QR(A_ref.T) (m6), estimator: central a_hi
                     (R2), eps_fixed_from: source_cell (N4), screen: p10_ratio_ref И ratio_v0
@@ -830,9 +878,10 @@ config: {eps_a: {a_lo: 3e-4*||h_t||, a_hi: 1e-3*||h_t||} (primary) | {a_lo: 1e-3
          code/0,chat/0]}
 cells: per (L, dom, t) {cell_id (M4),
   hnorm, floor_q {measured, quant, used},
-  b0: {sha256 (f64), gqr_seed, per group: max_dev_G_minus_I (N2/N3), per direction:
-       {label: top_pca|bottom_pca|sample_null_space|gqr,
-         q_k [8], lambda_tau [3], windows {K1, K2, all}}},
+  b0: {sha256 (f64), gqr_seed, checks {per group orth + norms (N2/N3, M7)},
+       per_dir [32]: {j, label: top_pca|sample_null_space|gqr_cellseed,
+         K1: lambda_tau [3], K2: lambda_tau [3], full: lambda_tau [3]} (r3 V6; из b0_q_hi, 0 fwd),
+       q_hi/lo per k [32x9] (b0_q_hi/lo)},
   eps0 (обобщённый, G = B^T B, N3), lambda_max_B0 (нижняя граница, K1-объект, N1/N3),
   ascent: {traj: [ {i, v_sha256, lambda_K1, delta_v_norm, eta} x8 ], v0_source,
            v0_lambda_K1 (λ(v₀) из B₀-батча, явный в блоке — r5 минор 3),
@@ -852,14 +901,15 @@ cells: per (L, dom, t) {cell_id (M4),
                rank_vstar per tau,
                distribution: [min, p25, med, p75, max] per tau,
                rho_distribution: [p10, p25, med, p75, p90]},
-  pos_spec: {t_prime, lambda_K1_tprime (central a_hi, fixed eps = 1e-2*eps0(t), N4/R2), ratio,
-             ratio_ref [16] (M1; subset = первые 16 столбцов QR, m6; central a_hi, R2),
-             ratio_ref_p10,
-             v0_at_tprime {lambda_K1, ratio} (N-new-1; central a_hi, R2),
-             rstar {idx, ratio}, f_inflation (отчёты, r4),
-             screen_ok (ratio <= p10 И ratio <= ratio_v0, weak-скрин r5 R1),
-             eps0_tprime_diag (отчёт, N4), kappa_flags_tprime [9] (N4)}
-  (для клеток, прошедших rank K1 + companion),
+  pos_spec: {t_prime, lambda_K1_tprime (central a_hi, fixed eps = 1e-2*eps0(t), N4/R2),
+             ratio_vstar, ratio_v0 (None при мёртвом отклике, r3 M5/C4),
+             ratio_ref [≤16] — КОНЕЧНЫЕ только (r3 V2: мёртвые направления отфильтрованы),
+             n_ref_finite, ratio_ref_p10 (None, если нет конечных),
+             rstar {idx, ratio} | None (r3 V2: argmax по конечным, индексы выравнены),
+             f_inflation (отчёты, r4; None при мёртвом медиане),
+             screen_ok (ratio <= p10 И ratio <= ratio_v0, weak-скрин r5 R1; None-ратии = провал),
+             eps0_tprime_diag (отчёт, N4; guard lam_v_t > 0, r3 V2), kappa_flags_tprime [9] (N4)}
+  (для клеток, прошедших rank K1 + companion; r3 V4: null — те же условия, без force-обхода),
   stage1d (для 1d-кандидатов, r5 R1): {
              t_prime, probe_b0_tprime: [32 x {q, lambda_K1}], v0_tprime {sha, lambda_K1},
              ascent_tprime: {traj x8, vstar_tprime_argmax i ∈ 0..8, vstar_tprime_sha},
@@ -891,10 +941,13 @@ md5-сцепка; маркер AT2E_MAIN_DONE — в лог-файл (не в st
    N1-N5, M1-M5) + pre-study r3 — **сделан (5266467)**. TZ r4 (ревью r3: N-new-1/N-new-2, m1-m9)
    + pre-study r4 (канонический ‖h_t‖) — **сделан (35bfa89)**. TZ r5 (ревью r4: R1-R4 + 4 минорных:
    transfer-gap стадия 1d, эстиматор/амплитуда pos-spec запинены, a_lo/a_hi, глобальная
-   POSITION_GENERIC_DOMINANT) — текущий шаг (после PASS ревью-лупа).
-3. (после ревью-лупа, PASS) `AT2e: код r1 + smoke PASS` — experiments/at2/AT2e.py + smoke-логи +
-   smoke-артефакт (CPU).
-4. `AT2e: T4 canary PASS` — kaggle kernel canary (обе клетки, retain-двойной backward, VRAM ≤ 12 GB)
-   + лог + VRAM/det-числа в pre-study-папку.
-5. (после main) `AT2e: main r1 результаты` — results/AT2e/ + AT2e_results.md + trackio-бэкилл
+   POSITION_GENERIC_DOMINANT) — **сделан (f06b142)**. TZ r5.2 (ревью кода r2: C2/C3/C4, V1-V6,
+   минорные — все приняты; C1 — не воспроизведено, evidence в `docs/AT2e_response_r2.md`) —
+   **текущий шаг** (после PASS ревью-лупа на код r3 + smoke r3).
+3. (после ревью-лупа, PASS) `AT2e: код r3 + smoke r3 PASS` — experiments/at2/AT2e.py + smoke-логи +
+   smoke-артефакт (CPU) + валидационные тесты (dry-run reinit, forced-degenerate, resume — §6
+   ревью r2).
+4. (опционально, если T4-путь выбран) `AT2e: T4 canary PASS` — kaggle kernel canary (обе клетки,
+   retain-двойной backward, VRAM ≤ 12 GB) + лог + VRAM/det-числа в pre-study-папку.
+5. (после main) `AT2e: main r3 результаты` — results/AT2e/ + AT2e_results.md + trackio-бэкилл
    (T4: JSON-лог; CPU: trackio как обычно).

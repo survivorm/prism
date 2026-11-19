@@ -1,0 +1,29 @@
+[09:39:43] AT2e at2e_smoke_r1: TZ r5.1, script_sha=3374936afa3b, smoke=True
+[09:39:43] S1: pool sha OK (ded634f7d16c...)
+[09:39:46] S1: jcache L12 sha OK (976079ce1d3c...)
+[09:39:46] S1: fla guard активен
+[09:39:47] model loaded: qwen3_5_text, n_layers=24, vocab=248320, 1.6s
+[09:39:58] baseline wiki: md5=83d92e415bf2 det=True
+[09:39:58] SMOKE PASS: S2_baseline_det 83d92e415bf2
+[09:39:58] cell 8 (wiki L12 t32): hnorm=2.1614 hnorm'=2.4189 a_lo=6.484e-04 a_hi=2.161e-03
+[09:48:07] cell 8: eps0=5.0274e+00 pencil=3.2220e-01 b0_qt_alo_med=9.559e-08 floor=7.541e-13
+[09:48:44] cell 8: ascent v0_idx=13 vstar_i=2 lambda_vstar=3.1346e-01 conv=False not_conv=True
+[09:48:57] cell 8: verify mode=normal linear_ok=True denom_v*=True companion=True rho=0.04656391279700143
+[09:49:43] cell 8: rank K1={'0.001': 1, '0.01': 1, '0.05': 1} K2={'0.001': 3, '0.01': 3, '0.05': 2} (1s: 3/0) rho_ref_p90=0.011345044543990006 rho_rank=100.0
+[09:50:41] cell 8: pos-spec ratio(v*)=0.3752 p10=3.9150 ratio(v0)=2.2620 screen_ok=True
+[09:55:33] cell 8: 1d gap=0.06751586129996251 bound=5.2256e-01 pass=True test_guard=False near=False
+[09:55:33] SMOKE PASS: S3_b0 {'top_orth_max_dev': 2.220446049250313e-15, 'bot_orth_max_dev': 1.0044048925905713e-15, 'gqr_orth_max_dev': 4.440892098500626e-16, 'norm_max_dev': 1.1102230246251565e-16, 'norm_f32_max_dev': 1.1102230246251565e-16}
+[09:55:33] SMOKE PASS: S4_eps0 5.027395713197047
+[09:55:33] SMOKE PASS: S4_pencil 0.3221983614968533
+[09:55:33] SMOKE PASS: S3_hnorm_anchor 2.161351023728364
+[09:55:46] SMOKE PASS: S5_vjp_fd {'rel_ov': 0.0019261192691894078, 'rel_cv': 0.00016464142221202333}
+[09:55:46] SMOKE PASS: S6_ascent {'vstar_i': 2, 'eta': [None, 0.2, 0.2], 'lambda': [0.053749599168330685, 0.053749599168330685, 0.061472447612852026, 0.3134596530092621]}
+[09:55:46] SMOKE PASS: S7_verify {'mode': 'normal', 'linear_ok': True, 'denom_cell': 9.55851555183658e-08}
+[09:55:46] SMOKE PASS: S8_random {'K1': {'0.001': 1, '0.01': 1, '0.05': 1}, 'K2': {'0.001': 3, '0.01': 3, '0.05': 2}, 'rank1_K1': 3, 'rank1_K2': 0}
+[09:55:46] SMOKE PASS: S10_kappa {'0': True, '1': True, '2': True, '3': True, '4': True, '5': True, '6': True, '7': True, '8': True}
+[09:56:03] SMOKE PASS: S11_det_subset md5
+[09:56:03] SMOKE PASS: S13_stage1d {'gap': 0.06751586129996251, 'test_guard': False}
+[09:56:09] G-zero L23: max_dz_fut=0.000e+00 gate=True
+[09:56:09] SMOKE PASS: S9_gzero 0.0
+[09:56:09] global verdict: NOT_RESOLVED
+[09:56:09] per-cell: c8(wikiL12t32)=SHORT_HORIZON_ONLY
