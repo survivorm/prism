@@ -675,24 +675,58 @@
   **m5** — синтетика 10: S1'/S2' той же моделью, малость N_PHR — seed;
   **m6** — δ-хвост caveat; **m7** — union по L23; **SYCL** (указание):
   тяжёлые стадии — iGPU (docs/SYCL.md), S_cross_store обязателен.
+- DONE — **ревью r6** (`docs/AT8_2_review.md` — «Ревью AT8_2b v1.5,
+  раунд 6», VERDICT: REVISE; р5 закрыто чисто, оба спора r5 приняты,
+  reconcile «7 SE»/0.11σ_S — разные объекты; ответы —
+  `docs/AT8_2b_review_r6_answers.md`): **все 6 + 4 минора приняты, без
+  споров** → **TZ v1.6** (sha `63d5a6b0…`): **F1** — гейт S_cross_store
+  переопределён (старый падал всегда: стор округлён до 6 знаков,
+  при |cos_raw|~1e-3 округление само даёт 5e-4 относительных; проверено
+  по коду R2: round 6 — :264/277-279, use_cache=False — :240, no_grad
+  — :239, set_grad_enabled(False) — :707): свежий ряд = `cond_series`
+  R2 verbatim (round 6), гейт = bit-identity округлённых (весь ряд,
+  5 слоёв, cos_raw/cos_state/norm_delta — домен запинен), rel 1e-6 —
+  диагностика с полом 5e-7; пин + use_cache/grad-off; **F2** — +1
+  форвард wiki_0 n16 loop (REP@n16 тоже вычитает сохранённый L1; путь
+  dose-зависим 274 vs 400 токенов), смоук 22 фд; **F3** — провал
+  S_cross_store → fallback, не стоп (стоп — только если сам fallback);
+  **F4** — конфаунд CALIBRATION_WARN задекларирован + чистый якорь на
+  паре (N_PHR, N_perm); **F5** — 10⁻¹² перемечено (было type-I
+  per-dose): таблица 4 клеток (type-I 1.2e-12/4e-29; power 1.4e-8/
+  1e-22) + честный хвост (n=14: «рабочий type-I ≪ 0.025, точное
+  значение не оценивается») + разделение инкремента 0.11σ_S и
+  расстояния 7.0/11.1 SE; **F6** — остаточный риск маржи — пре-рег-
+  исход (смок ≥0.3, main <0.3 → GATE_N2 → NOT_RESOLVED) + манифест:
+  смок-значение И реализованная 14-доковая медиана; миноры: MDE —
+  прокси-σ (отчёт, не порог), fallback-провенанс legacy-якоря,
+  смоук-тотал 22. Main 140 фд не меняется; fallback 252 — только при
+  реальном расхождении пути.
 - NEXT:
-  - [ ] Скрипт `experiments/at8/AT8_2b.py` (машина 2b v1.5: read R2-store
-    + гейт S_cross_store (fresh wiki_0 n2 loop vs store, fallback 4
-    условия) + 5 новых условий (L2/S1/S2/S1'/S2') × 2 дозы + E_phr/REP/INT
-    + нули (N_PHR, N_perm сматчен) + G_inside_rep × 2 дозы (И медиана
-    min(m₁,m₂) ≥ 0.3 на n=2 + правило пересмотра ДО main / LOW_MARGIN)
-    + дерево (M2; BOTH+_AMBIGUOUS) + LEARN_ASYMM_N2/_N16 (обе дозы) +
-    2-дозный дозовый тег (без SATURATING) + INT-эвристика + прямой
-    σ_L/σ_S (CALIBRATION_WARN) + per-layer δ (F3); per-контраст
-    наблюдаемые + δ на своей наблюдаемой (C1); сиды
+  - [ ] Скрипт `experiments/at8/AT8_2b.py` (машина 2b v1.6: read R2-store
+    + гейт S_cross_store (fresh wiki_0 n2 И n16 `loop` vs store; свежий
+    ряд = `cond_series` R2 verbatim round 6; bit-identity округлённых
+    на всём ряду × 5 слоёв × cos_raw/cos_state/norm_delta; rel 1e-6 —
+    диагностика с полом 5e-7; провал → fallback 4 условия, НЕ стоп) +
+    5 новых условий (L2/S1/S2/S1'/S2') × 2 дозы + E_phr/REP/INT + нули
+    (N_PHR, N_perm сматчен) + G_inside_rep × 2 дозы (И медиана
+    min(m₁,m₂) ≥ 0.3 на n=2 + правило пересмотра ДО main / LOW_MARGIN +
+    запись смок/main-медиан в манифест, F6) + дерево (M2;
+    BOTH+_AMBIGUOUS) + LEARN_ASYMM_N2/_N16 (обе дозы) + 2-дозный дозовый
+    тег (без SATURATING) + INT-эвристика + прямой σ_L/σ_S
+    (CALIBRATION_WARN + конфаунд-декларация + якорь на паре (N_PHR,
+    N_perm), F4) + per-layer δ (F3); per-контраст наблюдаемые + δ на
+    своей наблюдаемой (C1); сиды
     zlib.crc32(f"S{i}|{doc}|{n}") + assert 112 уникальных + sha256
-    конкатенации 112 строк; 112 sha256 S_i-блоков; legacy-якорь 4
-    дозы verbatim; координаты на числа; окружение (attn/dtype/py/torch/
-    transformers/threads) в манифест; --reanalysis/--test-synth (10
-    сценариев); prism/explog + nulls_and_stats; trackio at8_2b_r1).
-  - [ ] Само-аудит + смоук (wiki × 2 дока × 2 дозы: 20 форвардов +
-    S_cross_store 1 фд; integrity-якорь 4 дозы, per-doc сиды + полная
-    проверка 112 сидов + sha256 конкатенации, S_shuffle-таблица,
+    конкатенации 112 строк (`3a98ef6f…`); 112 sha256 S_i-блоков;
+    legacy-якорь 4 дозы verbatim (в fallback — дисковая store-check,
+    метка «store»); координаты на числа; окружение (attn/dtype/py/
+    torch/transformers/threads/use_cache/grad) в манифест; pin-константы
+    R2 (sdpa/fp32/torch 2.14.1/py 3.12.9/OMP=6); --reanalysis/
+    --test-synth (10 сценариев); prism/explog + nulls_and_stats; trackio
+    at8_2b_r1).
+  - [ ] Само-аудит + смоук (wiki × 2 дока × 2 дозы: **22 форварда** =
+    20 условий + 2 S_cross_store; integrity-якорь 4 дозы, per-doc сиды
+    + полная проверка 112 сидов + sha256 конкатенации, S_shuffle-таблица,
     sha256 S_i-блоков, G_inside_rep вычислима + маржи m₁/m₂ → решение
     пересмотра ДО main, δ на своих наблюдаемых, e_spec1 cross-check
     0.1020) + синтетика 10/10 (вкл. bag_mode и адверсарный bag) +
