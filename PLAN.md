@@ -640,24 +640,38 @@
   сиды zlib.crc32 32 бита; дерево с NOT_RESOLVED+GATE_* (M2); слойный тег
   per-contrast (M3); σ_L/σ_S с P0-числами (m3); координаты m4/G14; 9
   синтетик (bag_mode — регрессия M1); смета 364; S_shuffle bug-guard.
+- DONE — **ревью r4** (`docs/AT8_2b_review_r4.md`, sha `38fe486a…`,
+  VERDICT: REVISE; ответы — `docs/AT8_2b_review_r4_answers.md`):
+  **принято полностью** (F1–F6, m1'–m5'; спорных нет) → **TZ v1.4**:
+  F1 — LEARN_ASYMM на обеих дозах, тег по дозе контраста (N2 —
+  некалиброванная эвристика); F2 — дозовый тег 2-дозный (SATURATING
+  удалён); F3 — δ per-layer в §8; F4 — «draw-робастность» снята
+  (знак не на модули); F5 — INT-тег = эвристика без калибровки
+  (консервативен, √2); F6 — G_inside_rep: логика объявлена + медианная
+  маржа ≥ 0.3 nat на n=2; m1' — assert 112 сидов; m2' — прямой
+  σ_L/σ_S + CALIBRATION_WARN; m3' — row-type by design; m4' —
+  синтетика 10 (адверсарный bag); m5' — BOTH+_AMBIGUOUS. Цена и
+  поверхность не изменились (2 теста, 140 фд).
 - NEXT:
-  - [ ] Скрипт `experiments/at8/AT8_2b.py` (машина 2b v1.3: read R2-store +
+  - [ ] Скрипт `experiments/at8/AT8_2b.py` (машина 2b v1.4: read R2-store +
     5 новых условий (L2/S1/S2/S1'/S2') × 2 дозы + E_phr/REP/INT + нули
-    (N_PHR, N_perm сматчен) + G_inside_rep × 2 дозы + дерево (M2); per-контраст
-    наблюдаемые + δ на своей наблюдаемой (C1); сиды zlib.crc32(f"S{i}|{doc}|
-    {n}"); legacy-якорь 4 дозы verbatim; координаты на числа; --reanalysis/
-    --test-synth (9 сценариев); prism/explog + nulls_and_stats; trackio
-    at8_2b_r1).
+    (N_PHR, N_perm сматчен) + G_inside_rep × 2 дозы (И маржа ≥ 0.3 на n=2)
+    + дерево (M2; BOTH+_AMBIGUOUS) + LEARN_ASYMM_N2/_N16 (обе дозы) +
+    2-дозный дозовый тег (без SATURATING) + INT-эвристика + прямой
+    σ_L/σ_S (CALIBRATION_WARN) + per-layer δ (F3); per-контраст
+    наблюдаемые + δ на своей наблюдаемой (C1); сиды
+    zlib.crc32(f"S{i}|{doc}|{n}") + assert 112 уникальных; legacy-якорь 4
+    дозы verbatim; координаты на числа; --reanalysis/--test-synth (10
+    сценариев); prism/explog + nulls_and_stats; trackio at8_2b_r1).
   - [ ] Само-аудит + смоук (wiki × 2 дока × n=2: 10 форвардов; integrity-
-    якорь 4 дозы, per-doc сиды + no-collision (пара S1|code_3|2 vs
-    S2|chat_0|2), S_shuffle-таблица, G_inside_rep вычислима, δ на своих
-    наблюдаемых, e_spec1 cross-check 0.1020) + синтетика 9/9 (вкл. bag_mode)
-    + дегенерации (вкл. legacy-δ по 2 дозам — не глосовать) → GO на полный
-    прогон (140 форвардов).
+    якорь 4 дозы, per-doc сиды + полная проверка 112 сидов, S_shuffle-
+    таблица, G_inside_rep вычислима (вкл. медианная маржа), δ на своих
+    наблюдаемых, e_spec1 cross-check 0.1020) + синтетика 10/10 (вкл.
+    bag_mode и адверсарный bag) + дегенерации (вкл. legacy-δ по 2 дозам —
+    не глосовать) → GO на полный прогон (140 форвардов).
   - [ ] Прогон `./run_one.sh at8_2b` (setsid nohup, OMP=6; одна CPU-задача)
     — **или** пропуск, если до запуска утверждён объединённый пре-рег 2b+8_3
     (явное решение; смета: слияние 384 > раздельно 364).
-  - [ ] Ревью-раунд r4 (ответки отдельным md; спорь).
   - [ ] (8_3-луп) закрыть патч-пункты 1–5 review r3 → потом объединённый
     пре-рег 2b+8_3 (архитектор расписывает).
 - Границы: R2-store read-only (sha пин); R2-вердикт/числа не трогать; пул не
