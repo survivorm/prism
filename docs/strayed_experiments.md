@@ -118,7 +118,15 @@ E-65…E-80 прошли **другой** проход (`docs/dynamic/RERUN_SCRI
    AST без исполнения кода, артефакт `results/_audit_checks/paths_resolve.json`):
    из **353** `.py` в `experiments/` пути от `__file__` собирают **76**, из них у
    **11 файлов (17 ссылок)** целевой каталог не существует, ещё у **4 файлов (5 ссылок)**
-   каталог есть, а файла нет. Затронуты и те карточки, что я только что проверял:
+   каталог есть, а файла нет. **Поправка после внешнего ревью ТЗ гейтов (2026-11-20):** это число
+   — цена слепоты чека, а не цену класса. Он берёт `args[0]` вызова `join(...)` и считает в нём
+   `dirname`; форма через алиас (`HERE = dirname(abspath(__file__))`, `join(HERE, …)`) при
+   `depth<1` **молча пропускается** — а это именно форма основателя класса
+   (`exp45b_analysis.py:28–29`). Символический скан
+   (`experiments/_audit_checks/paths_sym_probe.py`, артефакт
+   `results/_audit_checks/paths_sym_scan.json`: 121 файл, 295 ссылок, 92 битых в 54 файлах)
+   добавляет **43 файла / 64 ссылки** `dir_missing`; объединение с inline —
+   **51 файл / 77 ссылок** `dir_missing` и **23 файла / 31** `file_missing`. Затронуты и те карточки, что я только что проверял:
    `exp46_verdicts.py` падает `FileNotFoundError: experiments/results/exp46_frame_as_memory.json.gz`
    (RC=1), `exp45b_analysis.py` — так же; их docstring'и продолжают обещать рабочую
    команду `cd experiments && ../.venv/bin/python exp45b_analysis.py`. Ни один тест

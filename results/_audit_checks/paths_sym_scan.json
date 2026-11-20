@@ -1,0 +1,754 @@
+{
+ "alias_files": 121,
+ "refs": 295,
+ "broken_refs": 92,
+ "broken_files": 54,
+ "by_kind": {
+  "file_missing": {
+   "refs": 28,
+   "files": 20
+  },
+  "dir_missing": {
+   "refs": 64,
+   "files": 43
+  }
+ },
+ "broken": [
+  {
+   "file": "experiments/at2/AT2.py",
+   "line": 25,
+   "resolved": "experiments/results/AT2/AT2.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(RESULTS, 'AT2', 'AT2.json')"
+  },
+  {
+   "file": "experiments/at2/AT2.py",
+   "line": 26,
+   "resolved": "experiments/results/AT2_run.log",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(RESULTS, 'AT2_run.log')"
+  },
+  {
+   "file": "experiments/at2/AT2.py",
+   "line": 67,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism', 'field.py')"
+  },
+  {
+   "file": "experiments/e21_30/exp27_6_isolation.py",
+   "line": 32,
+   "resolved": "experiments/results/exp27_jcache.pt",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp27_jcache.pt')"
+  },
+  {
+   "file": "experiments/e21_30/exp27_6_isolation.py",
+   "line": 33,
+   "resolved": "experiments/results/exp27_6_isolation.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp27_6_isolation.json')"
+  },
+  {
+   "file": "experiments/e21_30/exp27_6_isolation.py",
+   "line": 34,
+   "resolved": "experiments/results/exp27_6_bock_4x4.png",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp27_6_bock_4x4.png')"
+  },
+  {
+   "file": "experiments/e21_30/exp27_6_isolation.py",
+   "line": 333,
+   "resolved": "experiments/results/exp27_noise_floor.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp27_noise_floor.json')"
+  },
+  {
+   "file": "experiments/e31_40/_e38_cache.py",
+   "line": 45,
+   "resolved": "experiments/kaggle_kernel/results",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'kaggle_kernel', 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp38a_uhat_dynamics.py",
+   "line": 71,
+   "resolved": "experiments/results/exp38a_uhat_dynamics.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38a_uhat_dynamics.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38b_position_audit.py",
+   "line": 97,
+   "resolved": "experiments/results/exp38b_position_audit.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38b_position_audit.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38c_degeneracy_preflight.py",
+   "line": 72,
+   "resolved": "experiments/results/exp38c_degeneracy_preflight.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38c_degeneracy_preflight.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38d_holonomy_spectrum.py",
+   "line": 180,
+   "resolved": "experiments/results/exp38d_holonomy_spectrum.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(out_dir, 'exp38d_holonomy_spectrum.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38e_MK_diagnostic.py",
+   "line": 73,
+   "resolved": "experiments/results/exp38e_MK_diagnostic.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38e_MK_diagnostic.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38f_structural_consistency.py",
+   "line": 78,
+   "resolved": "experiments/results/exp38f_structural_consistency.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38f_structural_consistency.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38f_structural_consistency.py",
+   "line": 79,
+   "resolved": "experiments/results/exp38e_MK_diagnostic.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38e_MK_diagnostic.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38g_jlens_link.py",
+   "line": 109,
+   "resolved": "experiments/results/exp38g_jlens/lens.pt",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38g_jlens', 'lens.pt')"
+  },
+  {
+   "file": "experiments/e31_40/exp38g_jlens_link.py",
+   "line": 110,
+   "resolved": "experiments/results/exp38g_jlens_link.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38g_jlens_link.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38h_two_channel.py",
+   "line": 50,
+   "resolved": "experiments/results/exp38h_two_channel_goodhart.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38h_two_channel_goodhart.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38i_factorization.py",
+   "line": 49,
+   "resolved": "experiments/results/exp38i_factorization.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38i_factorization.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp39a_u_obs_rank.py",
+   "line": 114,
+   "resolved": "experiments/results/exp39a_u_obs_rank.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp39a_u_obs_rank.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp39c_pre_kl_surgery.py",
+   "line": 126,
+   "resolved": "experiments/results/exp39c_pre_kl_surgery.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp39c_pre_kl_surgery.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp39c_pre_kl_surgery.py",
+   "line": 144,
+   "resolved": "experiments/results/exp39a_u_obs_rank.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp39a_u_obs_rank.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp39d_l23_training.py",
+   "line": 122,
+   "resolved": "experiments/kaggle_kernel/results/exp27b_jcache_L23.pt",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'kaggle_kernel', 'results', 'exp27b_jcache_L23.pt')"
+  },
+  {
+   "file": "experiments/e31_40/exp39l_drift_behavior.py",
+   "line": 62,
+   "resolved": "experiments/results/exp39l_drift_behavior.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp39l_drift_behavior.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp39l_drift_behavior.py",
+   "line": 63,
+   "resolved": "experiments/results/exp39l_scatter.png",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp39l_scatter.png')"
+  },
+  {
+   "file": "experiments/e31_40/exp39l_drift_behavior.py",
+   "line": 209,
+   "resolved": "experiments/results/exp38i_factorization.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results', 'exp38i_factorization.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp40_0_gate.py",
+   "line": 26,
+   "resolved": "experiments/results/exp27_jcache.pt",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results', 'exp27_jcache.pt')"
+  },
+  {
+   "file": "experiments/e31_40/exp40_1_t4a.py",
+   "line": 36,
+   "resolved": "experiments/results/exp39_supp_three_objects.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results', 'exp39_supp_three_objects.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp40_1_t4a.py",
+   "line": 37,
+   "resolved": "experiments/results/exp39k_gauge_aware_importance.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results', 'exp39k_gauge_aware_importance.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp40plus_doc_check.py",
+   "line": 338,
+   "resolved": "experiments/results/exp40plus_artifacts.sha256",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(R, 'exp40plus_artifacts.sha256')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_strip_seednull.py",
+   "line": 9,
+   "resolved": "experiments/results/exp45_damage_vs_structure.partial.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'results', 'exp45_damage_vs_structure.partial.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_table_check.py",
+   "line": 24,
+   "resolved": "experiments/docs/ref-exp.md",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'docs', 'ref-exp.md')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_table_check.py",
+   "line": 27,
+   "resolved": "experiments/results/exp45_damage_vs_structure.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp45_damage_vs_structure.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_table_check.py",
+   "line": 28,
+   "resolved": "experiments/results/exp45f_gauge_decomp.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp45f_gauge_decomp.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_verdicts.py",
+   "line": 19,
+   "resolved": "experiments/results/exp45_damage_vs_structure.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp45_damage_vs_structure.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_verdicts.py",
+   "line": 143,
+   "resolved": "experiments/results/exp45_kappa_seed_null.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(RES), 'exp45_kappa_seed_null.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45b_analysis.py",
+   "line": 29,
+   "resolved": "experiments/results/exp45b_leaf_table.json.gz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp45b_leaf_table.json.gz')"
+  },
+  {
+   "file": "experiments/e41_50/exp45c_gauge_null.py",
+   "line": 84,
+   "resolved": "experiments/results/exp45c_gauge_null.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE, '..', 'results', 'exp45c_gauge_null.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45f_gauge_decomp.py",
+   "line": 62,
+   "resolved": "experiments/results/exp45_edits_sparse.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE, '..', 'results', 'exp45_edits_sparse.npz')"
+  },
+  {
+   "file": "experiments/e41_50/exp45f_gauge_decomp.py",
+   "line": 63,
+   "resolved": "experiments/results/exp45_damage_vs_structure.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE, '..', 'results', 'exp45_damage_vs_structure.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45f_gauge_decomp.py",
+   "line": 64,
+   "resolved": "experiments/results/exp45f_gauge_decomp.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE, '..', 'results', 'exp45f_gauge_decomp.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45g_cut_stability.py",
+   "line": 60,
+   "resolved": "experiments/results/exp45g_cut_stability.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE, '..', 'results', 'exp45g_cut_stability.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp46_verdicts.py",
+   "line": 26,
+   "resolved": "experiments/results/exp46_frame_as_memory.json.gz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'results', 'exp46_frame_as_memory.json.gz')"
+  },
+  {
+   "file": "experiments/e41_50/exp47a_kinematics_cache.py",
+   "line": 92,
+   "resolved": "experiments/results/exp47a_kinematics_cache.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE, '..', 'results', 'exp47a_kinematics_cache.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp47c_p2_loop_prediction.py",
+   "line": 224,
+   "resolved": "experiments/results/exp47c_p2_loop_prediction.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(root, 'results', 'exp47c_p2_loop_prediction.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp50v4_order_null.py",
+   "line": 115,
+   "resolved": "experiments/results/exp50v4_order_null_qwen.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE, '..', 'results', 'exp50v4_order_null_qwen.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp52a_perturb_axis.py",
+   "line": 138,
+   "resolved": "experiments/results/exp45_flat_rows.pt",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(root, 'results', 'exp45_flat_rows.pt')"
+  },
+  {
+   "file": "experiments/e51_60/exp52c_symptom.py",
+   "line": 78,
+   "resolved": "experiments/results/exp45_flat_rows.pt",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(root, 'results', 'exp45_flat_rows.pt')"
+  },
+  {
+   "file": "experiments/e51_60/exp52e_amp_axis.py",
+   "line": 120,
+   "resolved": "experiments/results/exp45_flat_rows.pt",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "_os.path.join(root, 'results', 'exp45_flat_rows.pt')"
+  },
+  {
+   "file": "experiments/e51_60/exp52g_grid_artifact_check.py",
+   "line": 43,
+   "resolved": "experiments/models/Qwen3.5-4B",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE2, '..', 'models', 'Qwen3.5-4B')"
+  },
+  {
+   "file": "experiments/e51_60/exp52g_grid_artifact_check.py",
+   "line": 44,
+   "resolved": "experiments/results/e52_4b/exp47b_gen_kinematics.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE2, '..', 'results', 'e52_4b', 'exp47b_gen_kinematics.npz')"
+  },
+  {
+   "file": "experiments/e51_60/exp52g_grid_artifact_check.py",
+   "line": 45,
+   "resolved": "experiments/results/e52_4b/exp47b_gen_kinematics.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_HERE2, '..', 'results', 'e52_4b', 'exp47b_gen_kinematics.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp53c_gamma_fit.py",
+   "line": 15,
+   "resolved": "experiments/results/exp53b_servo.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'results', 'exp53b_servo.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp53c_gamma_fit.py",
+   "line": 108,
+   "resolved": "experiments/results/exp53c_gammafit.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'results', 'exp53c_gammafit.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp56_look.py",
+   "line": 132,
+   "resolved": "results/e56/e56_look.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT, 'e56_look.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp57_perdomain.py",
+   "line": 78,
+   "resolved": "experiments/results/exp57_perdomain.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp57_perdomain.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp58_shared_basis.py",
+   "line": 96,
+   "resolved": "experiments/results/exp58_shared_basis.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp58_shared_basis.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp59_perdoc_osc.py",
+   "line": 137,
+   "resolved": "experiments/results/exp59_perdoc_osc.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp59_perdoc_osc.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp59b_perdoc.py",
+   "line": 163,
+   "resolved": "experiments/results/exp59b.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp59b.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp59c.py",
+   "line": 217,
+   "resolved": "experiments/results/exp59c.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp59c.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60.py",
+   "line": 190,
+   "resolved": "experiments/results/exp60.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp60.json')"
+  },
+  {
+   "file": "experiments/e61_70/exp61_lfm3.py",
+   "line": 18,
+   "resolved": "experiments/results/exp48b_lfm3_gen_kinematics.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp48b_lfm3_gen_kinematics.json')"
+  },
+  {
+   "file": "experiments/e61_70/exp61_lfm3.py",
+   "line": 19,
+   "resolved": "experiments/results/exp48b_lfm3_gen_kinematics.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp48b_lfm3_gen_kinematics.npz')"
+  },
+  {
+   "file": "experiments/e61_70/exp61_lfm3.py",
+   "line": 144,
+   "resolved": "experiments/results/exp61_lfm3.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(HERE, '..', 'results', 'exp61_lfm3.json')"
+  },
+  {
+   "file": "experiments/at2/AT2.py",
+   "line": 24,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'results')"
+  },
+  {
+   "file": "experiments/at2/AT2.py",
+   "line": 79,
+   "resolved": "experiments/.trackio",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, '.trackio')"
+  },
+  {
+   "file": "experiments/at8/AT8_2b.py",
+   "line": 151,
+   "resolved": "results/AT8/AT8_2b.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT8_2b.json')"
+  },
+  {
+   "file": "experiments/at8/AT8_2b.py",
+   "line": 153,
+   "resolved": "results/AT8/AT8_2b_manifest.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT8_2b_manifest.json')"
+  },
+  {
+   "file": "experiments/at8/AT8_2b.py",
+   "line": 154,
+   "resolved": "results/AT8/AT8_2b_series.npz",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT8_2b_series.npz')"
+  },
+  {
+   "file": "experiments/at8/AT8_2b.py",
+   "line": 156,
+   "resolved": "results/AT8/AT8_2b_decision.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT8_2b_decision.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp38d_holonomy_spectrum.py",
+   "line": 178,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(REPO, 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp38e_true_J_L23.py",
+   "line": 79,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(_HERE, '..', 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp38e_true_J_L23.py",
+   "line": 128,
+   "resolved": "experiments/e31_40/x.py",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "Path(__file__)"
+  },
+  {
+   "file": "experiments/e31_40/exp39a_u_obs_rank.py",
+   "line": 458,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(REPO, 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp39c_pre_kl_surgery.py",
+   "line": 237,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(REPO, 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp39d_l23_training.py",
+   "line": 478,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(REPO, 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp40_0_gate.py",
+   "line": 166,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(HERE, '..', 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp40_1_audit.py",
+   "line": 61,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(REPO, 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp40_1_t4a.py",
+   "line": 270,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp40_5_kinetic.py",
+   "line": 69,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp40plus_doc_check.py",
+   "line": 38,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'results')"
+  },
+  {
+   "file": "experiments/e31_40/exp40plus_doc_check.py",
+   "line": 39,
+   "resolved": "experiments/docs",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'docs')"
+  },
+  {
+   "file": "experiments/e41_50/exp47b_gen_kinematics.py",
+   "line": 303,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(_HERE, '..', 'results')"
+  },
+  {
+   "file": "experiments/e41_50/exp48a_lfm3_kinematics.py",
+   "line": 116,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(_HERE, '..', 'results')"
+  },
+  {
+   "file": "experiments/e41_50/exp48b_lfm3_gen_kinematics.py",
+   "line": 265,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(_HERE, '..', 'results')"
+  },
+  {
+   "file": "experiments/e41_50/exp50v3_curvature.py",
+   "line": 347,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(root, 'results')"
+  },
+  {
+   "file": "experiments/e51_60/exp55_jrecal.py",
+   "line": 57,
+   "resolved": "results/exp55_sbi_gate.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'results', 'exp55_sbi_gate.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp55_jrecal.py",
+   "line": 96,
+   "resolved": "results/exp55_jrecal.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'results', 'exp55_jrecal.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp55_stage0.py",
+   "line": 71,
+   "resolved": "results/exp55_stage0.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(HERE, '..', '..', 'results', 'exp55_stage0.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp55_stage1b.py",
+   "line": 124,
+   "resolved": "results/exp55_stage1b.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(HERE, '..', '..', 'results', 'exp55_stage1b.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp56_look.py",
+   "line": 24,
+   "resolved": "results/e56",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(HERE, '..', '..', 'results', 'e56')"
+  },
+  {
+   "file": "experiments/e51_60/exp56_look.py",
+   "line": 38,
+   "resolved": "results/exp55_stage0.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(HERE, '..', '..', 'results', 'exp55_stage0.json')"
+  }
+ ]
+}
