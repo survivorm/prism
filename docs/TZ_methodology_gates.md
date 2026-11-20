@@ -47,7 +47,7 @@ G1 ≤60 / G2 ≤10 / G6 ≤60, агрегатор ≤180 с вместо выд
 |---|---|---|
 | тестов собирается по `experiments/` | `pytest experiments/ --collect-only -q` | **11 тестов, RC=0, 0 error/warning**, 9.5–14.2 с (дрейф машины) |
 | файлов с тестовыми именами | `find experiments -name "test_*.py" -o -name "*_tests.py"` | **6** (4 в `at8`, `at0/at0_7_tests.py`, `e31_40/test_exp39f_math.py`) |
-| из них мертвы | см. ниже | **2** |
+| из них мертвы | `pytest <file> --collect-only -q` поимённо | **5 из 6** (r2c: первая цифра «2» была получена сбором каталога, а сбор каталога молча не видит файлы без тестов; гейт G1 обходит по имени и нашёл ещё `at8/test_at8_2_{cells,resume,verdict}.py` — в них **ноль** `def test_` и ноль `def main`, только module-level код) |
 | `at0/at0_7_tests.py` | `pytest experiments/at0/at0_7_tests.py` | `ModuleNotFoundError: No module named 'AT0_6_spectrum'`, **RC=2** (`1 error during collection`); pytest не видит его и при сборе каталога — `*_tests.py` не матчится `python_files` |
 | `e31_40/test_exp39f_math.py` | `pytest … --collect-only -q` | **`no tests collected`, RC=5**: в файле `def main()` + `if __name__`, ни одного `def test`; импортирует `torch` (сбор одного файла 8.8 с) |
 | `tests/` | `pytest tests/ --collect-only -q` | **363 теста, 26 с** — в бюджет G1 **не входит** (см. §3) |
