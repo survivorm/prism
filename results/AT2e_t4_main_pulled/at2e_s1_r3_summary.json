@@ -19,6 +19,11 @@
    "c14": "chat L12 t32=NOT_FOUND",
    "c15": "chat L12 t96=SHORT_HORIZON_ONLY"
   },
+  "n_recovery_cells": 0,
+  "global": "NOT_RESOLVED",
+  "final": "NOT_RESOLVED",
+  "global_recovery": null,
+  "global_under_r6_tree": "SUB_THRESHOLD_FOUND",
   "n_found": 2,
   "n_sho": 1,
   "n_found_sho": 3,
@@ -32,9 +37,6 @@
   "n_not_found": 2,
   "n_ok8": 9,
   "pos_spec_n": 12,
-  "global": "NOT_RESOLVED",
-  "final": "NOT_RESOLVED",
-  "global_under_r6_tree": "SUB_THRESHOLD_FOUND",
   "gaps_to_labels": {
    "SCRATCHPAD_CANDIDATE": {
     "n_found_sho": 1,
@@ -90,55 +92,60 @@
   "recovery_fallback_check": {
    "c1": {
     "fail_reason": "kappa",
-    "unresolved_k": [
+    "flagged_k": [
      8
     ],
     "target_under_old_rule": true,
     "target_under_new_rule_M2": true,
+    "target_under_new_rule_M2_is_upper_bound": true,
     "primary_margin_median_qt_alo_over_floor": 2659.917913133009,
     "recovery_margin_at_a_lo_1e-4": 295.54643479255657,
     "would_trigger_fallback_100_at_recovery": false
    },
    "c9": {
     "fail_reason": "kappa",
-    "unresolved_k": [
+    "flagged_k": [
      7,
      8
     ],
     "target_under_old_rule": true,
     "target_under_new_rule_M2": true,
+    "target_under_new_rule_M2_is_upper_bound": true,
     "primary_margin_median_qt_alo_over_floor": 2495.9721152519182,
     "recovery_margin_at_a_lo_1e-4": 277.33023502799097,
     "would_trigger_fallback_100_at_recovery": false
    },
    "c12": {
     "fail_reason": "kappa",
-    "unresolved_k": [
+    "flagged_k": [
      7
     ],
     "target_under_old_rule": true,
     "target_under_new_rule_M2": false,
+    "target_under_new_rule_M2_is_upper_bound": true,
     "primary_margin_median_qt_alo_over_floor": 925.6011574390226,
     "recovery_margin_at_a_lo_1e-4": 102.8445730487803,
     "would_trigger_fallback_100_at_recovery": false
    },
    "c13": {
     "fail_reason": "kappa",
-    "unresolved_k": [
+    "flagged_k": [
      5,
      8
     ],
     "target_under_old_rule": true,
     "target_under_new_rule_M2": true,
+    "target_under_new_rule_M2_is_upper_bound": true,
     "primary_margin_median_qt_alo_over_floor": 399.0224578147625,
     "recovery_margin_at_a_lo_1e-4": 44.33582864608473,
     "would_trigger_fallback_100_at_recovery": true
    },
    "c6": {
     "fail_reason": "L1L2",
-    "unresolved_k": [],
+    "flagged_k": [],
     "target_under_old_rule": true,
     "target_under_new_rule_M2": true,
+    "target_under_new_rule_M2_is_upper_bound": true,
     "primary_margin_median_qt_alo_over_floor": 251.84737797750813,
     "recovery_margin_at_a_lo_1e-4": 27.98304199750091,
     "would_trigger_fallback_100_at_recovery": true
@@ -163,7 +170,19 @@
   "tprime_gain_margin": 2.9965679157039156,
   "tprime_gain_margin_components": {
    "min_full_gain_tprime": 22.765261208659332,
-   "max_needed_tprime": 7.597111712154072
+   "min_full_gain_tprime_cells": [
+    "c1"
+   ],
+   "min_full_gain_tprime_docs": [
+    "wiki"
+   ],
+   "max_needed_tprime": 7.597111712154072,
+   "max_needed_tprime_cells": [
+    "c2"
+   ],
+   "max_needed_tprime_docs": [
+    "math"
+   ]
   }
  },
  "linear_gate_decomp": {

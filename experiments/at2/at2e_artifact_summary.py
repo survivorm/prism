@@ -28,7 +28,15 @@ N2 — единый критерий verify["mode"], явные скобки, м
      первичный a_lo=3e-4; recovery a_lo=1e-4 ⇒ margin/9 — кто бы умер),
      kappa_scope_counterfactual (р9 §4: пересчёт вердиктов по M2-окну из
      того же артефакта), tprime_gain_margin (мин полный gain_tprime / макс
-     needed_tprime — 2.997 из r7 как машина-поле).
+     needed_tprime — 2.997 из r7 как машина-поле);
+  6. r10 R2/R3: ВСЕ диагностические циклы (mono, recovery_fallback_check,
+     kappa_scope_counterfactual, tprime_gain_margin, ascent_not_converged_n,
+     tprime_early_stop_n, per_cell, linear_gate_decomp, ascent_table) —
+     primary-only (cells_p): r3 no-op, r4 — recovery-записи не попадают в
+     поля с primary-семантикой; n_recovery_cells + global_recovery —
+     машинная видимость фильтра. unresolved_k → flagged_k (R3: «unresolved»
+     — классификация, которой нет без S_floor; статус целей — верхняя
+     граница, не утверждение).
 
 Использование:
     python3 experiments/at2/at2e_artifact_summary.py <путь к артефакту.json>
@@ -119,6 +127,7 @@ def run_summary(d):
     # (amplitude_grid: recovery, r4) учитываются своим первичным исходом.
     # r3: no-op (поля нет) — r4: исключение recovery-записей из счётчиков.
     cells_p = [c for c in cells if c.get("amplitude_grid", "primary") == "primary"]
+    n_recovery = len(cells) - len(cells_p)  # r10 R2: фильтр видим машинно
     vs = [c["verdict"] for c in cells_p]
     found = [c for c in cells_p if c["verdict"] == "FOUND"]
     sho = [c for c in cells_p if c["verdict"] == "SHORT_HORIZON_ONLY"]
@@ -174,7 +183,7 @@ def run_summary(d):
     # early-stop клетки (все blocked или rank1_K1=0) — тоже только добавляет.
     mono = {"robust_found_sho": [], "pg_upper_bound_gap": [],
             "t_ascent_early_stop_cells": []}
-    for c in cells:
+    for c in cells_p:  # r10 R2: primary-only
         s1d = c.get("stage1d")
         a = c["ascent"]
         if a["ascent_converged"] and len(a["traj"]) == 0:
@@ -197,22 +206,27 @@ def run_summary(d):
     # normal; below_floor/denom-провалы (c3/c11) в recovery не входят (р7).
     # M2: внеоконный κ больше не блокирует — c12 перестаёт быть целью.
     rfc = {}
-    for c in cells:
+    for c in cells_p:  # r10 R2: recovery-цели — первичные записи
         v = c["verify"]
         lin = v["linear"]
         if lin["ok"] or v["mode"] == "denom_below_floor":
             continue
         kfl = lin.get("kappa_flags_hi") or lin.get("kappa_flags") or {}
-        unres = {int(k) for k, f in kfl.items() if f}
-        in_win = bool(unres & KAPPA_WINDOW)
+        flagged = {int(k) for k, f in kfl.items() if f}
+        in_win = bool(flagged & KAPPA_WINDOW)
         l12 = (lin["L1"] is not None and lin["L1"] <= L1_MAX
                and L2_MIN <= lin["L2"] <= L2_MAX)
         m = c["b0_qt_alo_median"] / c["floor"]["used"]
         rfc[f"c{c['cell_id']}"] = {
             "fail_reason": "L1L2" if not l12 else "kappa",
-            "unresolved_k": sorted(unres),
+            # r10 R3: flagged_k — НЕ «unresolved»: без S_floor (r3-артефакт)
+            # флаг ≠ «нерешиемый»; в r4 S_floor решит часть флагов, но клетка
+            # останется recovery-целью по genuine-нелинейности — множество
+            # целей не меняется. Статус — верхняя граница, не утверждение.
+            "flagged_k": sorted(flagged),
             "target_under_old_rule": True,
             "target_under_new_rule_M2": bool(in_win or not l12),
+            "target_under_new_rule_M2_is_upper_bound": True,
             "primary_margin_median_qt_alo_over_floor": m,
             "recovery_margin_at_a_lo_1e-4": m * RECOVERY_ALO2,
             "would_trigger_fallback_100_at_recovery":
@@ -222,12 +236,12 @@ def run_summary(d):
     # сверка: _verdict_m2 должен воспроизвести вердикт каждой клетки, кроме
     # тех, что реально меняются (r3: только c12)
     ks_changes = {}
-    for c in cells:
+    for c in cells_p:  # r10 R2: primary-only
         v_m2 = _verdict_m2(c)
         if v_m2 != c["verdict"]:
             ks_changes[f"c{c['cell_id']}"] = {"old": c["verdict"], "new": v_m2}
     # счётчики под M2-правилом (р9 §4: n_pg 4→5, n_nt 7→6, headline не меняет)
-    ks_m2 = [_verdict_m2(c) for c in cells]
+    ks_m2 = [_verdict_m2(c) for c in cells_p]
     ks_counts = {
         "n_pg": sum(1 for v in ks_m2 if v == "POSITION_GENERIC"),
         "n_nt": sum(1 for v in ks_m2 if v == "NOT_TESTABLE"),
@@ -235,8 +249,8 @@ def run_summary(d):
         "n_sho": sum(1 for v in ks_m2 if v == "SHORT_HORIZON_ONLY"),
     }
     # р9 п.5: tprime_gain_margin = min(полный gain_tprime) / max(needed)
-    full_gains, needed = [], []
-    for c in cells:
+    full_gains, needed = [], []  # (doc, cell_id, value) — r10 нитка 3: docs
+    for c in cells_p:  # r10 R2: primary-only
         s1d = c.get("stage1d")
         if s1d is None:
             continue
@@ -244,28 +258,32 @@ def run_summary(d):
         a_p = A_HI_REL * c["hnorm_prime"]
         lam_v0_tp = max(_lam_k1(b, a_p, c["eps0"])
                         for b in s1d["probe_b0_tprime"])
-        needed.append(s1d["gap"] / GAP_MARGIN)
+        needed.append((c["doc"], c["cell_id"], s1d["gap"] / GAP_MARGIN))
         if not (atp["ascent_converged"] and len(atp["traj"]) == 0):
-            full_gains.append(atp["lambda_vstar_tprime"] / lam_v0_tp)
-    min_full = min(full_gains)
-    max_needed = max(needed)
+            full_gains.append((c["doc"], c["cell_id"],
+                               atp["lambda_vstar_tprime"] / lam_v0_tp))
+    min_full = min(v for _, _, v in full_gains)
+    max_needed = max(v for _, _, v in needed)
     tpm = min_full / max_needed
     return {"per_cell": {f"c{c['cell_id']}": f"{c['doc']} L{c['L']} t{c['t']}={c['verdict']}"
-                         for c in cells},
+                         for c in cells_p},  # r10 R2: primary-only (r4: ключи-дублики)
+            "n_recovery_cells": n_recovery,
+            "global": d["verdicts"]["global"], "final": d["verdicts"]["final"],
+            # r9 N3: recovery-исход — отдельный exploratory-счёт (r4)
+            "global_recovery": d["verdicts"].get("global_recovery"),
+            "global_under_r6_tree": g_r6,
             "n_found": len(found), "n_sho": len(sho), "n_found_sho": n_found_sho,
             "docs_found": docs_found, "n_pg": n_pg, "n_red": n_red,
             "n_not_testable": n_nt, "n_not_found": n_nf, "n_ok8": n_ok8,
             "pos_spec_n": n_ps,
-            "global": d["verdicts"]["global"], "final": d["verdicts"]["final"],
-            "global_under_r6_tree": g_r6,
             "gaps_to_labels": gaps,
             "tprime_fix_monotonicity": mono,
             "ascent_not_converged_n": sum(
-                1 for c in cells if not c["ascent"]["ascent_converged"]),
+                1 for c in cells_p if not c["ascent"]["ascent_converged"]),  # r10 R2
             # r3: точные early_stop_iter t'-подъёма не в артефакте (N3);
             # conv=True И n_traj==0 — единственный наблюдаемый след стопа
             "tprime_early_stop_n": sum(
-                1 for c in cells if c.get("stage1d")
+                1 for c in cells_p if c.get("stage1d")  # r10 R2
                 and c["stage1d"]["ascent_tprime"].get("ascent_converged")
                 and len(c["stage1d"]["ascent_tprime"]["traj"]) == 0),
             # ---- r9 N1: recovery-сетка × fallback-правило ----
@@ -287,15 +305,29 @@ def run_summary(d):
             },
             # ---- р9 п.5: tprime_gain_margin (2.997 из r7 §2.2 как поле) ----
             "tprime_gain_margin": tpm,
-            "tprime_gain_margin_components": {"min_full_gain_tprime": min_full,
-                                               "max_needed_tprime": max_needed}}
+            "tprime_gain_margin_components": {
+                "min_full_gain_tprime": min_full,
+                # r10 нитка 3: экстраполяция wiki видима машинно, не только
+                # в прозе (оговорка M4 из TZ)
+                "min_full_gain_tprime_cells": [
+                    f"c{ci}" for d_, ci, v in full_gains if v == min_full],
+                "min_full_gain_tprime_docs": sorted(
+                    {d_ for d_, _, v in full_gains if v == min_full}),
+                "max_needed_tprime": max_needed,
+                "max_needed_tprime_cells": [
+                    f"c{ci}" for d_, ci, v in needed if v == max_needed],
+                "max_needed_tprime_docs": sorted(
+                    {d_ for d_, _, v in needed if v == max_needed}),
+            }}
 
 
 def linear_gate_decomp(d):
-    """По каждому NOT_TESTABLE: какой под-гейт упал (единый критерий:
-    verify["mode"]) + κ-статистики по всем k (сырые)."""
+    """По каждому NOT_TESTABLE (primary, r10 R2): какой под-гейт упал
+    (единый критерий: verify["mode"]) + κ-статистики по всем k (сырые)."""
     out = {}
     for c in d["cells"]:
+        if c.get("amplitude_grid", "primary") != "primary":  # r10 R2
+            continue
         if c["verdict"] != "NOT_TESTABLE":
             continue
         v = c["verify"]
@@ -359,9 +391,12 @@ def linear_gate_decomp(d):
 
 
 def ascent_table(d):
-    """16 клеток: подъёмы (t и t') + выигрыши + pencil-сертификат + 1d."""
+    """16 клеток (primary, r10 R2): подъёмы (t и t') + выигрыши + pencil-
+    сертификат + 1d."""
     rows = []
     for c in d["cells"]:
+        if c.get("amplitude_grid", "primary") != "primary":  # r10 R2
+            continue
         a = c["ascent"]
         g, it, conv, g_at = _stop_info(a)
         a2 = c["a_hi"] ** 2
