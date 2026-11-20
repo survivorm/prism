@@ -24,7 +24,12 @@ import ast
 import json
 import os
 
-FILE = "\x00FILE"          # маркер каталога файла; \x00 исключает случайное совпадение с текстом
+# Символический корень репо. Раньше здесь был один компонент (\x00FILE), и вложенный
+# `dirname` терялся: os.path.dirname("\x00FILE") == "" — файлы вида
+# `_ROOT = dirname(dirname(abspath(__file__)))` выпадали из скана целиком (нашёл ревьюер r2).
+# Теперь `__file__` подставляется как <SENT>/<путь файла от корня репо>, поэтому dirname/join
+# работают по настоящей глубине, а разрешение = срезать SENT.
+SENT = "/\x00REPO"
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 OUT = os.path.join(ROOT, "results", "_audit_checks", "paths_sym_scan.json")
 
@@ -35,7 +40,7 @@ def ev(node, env):
         return node.value
     if isinstance(node, ast.Name):
         if node.id == "__file__":
-            return FILE + "/x.py"
+            return env["__file__"]                     # подставляется scan_file (см. SENT)
         return env.get(node.id)
     if isinstance(node, ast.Attribute):
         if node.attr in ("parent", "parents"):
@@ -58,6 +63,8 @@ def ev(node, env):
             return args[0]
         if fname.endswith("join") and args:
             return os.path.join(*args)
+        if fname.endswith("pardir") or fname.endswith("curdir"):
+            return None
         if (fname.endswith("resolve") or fname.endswith("absolute")) and not args:
             return ev(node.func.value, env)          # Path(__file__).resolve()
         if fname.endswith("Path") and len(args) == 1:
@@ -65,8 +72,8 @@ def ev(node, env):
     return None
 
 
-def build_env(tree):
-    env = {}
+def build_env(tree, seed=None):
+    env = dict(seed or {})
     for _ in range(3):                                # имена могут быть объявлены ниже
         for node in ast.walk(tree):
             if not isinstance(node, ast.Assign) or len(node.targets) != 1:
@@ -83,13 +90,14 @@ def build_env(tree):
 def scan_file(path):
     rel = os.path.relpath(path, ROOT)
     if os.path.abspath(path) == os.path.abspath(__file__):
-        return None, []                               # не проверять себя: собственные OUT/FILE-литералы
+        return None, []                               # не проверять себя: собственные OUT/SENT-литералы
     try:
         tree = ast.parse(open(path, encoding="utf-8", errors="ignore").read())
     except SyntaxError:
         return None, []
-    env = build_env(tree)
-    if not any(FILE in v for v in env.values()):
+    seed = {"__file__": os.path.join(SENT, rel)}
+    env = build_env(tree, seed)
+    if not any(SENT in v for v in env.values()):
         return None, []                               # файл без алиаса от __file__ — не наш подкласс
     out = []
     for node in ast.walk(tree):
@@ -99,12 +107,12 @@ def scan_file(path):
         if not (fname.endswith("join") or fname.endswith("Path")):
             continue
         args = [ev(a, env) for a in node.args]
-        if any(a is None for a in args) or not any(FILE in a for a in args):
+        if any(a is None for a in args) or not any(SENT in a for a in args):
             continue
-        raw = os.path.join(*args)
-        if not raw.startswith(FILE):
-            continue
-        cand = os.path.normpath(os.path.join(os.path.dirname(path), raw[len(FILE) + 1:]))
+        raw = os.path.normpath(os.path.join(*args))
+        if not (raw == SENT or raw.startswith(SENT + "/")):
+            continue                              # ушло выше корня репо — не разрешаем
+        cand = os.path.normpath(os.path.join(ROOT, raw[len(SENT) + 1:] or "."))
         is_dir = os.path.isdir(os.path.dirname(cand))
         out.append({"file": rel, "line": node.lineno,
                     "resolved": os.path.relpath(cand, ROOT),

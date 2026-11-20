@@ -1,19 +1,619 @@
 {
- "alias_files": 121,
- "refs": 295,
- "broken_refs": 92,
- "broken_files": 54,
+ "alias_files": 352,
+ "refs": 566,
+ "broken_refs": 226,
+ "broken_files": 86,
  "by_kind": {
   "file_missing": {
-   "refs": 28,
-   "files": 20
+   "refs": 42,
+   "files": 31
   },
   "dir_missing": {
-   "refs": 64,
-   "files": 43
+   "refs": 184,
+   "files": 69
   }
  },
  "broken": [
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 66,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 78,
+   "resolved": "experiments/results/AT0",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0')"
+  },
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 79,
+   "resolved": "experiments/results/AT0/store",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'store')"
+  },
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 80,
+   "resolved": "experiments/results/AT0/AT0_3_AREA.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_3_AREA.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 81,
+   "resolved": "experiments/results/AT0/AT0_3_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_3_manifest.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 82,
+   "resolved": "experiments/results/AT0/AT0_3_run.log",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_3_run.log')"
+  },
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 110,
+   "resolved": "experiments/.hf_cache/hub/models--Qwen--Qwen3.5-0.8B",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, '.hf_cache/hub/models--Qwen--Qwen3.5-0.8B')"
+  },
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 119,
+   "resolved": "experiments/.hf_cache/hub/models--Qwen--Qwen3.5-0.8B/snapshots/*/config.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(MODEL_CONFIG, 'snapshots', '*', 'config.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 1025,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_mix.py",
+   "line": 66,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_mix.py",
+   "line": 76,
+   "resolved": "experiments/results/e64/tpu_v8/P1_own.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu_v8/P1_own.npz')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_mix.py",
+   "line": 77,
+   "resolved": "experiments/results/AT0",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_mix.py",
+   "line": 78,
+   "resolved": "experiments/results/AT0/store",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'store')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_mix.py",
+   "line": 79,
+   "resolved": "experiments/results/AT0/AT0_4_MIX.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_4_MIX.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_mix.py",
+   "line": 80,
+   "resolved": "experiments/results/AT0/AT0_4_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_4_manifest.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_mix.py",
+   "line": 81,
+   "resolved": "experiments/results/AT0/AT0_4_run.log",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_4_run.log')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_mix.py",
+   "line": 82,
+   "resolved": "experiments/results/AT0/AT0_4_checkpoint.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_4_checkpoint.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_mix.py",
+   "line": 963,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_rebuild_r5.py",
+   "line": 64,
+   "resolved": "experiments/results/AT0",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results', 'AT0')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_rebuild_r5.py",
+   "line": 65,
+   "resolved": "experiments/results/AT0/store",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'store')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_rebuild_r5.py",
+   "line": 66,
+   "resolved": "experiments/results/AT0/store/e852a4bd88c92649.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(STORE_DIR, 'e852a4bd88c92649.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_rebuild_r5.py",
+   "line": 68,
+   "resolved": "experiments/results/AT0/AT0_4_MIX.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_4_MIX.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_rebuild_r5.py",
+   "line": 69,
+   "resolved": "experiments/results/AT0/AT0_4_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_4_manifest.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_rebuild_r5.py",
+   "line": 70,
+   "resolved": "experiments/results/AT0/AT0_4_rebuild_r5.log",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_4_rebuild_r5.log')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_rebuild_r5.py",
+   "line": 96,
+   "resolved": "experiments/experiments/at0/AT0_4_mix.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'experiments', 'at0', 'AT0_4_mix.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_rebuild_r5.py",
+   "line": 106,
+   "resolved": "experiments/experiments/at0/AT0_4_mix.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'experiments', 'at0', 'AT0_4_mix.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_4_rebuild_r5.py",
+   "line": 375,
+   "resolved": "experiments/experiments/at0/AT0_4_mix.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'experiments', 'at0', 'AT0_4_mix.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 185,
+   "resolved": "experiments/results/AT0/T0_ACCOUNTING.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0/T0_ACCOUNTING.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 186,
+   "resolved": "experiments/results/AT0/store/23281c64cc418ff1.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0/store/23281c64cc418ff1.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 188,
+   "resolved": "experiments/results/AT0",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 189,
+   "resolved": "experiments/results/AT0/store",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'store')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 190,
+   "resolved": "experiments/results/AT0/AT0_5_run.log",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_5_run.log')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 191,
+   "resolved": "experiments/results/AT0/AT0_5_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_5_manifest.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 192,
+   "resolved": "experiments/results/AT0/AT0_5_GENCHECK.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_5_GENCHECK.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 1000,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 107,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 117,
+   "resolved": "experiments/results/AT0/AT0_3_AREA.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0/AT0_3_AREA.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 143,
+   "resolved": "experiments/results/AT0",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results', 'AT0')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 144,
+   "resolved": "experiments/results/AT0/store",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'store')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 773,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 874,
+   "resolved": "experiments/results/AT0/AT0_6_SPECTRUM.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_6_SPECTRUM.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 879,
+   "resolved": "experiments/results/AT0/archive/v2.2",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'archive', 'v2.2')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 981,
+   "resolved": "experiments/results/AT0/AT0_6_SPECTRUM.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_6_SPECTRUM.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 1001,
+   "resolved": "experiments/results/AT0/AT0_6_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_6_manifest.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_6_spectrum.py",
+   "line": 1005,
+   "resolved": "experiments/results/AT0/AT0_6_run.log",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_6_run.log')"
+  },
+  {
+   "file": "experiments/at0/AT0_7_loop.py",
+   "line": 87,
+   "resolved": "experiments/experiments/at06_v22_pinned.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'experiments', 'at06_v22_pinned.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_7_loop.py",
+   "line": 101,
+   "resolved": "experiments/results/AT0",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results', 'AT0')"
+  },
+  {
+   "file": "experiments/at0/AT0_7_loop.py",
+   "line": 102,
+   "resolved": "experiments/results/AT0/store",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'store')"
+  },
+  {
+   "file": "experiments/at0/AT0_7_loop.py",
+   "line": 103,
+   "resolved": "experiments/results/AT0/AT0_7_LOOP.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_7_LOOP.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_7_loop.py",
+   "line": 104,
+   "resolved": "experiments/results/AT0/AT0_7_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_7_manifest.json')"
+  },
+  {
+   "file": "experiments/at0/AT0_7_loop.py",
+   "line": 105,
+   "resolved": "experiments/results/AT0/AT0_7_run.log",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_7_run.log')"
+  },
+  {
+   "file": "experiments/at0/AT0_7_loop.py",
+   "line": 322,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/at06_v22_pinned.py",
+   "line": 93,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/at06_v22_pinned.py",
+   "line": 103,
+   "resolved": "experiments/results/AT0/AT0_3_AREA.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0/AT0_3_AREA.json')"
+  },
+  {
+   "file": "experiments/at0/at06_v22_pinned.py",
+   "line": 127,
+   "resolved": "experiments/results/AT0",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results', 'AT0')"
+  },
+  {
+   "file": "experiments/at0/at06_v22_pinned.py",
+   "line": 128,
+   "resolved": "experiments/results/AT0/store",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'store')"
+  },
+  {
+   "file": "experiments/at0/at06_v22_pinned.py",
+   "line": 527,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/at06_v22_pinned.py",
+   "line": 664,
+   "resolved": "experiments/results/AT0/AT0_6_SPECTRUM.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_6_SPECTRUM.json')"
+  },
+  {
+   "file": "experiments/at0/at06_v22_pinned.py",
+   "line": 684,
+   "resolved": "experiments/results/AT0/AT0_6_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_6_manifest.json')"
+  },
+  {
+   "file": "experiments/at0/at06_v22_pinned.py",
+   "line": 688,
+   "resolved": "experiments/results/AT0/AT0_6_run.log",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_6_run.log')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 57,
+   "resolved": "experiments/prism/field.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'prism/field.py')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 67,
+   "resolved": "experiments/results/AT0/store/claim_r5_d4a4b101.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0/store/claim_r5_d4a4b101.json')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 68,
+   "resolved": "experiments/results/AT0/store/claim_r6_b0f74312.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0/store/claim_r6_b0f74312.json')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 69,
+   "resolved": "experiments/results/AT0/store/23281c64cc418ff1.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0/store/23281c64cc418ff1.json')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 71,
+   "resolved": "experiments/results/e64/tpu_v8/P1_own.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu_v8/P1_own.npz')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 72,
+   "resolved": "experiments/results/e64/tpu_v8/P2_corpus.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu_v8/P2_corpus.npz')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 73,
+   "resolved": "experiments/results/e64/tpu_v8/P1_own_meta.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu_v8/P1_own_meta.json')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 74,
+   "resolved": "experiments/results/e64/tpu_v8/P2_corpus_meta.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu_v8/P2_corpus_meta.json')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 75,
+   "resolved": "experiments/results/AT0",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 76,
+   "resolved": "experiments/results/AT0/T0_ACCOUNTING.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'T0_ACCOUNTING.json')"
+  },
+  {
+   "file": "experiments/at0/at0_1_r7_annotation.py",
+   "line": 77,
+   "resolved": "experiments/results/AT0/AT0_1_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_1_manifest.json')"
+  },
+  {
+   "file": "experiments/at0/at0_1_tpu_dev_recompute.py",
+   "line": 23,
+   "resolved": "experiments/results/e64/tpu_v8/P1_own.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu_v8/P1_own.npz')"
+  },
+  {
+   "file": "experiments/at0/at0_1_tpu_dev_recompute.py",
+   "line": 24,
+   "resolved": "experiments/results/e64/tpu_v8/P2_corpus.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu_v8/P2_corpus.npz')"
+  },
+  {
+   "file": "experiments/at0/at0_1_tpu_dev_recompute.py",
+   "line": 25,
+   "resolved": "experiments/results/AT0/store/23281c64cc418ff1.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0/store/23281c64cc418ff1.json')"
+  },
+  {
+   "file": "experiments/at0/at0_1_tpu_dev_recompute.py",
+   "line": 26,
+   "resolved": "experiments/results/AT0/T0_ACCOUNTING.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/AT0/T0_ACCOUNTING.json')"
+  },
   {
    "file": "experiments/at2/AT2.py",
    "line": 25,
@@ -37,6 +637,78 @@
    "exists": false,
    "kind": "dir_missing",
    "expr": "os.path.join(ROOT, 'prism', 'field.py')"
+  },
+  {
+   "file": "experiments/at8/AT8_1_r2_reanalysis.py",
+   "line": 77,
+   "resolved": "experiments/results/AT8/AT8_1_THRESHOLD.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_ROOT, 'results', 'AT8', 'AT8_1_THRESHOLD.json')"
+  },
+  {
+   "file": "experiments/at8/AT8_1_r2_reanalysis.py",
+   "line": 78,
+   "resolved": "experiments/results/AT8/store/018c3dac90eb1bba.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_ROOT, 'results', 'AT8', 'store', '018c3dac90eb1bba.json')"
+  },
+  {
+   "file": "experiments/at8/AT8_1_r2_reanalysis.py",
+   "line": 79,
+   "resolved": "experiments/results/AT8/AT8_1_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_ROOT, 'results', 'AT8', 'AT8_1_manifest.json')"
+  },
+  {
+   "file": "experiments/at8/AT8_1_r2_reanalysis.py",
+   "line": 80,
+   "resolved": "experiments/results/AT8",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_ROOT, 'results', 'AT8')"
+  },
+  {
+   "file": "experiments/at8/AT8_1_r2_reanalysis.py",
+   "line": 81,
+   "resolved": "experiments/results/AT8/AT8_1_THRESHOLD_v2.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT8_1_THRESHOLD_v2.json')"
+  },
+  {
+   "file": "experiments/at8/AT8_1_r2_reanalysis.py",
+   "line": 82,
+   "resolved": "experiments/results/AT8/AT8_1_v2_manifest.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT8_1_v2_manifest.json')"
+  },
+  {
+   "file": "experiments/at8/AT8_1_r2_reanalysis.py",
+   "line": 83,
+   "resolved": "experiments/results/AT8/AT8_1_v2_run.log",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT8_1_v2_run.log')"
+  },
+  {
+   "file": "experiments/at8/AT8_1_r2_reanalysis.py",
+   "line": 391,
+   "resolved": "experiments/experiments/at8/AT8_1_r2_reanalysis.py",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_ROOT, 'experiments', 'at8', 'AT8_1_r2_reanalysis.py')"
+  },
+  {
+   "file": "experiments/at8/AT8_1_threshold.py",
+   "line": 810,
+   "resolved": "experiments/results/AT0",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(_REPO, 'results', 'AT0')"
   },
   {
    "file": "experiments/e21_30/exp27_6_isolation.py",
@@ -167,6 +839,22 @@
    "expr": "os.path.join(REPO, 'results', 'exp38i_factorization.json')"
   },
   {
+   "file": "experiments/e31_40/exp39_supp_pscale_probe.py",
+   "line": 131,
+   "resolved": "experiments/results/exp39_supp_sentinel_probe.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT, 'exp39_supp_sentinel_probe.json')"
+  },
+  {
+   "file": "experiments/e31_40/exp39_supp_pscale_probe.py",
+   "line": 136,
+   "resolved": "experiments/results/exp39_supp_pscale_probe.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(OUT, 'exp39_supp_pscale_probe.json')"
+  },
+  {
    "file": "experiments/e31_40/exp39a_u_obs_rank.py",
    "line": 114,
    "resolved": "experiments/results/exp39a_u_obs_rank.json",
@@ -253,6 +941,54 @@
    "exists": false,
    "kind": "dir_missing",
    "expr": "os.path.join(R, 'exp40plus_artifacts.sha256')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_gap_scan.py",
+   "line": 57,
+   "resolved": "experiments/results/exp45_damage_vs_structure.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(_HERE), 'results', 'exp45_damage_vs_structure.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_gap_scan.py",
+   "line": 134,
+   "resolved": "experiments/results/exp45_gap_scan.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(_HERE), 'results', 'exp45_gap_scan.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_kappa_seed_null.py",
+   "line": 82,
+   "resolved": "experiments/results/exp28_leaf_structure.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(_HERE), 'results', 'exp28_leaf_structure.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_kappa_seed_null.py",
+   "line": 103,
+   "resolved": "experiments/results/exp45_kappa_seed_null.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(_HERE), 'results', 'exp45_kappa_seed_null.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_kappa_seed_null.py",
+   "line": 122,
+   "resolved": "experiments/results/exp45_damage_vs_structure.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(_HERE), 'results', 'exp45_damage_vs_structure.json')"
+  },
+  {
+   "file": "experiments/e41_50/exp45_kappa_seed_null.py",
+   "line": 181,
+   "resolved": "experiments/results/exp45_kappa_seed_null.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(rd, 'exp45_kappa_seed_null.json')"
   },
   {
    "file": "experiments/e41_50/exp45_strip_seednull.py",
@@ -503,6 +1239,102 @@
    "expr": "os.path.join(HERE, '..', 'results', 'exp60.json')"
   },
   {
+   "file": "experiments/e51_60/exp60b.py",
+   "line": 19,
+   "resolved": "experiments/results/exp60.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60b.py",
+   "line": 215,
+   "resolved": "experiments/results/exp60b.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60b.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60c.py",
+   "line": 107,
+   "resolved": "experiments/results/exp60c.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60c.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60d.py",
+   "line": 21,
+   "resolved": "experiments/results/exp60b.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60b.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60d.py",
+   "line": 118,
+   "resolved": "experiments/results/exp60d.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60d.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60e.py",
+   "line": 125,
+   "resolved": "experiments/results/exp60e.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60e.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60f.py",
+   "line": 17,
+   "resolved": "experiments/results/exp60d.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60d.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60f.py",
+   "line": 18,
+   "resolved": "experiments/results/exp60b.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60b.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60f.py",
+   "line": 89,
+   "resolved": "experiments/results/exp60f.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60f.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60g.py",
+   "line": 17,
+   "resolved": "experiments/results/exp60d.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60d.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60g.py",
+   "line": 115,
+   "resolved": "experiments/results/exp60g.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60g.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp60h.py",
+   "line": 85,
+   "resolved": "experiments/results/exp60h.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60h.json')"
+  },
+  {
    "file": "experiments/e61_70/exp61_lfm3.py",
    "line": 18,
    "resolved": "experiments/results/exp48b_lfm3_gen_kinematics.json",
@@ -525,6 +1357,214 @@
    "exists": false,
    "kind": "dir_missing",
    "expr": "os.path.join(HERE, '..', 'results', 'exp61_lfm3.json')"
+  },
+  {
+   "file": "experiments/e61_70/exp64_mark.py",
+   "line": 83,
+   "resolved": "experiments/results/e64/e64c_markov.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'results/e64/e64c_markov.json')"
+  },
+  {
+   "file": "experiments/e61_70/exp67_quantolike.py",
+   "line": 20,
+   "resolved": "experiments/results/e64/tpu/P2_corpus.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu/P2_corpus.npz')"
+  },
+  {
+   "file": "experiments/e61_70/exp67_quantolike.py",
+   "line": 21,
+   "resolved": "experiments/results/e64/tpu/P3_rnull.npz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu/P3_rnull.npz')"
+  },
+  {
+   "file": "experiments/e61_70/exp67_quantolike.py",
+   "line": 22,
+   "resolved": "experiments/results/e64/tpu/P2_corpus_meta.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e64/tpu/P2_corpus_meta.json')"
+  },
+  {
+   "file": "experiments/e61_70/exp67_quantolike.py",
+   "line": 70,
+   "resolved": "experiments/results/e67",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e67')"
+  },
+  {
+   "file": "experiments/e61_70/exp67_quantolike.py",
+   "line": 71,
+   "resolved": "experiments/results/e67/QUANTOLIKE.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(ROOT, 'results/e67/QUANTOLIKE.json')"
+  },
+  {
+   "file": "experiments/sycl/exp94_q2rank.py",
+   "line": 241,
+   "resolved": "experiments/results/e81/REPLAY.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results/e81/REPLAY.json')"
+  },
+  {
+   "file": "experiments/sycl/exp94_s5_dryrecon.py",
+   "line": 26,
+   "resolved": "experiments/results/e94/raw_q1.json.tar.gz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results/e94/raw_q1.json.tar.gz')"
+  },
+  {
+   "file": "experiments/sycl/exp94_s5_dryrecon.py",
+   "line": 28,
+   "resolved": "experiments/results/e94/S5.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results/e94/S5.json')"
+  },
+  {
+   "file": "experiments/sycl/exp94_s6_dry0.py",
+   "line": 46,
+   "resolved": "experiments/results/e94/Q2.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results/e94/Q2.json')"
+  },
+  {
+   "file": "experiments/sycl/exp94_s6_dry0.py",
+   "line": 47,
+   "resolved": "experiments/results/e94/Q1.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results/e94/Q1.json')"
+  },
+  {
+   "file": "experiments/sycl/exp94_s6_dry0.py",
+   "line": 48,
+   "resolved": "experiments/results/e94/raw_q2.json.tar.gz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, 'results/e94/raw_q2.json.tar.gz')"
+  },
+  {
+   "file": "experiments/sycl/exp94_s6_dry0.py",
+   "line": 356,
+   "resolved": "experiments/results/e94",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, OUT)"
+  },
+  {
+   "file": "experiments/sycl/exp94_s6_dry0.py",
+   "line": 357,
+   "resolved": "experiments/results/e94/S6.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, OUT, 'S6.json')"
+  },
+  {
+   "file": "experiments/sycl/exp94_s6_dry0.py",
+   "line": 509,
+   "resolved": "experiments/results/e94/raw_s6.json.tar.gz",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, OUT, 'raw_s6.json.tar.gz')"
+  },
+  {
+   "file": "experiments/sycl/exp94_s6_dry0.py",
+   "line": 583,
+   "resolved": "experiments/results/e94/S6.json",
+   "exists": false,
+   "kind": "dir_missing",
+   "expr": "os.path.join(REPO, OUT, 'S6.json')"
+  },
+  {
+   "file": "experiments/AT0_4_rebuild_r6.py",
+   "line": 79,
+   "resolved": "results/AT0/store/ab8ec0ed2df2f8c7.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(STORE_DIR, 'ab8ec0ed2df2f8c7.json')"
+  },
+  {
+   "file": "experiments/AT0_4_rebuild_r6.py",
+   "line": 83,
+   "resolved": "results/AT0/AT0_4_rebuild_r6.log",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_4_rebuild_r6.log')"
+  },
+  {
+   "file": "experiments/AT0_4_rebuild_r6b.py",
+   "line": 69,
+   "resolved": "results/AT0/store/205a5965cf963eff.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(STORE_DIR, '205a5965cf963eff.json')"
+  },
+  {
+   "file": "experiments/AT0_4_rebuild_r6b.py",
+   "line": 73,
+   "resolved": "results/AT0/AT0_4_rebuild_r6b.log",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_4_rebuild_r6b.log')"
+  },
+  {
+   "file": "experiments/at0/AT0_1_accounting.py",
+   "line": 147,
+   "resolved": "results/AT0/AT0_1_run.log",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(OUT_DIR, 'AT0_1_run.log')"
+  },
+  {
+   "file": "experiments/at0/AT0_2_shape.py",
+   "line": 1029,
+   "resolved": "experiments/AT0_2_shape.py",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'experiments/AT0_2_shape.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_2_shape.py",
+   "line": 1189,
+   "resolved": "experiments/AT0_2_shape.py",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'experiments/AT0_2_shape.py')"
+  },
+  {
+   "file": "experiments/at0/AT0_3_area.py",
+   "line": 74,
+   "resolved": "experiments/experiments",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'experiments')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 165,
+   "resolved": "experiments/prism",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'prism')"
+  },
+  {
+   "file": "experiments/at0/AT0_5_gencheck.py",
+   "line": 166,
+   "resolved": "experiments/experiments",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(ROOT, 'experiments')"
   },
   {
    "file": "experiments/at2/AT2.py",
@@ -591,12 +1631,12 @@
    "expr": "os.path.join(_HERE, '..', 'results')"
   },
   {
-   "file": "experiments/e31_40/exp38e_true_J_L23.py",
-   "line": 128,
-   "resolved": "experiments/e31_40/x.py",
+   "file": "experiments/e31_40/exp39_supp_pscale_probe.py",
+   "line": 26,
+   "resolved": "experiments/results",
    "exists": false,
    "kind": "file_missing",
-   "expr": "Path(__file__)"
+   "expr": "os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'results')"
   },
   {
    "file": "experiments/e31_40/exp39a_u_obs_rank.py",
@@ -671,6 +1711,14 @@
    "expr": "os.path.join(ROOT, 'docs')"
   },
   {
+   "file": "experiments/e41_50/exp45_kappa_seed_null.py",
+   "line": 180,
+   "resolved": "experiments/results",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(os.path.dirname(_HERE), 'results')"
+  },
+  {
    "file": "experiments/e41_50/exp47b_gen_kinematics.py",
    "line": 303,
    "resolved": "experiments/results",
@@ -719,6 +1767,22 @@
    "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'results', 'exp55_jrecal.json')"
   },
   {
+   "file": "experiments/e51_60/exp55_modes.py",
+   "line": 256,
+   "resolved": "results/exp55_stage-1.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'results', 'exp55_stage-1.json')"
+  },
+  {
+   "file": "experiments/e51_60/exp55_sbi.py",
+   "line": 181,
+   "resolved": "results/exp55_sbi_gate.json",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'results', 'exp55_sbi_gate.json')"
+  },
+  {
    "file": "experiments/e51_60/exp55_stage0.py",
    "line": 71,
    "resolved": "results/exp55_stage0.json",
@@ -749,6 +1813,14 @@
    "exists": false,
    "kind": "file_missing",
    "expr": "os.path.join(HERE, '..', '..', 'results', 'exp55_stage0.json')"
+  },
+  {
+   "file": "experiments/sycl/exp94_q2rank.py",
+   "line": 531,
+   "resolved": "experiments/experiments",
+   "exists": false,
+   "kind": "file_missing",
+   "expr": "os.path.join(REPO, 'experiments')"
   }
  ]
 }

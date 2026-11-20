@@ -128,7 +128,13 @@ E-65…E-80 прошли **другой** проход (`docs/dynamic/RERUN_SCRI
    (`experiments/_audit_checks/paths_sym_probe.py`, артефакт
    `results/_audit_checks/paths_sym_scan.json`: 121 файл, 295 ссылок, 92 битых в 54 файлах)
    добавляет **43 файла / 64 ссылки** `dir_missing`; объединение с inline —
-   **51 файл / 77 ссылок** `dir_missing` и **23 файла / 31** `file_missing`. Затронуты и те карточки, что я только что проверял:
+   **51 файл / 77 ссылок** `dir_missing`. **Вторая поправка (ревью r2 ТЗ гейтов, 2026-11-20):** и это
+   было занижением — у пробера `os.path.dirname("\x00FILE") == ""`, поэтому вложенный `dirname`
+   (`_ROOT = dirname(dirname(abspath(__file__)))`) отсекался, и файлы вида `AT0_4_rebuild_r6.py`,
+   `at8/AT8_1_r2_reanalysis.py`, `sycl/exp94_s6_dry0.py` в скан не попадали. После перевода на
+   абсолютный символический корень: **352 файла / 566 ссылок / 226 битых в 86 файлах**, из них
+   `dir_missing` — **184 ссылки в 69 файлах** (все 11 inline-файлов внутри), `file_missing` — 42
+   ссылки в 31 файле. Число дефектов в классе — свойство инструмента, а не репозитория: 11 → 51 → 69. Затронуты и те карточки, что я только что проверял:
    `exp46_verdicts.py` падает `FileNotFoundError: experiments/results/exp46_frame_as_memory.json.gz`
    (RC=1), `exp45b_analysis.py` — так же; их docstring'и продолжают обещать рабочую
    команду `cd experiments && ../.venv/bin/python exp45b_analysis.py`. Ни один тест
