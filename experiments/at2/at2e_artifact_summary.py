@@ -23,7 +23,12 @@ N2 — единый критерий verify["mode"], явные скобки, м
   4. run_summary: global_under_r6_tree (машинная метка r3 по новому дереву —
      р8: иначе N1 в новом месте), gaps_to_labels.blockers, и
      tprime_fix_monotonicity (формальное свойство: t'-фикс монотонен —
-     только добавляет кандидатов; r3 — нижняя граница кандидатного множества).
+     только добавляет кандидатов; r3 — нижняя граница кандидатного множества);
+  5. r9: recovery_fallback_check (N1: fallback-правило 100 калибровано под
+     первичный a_lo=3e-4; recovery a_lo=1e-4 ⇒ margin/9 — кто бы умер),
+     kappa_scope_counterfactual (р9 §4: пересчёт вердиктов по M2-окну из
+     того же артефакта), tprime_gain_margin (мин полный gain_tprime / макс
+     needed_tprime — 2.997 из r7 как машина-поле).
 
 Использование:
     python3 experiments/at2/at2e_artifact_summary.py <путь к артефакту.json>
@@ -37,6 +42,10 @@ L1_MAX = 0.10             # TZ §3.5: L1 <= 0.10
 L2_MIN, L2_MAX = 1.9, 2.1  # TZ §3.5: 1.9 <= L2 <= 2.1
 KAPPA_ABS = 0.5           # TZ §3.5: flag при |2κ-q|/max(q,floor) > 0.5
 FLOOR_FACTOR = 10         # TZ §3.9: denom-гейты 10*floor
+KAPPA_WINDOW = {1, 2, 4, 8}   # M2 (р8): K1∪K2 — только эти k блокируют
+RECOVERY_ALO2 = (1e-4 / 3e-4) ** 2  # r9 N1: (a_lo_recovery/a_lo_primary)² = 1/9
+FALLBACK_TOL = 100.0      # TZ r5.2 F3: median q_t(a_lo)/floor < 100 → NOT_TESTABLE
+TAU_STRS = ("0.001", "0.01", "0.05")  # str(t) для t in TAUS=(1e-3, 1e-2, 5e-2)
 
 
 def _lam_k1(qd, a, eps0, tau=1e-2):
@@ -61,21 +70,68 @@ def _stop_info(a):
     return last[-1]["gnorm"], len(a["traj"]), False, "v_last_measured"
 
 
+def _verdict_m2(c):
+    """Зеркало cell_verdict (AT2e.py L1025-1057) с M2 k-окном (р8/р9): unresolved
+    κ блокирует только при k ∈ {1,2,4,8} = K1∪K2; вне окон — report-only.
+    Всё остальное идентично (тот же приоритет, те же гейты). Используется
+    ТОЛЬКО как контрфактуал (р9 §4) — для проверки: на r3 данных должен
+    воспроизвести вердикты всех клеток, кроме c12 (NOT_TESTABLE → PG)."""
+    v = c["verify"]
+    lin = v["linear"]
+    kfl = lin.get("kappa_flags_hi") or lin.get("kappa_flags") or {}
+    unres = {int(k) for k, f in kfl.items() if f}
+    kappa_ok = not (unres & KAPPA_WINDOW)
+    if v["mode"] == "normal":
+        l12 = (lin["L1"] is not None and lin["L1"] <= L1_MAX
+               and L2_MIN <= lin["L2"] <= L2_MAX)
+    else:
+        l12 = (lin["L1_num"] is not None and lin["L1_num"] <= L1_MAX
+               and L2_MIN <= lin["L2_num"] <= L2_MAX)
+    lin_ok = bool(l12 and kappa_ok)
+    s1d = c.get("stage1d")
+    if (not lin_ok or not v["denom_gate_cell"] or not v["companion_ok"]
+            or v.get("fallback_grid_triggered")
+            or (s1d and s1d["test_guard"])):
+        return "NOT_TESTABLE"
+    rank1_k1 = sum(1 for tau in TAU_STRS if c["rank"]["K1"][tau] == 1)
+    rank1_k2 = sum(1 for tau in TAU_STRS if c["rank"]["K2"][tau] == 1)
+    rho = v["rho"]
+    signature = bool((rho is not None and c["rho_ref_p90"] is not None
+                      and rho > c["rho_ref_p90"])
+                     or (not v["denom_gate_vstar"]))
+    is_1d = bool(c.get("pos_spec") is not None and rank1_k1 >= 2 and signature)
+    if is_1d:
+        if not c["pos_spec"]["screen_ok"]:
+            return "POSITION_GENERIC"  # early-exit, 1d не гоняется
+        if s1d["gate"]["pass"]:
+            return "FOUND" if rank1_k2 >= 2 else "SHORT_HORIZON_ONLY"
+        return "POSITION_GENERIC"
+    if (rank1_k1 >= 2 and v["denom_gate_vstar"]
+            and c["rho_rank"] is not None
+            and c["rho_ref_p10"] <= c["rho_rank"] <= c["rho_ref_p90"]):
+        return "REDUNDANT"
+    return "NOT_FOUND"
+
+
 def run_summary(d):
     cells = d["cells"]
-    vs = [c["verdict"] for c in cells]
-    found = [c for c in cells if c["verdict"] == "FOUND"]
-    sho = [c for c in cells if c["verdict"] == "SHORT_HORIZON_ONLY"]
+    # r9 N3: обе tree-оценки — только по ПЕРВИЧНОЙ сетке; recovery-клетки
+    # (amplitude_grid: recovery, r4) учитываются своим первичным исходом.
+    # r3: no-op (поля нет) — r4: исключение recovery-записей из счётчиков.
+    cells_p = [c for c in cells if c.get("amplitude_grid", "primary") == "primary"]
+    vs = [c["verdict"] for c in cells_p]
+    found = [c for c in cells_p if c["verdict"] == "FOUND"]
+    sho = [c for c in cells_p if c["verdict"] == "SHORT_HORIZON_ONLY"]
     docs_found = sorted({c["doc"] for c in found + sho})
     n_found_sho = len(found) + len(sho)
     n_pg = sum(1 for v in vs if v == "POSITION_GENERIC")
     n_red = sum(1 for v in vs if v == "REDUNDANT")
     n_nt = sum(1 for v in vs if v == "NOT_TESTABLE")
     n_nf = sum(1 for v in vs if v == "NOT_FOUND")
-    n_ok8 = sum(1 for c in cells
+    n_ok8 = sum(1 for c in cells_p
                 if c["verify"]["denom_gate_cell"] and c["verify"]["companion_ok"]
                 and c["verdict"] != "NOT_TESTABLE")
-    n_ps = sum(1 for c in cells if c.get("pos_spec"))
+    n_ps = sum(1 for c in cells_p if c.get("pos_spec"))
     # контрфактуалы до меток §5 (+ blockers — р8: где стоит 0, а есть блокер)
     def _blockers():
         return [f"n_found_sho={n_found_sho}≠0"] if n_found_sho > 0 else []
@@ -137,6 +193,63 @@ def run_summary(d):
                         "pass легче): текущие FOUND/SHO робастны, PG с "
                         "gain=1.0 имеют gap-верхнюю границу — r3 = нижняя "
                         "граница кандидатного множества по t'-оси")
+    # r9 N1: recovery-цели = клетки с linear-fail (κ или L1/L2) на mode
+    # normal; below_floor/denom-провалы (c3/c11) в recovery не входят (р7).
+    # M2: внеоконный κ больше не блокирует — c12 перестаёт быть целью.
+    rfc = {}
+    for c in cells:
+        v = c["verify"]
+        lin = v["linear"]
+        if lin["ok"] or v["mode"] == "denom_below_floor":
+            continue
+        kfl = lin.get("kappa_flags_hi") or lin.get("kappa_flags") or {}
+        unres = {int(k) for k, f in kfl.items() if f}
+        in_win = bool(unres & KAPPA_WINDOW)
+        l12 = (lin["L1"] is not None and lin["L1"] <= L1_MAX
+               and L2_MIN <= lin["L2"] <= L2_MAX)
+        m = c["b0_qt_alo_median"] / c["floor"]["used"]
+        rfc[f"c{c['cell_id']}"] = {
+            "fail_reason": "L1L2" if not l12 else "kappa",
+            "unresolved_k": sorted(unres),
+            "target_under_old_rule": True,
+            "target_under_new_rule_M2": bool(in_win or not l12),
+            "primary_margin_median_qt_alo_over_floor": m,
+            "recovery_margin_at_a_lo_1e-4": m * RECOVERY_ALO2,
+            "would_trigger_fallback_100_at_recovery":
+                bool(m * RECOVERY_ALO2 < FALLBACK_TOL),
+        }
+    # р9 §4: контрфактуал M2 — пересчёт вердиктов из того же артефакта;
+    # сверка: _verdict_m2 должен воспроизвести вердикт каждой клетки, кроме
+    # тех, что реально меняются (r3: только c12)
+    ks_changes = {}
+    for c in cells:
+        v_m2 = _verdict_m2(c)
+        if v_m2 != c["verdict"]:
+            ks_changes[f"c{c['cell_id']}"] = {"old": c["verdict"], "new": v_m2}
+    # счётчики под M2-правилом (р9 §4: n_pg 4→5, n_nt 7→6, headline не меняет)
+    ks_m2 = [_verdict_m2(c) for c in cells]
+    ks_counts = {
+        "n_pg": sum(1 for v in ks_m2 if v == "POSITION_GENERIC"),
+        "n_nt": sum(1 for v in ks_m2 if v == "NOT_TESTABLE"),
+        "n_found": sum(1 for v in ks_m2 if v == "FOUND"),
+        "n_sho": sum(1 for v in ks_m2 if v == "SHORT_HORIZON_ONLY"),
+    }
+    # р9 п.5: tprime_gain_margin = min(полный gain_tprime) / max(needed)
+    full_gains, needed = [], []
+    for c in cells:
+        s1d = c.get("stage1d")
+        if s1d is None:
+            continue
+        atp = s1d["ascent_tprime"]
+        a_p = A_HI_REL * c["hnorm_prime"]
+        lam_v0_tp = max(_lam_k1(b, a_p, c["eps0"])
+                        for b in s1d["probe_b0_tprime"])
+        needed.append(s1d["gap"] / GAP_MARGIN)
+        if not (atp["ascent_converged"] and len(atp["traj"]) == 0):
+            full_gains.append(atp["lambda_vstar_tprime"] / lam_v0_tp)
+    min_full = min(full_gains)
+    max_needed = max(needed)
+    tpm = min_full / max_needed
     return {"per_cell": {f"c{c['cell_id']}": f"{c['doc']} L{c['L']} t{c['t']}={c['verdict']}"
                          for c in cells},
             "n_found": len(found), "n_sho": len(sho), "n_found_sho": n_found_sho,
@@ -154,7 +267,28 @@ def run_summary(d):
             "tprime_early_stop_n": sum(
                 1 for c in cells if c.get("stage1d")
                 and c["stage1d"]["ascent_tprime"].get("ascent_converged")
-                and len(c["stage1d"]["ascent_tprime"]["traj"]) == 0)}
+                and len(c["stage1d"]["ascent_tprime"]["traj"]) == 0),
+            # ---- r9 N1: recovery-сетка × fallback-правило ----
+            # Fallback (r5 F3: median q_t(a_lo)/floor < 100) калиброван под
+            # первичный a_lo = 3e-4·||h||; recovery-сетка {1e-4, 3e-4} имеет
+            # a_lo втрое меньше ⇒ q ∝ a² ⇒ margin /9. Правило на recovery-сетке
+            # убивает клетки с первичным margin < 900 (р3: c6 252→28 и
+            # c13 399→44 — умирают; c12 926→103 — 2.8% запаса). TZ r6 фикс:
+            # правило — только первичная сетка; на recovery — только
+            # 10·floor denom-гейт. Поле — машинная видимость (р9 п.4).
+            "recovery_fallback_check": rfc,
+            # ---- р9 §4: контрфактуал k-скоупа как ФАКТ ----
+            "kappa_scope_counterfactual": {
+                "rule": "M2: k ∈ {1,2,4,8} unresolved -> NOT_TESTABLE; "
+                        "вне окон -> report-only",
+                "changes": ks_changes,
+                "unchanged_n": len(cells) - len(ks_changes),
+                "counts_under_M2": ks_counts,
+            },
+            # ---- р9 п.5: tprime_gain_margin (2.997 из r7 §2.2 как поле) ----
+            "tprime_gain_margin": tpm,
+            "tprime_gain_margin_components": {"min_full_gain_tprime": min_full,
+                                               "max_needed_tprime": max_needed}}
 
 
 def linear_gate_decomp(d):

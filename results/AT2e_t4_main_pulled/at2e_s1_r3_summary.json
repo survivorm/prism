@@ -86,7 +86,85 @@
    "property": "t'-фикс монотонен (больше поиска ⇒ gap падает ⇒ pass легче): текущие FOUND/SHO робастны, PG с gain=1.0 имеют gap-верхнюю границу — r3 = нижняя граница кандидатного множества по t'-оси"
   },
   "ascent_not_converged_n": 10,
-  "tprime_early_stop_n": 6
+  "tprime_early_stop_n": 6,
+  "recovery_fallback_check": {
+   "c1": {
+    "fail_reason": "kappa",
+    "unresolved_k": [
+     8
+    ],
+    "target_under_old_rule": true,
+    "target_under_new_rule_M2": true,
+    "primary_margin_median_qt_alo_over_floor": 2659.917913133009,
+    "recovery_margin_at_a_lo_1e-4": 295.54643479255657,
+    "would_trigger_fallback_100_at_recovery": false
+   },
+   "c9": {
+    "fail_reason": "kappa",
+    "unresolved_k": [
+     7,
+     8
+    ],
+    "target_under_old_rule": true,
+    "target_under_new_rule_M2": true,
+    "primary_margin_median_qt_alo_over_floor": 2495.9721152519182,
+    "recovery_margin_at_a_lo_1e-4": 277.33023502799097,
+    "would_trigger_fallback_100_at_recovery": false
+   },
+   "c12": {
+    "fail_reason": "kappa",
+    "unresolved_k": [
+     7
+    ],
+    "target_under_old_rule": true,
+    "target_under_new_rule_M2": false,
+    "primary_margin_median_qt_alo_over_floor": 925.6011574390226,
+    "recovery_margin_at_a_lo_1e-4": 102.8445730487803,
+    "would_trigger_fallback_100_at_recovery": false
+   },
+   "c13": {
+    "fail_reason": "kappa",
+    "unresolved_k": [
+     5,
+     8
+    ],
+    "target_under_old_rule": true,
+    "target_under_new_rule_M2": true,
+    "primary_margin_median_qt_alo_over_floor": 399.0224578147625,
+    "recovery_margin_at_a_lo_1e-4": 44.33582864608473,
+    "would_trigger_fallback_100_at_recovery": true
+   },
+   "c6": {
+    "fail_reason": "L1L2",
+    "unresolved_k": [],
+    "target_under_old_rule": true,
+    "target_under_new_rule_M2": true,
+    "primary_margin_median_qt_alo_over_floor": 251.84737797750813,
+    "recovery_margin_at_a_lo_1e-4": 27.98304199750091,
+    "would_trigger_fallback_100_at_recovery": true
+   }
+  },
+  "kappa_scope_counterfactual": {
+   "rule": "M2: k ∈ {1,2,4,8} unresolved -> NOT_TESTABLE; вне окон -> report-only",
+   "changes": {
+    "c12": {
+     "old": "NOT_TESTABLE",
+     "new": "POSITION_GENERIC"
+    }
+   },
+   "unchanged_n": 15,
+   "counts_under_M2": {
+    "n_pg": 5,
+    "n_nt": 6,
+    "n_found": 2,
+    "n_sho": 1
+   }
+  },
+  "tprime_gain_margin": 2.9965679157039156,
+  "tprime_gain_margin_components": {
+   "min_full_gain_tprime": 22.765261208659332,
+   "max_needed_tprime": 7.597111712154072
+  }
  },
  "linear_gate_decomp": {
   "c1": {
