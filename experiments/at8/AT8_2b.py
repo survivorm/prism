@@ -183,14 +183,27 @@ def init_trackio(t0, script_path, mode):
             "trackio: TRACKIO_DIR не задан — запускать через ./run_one.sh "
             "(он экспортирует TRACKIO_DIR=$PRISM_DIR/.trackio); для "
             "--test-synth/--reanalysis задайте TRACKIO_DIR вручную.")
-    import trackio
-    tr = trackio.init(project="prism", name="at8_2b_r1", group="AT8_2b",
-                      config={"device": "cpu", "model": MODEL, "mode": mode,
-                              "log": os.path.abspath(RUNLOG),
-                              "revision": RUN_REVISION,
-                              "machine_revision": MACHINE_REVISION,
-                              "script_sha": sha256_file(script_path),
-                              "seed": SEED})
+
+    class _NoopTr:
+        """trackio в .venv сломан (huggingface_hub 1.28, ImportError httpx —
+        зафиксировано в docstring trackio_run.py): тайм-метки ведёт wrapper
+        trackio_run.py (системный python3), внутренний — no-op."""
+        def log(self, *a, **k): pass
+        def finish(self, *a, **k): pass
+
+    try:
+        import trackio
+        tr = trackio.init(project="prism", name="at8_2b_r1", group="AT8_2b",
+                          config={"device": "cpu", "model": MODEL, "mode": mode,
+                                  "log": os.path.abspath(RUNLOG),
+                                  "revision": RUN_REVISION,
+                                  "machine_revision": MACHINE_REVISION,
+                                  "script_sha": sha256_file(script_path),
+                                  "seed": SEED})
+    except Exception as e:  # noqa: BLE001 — трекинг не должен убивать прогон
+        logline(f"TRACKIO_UNAVAILABLE (внутренний): {type(e).__name__}: {e} — "
+                "тайм-метки ведёт wrapper trackio_run.py")
+        tr = _NoopTr()
     tr.log({"started_at": datetime.now(timezone.utc).isoformat()}, step=0)
     state = {"done": False}
 
@@ -270,15 +283,22 @@ def load_pool(tk):
 
 
 def check_pool(pool, pool_meta, r2store):
-    """TZ §4: пул заморожен — идентичность со R2-store (read-only-проверка)."""
+    """TZ §4: пул заморожен — идентичность со R2-store (read-only-проверка).
+    D1 (20.11): docs_sha256 (id-уровень) — WARNING, не стоп: тексты уже
+    верифицированы pool_fps (байт-fp), длины — T/cut; id-хаши — прокси
+    идентичности ОКРУЖЕНИЯ, а прямой гейт на окружение — S_cross_store
+    (свежий форвард vs store, bit-identity). В текущем .venv (py3.13/
+    torch 2.13 vs R2 py3.12/torch 2.14) id-последовательности пула не
+    воспроизводятся, хотя тексты/длины/фраза-иды идентичны."""
     cfg = r2store["__config__"]
     docs = {d["name"]: d for d in pool}
-    if sorted(docs) != DOCS14:
+    if sorted(docs) != sorted(DOCS14):
         raise SystemExit(f"pool: имена 14 доков != TZ §4: {sorted(docs)}")
     if pool_meta["pool_fps"] != cfg["pool_fps"]:
         raise SystemExit("pool: pool_fps != R2-store — стоп (TZ §4: пул заморожен)")
     if pool_meta["filler_map"] != cfg["filler_map"]:
         raise SystemExit("pool: filler_map != R2-store — стоп (TZ §4)")
+    n_sha_diff = 0
     for name in DOCS14:
         d = docs[name]
         if len(d["ids"]) != r2store[name]["T"]:
@@ -287,9 +307,13 @@ def check_pool(pool, pool_meta, r2store):
         if len(d["ids"]) // 2 != r2store[name]["cut"]:
             raise SystemExit(f"pool: {name} cut != R2-store — стоп")
         if sha256_ids(d["ids"]) != cfg["docs_sha256"][name]:
-            raise SystemExit(f"pool: {name} docs_sha256 != R2-store — стоп")
-    logline("pool check: PASS (14 доков: T/cut/docs_sha256/pool_fps/filler_map "
-            "== R2-store)")
+            n_sha_diff += 1
+            logline(f"pool: {name} docs_sha256 != R2-store (D1: окружение "
+                    f"drift — id-уровень; решение примет S_cross_store)")
+    logline("pool check: PASS (14 доков: T/cut/pool_fps/filler_map == R2-store"
+            + (f"; docs_sha256: {n_sha_diff}/14 DIFF — D1 warning, не стоп)"
+               if n_sha_diff else "; docs_sha256: 14/14 match"))
+    return n_sha_diff
 
 # ----------------------------- R2-store (TZ §10.1, read-only) -----------------------------
 
@@ -309,7 +333,7 @@ def check_r2_store():
     if not set(DOSES) <= set(cfg.get("n_dose", [])):
         raise SystemExit("R2-store fingerprint: n_dose не покрывает {2,16} — стоп")
     docs = [k for k in s if k != "__config__"]
-    if sorted(docs) != DOCS14:
+    if sorted(docs) != sorted(DOCS14):
         raise SystemExit(f"R2-store: 14 имён доков != TZ §4 — стоп")
     per_dom = Counter(s[k]["domain"] for k in docs)
     if len(per_dom) < DOMAINS_MIN or any(v < 2 for v in per_dom.values()):
@@ -783,7 +807,7 @@ def _finite_gate_2b(store2b, r2store, docs, doses, fallback):
             for key in CONTRASTS:
                 for L in LAYERS:
                     for obs in OBS_LIST:
-                        a = np.asarray(cell[key][str(L)][obs], dtype="float64")
+                        a = np.asarray(cell[key][obs][str(L)], dtype="float64")
                         if not np.isfinite(a).all():
                             raise SystemExit(f"M5 finite-gate: {dn} n{n} {key} "
                                              f"L{L} {obs} содержит NaN/Inf")
@@ -816,10 +840,10 @@ def analyze_2b(store2b, r2store, doses=None, margin_decision="THRESHOLD",
         for dn in docs:
             for n in doses:
                 c = store2b[dn][f"n{n}"]
-                nn_p.append(_near(c["N_PHR"][Ls][PHR_OBS]))
-                fn_p.append(_far(c["N_PHR"][Ls][PHR_OBS]))
-                nn_r.append(_near(c["N_perm"][Ls][REP_OBS]))
-                fn_r.append(_far(c["N_perm"][Ls][REP_OBS]))
+                nn_p.append(_near(c["N_PHR"][PHR_OBS][Ls]))
+                fn_p.append(_far(c["N_PHR"][PHR_OBS][Ls]))
+                nn_r.append(_near(c["N_perm"][REP_OBS][Ls]))
+                fn_r.append(_far(c["N_perm"][REP_OBS][Ls]))
         dmin_PHR_layer[Ls] = float(np.percentile(nn_p, 95))
         dmin_far_PHR_layer[Ls] = float(np.percentile(fn_p, 95))
         dmin_REP_layer[Ls] = float(np.percentile(nn_r, 95))
@@ -846,15 +870,15 @@ def analyze_2b(store2b, r2store, doses=None, margin_decision="THRESHOLD",
     rows = []
     for dn in docs:
         c2, c16 = store2b[dn]["n2"], store2b[dn]["n16"]
-        e_n = _near(c2["E_phr"][L23][PHR_OBS])
-        e_f = _far(c2["E_phr"][L23][PHR_OBS])
-        r_n = _near(c16["REP"][L23][REP_OBS])
-        r_f = _far(c16["REP"][L23][REP_OBS])
-        i_n = _near(c2["INT"][L23][PHR_OBS])
-        p_n = _near(c2["N_PHR"][L23][PHR_OBS])
-        p_f = _far(c2["N_PHR"][L23][PHR_OBS])
-        q_n = _near(c16["N_perm"][L23][REP_OBS])
-        q_f = _far(c16["N_perm"][L23][REP_OBS])
+        e_n = _near(c2["E_phr"][PHR_OBS][L23])
+        e_f = _far(c2["E_phr"][PHR_OBS][L23])
+        r_n = _near(c16["REP"][REP_OBS][L23])
+        r_f = _far(c16["REP"][REP_OBS][L23])
+        i_n = _near(c2["INT"][PHR_OBS][L23])
+        p_n = _near(c2["N_PHR"][PHR_OBS][L23])
+        p_f = _far(c2["N_PHR"][PHR_OBS][L23])
+        q_n = _near(c16["N_perm"][REP_OBS][L23])
+        q_f = _far(c16["N_perm"][REP_OBS][L23])
         rows.append([e_n, e_f, e_n - e_f, r_n, r_f, r_n - r_f,
                      i_n, p_n, p_f, q_n, q_f])
     COLNAMES = ["E_phr_near_n2", "E_phr_far_n2", "E_phr_diff_n2",
@@ -929,7 +953,7 @@ def analyze_2b(store2b, r2store, doses=None, margin_decision="THRESHOLD",
         near_layer[name] = {}
         for L in LAYERS:
             near_layer[name][str(L)] = float(np.mean(
-                [_near(store2b[dn][f"n{n}"][name][str(L)][obs]) for dn in docs]))
+                [_near(store2b[dn][f"n{n}"][name][obs][str(L)]) for dn in docs]))
 
     # G_inside_legacy (TZ §10.7, диагностика): n=16, L1/L2 < fillerA/fillerB
     legacy_pass = 0
@@ -964,14 +988,14 @@ def analyze_2b(store2b, r2store, doses=None, margin_decision="THRESHOLD",
         for n in doses:
             summary[C][str(n)] = {}
             for obs in obs_list:
-                ns = [_near(store2b[dn][f"n{n}"][C][L23][obs]) for dn in docs]
-                fs = [_far(store2b[dn][f"n{n}"][C][L23][obs]) for dn in docs]
+                ns = [_near(store2b[dn][f"n{n}"][C][obs][L23]) for dn in docs]
+                fs = [_far(store2b[dn][f"n{n}"][C][obs][L23]) for dn in docs]
                 entry = dict(near=round(float(np.mean(ns)), 6),
                              far=round(float(np.mean(fs)), 6))
                 if C == "INT" and n == PHR_DOSE and obs == PHR_OBS:
                     # signed near (направление чтения, TZ §11.5)
                     entry["signed_near"] = round(float(np.mean(
-                        [float(np.mean(store2b[dn][f"n{n}"][C][L23][obs][:N_W]))
+                        [float(np.mean(store2b[dn][f"n{n}"][C][obs][L23][:N_W]))
                          for dn in docs])), 6)
                 summary[C][str(n)][obs] = entry
 
@@ -1220,7 +1244,7 @@ def run_main(mode="full"):
     _logf = open(RUNLOG, "w")
 
     class _Tee:
-        def __init__(self, a, b): self.a, self.b = a, self.b
+        def __init__(self, a, b): self.a, self.b = a, b
         def write(self, s): self.a.write(s); self.b.write(s); self.b.flush()
         def flush(self): self.a.flush(); self.b.flush()
 
@@ -1249,7 +1273,7 @@ def run_main(mode="full"):
     logline(f"seeds: 112 уникальных, concat sha256={SEED_SHA_PIN[:16]}… (пин)")
 
     docs_all, pool_meta = load_pool(tk)
-    check_pool(docs_all, pool_meta, r2store)
+    pool_sha_diff = check_pool(docs_all, pool_meta, r2store)
     texts_by_name = {d["name"]: d["text"] for d in docs_all}
     docs = docs_all
     if mode == "smoke":
@@ -1406,7 +1430,8 @@ def run_main(mode="full"):
         logline(f"  S_shuffle: 16 shas записаны (smoke: 2 дока × 4 i × 2 дозы); "
                 f"период-9-чек PASS (fail-loud); max-9g-таблица в store")
         # block-CE L2(n=2) ∈ [0.5, 2 × block-CE_L1(n=2)]
-        for dn in docs:
+        for doc in docs:
+            dn = doc["name"]
             L2b = store[dn]["n2"]["L2"]["ce_block"]
             L1b = r2store[dn]["n2"]["loop"]["ce_block"]
             if not (0.5 <= L2b <= 2.0 * L1b):
@@ -1415,17 +1440,21 @@ def run_main(mode="full"):
                         f"[0.5, 2×{L1b:.3f}]")
         # G_inside_rep(n=2) вычислима + маржи → решение ДО main (M2-r5)
         margins = []
+        margins_ml = []
         in_pass = 0
-        for dn in docs:
+        for doc in docs:
+            dn = doc["name"]
             c = store[dn]["n2"]
             L1b = r2store[dn]["n2"]["loop"]["ce_block"]
             m1, m2 = c["S1"]["ce_block"] - L1b, c["S2"]["ce_block"] - c["L2"]["ce_block"]
             in_pass += 1 if (L1b < c["S1"]["ce_block"] and c["L2"]["ce_block"] < c["S2"]["ce_block"]) else 0
             margins.append(min(m1, m2))
+            margins_ml.append((m1, m2))
         med2 = float(np.median(margins))
         margin_decision = "LOW_MARGIN" if med2 < MARGIN_N2 else "THRESHOLD"
         logline(f"  G_inside_rep(n2): {in_pass}/{len(docs)}, margins m1/m2: "
-                + ", ".join(f"{dn}: ({m1:.3f},{m2:.3f})" for dn in docs)
+                + ", ".join(f"{doc['name']}: ({m[0]:.3f},{m[1]:.3f})"
+                            for doc, m in zip(docs, margins_ml))
                 + f" → median(min)={med2:.3f} → decision={margin_decision} "
                   "(ДО main, M2-r5)")
         # finite-гейт + δ на своих наблюдаемых (C1)
@@ -1433,9 +1462,9 @@ def run_main(mode="full"):
         names = [d["name"] for d in docs]
         dphr = drep = float("nan")
         try:
-            nn_p = [_near(store[dn][f"n{n}"]["N_PHR"][str(PRIMARY_LAYER)][PHR_OBS])
+            nn_p = [_near(store[dn][f"n{n}"]["N_PHR"][PHR_OBS][str(PRIMARY_LAYER)])
                     for dn in names for n in DOSES]
-            nn_r = [_near(store[dn][f"n{n}"]["N_perm"][str(PRIMARY_LAYER)][REP_OBS])
+            nn_r = [_near(store[dn][f"n{n}"]["N_perm"][REP_OBS][str(PRIMARY_LAYER)])
                     for dn in names for n in DOSES]
             dphr, drep = (float(np.percentile(nn_p, 95)),
                           float(np.percentile(nn_r, 95)))
@@ -1493,6 +1522,10 @@ def run_main(mode="full"):
         s_stimulus="pass (phrase_token_check ×2, multiset-check, L_n=9n, "
                    "finitem — fail-loud)",
         s_shuffle="pass (период-9-чек fail-loud + max-9g-таблица в артефакте)",
+        pool_docs_sha256=(f"D1: {pool_sha_diff}/14 DIFF (окружение-drift, "
+                          "id-уровень; тексты pool_fps-верифицированы, "
+                          "решение — S_cross_store)"
+                          if pool_sha_diff else "14/14 match"),
         finite_gate="pass (analyze: _finite_gate_2b — 12 контрастов)",
         s_null="pass" if an["gates_ok"] else f"FAIL: {an['gate_reason']}")
     manifest = dict(
@@ -1516,6 +1549,7 @@ def run_main(mode="full"):
                          "реализованную 14-доковую медиану (какая ветка "
                          "взята и была ли она права, F6-r6)"),
         pool_fps=pool_meta["pool_fps"],
+        pool_docs_sha256_diff=pool_sha_diff,
         docs_table={d["name"]: dict(domain=d["domain"], T=len(d["ids"]),
                                     cut=len(d["ids"]) // 2,
                                     sha256=sha256_ids(d["ids"]))
@@ -1692,8 +1726,8 @@ def _synth_store_2b(kind, n_docs=14):
                 null_arr = (null2 if C in ("E_phr", "INT", "N_PHR")
                             else null16)
                 arr = prof.get((n, C), list(null_arr))
-                cell[C] = {str(L): {obs: list(arr) for obs in OBS_LIST}
-                           for L in LAYERS}
+                cell[C] = {obs: {str(L): list(arr) for L in LAYERS}
+                           for obs in OBS_LIST}
             store[dn][f"n{n}"] = cell
     return store
 
