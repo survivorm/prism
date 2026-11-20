@@ -57,7 +57,9 @@ curves={f:{} for f in fams}
 for i,nm in enumerate(names):
     U=U_of(nm)
     for f,fn in fams.items():
-        curves[f][nm]=curve_V(curve_u(fn(U,i),None))
+        # строки уже отмасштабированы hn и нормированы (U_of), поэтому curve_u зовём с hn=1:
+        # раньше здесь стояло curve_u(..., None) -> np.asarray(None) 0-мерный -> IndexError (скрипт не работал)
+        curves[f][nm]=curve_V(curve_u(fn(U,i), np.ones(len(U))))
     if i%16==15: print("...",i+1,flush=True)
 
 def agg(f,dm=None):
@@ -81,7 +83,7 @@ for dm in ["all"]+["wiki","math","code","chat"]:
     seg=[(25,32),(33,48),(49,64),(65,96)]
     segs={}
     for a,b in seg:
-        segv=E[:,a-1:b].mean(axis=0)  # per-doc mean over segment
+        segv=E[:,a-1:b].mean(axis=1)  # per-doc среднее по сегменту (axis=1: было axis=0 -> бутстрап индексировал лаги как доки и падал)
         bs=[segv[rng.integers(0,len(ns),len(ns))].mean() for _ in range(2000)]
         segs[f"{a}-{b}"]=[float(np.median(segv)),float(np.quantile(bs,0.025)),float(np.quantile(bs,0.975))]
     out[dm]={"n":len(ns),"E_med_by_k":{str(k+1):float(np.median(E[:,k])) for k in [31,47,63,95]},
