@@ -1,0 +1,90 @@
+# allowlist гейтов: gate_id<TAB>путь<TAB>links=<K><TAB>причина
+# Правило: только уменьшается; запись без причины — провал ревью; устаревшая запись даёт ALLOWLIST_UNUSED.
+# Дефекты НЕ чинятся в итерации 1: цель гейта — зафиксировать класс и не пустить новые.
+
+# --- G1: файл с тестовым именем, в котором нет тестов (класс 6 аудита)
+G1	experiments/at0/at0_7_tests.py	скрипт с именем теста: 0 функций test_ + импорт AT0_6_spectrum -> RC=2; карточка E-30/AT0
+G1	experiments/e31_40/test_exp39f_math.py	скрипт с именем теста: только def main() (0 тестов) -> RC=5; E-39f
+G1	experiments/at8/test_at8_2_cells.py	exec-сценарий машины v3 (0 def test_, запускается вручную по AGENTS п.2); AT8_2
+G1	experiments/at8/test_at8_2_resume.py	exec-сценарий машины v3 (0 def test_); AT8_2
+G1	experiments/at8/test_at8_2_verdict.py	exec-сценарий машины v3 (0 def test_); AT8_2
+
+# --- G2: путь от __file__ ведёт в несуществующий каталог (реорг d6ab76b, класс 6)
+# links=K — число DIR_MISSING-ссылок файла на момент ввода гейта; рост -> ALLOWLIST_STALE (RC=1).
+G2	experiments/at0/AT0_3_area.py	links=9	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at0/AT0_4_mix.py	links=9	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at0/AT0_4_rebuild_r5.py	links=9	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at0/AT0_5_gencheck.py	links=8	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at0/AT0_6_spectrum.py	links=10	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at0/AT0_7_loop.py	links=7	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at0/at06_v22_pinned.py	links=8	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at0/at0_1_r7_annotation.py	links=11	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at0/at0_1_tpu_dev_recompute.py	links=4	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at2/AT2.py	links=3	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at8/AT8_1_r2_reanalysis.py	links=8	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/at8/AT8_1_threshold.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e21_30/exp27_6_isolation.py	links=4	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/_e38_cache.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp38a_uhat_dynamics.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp38b_position_audit.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp38c_degeneracy_preflight.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp38d_holonomy_spectrum.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp38e_MK_diagnostic.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp38f_structural_consistency.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp38g_jlens_link.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp38h_two_channel.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp38i_factorization.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp39_supp_pscale_probe.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp39a_u_obs_rank.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp39c_pre_kl_surgery.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp39d_l23_training.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp39l_drift_behavior.py	links=3	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp40_0_gate.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp40_1_t4a.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e31_40/exp40plus_doc_check.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp45_gap_scan.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp45_kappa_seed_null.py	links=4	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp45_strip_seednull.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp45_table_check.py	links=3	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp45_verdicts.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp45b_analysis.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp45c_gauge_null.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp45f_gauge_decomp.py	links=3	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp45g_cut_stability.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp46_verdicts.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp47a_kinematics_cache.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp47c_p2_loop_prediction.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e41_50/exp50v4_order_null.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp52a_perturb_axis.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp52c_symptom.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp52e_amp_axis.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp52g_grid_artifact_check.py	links=3	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp53c_gamma_fit.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp56_look.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp57_perdomain.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp58_shared_basis.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp59_perdoc_osc.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp59b_perdoc.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp59c.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp60.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp60b.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp60c.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp60d.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp60e.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp60f.py	links=3	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp60g.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e51_60/exp60h.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e61_70/exp61_lfm3.py	links=3	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e61_70/exp64_mark.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/e61_70/exp67_quantolike.py	links=5	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/sycl/exp94_q2rank.py	links=1	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/sycl/exp94_s5_dryrecon.py	links=2	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+G2	experiments/sycl/exp94_s6_dry0.py	links=7	реорг d6ab76b: experiments/<серия>/ + ../results -> experiments/results (нет); чинить аксессором путей
+
+# --- G6: артефакт не описывает сам себя (классы 3/4)
+G6	results/AT2e/at2e_smoke_r1.json	оборванная запись закоммичена в git (JSONDecodeError); AT2e
+G6	results/exp27_pair_matrix_S64K64p0.json	192 нефинитных значения (легаси E-27); перевыпуск артефакта вне итерации 1
+G6	results/exp39d_l23_training.json	6 нефинитных (E-39d)
+G6	results/exp27_noise_floor.json	4 нефинитных (E-27)
+G6	results/v2check/exp38d_holonomy_spectrum.json	3 нефинитных (E-38d)
+G6	results/exp45g_cut_stability.json	1 нефинитное (E-45g)

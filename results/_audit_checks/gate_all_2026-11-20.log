@@ -1,0 +1,260 @@
+# gate_all приёмка 2026-11-20T18:20:04+03:00
+## пины провенанса
+6d6ba093068cafbcedb9dc0e90b4c56b0c32f138dd653893b849a858ab6edc95  tools/gate_collect.py
+c743a332e960193c444f9782b8182fc0620bd13b31b10a3ada96200affbdfde2  tools/gate_paths.py
+13331e8c6075d2db4bef8875fde14d40b659136cfd4d53c2995c84cbecdf313b  tools/gate_artifacts.py
+634b8aab19b3a74774bad7ec3d9105d0267aa815b5cb4f22027f5c056072ee84  tools/gate_all.sh
+b91895321a7568eed50a2f7790a14e551954037b127c20df3bc444dd3e124920  tools/gate_allowlist.txt
+a0eceb6864d310905ae54405bf266e5324a775def5664c57e63d221f2cba77b9  tools/artifact_io.py
+9a2235bd87827dae1f396d34afff8f7324288701ec1388d285af3c97463bd662  results/_audit_checks/paths_sym_scan.json
+3d5aca07d1b0b9ca6293fcdf8eed4c30e285583779259b7f276795666e813a99  experiments/_audit_checks/paths_sym_probe.py
+
+## прогон
+--- gate_collect
+DEAD_TEST experiments/at8/test_at8_2_cells.py  (allowlisted)
+DEAD_TEST experiments/at8/test_at8_2_resume.py  (allowlisted)
+DEAD_TEST experiments/at8/test_at8_2_verdict.py  (allowlisted)
+DEAD_TEST experiments/e31_40/test_exp39f_math.py  (allowlisted)
+DEAD_TEST experiments/at0/at0_7_tests.py  (allowlisted)
+G1: test_named=7 collected=18 dead=0 dead_allowlisted=5 allowlist_unused=0 t=27.0s
+--- gate_paths
+INFO FILE_MISSING experiments/AT0_4_rebuild_r6.py:79 -> results/AT0/store/ab8ec0ed2df2f8c7.json
+INFO FILE_MISSING experiments/AT0_4_rebuild_r6.py:83 -> results/AT0/AT0_4_rebuild_r6.log
+INFO FILE_MISSING experiments/AT0_4_rebuild_r6b.py:69 -> results/AT0/store/205a5965cf963eff.json
+INFO FILE_MISSING experiments/AT0_4_rebuild_r6b.py:73 -> results/AT0/AT0_4_rebuild_r6b.log
+INFO FILE_MISSING experiments/at0/AT0_1_accounting.py:147 -> results/AT0/AT0_1_run.log
+INFO FILE_MISSING experiments/at0/AT0_2_shape.py:1189 -> experiments/AT0_2_shape.py
+INFO FILE_MISSING experiments/at0/AT0_2_shape.py:1029 -> experiments/AT0_2_shape.py
+DIR_MISSING experiments/at0/AT0_3_area.py:78 -> experiments/results/AT0
+DIR_MISSING experiments/at0/AT0_3_area.py:79 -> experiments/results/AT0/store
+DIR_MISSING experiments/at0/AT0_3_area.py:80 -> experiments/results/AT0/AT0_3_AREA.json
+DIR_MISSING experiments/at0/AT0_3_area.py:81 -> experiments/results/AT0/AT0_3_manifest.json
+DIR_MISSING experiments/at0/AT0_3_area.py:82 -> experiments/results/AT0/AT0_3_run.log
+DIR_MISSING experiments/at0/AT0_3_area.py:110 -> experiments/.hf_cache/hub/models--Qwen--Qwen3.5-0.8B
+DIR_MISSING experiments/at0/AT0_3_area.py:66 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/AT0_3_area.py:1025 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/AT0_3_area.py:119 -> experiments/.hf_cache/hub/models--Qwen--Qwen3.5-0.8B/snapshots/*/config.json
+INFO FILE_MISSING experiments/at0/AT0_3_area.py:74 -> experiments/experiments
+DIR_MISSING experiments/at0/AT0_4_mix.py:76 -> experiments/results/e64/tpu_v8/P1_own.npz
+DIR_MISSING experiments/at0/AT0_4_mix.py:77 -> experiments/results/AT0
+DIR_MISSING experiments/at0/AT0_4_mix.py:78 -> experiments/results/AT0/store
+DIR_MISSING experiments/at0/AT0_4_mix.py:79 -> experiments/results/AT0/AT0_4_MIX.json
+DIR_MISSING experiments/at0/AT0_4_mix.py:80 -> experiments/results/AT0/AT0_4_manifest.json
+DIR_MISSING experiments/at0/AT0_4_mix.py:81 -> experiments/results/AT0/AT0_4_run.log
+DIR_MISSING experiments/at0/AT0_4_mix.py:82 -> experiments/results/AT0/AT0_4_checkpoint.json
+DIR_MISSING experiments/at0/AT0_4_mix.py:66 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/AT0_4_mix.py:963 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/AT0_4_rebuild_r5.py:64 -> experiments/results/AT0
+DIR_MISSING experiments/at0/AT0_4_rebuild_r5.py:65 -> experiments/results/AT0/store
+DIR_MISSING experiments/at0/AT0_4_rebuild_r5.py:66 -> experiments/results/AT0/store/e852a4bd88c92649.json
+DIR_MISSING experiments/at0/AT0_4_rebuild_r5.py:68 -> experiments/results/AT0/AT0_4_MIX.json
+DIR_MISSING experiments/at0/AT0_4_rebuild_r5.py:69 -> experiments/results/AT0/AT0_4_manifest.json
+DIR_MISSING experiments/at0/AT0_4_rebuild_r5.py:70 -> experiments/results/AT0/AT0_4_rebuild_r5.log
+DIR_MISSING experiments/at0/AT0_4_rebuild_r5.py:96 -> experiments/experiments/at0/AT0_4_mix.py
+DIR_MISSING experiments/at0/AT0_4_rebuild_r5.py:106 -> experiments/experiments/at0/AT0_4_mix.py
+DIR_MISSING experiments/at0/AT0_4_rebuild_r5.py:375 -> experiments/experiments/at0/AT0_4_mix.py
+DIR_MISSING experiments/at0/AT0_5_gencheck.py:185 -> experiments/results/AT0/T0_ACCOUNTING.json
+DIR_MISSING experiments/at0/AT0_5_gencheck.py:186 -> experiments/results/AT0/store/23281c64cc418ff1.json
+DIR_MISSING experiments/at0/AT0_5_gencheck.py:188 -> experiments/results/AT0
+DIR_MISSING experiments/at0/AT0_5_gencheck.py:189 -> experiments/results/AT0/store
+DIR_MISSING experiments/at0/AT0_5_gencheck.py:190 -> experiments/results/AT0/AT0_5_run.log
+DIR_MISSING experiments/at0/AT0_5_gencheck.py:191 -> experiments/results/AT0/AT0_5_manifest.json
+DIR_MISSING experiments/at0/AT0_5_gencheck.py:192 -> experiments/results/AT0/AT0_5_GENCHECK.json
+DIR_MISSING experiments/at0/AT0_5_gencheck.py:1000 -> experiments/prism/field.py
+INFO FILE_MISSING experiments/at0/AT0_5_gencheck.py:165 -> experiments/prism
+INFO FILE_MISSING experiments/at0/AT0_5_gencheck.py:166 -> experiments/experiments
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:117 -> experiments/results/AT0/AT0_3_AREA.json
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:143 -> experiments/results/AT0
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:144 -> experiments/results/AT0/store
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:107 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:874 -> experiments/results/AT0/AT0_6_SPECTRUM.json
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:981 -> experiments/results/AT0/AT0_6_SPECTRUM.json
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:773 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:1001 -> experiments/results/AT0/AT0_6_manifest.json
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:1005 -> experiments/results/AT0/AT0_6_run.log
+DIR_MISSING experiments/at0/AT0_6_spectrum.py:879 -> experiments/results/AT0/archive/v2.2
+DIR_MISSING experiments/at0/AT0_7_loop.py:87 -> experiments/experiments/at06_v22_pinned.py
+DIR_MISSING experiments/at0/AT0_7_loop.py:101 -> experiments/results/AT0
+DIR_MISSING experiments/at0/AT0_7_loop.py:102 -> experiments/results/AT0/store
+DIR_MISSING experiments/at0/AT0_7_loop.py:103 -> experiments/results/AT0/AT0_7_LOOP.json
+DIR_MISSING experiments/at0/AT0_7_loop.py:104 -> experiments/results/AT0/AT0_7_manifest.json
+DIR_MISSING experiments/at0/AT0_7_loop.py:105 -> experiments/results/AT0/AT0_7_run.log
+DIR_MISSING experiments/at0/AT0_7_loop.py:322 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/at06_v22_pinned.py:103 -> experiments/results/AT0/AT0_3_AREA.json
+DIR_MISSING experiments/at0/at06_v22_pinned.py:127 -> experiments/results/AT0
+DIR_MISSING experiments/at0/at06_v22_pinned.py:128 -> experiments/results/AT0/store
+DIR_MISSING experiments/at0/at06_v22_pinned.py:93 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/at06_v22_pinned.py:664 -> experiments/results/AT0/AT0_6_SPECTRUM.json
+DIR_MISSING experiments/at0/at06_v22_pinned.py:527 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/at06_v22_pinned.py:684 -> experiments/results/AT0/AT0_6_manifest.json
+DIR_MISSING experiments/at0/at06_v22_pinned.py:688 -> experiments/results/AT0/AT0_6_run.log
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:67 -> experiments/results/AT0/store/claim_r5_d4a4b101.json
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:68 -> experiments/results/AT0/store/claim_r6_b0f74312.json
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:69 -> experiments/results/AT0/store/23281c64cc418ff1.json
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:71 -> experiments/results/e64/tpu_v8/P1_own.npz
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:72 -> experiments/results/e64/tpu_v8/P2_corpus.npz
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:73 -> experiments/results/e64/tpu_v8/P1_own_meta.json
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:74 -> experiments/results/e64/tpu_v8/P2_corpus_meta.json
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:75 -> experiments/results/AT0
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:76 -> experiments/results/AT0/T0_ACCOUNTING.json
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:77 -> experiments/results/AT0/AT0_1_manifest.json
+DIR_MISSING experiments/at0/at0_1_r7_annotation.py:57 -> experiments/prism/field.py
+DIR_MISSING experiments/at0/at0_1_tpu_dev_recompute.py:23 -> experiments/results/e64/tpu_v8/P1_own.npz
+DIR_MISSING experiments/at0/at0_1_tpu_dev_recompute.py:24 -> experiments/results/e64/tpu_v8/P2_corpus.npz
+DIR_MISSING experiments/at0/at0_1_tpu_dev_recompute.py:25 -> experiments/results/AT0/store/23281c64cc418ff1.json
+DIR_MISSING experiments/at0/at0_1_tpu_dev_recompute.py:26 -> experiments/results/AT0/T0_ACCOUNTING.json
+DIR_MISSING experiments/at2/AT2.py:25 -> experiments/results/AT2/AT2.json
+DIR_MISSING experiments/at2/AT2.py:26 -> experiments/results/AT2_run.log
+DIR_MISSING experiments/at2/AT2.py:67 -> experiments/prism/field.py
+INFO FILE_MISSING experiments/at2/AT2.py:24 -> experiments/results
+INFO FILE_MISSING experiments/at2/AT2.py:79 -> experiments/.trackio
+DIR_MISSING experiments/at8/AT8_1_r2_reanalysis.py:77 -> experiments/results/AT8/AT8_1_THRESHOLD.json
+DIR_MISSING experiments/at8/AT8_1_r2_reanalysis.py:78 -> experiments/results/AT8/store/018c3dac90eb1bba.json
+DIR_MISSING experiments/at8/AT8_1_r2_reanalysis.py:79 -> experiments/results/AT8/AT8_1_manifest.json
+DIR_MISSING experiments/at8/AT8_1_r2_reanalysis.py:80 -> experiments/results/AT8
+DIR_MISSING experiments/at8/AT8_1_r2_reanalysis.py:81 -> experiments/results/AT8/AT8_1_THRESHOLD_v2.json
+DIR_MISSING experiments/at8/AT8_1_r2_reanalysis.py:82 -> experiments/results/AT8/AT8_1_v2_manifest.json
+DIR_MISSING experiments/at8/AT8_1_r2_reanalysis.py:83 -> experiments/results/AT8/AT8_1_v2_run.log
+DIR_MISSING experiments/at8/AT8_1_r2_reanalysis.py:391 -> experiments/experiments/at8/AT8_1_r2_reanalysis.py
+DIR_MISSING experiments/at8/AT8_1_threshold.py:810 -> experiments/results/AT0
+INFO FILE_MISSING experiments/at8/AT8_2b.py:151 -> results/AT8/AT8_2b.json
+INFO FILE_MISSING experiments/at8/AT8_2b.py:153 -> results/AT8/AT8_2b_manifest.json
+INFO FILE_MISSING experiments/at8/AT8_2b.py:154 -> results/AT8/AT8_2b_series.npz
+INFO FILE_MISSING experiments/at8/AT8_2b.py:156 -> results/AT8/AT8_2b_decision.json
+DIR_MISSING experiments/e21_30/exp27_6_isolation.py:32 -> experiments/results/exp27_jcache.pt
+DIR_MISSING experiments/e21_30/exp27_6_isolation.py:33 -> experiments/results/exp27_6_isolation.json
+DIR_MISSING experiments/e21_30/exp27_6_isolation.py:34 -> experiments/results/exp27_6_bock_4x4.png
+DIR_MISSING experiments/e21_30/exp27_6_isolation.py:333 -> experiments/results/exp27_noise_floor.json
+DIR_MISSING experiments/e31_40/_e38_cache.py:45 -> experiments/kaggle_kernel/results
+DIR_MISSING experiments/e31_40/exp38a_uhat_dynamics.py:71 -> experiments/results/exp38a_uhat_dynamics.json
+DIR_MISSING experiments/e31_40/exp38b_position_audit.py:97 -> experiments/results/exp38b_position_audit.json
+DIR_MISSING experiments/e31_40/exp38c_degeneracy_preflight.py:72 -> experiments/results/exp38c_degeneracy_preflight.json
+DIR_MISSING experiments/e31_40/exp38d_holonomy_spectrum.py:180 -> experiments/results/exp38d_holonomy_spectrum.json
+INFO FILE_MISSING experiments/e31_40/exp38d_holonomy_spectrum.py:178 -> experiments/results
+DIR_MISSING experiments/e31_40/exp38e_MK_diagnostic.py:73 -> experiments/results/exp38e_MK_diagnostic.json
+INFO FILE_MISSING experiments/e31_40/exp38e_true_J_L23.py:79 -> experiments/results
+DIR_MISSING experiments/e31_40/exp38f_structural_consistency.py:78 -> experiments/results/exp38f_structural_consistency.json
+DIR_MISSING experiments/e31_40/exp38f_structural_consistency.py:79 -> experiments/results/exp38e_MK_diagnostic.json
+DIR_MISSING experiments/e31_40/exp38g_jlens_link.py:109 -> experiments/results/exp38g_jlens/lens.pt
+DIR_MISSING experiments/e31_40/exp38g_jlens_link.py:110 -> experiments/results/exp38g_jlens_link.json
+DIR_MISSING experiments/e31_40/exp38h_two_channel.py:50 -> experiments/results/exp38h_two_channel_goodhart.json
+DIR_MISSING experiments/e31_40/exp38i_factorization.py:49 -> experiments/results/exp38i_factorization.json
+DIR_MISSING experiments/e31_40/exp39_supp_pscale_probe.py:131 -> experiments/results/exp39_supp_sentinel_probe.json
+DIR_MISSING experiments/e31_40/exp39_supp_pscale_probe.py:136 -> experiments/results/exp39_supp_pscale_probe.json
+INFO FILE_MISSING experiments/e31_40/exp39_supp_pscale_probe.py:26 -> experiments/results
+DIR_MISSING experiments/e31_40/exp39a_u_obs_rank.py:114 -> experiments/results/exp39a_u_obs_rank.json
+INFO FILE_MISSING experiments/e31_40/exp39a_u_obs_rank.py:458 -> experiments/results
+DIR_MISSING experiments/e31_40/exp39c_pre_kl_surgery.py:126 -> experiments/results/exp39c_pre_kl_surgery.json
+DIR_MISSING experiments/e31_40/exp39c_pre_kl_surgery.py:144 -> experiments/results/exp39a_u_obs_rank.json
+INFO FILE_MISSING experiments/e31_40/exp39c_pre_kl_surgery.py:237 -> experiments/results
+DIR_MISSING experiments/e31_40/exp39d_l23_training.py:122 -> experiments/kaggle_kernel/results/exp27b_jcache_L23.pt
+INFO FILE_MISSING experiments/e31_40/exp39d_l23_training.py:478 -> experiments/results
+DIR_MISSING experiments/e31_40/exp39l_drift_behavior.py:62 -> experiments/results/exp39l_drift_behavior.json
+DIR_MISSING experiments/e31_40/exp39l_drift_behavior.py:63 -> experiments/results/exp39l_scatter.png
+DIR_MISSING experiments/e31_40/exp39l_drift_behavior.py:209 -> experiments/results/exp38i_factorization.json
+DIR_MISSING experiments/e31_40/exp40_0_gate.py:26 -> experiments/results/exp27_jcache.pt
+INFO FILE_MISSING experiments/e31_40/exp40_0_gate.py:166 -> experiments/results
+INFO FILE_MISSING experiments/e31_40/exp40_1_audit.py:61 -> experiments/results
+DIR_MISSING experiments/e31_40/exp40_1_t4a.py:36 -> experiments/results/exp39_supp_three_objects.json
+DIR_MISSING experiments/e31_40/exp40_1_t4a.py:37 -> experiments/results/exp39k_gauge_aware_importance.json
+INFO FILE_MISSING experiments/e31_40/exp40_1_t4a.py:270 -> experiments/results
+INFO FILE_MISSING experiments/e31_40/exp40_5_kinetic.py:69 -> experiments/results
+DIR_MISSING experiments/e31_40/exp40plus_doc_check.py:338 -> experiments/results/exp40plus_artifacts.sha256
+INFO FILE_MISSING experiments/e31_40/exp40plus_doc_check.py:38 -> experiments/results
+INFO FILE_MISSING experiments/e31_40/exp40plus_doc_check.py:39 -> experiments/docs
+DIR_MISSING experiments/e41_50/exp45_gap_scan.py:57 -> experiments/results/exp45_damage_vs_structure.json
+DIR_MISSING experiments/e41_50/exp45_gap_scan.py:134 -> experiments/results/exp45_gap_scan.json
+DIR_MISSING experiments/e41_50/exp45_kappa_seed_null.py:82 -> experiments/results/exp28_leaf_structure.json
+DIR_MISSING experiments/e41_50/exp45_kappa_seed_null.py:122 -> experiments/results/exp45_damage_vs_structure.json
+DIR_MISSING experiments/e41_50/exp45_kappa_seed_null.py:181 -> experiments/results/exp45_kappa_seed_null.json
+DIR_MISSING experiments/e41_50/exp45_kappa_seed_null.py:103 -> experiments/results/exp45_kappa_seed_null.json
+INFO FILE_MISSING experiments/e41_50/exp45_kappa_seed_null.py:180 -> experiments/results
+DIR_MISSING experiments/e41_50/exp45_strip_seednull.py:9 -> experiments/results/exp45_damage_vs_structure.partial.json
+DIR_MISSING experiments/e41_50/exp45_table_check.py:24 -> experiments/docs/ref-exp.md
+DIR_MISSING experiments/e41_50/exp45_table_check.py:27 -> experiments/results/exp45_damage_vs_structure.json
+DIR_MISSING experiments/e41_50/exp45_table_check.py:28 -> experiments/results/exp45f_gauge_decomp.json
+DIR_MISSING experiments/e41_50/exp45_verdicts.py:19 -> experiments/results/exp45_damage_vs_structure.json
+DIR_MISSING experiments/e41_50/exp45_verdicts.py:143 -> experiments/results/exp45_kappa_seed_null.json
+DIR_MISSING experiments/e41_50/exp45b_analysis.py:29 -> experiments/results/exp45b_leaf_table.json.gz
+DIR_MISSING experiments/e41_50/exp45c_gauge_null.py:84 -> experiments/results/exp45c_gauge_null.json
+DIR_MISSING experiments/e41_50/exp45f_gauge_decomp.py:62 -> experiments/results/exp45_edits_sparse.npz
+DIR_MISSING experiments/e41_50/exp45f_gauge_decomp.py:63 -> experiments/results/exp45_damage_vs_structure.json
+DIR_MISSING experiments/e41_50/exp45f_gauge_decomp.py:64 -> experiments/results/exp45f_gauge_decomp.json
+DIR_MISSING experiments/e41_50/exp45g_cut_stability.py:60 -> experiments/results/exp45g_cut_stability.json
+DIR_MISSING experiments/e41_50/exp46_verdicts.py:26 -> experiments/results/exp46_frame_as_memory.json.gz
+DIR_MISSING experiments/e41_50/exp47a_kinematics_cache.py:92 -> experiments/results/exp47a_kinematics_cache.json
+INFO FILE_MISSING experiments/e41_50/exp47b_gen_kinematics.py:303 -> experiments/results
+DIR_MISSING experiments/e41_50/exp47c_p2_loop_prediction.py:224 -> experiments/results/exp47c_p2_loop_prediction.json
+INFO FILE_MISSING experiments/e41_50/exp48a_lfm3_kinematics.py:116 -> experiments/results
+INFO FILE_MISSING experiments/e41_50/exp48b_lfm3_gen_kinematics.py:265 -> experiments/results
+INFO FILE_MISSING experiments/e41_50/exp50v3_curvature.py:347 -> experiments/results
+DIR_MISSING experiments/e41_50/exp50v4_order_null.py:115 -> experiments/results/exp50v4_order_null_qwen.json
+DIR_MISSING experiments/e51_60/exp52a_perturb_axis.py:138 -> experiments/results/exp45_flat_rows.pt
+DIR_MISSING experiments/e51_60/exp52c_symptom.py:78 -> experiments/results/exp45_flat_rows.pt
+DIR_MISSING experiments/e51_60/exp52e_amp_axis.py:120 -> experiments/results/exp45_flat_rows.pt
+DIR_MISSING experiments/e51_60/exp52g_grid_artifact_check.py:43 -> experiments/models/Qwen3.5-4B
+DIR_MISSING experiments/e51_60/exp52g_grid_artifact_check.py:44 -> experiments/results/e52_4b/exp47b_gen_kinematics.npz
+DIR_MISSING experiments/e51_60/exp52g_grid_artifact_check.py:45 -> experiments/results/e52_4b/exp47b_gen_kinematics.json
+DIR_MISSING experiments/e51_60/exp53c_gamma_fit.py:15 -> experiments/results/exp53b_servo.json
+DIR_MISSING experiments/e51_60/exp53c_gamma_fit.py:108 -> experiments/results/exp53c_gammafit.json
+INFO FILE_MISSING experiments/e51_60/exp55_jrecal.py:57 -> results/exp55_sbi_gate.json
+INFO FILE_MISSING experiments/e51_60/exp55_jrecal.py:96 -> results/exp55_jrecal.json
+INFO FILE_MISSING experiments/e51_60/exp55_modes.py:256 -> results/exp55_stage-1.json
+INFO FILE_MISSING experiments/e51_60/exp55_sbi.py:181 -> results/exp55_sbi_gate.json
+INFO FILE_MISSING experiments/e51_60/exp55_stage0.py:71 -> results/exp55_stage0.json
+INFO FILE_MISSING experiments/e51_60/exp55_stage1b.py:124 -> results/exp55_stage1b.json
+DIR_MISSING experiments/e51_60/exp56_look.py:132 -> results/e56/e56_look.json
+INFO FILE_MISSING experiments/e51_60/exp56_look.py:24 -> results/e56
+INFO FILE_MISSING experiments/e51_60/exp56_look.py:38 -> results/exp55_stage0.json
+DIR_MISSING experiments/e51_60/exp57_perdomain.py:78 -> experiments/results/exp57_perdomain.json
+DIR_MISSING experiments/e51_60/exp58_shared_basis.py:96 -> experiments/results/exp58_shared_basis.json
+DIR_MISSING experiments/e51_60/exp59_perdoc_osc.py:137 -> experiments/results/exp59_perdoc_osc.json
+DIR_MISSING experiments/e51_60/exp59b_perdoc.py:163 -> experiments/results/exp59b.json
+DIR_MISSING experiments/e51_60/exp59c.py:217 -> experiments/results/exp59c.json
+DIR_MISSING experiments/e51_60/exp60.py:190 -> experiments/results/exp60.json
+DIR_MISSING experiments/e51_60/exp60b.py:19 -> experiments/results/exp60.json
+DIR_MISSING experiments/e51_60/exp60b.py:215 -> experiments/results/exp60b.json
+DIR_MISSING experiments/e51_60/exp60c.py:107 -> experiments/results/exp60c.json
+DIR_MISSING experiments/e51_60/exp60d.py:21 -> experiments/results/exp60b.json
+DIR_MISSING experiments/e51_60/exp60d.py:118 -> experiments/results/exp60d.json
+DIR_MISSING experiments/e51_60/exp60e.py:125 -> experiments/results/exp60e.json
+DIR_MISSING experiments/e51_60/exp60f.py:17 -> experiments/results/exp60d.json
+DIR_MISSING experiments/e51_60/exp60f.py:18 -> experiments/results/exp60b.json
+DIR_MISSING experiments/e51_60/exp60f.py:89 -> experiments/results/exp60f.json
+DIR_MISSING experiments/e51_60/exp60g.py:115 -> experiments/results/exp60g.json
+DIR_MISSING experiments/e51_60/exp60g.py:17 -> experiments/results/exp60d.json
+DIR_MISSING experiments/e51_60/exp60h.py:85 -> experiments/results/exp60h.json
+DIR_MISSING experiments/e61_70/exp61_lfm3.py:19 -> experiments/results/exp48b_lfm3_gen_kinematics.npz
+DIR_MISSING experiments/e61_70/exp61_lfm3.py:144 -> experiments/results/exp61_lfm3.json
+DIR_MISSING experiments/e61_70/exp61_lfm3.py:18 -> experiments/results/exp48b_lfm3_gen_kinematics.json
+DIR_MISSING experiments/e61_70/exp64_mark.py:83 -> experiments/results/e64/e64c_markov.json
+DIR_MISSING experiments/e61_70/exp67_quantolike.py:20 -> experiments/results/e64/tpu/P2_corpus.npz
+DIR_MISSING experiments/e61_70/exp67_quantolike.py:21 -> experiments/results/e64/tpu/P3_rnull.npz
+DIR_MISSING experiments/e61_70/exp67_quantolike.py:70 -> experiments/results/e67
+DIR_MISSING experiments/e61_70/exp67_quantolike.py:22 -> experiments/results/e64/tpu/P2_corpus_meta.json
+DIR_MISSING experiments/e61_70/exp67_quantolike.py:71 -> experiments/results/e67/QUANTOLIKE.json
+DIR_MISSING experiments/sycl/exp94_q2rank.py:241 -> experiments/results/e81/REPLAY.json
+INFO FILE_MISSING experiments/sycl/exp94_q2rank.py:531 -> experiments/experiments
+DIR_MISSING experiments/sycl/exp94_s5_dryrecon.py:26 -> experiments/results/e94/raw_q1.json.tar.gz
+DIR_MISSING experiments/sycl/exp94_s5_dryrecon.py:28 -> experiments/results/e94/S5.json
+DIR_MISSING experiments/sycl/exp94_s6_dry0.py:46 -> experiments/results/e94/Q2.json
+DIR_MISSING experiments/sycl/exp94_s6_dry0.py:47 -> experiments/results/e94/Q1.json
+DIR_MISSING experiments/sycl/exp94_s6_dry0.py:48 -> experiments/results/e94/raw_q2.json.tar.gz
+DIR_MISSING experiments/sycl/exp94_s6_dry0.py:583 -> experiments/results/e94/S6.json
+DIR_MISSING experiments/sycl/exp94_s6_dry0.py:356 -> experiments/results/e94
+DIR_MISSING experiments/sycl/exp94_s6_dry0.py:509 -> experiments/results/e94/raw_s6.json.tar.gz
+DIR_MISSING experiments/sycl/exp94_s6_dry0.py:357 -> experiments/results/e94/S6.json
+G2: files_with_refs=86 dir_missing_links=184 dir_missing_files=69 file_missing_links=42 allowlisted_links=184 allowlist_entries=69 t=11.0s
+--- gate_artifacts
+INVALID results/AT2e/at2e_smoke_r1.json  (JSONDecodeError)
+NONFINITE results/exp27_noise_floor.json  (4 значений)
+NONFINITE results/exp27_pair_matrix_S64K64p0.json  (192 значений)
+NONFINITE results/exp39d_l23_training.json  (6 значений)
+NONFINITE results/exp45g_cut_stability.json  (1 значений)
+NONFINITE results/v2check/exp38d_holonomy_spectrum.json  (3 значений)
+G6: canon_files=435 canon_mb=172.7 invalid=1 nonfinite_files=5 nrows_mismatch=0 allowlisted=6 allowlist_unused=0 t=9.9s
+gate_all: total=49s rc=0
+
+## дизайн-тесты
+.......                                                                  [100%]
+7 passed in 7.76s

@@ -113,3 +113,10 @@ Sweep: `find docs/ \( -name "*REVIEW*" -o -name "*answers*" -o -name "*prompt*" 
   `/data`, в архив не идут. Kaggle-dataset — лишь дубликат для тех артефактов, что нужны из kernel.
   Механика: `tools/artifacts.py {scan,gate,add,verify,push,pull}`; `gate` стоит в `.git/hooks/pre-commit`
   и падает на staged-файлах >10MB. Политика целиком — `docs/ARTIFACTS_STORAGE.md`.
+
+## Гейты G1/G2/G6 (итерация 1) — перед коммитом
+- `tools/gate_all.sh` (≤120 с: G1 тест-файлы без тестов, G2 пути от `__file__`, G6 артефакт о себе);
+  ТЗ — `docs/TZ_methodology_gates.md`, ревью — `docs/dynamic/TZ_GATES_REVIEW*.md`, обоснование — `docs/METHODOLOGY_GATES.md`.
+- `tools/gate_allowlist.txt`: запись только с причиной и `links=K` (G2); allowlist **только уменьшается**,
+  вылеченный дефект — удалить запись в том же коммите (иначе `ALLOWLIST_UNUSED`).
+- Новые артефакты писать через `tools/artifact_io.dump_json_atomic` (`allow_nan=False`, атомарная замена).
