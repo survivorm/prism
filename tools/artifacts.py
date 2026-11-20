@@ -62,9 +62,17 @@ def cmd_scan(a):
                 if sz > a.mb * 1e6:
                     rows.append((sz, str(p.relative_to(ROOT))))
     rows.sort(reverse=True)
+    reg = load_reg()
+    covered = {v["local_path"] for v in reg["items"].values()}
+    unc = [(s, p) for s, p in rows if p not in covered]
     print(f"файлов больше {a.mb} МБ: {len(rows)}, суммарно {human(sum(s for s, _ in rows))}")
+    print(f"  из них НЕ в реестре: {len(unc)}, суммарно {human(sum(s for s, _ in unc))}")
     for sz, p in rows[: a.top]:
-        print(f"  {human(sz):>9}  {p}")
+        print(f"  {human(sz):>9}  {p}" + ("" if p in covered else "   [НЕ В РЕЕСТРЕ]"))
+    if len(rows) > a.top and unc:
+        rest = [(s, p) for s, p in unc if p not in {q for _, q in rows[: a.top]}]
+        for sz, p in rest:
+            print(f"  {human(sz):>9}  {p}   [НЕ В РЕЕСТРЕ]")
     return 0
 
 
@@ -104,9 +112,12 @@ def cmd_add(a):
         return 2
     sz = p.stat().st_size
     reg = load_reg()
-    key = a.name or p.name
+    rel = str(p.relative_to(ROOT)) if str(p).startswith(str(ROOT)) else str(p)
+    # ключ = путь относительно корня (уникален), а НЕ basename: одинаковые имена в разных
+    # каталогах (results/e64/tpu/ и results/e64/tpu_v8/) раньше схлопывались в одну запись.
+    key = a.name or rel
     reg["items"][key] = {
-        "local_path": str(p.relative_to(ROOT)) if str(p).startswith(str(ROOT)) else str(p),
+        "local_path": rel,
         "size": sz,
         "sha256_16": sha256_16(p),
         "exp": a.exp or "",
@@ -135,6 +146,27 @@ def cmd_verify(a):
             print(f"  РАСХОЖДЕНИЕ sha: {key} реестр {it['sha256_16']} файл {got}")
             bad += 1
     print(f"verify: {len(reg['items'])} записей, проблем {bad}")
+    if a.hf:
+        try:
+            from huggingface_hub import HfApi
+        except ImportError:
+            print("нет huggingface_hub — проверка HF пропущена")
+            return 1 if bad else 0
+        repo = reg.get("hf_repo")
+        files = set(HfApi().list_repo_files(repo, repo_type="dataset"))
+        paths = {v["hf_path"] for v in reg["items"].values() if v.get("hf_path")}
+        ml = sorted(paths - files)
+        extra = sorted(files - paths - {".gitattributes"})
+        no_hf = [k for k, v in reg["items"].items() if not v.get("hf_path")]
+        print(f"hf: записей {len(reg['items'])}, уникальных hf_path {len(paths)}, файлов в репо {len(files)}")
+        for p in ml:
+            print(f"  НЕТ В HF: {p}")
+        for p in extra:
+            print(f"  В HF БЕЗ ЗАПИСИ: {p}")
+        for k in no_hf:
+            print(f"  БЕЗ hf_path: {k}")
+        bad += len(ml) + len(extra) + len(no_hf)
+        print(f"verify --hf: проблем {bad}")
     return 1 if bad else 0
 
 
@@ -163,6 +195,12 @@ def cmd_push(a):
             print(f"  пропуск {k}: нет файла локально")
             continue
         dst = f"{it['exp'] or 'misc'}/{k}"
+        # базовая схема — exp/basename; полный путь ключа берём только если такой basename в этой exp не один
+        base = Path(it["local_path"]).name
+        same = [kk for kk, vv in reg["items"].items()
+                if (vv.get("exp") or "misc") == (it.get("exp") or "misc") and Path(vv["local_path"]).name == base]
+        if len(same) == 1:
+            dst = f"{it['exp'] or 'misc'}/{base}"
         api.upload_file(path_or_fileobj=str(p), path_in_repo=dst, repo_id=repo, repo_type="dataset")
         commit = api.dataset_info(repo).sha
         it["hf_path"], it["hf_revision"] = dst, commit
@@ -176,6 +214,15 @@ def cmd_push(a):
 def cmd_pull(a):
     reg = load_reg()
     it = reg["items"].get(a.name)
+    if not it:   # путь указан хвостом или basename: ищем однозначное совпадение
+        cands = {k: v for k, v in reg["items"].items()
+                 if k.endswith(a.name) or v["local_path"].endswith(a.name) or v.get("hf_path", "").endswith(a.name)}
+        if len(cands) > 1:
+            print(f"неоднозначно: {a.name} → {len(cands)} записей:")
+            for k in sorted(cands):
+                print(f"  {k}  ({cands[k]['local_path']}, hf {cands[k].get('hf_path')})")
+            return 2
+        it = next(iter(cands.values()), None)
     if not it:
         print(f"нет в реестре: {a.name}")
         return 2
@@ -212,7 +259,7 @@ def main():
     s = sub.add_parser("scan"); s.add_argument("--top", type=int, default=30); s.set_defaults(fn=cmd_scan)
     s = sub.add_parser("gate"); s.set_defaults(fn=cmd_gate)
     s = sub.add_parser("add"); s.add_argument("path"); s.add_argument("--name"); s.add_argument("--exp"); s.add_argument("--note"); s.set_defaults(fn=cmd_add)
-    s = sub.add_parser("verify"); s.set_defaults(fn=cmd_verify)
+    s = sub.add_parser("verify"); s.add_argument("--hf", action="store_true", help="сверить с файлами в HF-репозитории (сеть)"); s.set_defaults(fn=cmd_verify)
     s = sub.add_parser("push"); s.add_argument("--repo"); s.add_argument("--dry-run", action="store_true"); s.set_defaults(fn=cmd_push)
     s = sub.add_parser("pull"); s.add_argument("name"); s.add_argument("--dest"); s.set_defaults(fn=cmd_pull)
     a = ap.parse_args()

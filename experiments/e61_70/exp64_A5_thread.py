@@ -7,6 +7,9 @@ D-1 репликация: корреляция профилей (k=1..24) меж
 L23: все 64 дока; L1/L11: 16 доков (si 1..4/домен). САМОАУДИТ: curve_u сам нормирует строки — hn=ones;
 полная кривая считается заново на unit-u (не t25 с hn), иначе перекрёст несопоставим."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"2")
 import numpy as np, sys as _s
 _s.path.insert(0,'.')

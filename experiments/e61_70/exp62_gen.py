@@ -7,6 +7,8 @@ L∈{2,6,12,18,23}+hnorm на каждой позиции траектории +
 
 # reorg 16.11: cross-series imports (соседние подкаталоги experiments/)
 import os, sys  # noqa: E401
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "e01_10"))
 import argparse, hashlib, json, os, sys, time
 import numpy as np

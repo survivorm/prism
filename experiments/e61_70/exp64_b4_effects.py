@@ -9,6 +9,9 @@
 САМОАУДИТ: u fp16→float64; кривые только k1..24; фильтр вырождения = cr(k1..96)max>0.95 по L23
 (свой для каждого пула); контроль не видит вырожденные; пометить доки с суффиксным дефицитом."""
 import json, os
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"2")
 import numpy as np
 D="/data/prism_kernels/exp62"; KM=24; KK=np.arange(1,97)

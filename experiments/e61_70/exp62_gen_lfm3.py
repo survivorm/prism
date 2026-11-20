@@ -8,6 +8,8 @@ decoder-слоёв 0-based; L23 = вход финальной RMSNorm = exp48b-�
 
 # reorg 16.11: cross-series imports (соседние подкаталоги experiments/)
 import os, sys  # noqa: E401
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "e41_50"))
 import hashlib, json, os, sys, time
 import numpy as np

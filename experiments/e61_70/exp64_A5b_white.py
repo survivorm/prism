@@ -2,6 +2,9 @@
 """E-64 A5b: белый null resid-канала. curve_u на iid-строках маргинала resid (L23, все 64):
 базлайн «белого» V-оценщика на высокочастотном пути — отделит истинный анти-полосу resid (−0.14) от геометрии."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"1")
 import numpy as np, sys as _s; _s.path.insert(0,'.')
 from exp62_batt_lib import curve_u

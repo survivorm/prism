@@ -4,9 +4,12 @@
 «хеш-таблица + конструктор» подтверждён на точках; иначе — нет. Заодно закрывает
 часть теста 8 (per-doc winners сохраняются впервые)."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"1")
 import numpy as np
-sys.path.insert(0,'.')
+sys.path.insert(0, _HERE)
 NPZ="/data/prism_kernels/exp62/gen_layers_qwen.npz"; L="23"
 z=np.load(NPZ, allow_pickle=True); meta=json.load(open(NPZ.replace(".npz","_meta.json")))
 dom={n:meta[n]["dom"] for n in meta}

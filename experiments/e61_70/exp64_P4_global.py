@@ -4,6 +4,9 @@ L23 кривые k=1..24; для каждой модели: own-doc corr, xdoc c
 профиля (1−corr), сам медианный профиль. Если xdoc(LFM3)≈own — профиль один на всех: кривая
 есть константа модели, «документных» профилей там нет."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS",): os.environ.setdefault(v="2")
 import numpy as np, sys as _s; _s.path.insert(0,'.')
 from exp62_batt_lib import curve_u

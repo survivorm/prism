@@ -6,6 +6,9 @@ a) Δ(1) из ОДНИХ эмбеддингов: Δe_t = e(T_{t+1})−e(T_t); к
 b) «колонка глубины»: g_l(t)=h^{l'}(t)−h^l(t) при фиксированном токене —
    межтокенная устойчивость нити cos(g(t),g(t+1)) и её лаг-кривая (несёт ли нить ω*)."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"2")
 import numpy as np
 

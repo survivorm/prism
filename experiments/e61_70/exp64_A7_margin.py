@@ -6,6 +6,9 @@ FEASIBILITY-GATE: долю строк с argmax==факт. следующий т
 Выравнивание выбирается эмпирически среди {h_t→tok[t+1], h_t→tok[t]} × {с norm, без norm} (4 гипотезы).
 САМОАУДИТ: h = u·hn (иерархия из npz); rms по строке; chunked matmul; softmax по полным логонам."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"6")
 import numpy as np
 from safetensors.numpy import load_file

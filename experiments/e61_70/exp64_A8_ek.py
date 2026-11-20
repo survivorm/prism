@@ -4,6 +4,9 @@ E_band = mean_{k=33..96}(real−blk32); bootstrap CI по невырожденн
 Копия-дистанция: для 3-gram'а — расстояние до ПОСЛЕДНЕГО вхождения (обновление после запроса).
 Спирман: E_band vs joint4*cand (e64c), E_peak vs режим бина дистанций.САМОАУДИТ: индексы k=33..96 = [32:96]; медиана per-doc -> domain; без wiki в пуле корреляций."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"1")
 import numpy as np
 t25=json.load(open("../results/e63/t25_ekurve.json"))

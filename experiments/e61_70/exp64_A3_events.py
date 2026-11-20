@@ -9,9 +9,12 @@ V-jump (‖V‖>q90, thinning gap>=3), copy-hit (lookup-4gram продолжен
 САМОАУДИТ: ACF бинарного ряда по центру; Bernoulli-null с той же λ; ω̂/winners из e64c (не пересобранного);
 jump по V (MA-free), не по h; hit[t] требует tok[t+1] (не трогает последний t)."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"1")
 import numpy as np
-sys.path.insert(0,'.')
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import curve_u
 from transformers import AutoTokenizer
 NPZ="/data/prism_kernels/exp62/gen_layers_qwen.npz"; L="23"; KM=24

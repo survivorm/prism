@@ -19,12 +19,23 @@ z = np.load(NPZ, allow_pickle=True)
 meta = json.load(open(NPZ.replace(".npz", "_meta.json")))
 tok = AutoTokenizer.from_pretrained(MK)
 dom = {n: meta[n]["dom"] for n in meta}
+MAX_SI = {dm: max(int(n.rsplit("_", 1)[-1]) for n in meta if dom[n] == dm) for dm in set(dom.values())}
 
 
 def prompt_ids(dom_name):
-    f = glob.glob(f"../data/calib_pins/{dom_name}___data_Qwen_Qwen3.5_0.8B__n16__min384__max512__plain.json")
-    d = json.load(open(f[0]))
-    return [tok(t, add_special_tokens=False)["input_ids"][:256] for t in d["texts"]]
+    # Изначально тут был один литерал __n16__min384__max512; такого pin-файла в data/calib_pins
+    # нет ни для одного домена (проверено 20.11). Поэтому — цепочка: целевой конфиг → единственный
+    # существующий n16-набор → любой n16; выбор пишется в артефакт (PIN_USED), а не молча подменяется.
+    want = f"../data/calib_pins/{dom_name}___data_Qwen_Qwen3.5_0.8B__n16__min384__max512__plain.json"
+    alts = [f"../data/calib_pins/{dom_name}___data_Qwen_Qwen3.5_0.8B__n16__min64__max256__plain.json",
+            f"../data/calib_pins/{dom_name}___data_Qwen_Qwen3.5_0.8B__n12__min192__max512__plain.json"]
+    alts += sorted(glob.glob(f"../data/calib_pins/{dom_name}___*.json"))[:1]
+    for p in [want] + alts:
+        if os.path.exists(p):
+            d = json.load(open(p))
+            PIN_USED[dom_name] = os.path.basename(p)
+            return [tok(t, add_special_tokens=False)["input_ids"][:256] for t in d["texts"]]
+    raise SystemExit(f"нет pin-файла для домена {dom_name} (нужен {os.path.basename(want)} или n16-аналог)")
 
 
 def lookup_metrics(ctx, off, n):
@@ -50,13 +61,17 @@ def lookup_metrics(ctx, off, n):
 
 res = {}
 cache = {}
+PIN_USED = {}
+PIN_CYCLE = {}
 for nm in sorted(meta):
     dm = dom[nm]
     if dm not in cache:
         cache[dm] = prompt_ids(dm)
     si = int(nm.rsplit("_", 1)[-1])
     gen = list(np.asarray(z[f"{nm}_tok"], dtype=np.int64))
-    pr = list(cache[dm][si])
+    n_pins = len(cache[dm])
+    PIN_CYCLE[dm] = n_pins <= MAX_SI[dm]          # pin-текстов меньше, чем документов → индекс по кругу
+    pr = list(cache[dm][si % n_pins])
     ctx = pr + gen
     off = len(pr)
     for n in (2, 3, 4, 6, 8):
@@ -72,5 +87,5 @@ out = {dm: {str(n): {"cov": round(float(np.mean([r[0] for r in v])), 3),
                      "shuf_cov": round(float(np.mean([r[2] for r in v])), 3),
                      "shuf_acc": round(float(np.mean([r[3] for r in v])), 3)}
            for n, v in sorted(dv.items())} for dm, dv in res.items()}
-print(json.dumps(out, indent=1))
-json.dump(out, open("../results/e63/t23_ngram.json", "w"), default=float)
+print(json.dumps({"pins_used": PIN_USED, "pin_cycle": PIN_CYCLE, "res": out}, indent=1))
+json.dump({"pins_used": PIN_USED, "pin_cycle": PIN_CYCLE, "res": out}, open("../results/e63/t23_ngram.json", "w"), default=float)

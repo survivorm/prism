@@ -5,6 +5,9 @@ null'ы: blk32 (перестановка 32-блоков пути) и iid (пе�
 САМОАУДИТ: доменные выводы только при n_nondeg>=12 (критерий 7), иначе только пул;
 D-1 контроль = кривые LFM3-L23 vs Qwen-L23 (покомпонентно, own-vs-own слои); ω* halfwidth = IQR per-doc osc ω̂ Qwen (аппроксимация — помечена)."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"4")
 import numpy as np, zlib, sys as _s; _s.path.insert(0,'.')
 from exp62_batt_lib import curve_u

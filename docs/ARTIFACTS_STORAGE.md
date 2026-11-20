@@ -53,6 +53,8 @@ python tools/artifacts.py scan            # что весит > 10 МБ (кан�
 python tools/artifacts.py gate            # предкоммит-гейт (>10 МБ в staged → rc=1)
 python tools/artifacts.py add PATH --exp E65 --note "…"
 python tools/artifacts.py verify          # sha локальных копий против реестра
+python tools/artifacts.py verify --hf     # + сверка со списком файлов в HF-репо (сеть)
+python tools/artifacts.py scan --top 100  # пометка [НЕ В РЕЕСТРЕ]: файл >порога, которого нет в реестре
 python tools/artifacts.py push --repo <user>/prism-artifacts [--dry-run]
 python tools/artifacts.py pull <name>     # восстановить в local_path, сверив sha
 ```
@@ -83,11 +85,22 @@ python tools/artifacts.py pull <name>     # восстановить в local_pa
   `results/AT0/store/f7cc011ef856a6dc.json` 234 МБ, `results/e52_4b/exp47b_gen_kinematics.npz` 206 МБ;
 - `/data/prism_kernels` 30 ГБ, `/data/exp19chk/results` 18 ГБ — кэши входов, под правило «не в git»
   попадают автоматически;
-- реестр заведён: `artifacts/registry.json` — **37 записей**, `verify` → 0 расхождений на 5.3 ГБ.
+- реестр `artifacts/registry.json` — **50 записей**, сумма **3.905 ГБ**, `verify` → 0 расхождений;
+  `verify --hf` → 0 (46 уникальных `hf_path`, 47 файлов в репо = 46 + `.gitattributes`; совпадающие
+  байт-в-байт копии `results/e64/tpu/*.npz` и `results/e64/tpu_v8/*.npz` делят одну выгрузку).
+- **Не в реестре остаётся ровно один файл >10 МБ**: `results/exp27_jcache.pt` 1.73 ГБ — регенерируемый
+  кэш якобианов (§6), продюсеры: `exp27_noise_floor.py`, `exp27_5_postprocess.py`, `exp27_6_isolation.py`,
+  `exp27.5_pair_matrix.py`. Всё остальное (50 из 50 файлов >10 МБ, кроме него) — в реестре и в HF.
+- **Осторожно с числом 5.3–5.6 ГБ**: это объём *всех* 50 файлов >10 МБ из `scan`, а не реестра. Раньше
+  в этом месте стояло «0 расхождений на 5.3 ГБ», что читалось как «5.3 ГБ заархивировано» — отсюда
+  пропуск 12 файлов `results/e64/tpu*` (520 МБ) и `tokenizer.json` (12.8 МБ); теперь они выгружены.
+- **Ключ реестра (schema 2) — путь файла** (`results/e64/tpu/P1_own.npz`), а не basename: одинаковые имена
+  в `tpu/` и `tpu_v8/` раньше схлопывались в одну запись, и один из файлов молча выпадал из реестра.
+  `scan` теперь помечает `[НЕ В РЕЕСТРЕ]` и печатает их сумму, т.е. дырка видна без ручного сверять.
 
 ## 8. Что проверено прогоном (20.11), а не на глаз
 
-1. **Выгрузка состоялась**: 37 файлов в `survivor-m/prism-artifacts` (dataset, публичный), каждой записи
+1. **Выгрузка состоялась**: 46 уникальных объектов в `survivor-m/prism-artifacts` (dataset, публичный) на 50 записей реестра, каждой записи
    в реестре соответствуют `hf_path` + `hf_revision` (коммит HF), `sha256_16` сверен при `verify`.
    Регенерируемые кэши (`exp27_jcache.pt`, `gen_AT_C*`, `*_jcache*`) не выгружались — по §6.
 2. **`pull` был нерабочим, найден дефект**: `Path.replace(dst)` → `OSError: [Errno 18] EXDEV`
@@ -96,6 +109,9 @@ python tools/artifacts.py pull <name>     # восстановить в local_pa
    Проверено в двух режимах: `pull AT8/AT8_2_R2_series.npz` (перезапись локального) и
    `pull --dest /tmp/pulltest.npz` — `sha OK` в обоих. Вывод правила: **проверять восстановление, а не
    только выгрузку** — до прогона реестр выглядел полным при нерабочем `pull`.
+   Оговорка о провенансе: `tools/artifacts.py` попал в git уже исправленным, промежуточные ревизии
+   (`replace`, `move`) не коммитились, поэтому «было сломано» подтверждается только сообщениями об ошибках
+   из прогона, а не диффом — в git-checklist этот путь восстановлению не подлежит.
 3. **Стриминг из HF измерен** (вопрос «можно ли читать прямо из HF»): подкачка целого файла 82.8 МБ —
    **11.0 с (7.6 МБ/с)**, после неё чтение члена npz — **0.001 с**; ranged-чтение `.npy` 13.1 МБ
    через `HfFileSystem` — 2.8 с (**4.7 МБ/с**), т.е. медленнее полной подкачки; `np.load` прямо из

@@ -1,6 +1,9 @@
-import json, math, sys
+import os, json, math, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e62"), exist_ok=True)
 import numpy as np
-sys.path.insert(0, '.')
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import curve_u, K
 NL = len(K); ONES = np.ones(NL)
 z = np.load('/data/prism_kernels/exp62/gen_layers_qwen.npz', allow_pickle=True)

@@ -7,6 +7,9 @@ hit-hit, construct-construct, mixed — только по парам в клас
 САМОАУДИТ: hit[t] про переход t→t+1 (update после запроса); V с сохранением t; пары (t,t+k) требуют
 оба валидных; класс mixed симметричен; median per doc→dom; wiki=1 не домен."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"2")
 import numpy as np, sys as _s; _s.path.insert(0,'.')
 NPZ="/data/prism_kernels/exp62/gen_layers_qwen.npz"; L="23"; KM=32

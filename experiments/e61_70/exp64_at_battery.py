@@ -4,6 +4,9 @@
 профилей k1..24 (L 5,11,23), dip/hump/plateau, loopy доля, lk4-hit.
 Bootstrap по ПАРАМ документов, B=1000, для C1 − max(C2,C3,C4)."""
 import json, os
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"2")
 import numpy as np
 D="/data/prism_kernels/exp62"; KM=24; KK=np.arange(1,97)

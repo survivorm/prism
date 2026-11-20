@@ -1,7 +1,7 @@
 {
  "hf_repo": "survivor-m/prism-artifacts",
  "items": {
-  "AT0/store/1af1e9f3c1f14ba8.json": {
+  "results/AT0/store/1af1e9f3c1f14ba8.json": {
    "exp": "",
    "hf_path": "AT0/store/1af1e9f3c1f14ba8.json",
    "hf_revision": "891cf4bf3de0d857fe516889b91db11750a0e0ea",
@@ -10,7 +10,7 @@
    "sha256_16": "1af1e9f3c1f14ba8",
    "size": 13119119
   },
-  "AT0/store/23281c64cc418ff1.json": {
+  "results/AT0/store/23281c64cc418ff1.json": {
    "exp": "",
    "hf_path": "AT0/store/23281c64cc418ff1.json",
    "hf_revision": "6d64f3b9f3f31f788e59bcfb0b4ce2facb10f808",
@@ -19,7 +19,7 @@
    "sha256_16": "23281c64cc418ff1",
    "size": 13175673
   },
-  "AT0/store/5b05537017013a4f.json": {
+  "results/AT0/store/5b05537017013a4f.json": {
    "exp": "",
    "hf_path": "AT0/store/5b05537017013a4f.json",
    "hf_revision": "bbe06ecbd51e1d5cd51c88068017f9eea2c5dffb",
@@ -28,7 +28,7 @@
    "sha256_16": "5b05537017013a4f",
    "size": 33430132
   },
-  "AT0/store/d884e197539b85a9.json": {
+  "results/AT0/store/d884e197539b85a9.json": {
    "exp": "",
    "hf_path": "AT0/store/d884e197539b85a9.json",
    "hf_revision": "29560099fb7e8718e078634a187c8b64f3f60f9a",
@@ -37,7 +37,7 @@
    "sha256_16": "d884e197539b85a9",
    "size": 13175673
   },
-  "AT0/store/de81c922bc71a71b.json": {
+  "results/AT0/store/de81c922bc71a71b.json": {
    "exp": "",
    "hf_path": "AT0/store/de81c922bc71a71b.json",
    "hf_revision": "fd10d4ffcd6b6508ae6b9f6dd7b099a1e69a0077",
@@ -46,7 +46,7 @@
    "sha256_16": "de81c922bc71a71b",
    "size": 31432132
   },
-  "AT0/store/f7cc011ef856a6dc.json": {
+  "results/AT0/store/f7cc011ef856a6dc.json": {
    "exp": "",
    "hf_path": "AT0/store/f7cc011ef856a6dc.json",
    "hf_revision": "bc8875664493f154f1deaff14ca50ca3607ef751",
@@ -55,7 +55,7 @@
    "sha256_16": "f7cc011ef856a6dc",
    "size": 233614298
   },
-  "AT2/AT2.json": {
+  "results/AT2/AT2.json": {
    "exp": "",
    "hf_path": "AT2/AT2.json",
    "hf_revision": "abd031a74d8ee21e25edb9a12fe3f2c3089a444c",
@@ -64,7 +64,7 @@
    "sha256_16": "ee3a78ec0480f0a5",
    "size": 12358335
   },
-  "AT2b/AT2b.json": {
+  "results/AT2b/AT2b.json": {
    "exp": "",
    "hf_path": "AT2b/AT2b.json",
    "hf_revision": "3f48e735931c43737f6a91485604dcb5bf90134b",
@@ -73,7 +73,7 @@
    "sha256_16": "81fd7342c479e743",
    "size": 39809652
   },
-  "AT2c/AT2c.json": {
+  "results/AT2c/AT2c.json": {
    "exp": "",
    "hf_path": "AT2c/AT2c.json",
    "hf_revision": "a32271271caff35ae0ee0fe21fb2d70051df24d7",
@@ -82,7 +82,7 @@
    "sha256_16": "e04ae156f337ea64",
    "size": 24511768
   },
-  "AT8/AT8_2_R2_series.npz": {
+  "results/AT8/AT8_2_R2_series.npz": {
    "exp": "",
    "hf_path": "AT8/AT8_2_R2_series.npz",
    "hf_revision": "e4a1ad603250be34e76c4667616370397fecae04",
@@ -91,7 +91,7 @@
    "sha256_16": "f834c620616aaf98",
    "size": 10835297
   },
-  "AT8/AT8_2_R2_store.json": {
+  "results/AT8/AT8_2_R2_store.json": {
    "exp": "",
    "hf_path": "AT8/AT8_2_R2_store.json",
    "hf_revision": "00049bd312014e16d51583532fb7835cf4f1dbb8",
@@ -100,7 +100,16 @@
    "sha256_16": "78419a69a2edbc76",
    "size": 12802368
   },
-  "e52_4b/exp47b_gen_kinematics.npz": {
+  "results/e50v3_out/qwen35-08b/tokenizer.json": {
+   "exp": "E50",
+   "hf_path": "E50/tokenizer.json",
+   "hf_revision": "f6418bfc87b62e248110769148ac6349263932c7",
+   "local_path": "results/e50v3_out/qwen35-08b/tokenizer.json",
+   "note": "снимок токенайзера Qwen3.5-0.8B, использованный в e50v3_out; upstream тоже есть, но пин лучше фиксировать",
+   "sha256_16": "5f9e4d4901a92b99",
+   "size": 12807982
+  },
+  "results/e52_4b/exp47b_gen_kinematics.npz": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics.npz",
    "hf_revision": "87c84d744c74542bd32b2fc2e15e4170a09bfd02",
@@ -109,7 +118,7 @@
    "sha256_16": "f6a277a8c3e0f778",
    "size": 205741283
   },
-  "e52_4b/exp47b_gen_kinematics/chat_0_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/chat_0_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/chat_0_V.npy",
    "hf_revision": "055825c067e609a113a060aeb0ff466a3743419c",
@@ -118,7 +127,7 @@
    "sha256_16": "b1f91184f03afbcc",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/chat_1_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/chat_1_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/chat_1_V.npy",
    "hf_revision": "87c7c647122662e1a1eeee83e1123f7a46dc4a01",
@@ -127,7 +136,7 @@
    "sha256_16": "be19205c462ff875",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/chat_2_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/chat_2_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/chat_2_V.npy",
    "hf_revision": "7b0fcae9285e624c1847583b138211809bdf3a0a",
@@ -136,7 +145,7 @@
    "sha256_16": "425bb877d89ef74e",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/chat_3_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/chat_3_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/chat_3_V.npy",
    "hf_revision": "89a02804c0753f40ead8e78ea88c431e5a891cb3",
@@ -145,7 +154,7 @@
    "sha256_16": "1ce56ea36b3d8656",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/code_0_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/code_0_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/code_0_V.npy",
    "hf_revision": "7d8f49eecfe3a1f08f236c0e258a8e8a21845a0f",
@@ -154,7 +163,7 @@
    "sha256_16": "023d15b569a250e3",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/code_1_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/code_1_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/code_1_V.npy",
    "hf_revision": "1c1703128438f9b32296918e2538486fd85bedf3",
@@ -163,7 +172,7 @@
    "sha256_16": "43d9c84ccaed4bb6",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/code_2_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/code_2_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/code_2_V.npy",
    "hf_revision": "2f56bf4344726921cc3dbf7d9dbdd9bcb677f3e1",
@@ -172,7 +181,7 @@
    "sha256_16": "42565690bc2ed135",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/code_3_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/code_3_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/code_3_V.npy",
    "hf_revision": "ad5280c577083042050657642312ead081fbf440",
@@ -181,7 +190,7 @@
    "sha256_16": "9df3797627433ada",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/math_0_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/math_0_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/math_0_V.npy",
    "hf_revision": "203f87daf2a6fdefa0093a13d438cc604ebb8f3a",
@@ -190,7 +199,7 @@
    "sha256_16": "5acba336a744979f",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/math_1_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/math_1_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/math_1_V.npy",
    "hf_revision": "6838fd035f8324880831e8f6609ae63e4fd93760",
@@ -199,7 +208,7 @@
    "sha256_16": "1eb77f51861ab781",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/math_2_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/math_2_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/math_2_V.npy",
    "hf_revision": "668cf845c303b26960d3dace13c63b4d20c61159",
@@ -208,7 +217,7 @@
    "sha256_16": "3f1d743b11ccac69",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/math_3_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/math_3_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/math_3_V.npy",
    "hf_revision": "e974866dd50c38571fd74fd9cd36eaf86157a1f8",
@@ -217,7 +226,7 @@
    "sha256_16": "69096e11aa900be5",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/wiki_0_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/wiki_0_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/wiki_0_V.npy",
    "hf_revision": "f3d2f9bf2781243bd65dea40ca23ef90dca5df22",
@@ -226,7 +235,7 @@
    "sha256_16": "b4ad6c13377a5b58",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/wiki_1_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/wiki_1_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/wiki_1_V.npy",
    "hf_revision": "fa12c6e5f68b2cafa69da3340fcde4dc7e87787b",
@@ -235,7 +244,7 @@
    "sha256_16": "9d6cd1117ffb2ebe",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/wiki_2_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/wiki_2_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/wiki_2_V.npy",
    "hf_revision": "b75a5d6c221c78d6eaef80a95f5ba03ce7ac4f4a",
@@ -244,7 +253,7 @@
    "sha256_16": "f252f91b687f08de",
    "size": 13107328
   },
-  "e52_4b/exp47b_gen_kinematics/wiki_3_V.npy": {
+  "results/e52_4b/exp47b_gen_kinematics/wiki_3_V.npy": {
    "exp": "",
    "hf_path": "e52_4b/exp47b_gen_kinematics/wiki_3_V.npy",
    "hf_revision": "00d26a253c75b71e517b91741f51e7b78f745c53",
@@ -253,7 +262,115 @@
    "sha256_16": "9a3415afbf5429bd",
    "size": 13107328
   },
-  "e69c/lora_r16.pt": {
+  "results/e64/tpu/P1_own.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P1_own.npz",
+   "hf_revision": "285a2bb1aa9e6f75808dff37bf731d83a51adc3d",
+   "local_path": "results/e64/tpu/P1_own.npz",
+   "note": "выход E-64 (TPU): P1 own-якобиан; байт-в-байт совпадает с results/e64/tpu_v8/P1_own.npz (sha 783e1633…), на HF одна копия",
+   "sha256_16": "783e16338cdcb652",
+   "size": 57858745
+  },
+  "results/e64/tpu/P2_corpus.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P2_corpus.npz",
+   "hf_revision": "5e036f0563468620a0cb5291e01f3e2419019af5",
+   "local_path": "results/e64/tpu/P2_corpus.npz",
+   "note": "выход E-64 (TPU); байт-в-байт = results/e64/tpu_v8/P2_corpus.npz, на HF одна копия",
+   "sha256_16": "5f42a08442a5d3bc",
+   "size": 30607256
+  },
+  "results/e64/tpu/P2c_crossdom.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P2c_crossdom.npz",
+   "hf_revision": "2ef7ad497ce9b3686723e58d22fd50763aa5d1fb",
+   "local_path": "results/e64/tpu/P2c_crossdom.npz",
+   "note": "выход E-64 (TPU); байт-в-байт = results/e64/tpu_v8/P2c_crossdom.npz, на HF одна копия",
+   "sha256_16": "8ee4979eec63912a",
+   "size": 25719444
+  },
+  "results/e64/tpu/P3_rnull.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P3_rnull.npz",
+   "hf_revision": "6f49d77d61b2e7d2e91337462c7a26360b73ec6b",
+   "local_path": "results/e64/tpu/P3_rnull.npz",
+   "note": "выход E-64 (TPU); байт-в-байт = results/e64/tpu_v8/P3_rnull.npz, на HF одна копия",
+   "sha256_16": "6b88209931cd386d",
+   "size": 87132254
+  },
+  "results/e64/tpu/cor_p1.npz": {
+   "exp": "E64",
+   "hf_path": "E64/cor_p1.npz",
+   "hf_revision": "1e1a1fbf8fb65cee04b6a73e02bb36b72e1bcc87",
+   "local_path": "results/e64/tpu/cor_p1.npz",
+   "note": "выход E-64 (TPU/локальный): вход P1..P4 для eigen/сравнений; добавлено 20.11 по находке ревью (было пропущено)",
+   "sha256_16": "40bcbb684f9bb10a",
+   "size": 18650
+  },
+  "results/e64/tpu_v8/P1_own.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P1_own.npz",
+   "hf_revision": "285a2bb1aa9e6f75808dff37bf731d83a51adc3d",
+   "local_path": "results/e64/tpu_v8/P1_own.npz",
+   "note": "выход E-64 (TPU/локальный): вход P1..P4 для eigen/сравнений; добавлено 20.11 по находке ревью (было пропущено)",
+   "sha256_16": "783e16338cdcb652",
+   "size": 57858745
+  },
+  "results/e64/tpu_v8/P2_corpus.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P2_corpus.npz",
+   "hf_revision": "5e036f0563468620a0cb5291e01f3e2419019af5",
+   "local_path": "results/e64/tpu_v8/P2_corpus.npz",
+   "note": "выход E-64 (TPU/локальный): вход P1..P4 для eigen/сравнений; добавлено 20.11 по находке ревью (было пропущено)",
+   "sha256_16": "5f42a08442a5d3bc",
+   "size": 30607256
+  },
+  "results/e64/tpu_v8/P2c_crossdom.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P2c_crossdom.npz",
+   "hf_revision": "2ef7ad497ce9b3686723e58d22fd50763aa5d1fb",
+   "local_path": "results/e64/tpu_v8/P2c_crossdom.npz",
+   "note": "выход E-64 (TPU/локальный): вход P1..P4 для eigen/сравнений; добавлено 20.11 по находке ревью (было пропущено)",
+   "sha256_16": "8ee4979eec63912a",
+   "size": 25719444
+  },
+  "results/e64/tpu_v8/P3_rnull.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P3_rnull.npz",
+   "hf_revision": "6f49d77d61b2e7d2e91337462c7a26360b73ec6b",
+   "local_path": "results/e64/tpu_v8/P3_rnull.npz",
+   "note": "выход E-64 (TPU/локальный): вход P1..P4 для eigen/сравнений; добавлено 20.11 по находке ревью (было пропущено)",
+   "sha256_16": "6b88209931cd386d",
+   "size": 87132254
+  },
+  "results/e64/tpu_v8/P4_T1.2.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P4_T1.2.npz",
+   "hf_revision": "ed6344738248323d97a296186a02b2813cc7b4ee",
+   "local_path": "results/e64/tpu_v8/P4_T1.2.npz",
+   "note": "выход E-64 (TPU/локальный): вход P1..P4 для eigen/сравнений; добавлено 20.11 по находке ревью (было пропущено)",
+   "sha256_16": "6ec27fd3ed4e5be6",
+   "size": 39009194
+  },
+  "results/e64/tpu_v8/P4_T1.5.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P4_T1.5.npz",
+   "hf_revision": "d587b082a6e5bceb6ed34954e9469b93059213e7",
+   "local_path": "results/e64/tpu_v8/P4_T1.5.npz",
+   "note": "выход E-64 (TPU/локальный): вход P1..P4 для eigen/сравнений; добавлено 20.11 по находке ревью (было пропущено)",
+   "sha256_16": "d4d2cf39044fbd08",
+   "size": 39014052
+  },
+  "results/e64/tpu_v8/P4_T2.0.npz": {
+   "exp": "E64",
+   "hf_path": "E64/P4_T2.0.npz",
+   "hf_revision": "d80f43af8a655cdcd72be840df7d8b3c50e2d0fa",
+   "local_path": "results/e64/tpu_v8/P4_T2.0.npz",
+   "note": "выход E-64 (TPU/локальный): вход P1..P4 для eigen/сравнений; добавлено 20.11 по находке ревью (было пропущено)",
+   "sha256_16": "246d05ff679948bb",
+   "size": 39009528
+  },
+  "results/e69c/lora_r16.pt": {
    "exp": "",
    "hf_path": "e69c/lora_r16.pt",
    "hf_revision": "98274c09fe9155f3db99def099ba3e951910a5e2",
@@ -262,7 +379,7 @@
    "sha256_16": "287b4e56e5063745",
    "size": 18530159
   },
-  "exp16_deltas/exp16_dW_snapshots.pt": {
+  "results/exp16_deltas/exp16_dW_snapshots.pt": {
    "exp": "",
    "hf_path": "exp16_deltas/exp16_dW_snapshots.pt",
    "hf_revision": "365242672f5531375c70301df1295123524a3bcc",
@@ -271,7 +388,7 @@
    "sha256_16": "76b97fb8afcba64d",
    "size": 52982891
   },
-  "exp16_lm_head_final.pt": {
+  "results/exp16_lm_head_final.pt": {
    "exp": "",
    "hf_path": "exp16_lm_head_final.pt",
    "hf_revision": "b1d3c89f7dba40075b29d32fbe6d7263bf7beadb",
@@ -280,7 +397,7 @@
    "sha256_16": "35362cf7584539cc",
    "size": 508560664
   },
-  "exp36_gauge_anatomy.json": {
+  "results/exp36_gauge_anatomy.json": {
    "exp": "",
    "hf_path": "exp36_gauge_anatomy.json",
    "hf_revision": "9dc42832a23f6b1f8bc1a88699fca0e658a81bb2",
@@ -289,7 +406,7 @@
    "sha256_16": "7a1bb704c42b78d5",
    "size": 14326378
   },
-  "exp38g_jlens/lens.pt": {
+  "results/exp38g_jlens/lens.pt": {
    "exp": "",
    "hf_path": "exp38g_jlens/lens.pt",
    "hf_revision": "32b48951b22c99cc8e840984234305957827dad0",
@@ -298,7 +415,7 @@
    "sha256_16": "7918b892fcac8b19",
    "size": 48242990
   },
-  "exp45b_leaf_table.npz": {
+  "results/exp45b_leaf_table.npz": {
    "exp": "",
    "hf_path": "exp45b_leaf_table.npz",
    "hf_revision": "4a4e61f43246503729da1837d24513c8e078bba5",
@@ -307,7 +424,7 @@
    "sha256_16": "f09ed0c80fc5ac35",
    "size": 131797659
   },
-  "exp48b_lfm3_gen_kinematics.npz": {
+  "results/exp48b_lfm3_gen_kinematics.npz": {
    "exp": "",
    "hf_path": "exp48b_lfm3_gen_kinematics.npz",
    "hf_revision": "70a099adcd83e73df0a98f0956c8a765d45df9f8",
@@ -316,7 +433,7 @@
    "sha256_16": "535c100594d3a36e",
    "size": 1578794007
   },
-  "r52d_q08_int2/exp47b_gen_kinematics.npz": {
+  "results/r52d_q08_int2/exp47b_gen_kinematics.npz": {
    "exp": "",
    "hf_path": "r52d_q08_int2/exp47b_gen_kinematics.npz",
    "hf_revision": "4443b8de3c5847ef784a741d2eea061052999a4a",
@@ -325,7 +442,7 @@
    "sha256_16": "4896498f40ce74cd",
    "size": 82827901
   },
-  "r52d_q08_int4/exp47b_gen_kinematics.npz": {
+  "results/r52d_q08_int4/exp47b_gen_kinematics.npz": {
    "exp": "",
    "hf_path": "r52d_q08_int4/exp47b_gen_kinematics.npz",
    "hf_revision": "2a19fea23006c36aaf3a78e25a74c881c9b81869",
@@ -335,5 +452,5 @@
    "size": 82445596
   }
  },
- "schema": 1
+ "schema": 2
 }

@@ -1,5 +1,7 @@
-import json, sys, numpy as np
-sys.path.insert(0,'.')
+import os, json, sys, numpy as np
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import run
 z=np.load('../results/e52_4b/exp47b_gen_kinematics.npz',allow_pickle=True)
 docs=json.load(open('../results/e52_4b/exp47b_gen_kinematics.json'))['docs']

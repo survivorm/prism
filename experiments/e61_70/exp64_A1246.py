@@ -6,9 +6,12 @@ A6 состав/доменные строки на невырожденных. �
 - Pearson кривых норм НЕ центрируется дважды; для hn(level) центрирование по доку.
 - все median-агрегации: per-doc медиана → domain median (Б8)."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e64"), exist_ok=True)
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"1")
 import numpy as np
-sys.path.insert(0,'.')
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import curve_u
 NPZ="/data/prism_kernels/exp62/gen_layers_qwen.npz"; L="23"
 z=np.load(NPZ,allow_pickle=True); meta=json.load(open(NPZ.replace(".npz","_meta.json")))
@@ -110,7 +113,7 @@ for a,b in PAIRS:
         for n in ok:
             g=gs[(a,b)][n]; s=rng.integers(40,len(g)-100)
             idx=rng.integers(0,len(g)-s-50,300)
-            nullsh.append(np.median(np.einsum("ij,ij->i",g[idx],g[idx+s:s+idx+1][np.arange(300)% (len(g)-s)] if False else g[idx+s:idx+s+1][0:1]*(0+1)+g[idx]*0+g[idx+s]*0+ (g[idx]*0+g[idx+s:idx+s+1])[(np.arange(300))% max(len(g)-s-idx.max() if False else 1,1)]] if False else np.einsum("ij,ij->i",g[idx],np.take(g,idx+s,mode="clip"))))
+            nullsh.append(np.median(np.einsum("ij,ij->i", g[idx], np.take(g, idx+s, axis=0, mode="clip"))))  # было: непарсящаяся TK-мешанина (SyntaxError, файл не запускался никогда)
     A4[f"{a}->{b}"]={"real_by_dom":{dm:round(float(np.median([real[n] for n in ok if dom[n]==dm])),3) for dm in ["wiki","math","code","chat"]},
         "real_med":round(float(np.median(list(real.values()))),3),
         "null_crossdoc":round(float(np.median(nullcd)),3),

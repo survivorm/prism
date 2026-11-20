@@ -9,6 +9,9 @@ exp47b бывают 64–255 токенов; A/B отвечает «TF ≈ G н�
 
 # reorg 16.11: cross-series imports (соседние подкаталоги experiments/)
 import os, sys  # noqa: E401
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e62"), exist_ok=True)
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "e01_10"))
 import json, os, sys, time
 os.environ.setdefault("PRISM_CALIB_PIN_WRITE", "1")

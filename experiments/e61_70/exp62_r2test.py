@@ -3,10 +3,13 @@
 (B) робастность фазового R̄ к семени σ-бутстрапа (самоаудит: L23-контроль fixw
 не сошёлся с E-60d — 0.57 vs 0.79). Источники: Qwen L{1,5,11,17,23}, LFM3 L23, 4B."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results/..." -> <repo>/results/...
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e62"), exist_ok=True)
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(v, "1")
 import numpy as np
-sys.path.insert(0, '.')
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import curve_u, K  # noqa: E402
 
 NL = 14
