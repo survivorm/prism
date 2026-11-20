@@ -50,6 +50,8 @@ results/*.json
 # 20.11 (внешнее ревью strayed-exp): проверки аудита — провенанс, 8 КБ, в git
 !results/_audit_checks/
 !results/_audit_checks/*.json
+# 20.11 (аудит E-33r): провенанс Δ_fixP (37 КБ) — число из карточки иначе невоспроизводимо
+!results/exp33r_fixp_L23.json
 
 results/exp27_jcache.pt
 
