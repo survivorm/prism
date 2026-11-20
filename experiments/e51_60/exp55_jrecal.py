@@ -54,7 +54,7 @@ gateJ = bool(res["C3"]["j"] > max(thr, 4 * res["C2"]["j"]) and res["C2"]["j"] < 
 res["gate_J"] = gateJ
 print("gate_J:", gateJ, {k: round(res[k]["j"], 3) for k in res if k.startswith("C")}, flush=True)
 
-gp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results", "exp55_sbi_gate.json")
+gp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "results", "exp55_sbi_gate.json")
 if os.path.exists(gp):
     d = json.load(open(gp))
     for k in ("C1", "C2", "C3", "C5", "C7"):
@@ -93,5 +93,5 @@ if os.path.exists(gp):
     d["gate_all"] = all(bools)
     json.dump(d, open(gp, "w"), indent=1, default=float)
     print("обновлён gate_J (с провенансом) в", gp, flush=True)
-json.dump(res, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+json.dump(res, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
                                  "results", "exp55_jrecal.json"), "w"), indent=1, default=float)

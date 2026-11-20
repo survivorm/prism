@@ -9,7 +9,10 @@ import json, os, sys
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(v, "1")
 import numpy as np
-sys.path.insert(0, '.')
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e63"), exist_ok=True)   # каталога results/e63 в репо нет
+sys.path.insert(0, _HERE)
 
 NPZ = "/data/prism_kernels/exp62/gen_layers_qwen.npz"
 L = "23"
@@ -115,4 +118,4 @@ for dm, om in DOM.items():
               f"scr(плоск.реала)={r['R_scr_realplane']} var⊥пл={r['var_plane']:.2f} "
               f"minSV={r['plane_minSV']:.2f} Δ1 r/s={r['d1_real']:+.2f}/{r['d1_scr']:+.2f} "
               f"Δ24 r={r['d24_real']:+.2f} inv={r['dist_intra_ok']}", flush=True)
-json.dump(out, open("../results/e63/t5_audit.json", "w"))
+json.dump(out, open("../results/e63/t5_audit.json", "w"), default=float)

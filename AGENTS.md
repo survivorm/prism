@@ -62,6 +62,14 @@ qwen3.8); extension может уйти в `extension_unresponsive` посред
    промт-файл; чек только по файлам текущей правки (в истории CJK есть —
    репо-wide grep никогда не будет чист).
 
+## SYCL-библиотека (sycl_prism/ — прибор на iGPU: gemm/eigjac/eigtop/eigbot/svd_top)
+- Где/что: `sycl_prism/` — C ABI (`src/prism_sycl.cpp`) + python (`py/prism_sycl.py`, ctypes);
+  сборка `cd sycl_prism/build && make` (icpx -fsycl); устройство — iGPU (Level-Zero):
+  `LD_LIBRARY_PATH` обязан включать `/opt/intel/oneapi/2026.0/lib` (иначе «No device»).
+- Тесты: `cd sycl_prism && python -m pytest py/test_new_ops.py -q` (без GPU — автоскип, DEVICE_OK-guard).
+- Диспетчер: `PRISM_BACKEND=cpu|sycl` (дефолт cpu) + `prism/backend.py` — AT2c: `B.matmul/B.eigh/B.svd_top`
+  (один вызов в обоих режимах).
+
 ## trackio (временные ряды + реестр прогонов)
 **Обязательно для ВСЕХ новых локальных (CPU) экспериментов.** Прогон без trackio = прогон без
 засчитанных тайм-меток (правило 7.2). Формат:
@@ -99,3 +107,9 @@ Sweep: `find docs/ \( -name "*REVIEW*" -o -name "*answers*" -o -name "*prompt*" 
 - `--prune-before` НЕ использовать без явного согласования: он сносит ВСЁ ранее даты.
 - Кеш/артефакты >10MB в git не класть; артефакты, которых нет в git, дублировать в
   /tmp/recovered или внешний бэкап до любых опасных операций.
+- **Большие артефакты (правило 2026-11-20):** git — только провенанс. Пороги: ≤10MB — можно в git;
+  >10MB — HF private dataset `prism-artifacts` + запись в `artifacts/registry.json` (sha256,
+  local_path, hf_path); регенерируемые кэши (`*_jcache*.pt`, `P*_*.npz`, `trackio`-БД) — только
+  `/data`, в архив не идут. Kaggle-dataset — лишь дубликат для тех артефактов, что нужны из kernel.
+  Механика: `tools/artifacts.py {scan,gate,add,verify,push,pull}`; `gate` стоит в `.git/hooks/pre-commit`
+  и падает на staged-файлах >10MB. Политика целиком — `docs/ARTIFACTS_STORAGE.md`.

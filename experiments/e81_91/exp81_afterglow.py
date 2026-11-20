@@ -16,7 +16,7 @@ Null: θ-перестановки для R3 (перемешать ev по t вн
 """
 import json, numpy as np
 from pathlib import Path
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=Path(__file__).resolve().parents[2]
 D=ROOT/"results"/"e64"/"tpu"; OUT=ROOT/"results"/"e81"; OUT.mkdir(parents=True,exist_ok=True)
 RNG=np.random.default_rng(81); L=23; sfx=f"_L{L}"; TAU=(8,160)
 zo=np.load(D/"P1_own.npz"); zc=np.load(D/"P2_corpus.npz")

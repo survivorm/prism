@@ -11,7 +11,9 @@ import json, os, sys
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(v, "1")
 import numpy as np
-sys.path.insert(0, '.')
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import run, K  # noqa: E402
 
 NPZ = "/data/prism_kernels/exp62/gen_layers_qwen.npz"
@@ -25,7 +27,6 @@ dom_of = {n: meta[n]["dom"] for n in names}
 
 def U_of(nm):
     u = np.asarray(z[f"{nm}_L{L}_u"], dtype=np.float64)
-    U = u * np.asarray(z[f"{nm}_L{L}_hn"], dtype=np.float32)[:, None][:, None][:, 0]
     U = u * np.asarray(z[f"{nm}_L{L}_hn"], dtype=np.float64)[:, None]
     U /= np.maximum(np.linalg.norm(U, axis=1, keepdims=True), 1e-12)
     return U
@@ -95,5 +96,5 @@ for tag, gen in (("iid", lambda U, i: null_iid(U, i)),
     res[tag] = {k: r[k] for k in ("F1", "n_osc", "n", "clip", "n_strict", "dip1")}
     print(f"NULL {tag:>6}: F1={r['F1']} osc={r['n_osc']}/64 clip={r['clip']} "
           f"strict={r['n_strict']} Δ(1)={r['dip1']:+.3f}", flush=True)
-    json.dump(res, open("../results/e63/d2_nulls.json", "w"), ensure_ascii=False)
+    json.dump(res, open("../results/e63/d2_nulls.json", "w"), ensure_ascii=False, default=float)
 print("REAL L23 (справка): F1=0.913 osc=45/64 clip=19 strict=17 Δ(1)=-0.072")

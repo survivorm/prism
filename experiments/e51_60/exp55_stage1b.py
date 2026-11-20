@@ -121,5 +121,5 @@ if __name__ == "__main__":
     out["gate_obj50"] = bool(out[win]["obj_test"] < 50)
     out["gate_perlag3"] = bool(max(abs(z) for z in out[win]["perlag_z"]) < 3)   # ключ perlag_z (self-audit: был perlag_test → KeyError в конце)
     print("winner(BIC):", win, "obj50:", out["gate_obj50"], "per-lag<3σ:", out["gate_perlag3"], flush=True)
-    json.dump(out, open(os.path.join(HERE, "..", "results", "exp55_stage1b.json"), "w"), indent=1, default=float)
+    json.dump(out, open(os.path.join(HERE, "..", "..", "results", "exp55_stage1b.json"), "w"), indent=1, default=float)
     print("saved -> results/exp55_stage1b.json", flush=True)

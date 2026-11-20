@@ -178,7 +178,7 @@ def run_all():
     out["gate_all_partial_no_J"] = bool(allp)   # явная метка: без J — не финальный вердикт
     out["gate_all"] = None                       # финальный ставит только jrecal (review v14 minor a)
     print("=== STAGE -1 v2 (partial, без J):", "PASS" if allp else "FAIL", flush=True)
-    json.dump(out, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+    json.dump(out, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
                                      "results", "exp55_sbi_gate.json"), "w"), indent=1, default=float)
 
 if __name__ == "__main__":

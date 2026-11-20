@@ -14,7 +14,7 @@ onset, profile сегментами 32; C) связь с хвостом e1 (TAIL
 import json, numpy as np, torch, os
 from pathlib import Path
 from transformers import AutoModelForCausalLM,AutoTokenizer
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=Path(__file__).resolve().parents[2]
 D=ROOT/"results"/"e64"/"tpu"; OUT=ROOT/"results"/"e81"; OUT.mkdir(parents=True,exist_ok=True)
 BASE="/data/Qwen/Qwen3.5-0.8B"; N=384
 tk=AutoTokenizer.from_pretrained(BASE)

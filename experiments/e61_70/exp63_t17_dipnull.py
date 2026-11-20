@@ -6,6 +6,9 @@ Vo[t]=U[t+1]−(U[t+1]·U[t])U[t], Δ(k)=median cos(V̂_t,V̂_{t+k})) мерял
 −0.136 — «законы о дипах» (S2 симплектика, S1 renewal, S4 mean-reversion) объясняют
 свойство V-оценщика; если нет — у real есть реальный добавок."""
 import json, os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e63"), exist_ok=True)   # каталога results/e63 в репо нет
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(v, "1")
 import numpy as np
@@ -96,4 +99,4 @@ for tag, g in gens.items():
     print(f"{tag:>6}: Δ(1) pooled={res[tag]['d1_pooled_med']:+.3f} "
           f"IQR={np.round(res[tag]['d1_pooled_iqr'],3).tolist()} per-dom={res[tag]['per_dom_d1']}",
           flush=True)
-    json.dump(res, open("../results/e63/t17_dipnull.json", "w"))
+    json.dump(res, open("../results/e63/t17_dipnull.json", "w"), default=float)

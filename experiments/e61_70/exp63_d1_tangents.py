@@ -7,7 +7,9 @@ import json, os, sys
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(v, "1")
 import numpy as np
-sys.path.insert(0, '.')
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import curve_u, K  # noqa: E402
 
 NPZ = "/data/prism_kernels/exp62/gen_layers_qwen.npz"
@@ -56,4 +58,4 @@ for La, Lb in ((1, 23), (5, 23), (11, 23), (17, 23), (11, 17)):
     print(f"{ka}: cos(v,v')={res['a_pair'][ka]:+.3f} предпр.= {res['d_preferred_prod'][ka]:+.3f} "
           f"corr(Δk)={res['b_profile_corr'][ka]:+.3f} чужой={res['c_foreign'][ka]:+.3f}", flush=True)
 os.makedirs("../results/e63", exist_ok=True)
-json.dump(res, open("../results/e63/d1_tangent.json", "w"))
+json.dump(res, open("../results/e63/d1_tangent.json", "w"), default=float)

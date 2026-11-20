@@ -253,6 +253,6 @@ def controls(n_docs=24, seed=11):
 if __name__ == "__main__":
     t0 = time.time()
     res = controls()
-    json.dump(res, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+    json.dump(res, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
                                      "results", "exp55_stage-1.json"), "w"), indent=1, default=float)
     print(f"done {time.time()-t0:.0f}s -> results/exp55_stage-1.json", flush=True)

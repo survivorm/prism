@@ -9,7 +9,7 @@ cor-сторона требует teacher-forced p1 (GPU) — сюда не вх
 """
 import json, numpy as np
 from pathlib import Path
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=Path(__file__).resolve().parents[2]
 D=ROOT/"results"/"e64"/"tpu"; OUT=ROOT/"results"/"e80"; OUT.mkdir(parents=True,exist_ok=True)
 RNG=np.random.default_rng(8080); R=2; L=23; NB=200
 z_o=np.load(D/"P1_own.npz"); z_c=np.load(D/"P2_corpus.npz"); sfx=f"_L{L}"

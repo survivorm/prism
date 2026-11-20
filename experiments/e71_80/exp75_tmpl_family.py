@@ -31,6 +31,20 @@ def save(): json.dump(res,open(FN,"w"),default=float)
 def wrap(tok,txt):
     try: return tok.apply_chat_template([{"role":"user","content":txt}],add_generation_prompt=True,tokenize=False)
     except Exception: return "USER: "+txt+"\nASSISTANT:"
+
+def tmpl_prefix(tok,full,txt):
+    """Символы шаблона до начала текста. len(wrap("")) НЕ годится: у Qwen3.5 он 69 симв.
+    при реальном префиксе 17 симв. — в «шапку» попадало до 52 симв. тела (P=12..24 вместо 3).
+    Неопределимый префикс = исключение (молчаливый P=0 тихо превратил бы tmpl-клетку в raw)."""
+    probe=txt.strip()[:24]
+    if probe:
+        i=full.find(probe)
+        if i>=0: return full[:i]
+    h0=wrap(tok,"")
+    j=h0.find("<|im_end|>")
+    pre=h0[:j] if j>0 else ""
+    if pre and full.startswith(pre): return pre
+    raise RuntimeError(f"tmpl prefix not found (probe={probe[:12]!r})")
 MODELS=[("qwen","Qwen/Qwen3.5-0.8B"),("lfm","LiquidAI/LFM3-1.7B")]
 for tag,mid in MODELS:
     try:
@@ -49,8 +63,7 @@ for tag,mid in MODELS:
                 if form=="raw": hdr=""; body=txt
                 else:
                     full=wrap(tk,txt)
-                    hdr_s=wrap(tk,"")
-                    hdr=full[:len(hdr_s)]   # префикс шаблона до контента
+                    hdr=tmpl_prefix(tk,full,txt)
                     body=txt
                 ids_h=tk(hdr,add_special_tokens=False)["input_ids"]
                 ids_b=tk(body,add_special_tokens=False)["input_ids"][:MAXLEN]

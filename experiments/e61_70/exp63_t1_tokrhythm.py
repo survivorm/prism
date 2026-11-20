@@ -3,6 +3,8 @@
 генерации: real vs blk8 vs iid. Пик у real на лаге T=2π/ω*, сохранённый blk8 и убитый iid
 => «контент-часы» (ритм в тексте); пика нет => состояние добавляет ритм сверх текста."""
 import os, sys
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(v, "1")
 import json, numpy as np
@@ -75,4 +77,4 @@ for d in ("math", "code", "chat", "wiki"):
     for tag in ("real", "blk8", "iid"):
         print(f"  {d:<5}{tag:<5}", [round(x, 3) for x in res[tag]["cos"][d][:8]])
 os.makedirs("../results/e63", exist_ok=True)
-json.dump(res, open("../results/e63/t1_tokrhythm.json", "w"))
+json.dump(res, open("../results/e63/t1_tokrhythm.json", "w"), default=float)

@@ -11,9 +11,9 @@ slope ln|ACF| vs ln k (μ), rep8-доля и onset. Предсказание: μ
 """
 import json, numpy as np, torch, os
 from pathlib import Path
-os.environ["PRISM_CALIB_PIN_DIR"]=str(Path(__file__).resolve().parent.parent/"data"/"calib_pins")
+os.environ["PRISM_CALIB_PIN_DIR"]=str(Path(__file__).resolve().parents[2]/"data"/"calib_pins")
 from transformers import AutoModelForCausalLM,AutoTokenizer
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=Path(__file__).resolve().parents[2]
 D=ROOT/"results"/"e64"/"tpu"; OUT=ROOT/"results"/"e81"
 BASE="/data/Qwen/Qwen3.5-0.8B"; N=384
 tk=AutoTokenizer.from_pretrained(BASE)

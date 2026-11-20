@@ -11,7 +11,10 @@ import json, os, sys
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(v, "1")
 import numpy as np
-sys.path.insert(0, '.')
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e63"), exist_ok=True)   # каталога results/e63 в репо нет
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import run  # noqa: E402
 
 NPZ = "/data/prism_kernels/exp62/gen_layers_qwen.npz"
@@ -74,5 +77,5 @@ for blk in (8, 16, 32):
               f"Δ(1)={r['dip1']:+.3f}", flush=True)
         for dm, ph in (r.get("phase") or {}).items():
             print(f"   {dm:<5} ω*={ph[0]} R̄all={ph[1]} R̄strict={ph[2]} n={ph[3]}", flush=True)
-        json.dump(res, open("../results/e63/t5_scramble.json", "w"), ensure_ascii=False)
+        json.dump(res, open("../results/e63/t5_scramble.json", "w"), ensure_ascii=False, default=float)
 print("real: R̄strict code 0.98 math 0.89 chat 0.97 wiki 0.01 | iid: 0.27–0.66")

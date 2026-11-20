@@ -7,7 +7,10 @@ import json, math, os, sys
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(v, "1")
 import numpy as np
-sys.path.insert(0, '.')
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e63"), exist_ok=True)   # каталога results/e63 в репо нет
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import curve_u, K  # noqa: E402
 
 ONES = np.ones(len(K))
@@ -15,7 +18,14 @@ RGX = np.round(np.concatenate([np.arange(0.02, 0.991, 0.01),
                                np.arange(0.992, 0.99965, 0.001)]), 4)
 NPZ = "/data/prism_kernels/exp62/gen_layers_qwen.npz"
 W = {"chat": 0.5, "code": 0.94, "math": 1.28, "wiki": 0.6}
-S23 = json.load(open("../results/e62/layers_qwen_L23.part"))["L23"]["phase"]
+# E-62 пишет results/e62/layers_qwen.json (все слои, ключ "L23"); старое имя .part — историческое
+# и в репо его никто не производит (найдено 20.11: файла нет ни локально, ни в бэкапах).
+_P = "../results/e62/layers_qwen.json"
+if not os.path.exists(_P):
+    _P = "../results/e62/layers_qwen_L23.part"
+if not os.path.exists(_P):
+    raise SystemExit(f"нет входа: {_P} — сначала exp62_layers.py (он пишет layers_qwen.json)")
+S23 = json.load(open(_P))["L23"]["phase"]
 STRICT = {dm: v[4] for dm, v in S23.items() if v}
 
 
@@ -59,4 +69,4 @@ for L in (1, 5, 11, 17, 23):
     print(f"L{L:>2} @ω*(L23): " + "  ".join(
         f"{dm}: all={row[dm]['R_all']} strict@L23={row[dm]['R_strict23']}(n={row[dm]['nsel']})"
         for dm in W), flush=True)
-json.dump(out, open("../results/e63/d0_strict_at_L23omega.json", "w"), ensure_ascii=False)
+json.dump(out, open("../results/e63/d0_strict_at_L23omega.json", "w"), ensure_ascii=False, default=float)

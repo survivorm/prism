@@ -10,7 +10,7 @@ own/cor только в знаке e1; если нет — корпусная «
 """
 import json, numpy as np
 from pathlib import Path
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=Path(__file__).resolve().parents[2]
 D=ROOT/"results"/"e64"/"tpu"; OUT=ROOT/"results"/"e80"
 RNG=np.random.default_rng(8081); R=2; L=23; NB=200
 zp=np.load(D/"cor_p1.npz"); zc=np.load(D/"P2_corpus.npz"); sfx=f"_L{L}"

@@ -15,7 +15,7 @@ E-80 RING: «затухающий гул» e1? Автокорреляции ЗН
 """
 import json, numpy as np
 from pathlib import Path
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=Path(__file__).resolve().parents[2]
 D=ROOT/"results"/"e64"/"tpu"; OUT=ROOT/"results"/"e80"; OUT.mkdir(parents=True,exist_ok=True)
 RNG=np.random.default_rng(80)
 
@@ -35,14 +35,6 @@ def plane(Uo,Uc,R=2):
     Sxy=sum(x.T@y for x,y in zip(Xs,Ys));Sxx=sum(x.T@x for x in Xs)
     M=np.linalg.solve(Sxx.T,Sxy.T).T;w,Vv=np.linalg.eigh(.5*(M+M.T))
     return B,Vv[:,np.argsort(w)[:2]]
-def signed_acf(Us,plane,kmax=6):
-    """ACF знаковой проекции p(t)=unit(Dl)@e_k по лагам; по документам отдельно."""
-    out=[]
-    for U in Us:
-        A=U@plane@np.eye(plane.shape[1]) if False else None
-    for U in Us:
-        Bm=None
-    return out
 # --- аккуратно: две плоскости (e1,e2) от одного B ---
 def series(Us,B,pl):
     per=[]
@@ -67,7 +59,7 @@ for L in (11,23):
     so=series(Uo,B,pl); sc=series(Uc,B,pl)
     res[f"L{L}"]={}
     for k,tag in ((0,"e1"),(1,"e2")):
-        Ao=[acf_of(s[:,k]) for s in so]; Ac=[acf_of(s[:,k]) for s in sc]
+        Ao=[acf_of(s[:,k], 6) for s in so]; Ac=[acf_of(s[:,k], 6) for s in sc]
         row={}
         for lag in range(6):
             mo,co=boot_ci([a[lag] for a in Ao]); mc,cc=boot_ci([a[lag] for a in Ac])
@@ -90,4 +82,4 @@ for L in (11,23):
                        ring=bool(kx is not None and amp is not None and amp[0]>0.05))
 res["verdict"]=verd
 (OUT/"RING.json").write_text(json.dumps(res,ensure_ascii=False,indent=1,allow_nan=False))
-print("E80 DONE",json.dumps(verdict if False else verd,ensure_ascii=False),flush=True)
+print("E80 DONE",json.dumps(verd,ensure_ascii=False),flush=True)

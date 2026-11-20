@@ -3,10 +3,13 @@
 на каждом из L{1,5,11,17,23} ОДНИХ И ТЕХ ЖЕ 64 траекторий exp47b (траектория
 побайтово воспроизведена, гейт sha+cos). Ответ: форма — свойство траектории или L23.
 L23 здесь = контрольная точка (должна дать базлайн E-61: F1 0.913, osc 45/64)."""
-import json, sys
+import json, os, sys
 import numpy as np
 
-sys.path.insert(0, ".")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e62"), exist_ok=True)
+sys.path.insert(0, _HERE)   # бывш. sys.path.insert(0, ".") — падал при запуске из корня репо
 from exp62_batt_lib import run  # noqa: E402
 
 NPZ = "/data/prism_kernels/exp62/gen_layers_qwen.npz"

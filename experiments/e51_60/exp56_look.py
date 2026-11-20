@@ -21,7 +21,7 @@ import exp53b_servo as E
 import exp55_sbi as S
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "..", "results", "e56")
+OUT = os.path.join(HERE, "..", "..", "results", "e56")
 os.makedirs(OUT, exist_ok=True)
 res = {"predregistered_rules": {
     "dip": "raw med_t cos(v_{t+1},v_t) < -0.05 (СЫРАЯ медиана, не delta vs shuffle — честная",
@@ -35,7 +35,7 @@ COL = {d: c for d, c in zip(doms, ("tab:blue", "tab:orange", "tab:green", "tab:r
 print("docs:", len(docs), flush=True)
 
 # ---------- шаг 1: pooled Δ(k)±σ (stage0) + шаг 3: расширение лагов ----------
-st0 = json.load(open(os.path.join(HERE, "..", "results", "exp55_stage0.json")))
+st0 = json.load(open(os.path.join(HERE, "..", "..", "results", "exp55_stage0.json")))
 k14 = sorted(int(k) for k in st0["curve"])
 d14 = [st0["curve"][str(k)]["delta"][0] for k in k14]
 s14 = [st0["sigma"][str(k)] for k in k14]
@@ -111,7 +111,7 @@ for i, d in enumerate(picks):
         axx.set_title(f"{d['name']} {lbl}"); axx.grid(alpha=.3); axx.set_aspect("equal")
 fig.colorbar(sc, ax=fig.axes, fraction=.02, label="t")
 fig.tight_layout(); fig.savefig(f"{OUT}/f3_pca_trajectories.png", dpi=100); plt.close(fig)
-json.dump(trajs, open(f"{OUT}/f3_traj_coords.json", "w"))
+json.dump(trajs, open(f"{OUT}/f3_traj_coords.json", "w"), default=float)
 
 # ---------- честный null: j_paired на бюджете real (64), не 200 ----------
 jg, j, js, jx = M.j_paired(docs)

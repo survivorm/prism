@@ -5,6 +5,9 @@ suffix-decoding стиль. Ключ = последние n токенов; пр
 продолжение из ранних вхождений. cov / acc|cov / joint по n=2..8; контроль: порядок
 контекта перемешан (тот же multiset)."""
 import json, os, sys, glob
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e63"), exist_ok=True)   # каталога results/e63 в репо нет
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(v, "1")
 import numpy as np
@@ -70,4 +73,4 @@ out = {dm: {str(n): {"cov": round(float(np.mean([r[0] for r in v])), 3),
                      "shuf_acc": round(float(np.mean([r[3] for r in v])), 3)}
            for n, v in sorted(dv.items())} for dm, dv in res.items()}
 print(json.dumps(out, indent=1))
-json.dump(out, open("../results/e63/t23_ngram.json", "w"))
+json.dump(out, open("../results/e63/t23_ngram.json", "w"), default=float)

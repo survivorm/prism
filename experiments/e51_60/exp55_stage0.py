@@ -12,7 +12,7 @@ import exp55_modes as M
 import exp53b_servo as E
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OLD = os.path.join(HERE, "..", "results", "exp53b_servo.json")
+OLD = os.path.join(HERE, "..", "..", "results", "exp53b_servo.json")
 
 docs = [E.derive(d) for d in E.load_real()]
 print("docs:", len(docs), flush=True)
@@ -48,7 +48,7 @@ for name, dd in sorted(doms.items()):
     print("dom", name, out["per_domain"][name], flush=True)
 
 try:
-    jd = json.load(open(os.path.join(HERE, "..", "results", "exp47b_gen_kinematics.json")))["docs"]
+    jd = json.load(open(os.path.join(HERE, "..", "..", "results", "exp47b_gen_kinematics.json")))["docs"]
     lp = [np.median([l[2] for l in d["loops"]]) if d["loops"] else float("nan") for d in jd]
     out["rhythm_scale_check"] = {"median_loop_tokens": float(np.nanmedian(lp)),
                                  "note": "окно T=384 шага (D,T из exp53b); медианный цикл ~378 токенов ≈"
@@ -68,5 +68,5 @@ out["J_real"] = dict(j_glob=J[0], j_plane=J[1],
                            " решение по j_paired против собственного shuffled-бейслайна")
 print("J real:", J, "| j_paired:", jp, flush=True)
 
-json.dump(out, open(os.path.join(HERE, "..", "results", "exp55_stage0.json"), "w"), indent=1, default=float)
+json.dump(out, open(os.path.join(HERE, "..", "..", "results", "exp55_stage0.json"), "w"), indent=1, default=float)
 print("saved -> results/exp55_stage0.json", flush=True)

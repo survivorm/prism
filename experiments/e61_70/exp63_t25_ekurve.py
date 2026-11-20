@@ -7,7 +7,10 @@ blk32-нуля (тот убивает весь порядок >32 по пост�
 import json, os, sys
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ.setdefault(v,"1")
 import numpy as np
-sys.path.insert(0,'.')
+_HERE = os.path.dirname(os.path.abspath(__file__))
+os.chdir(os.path.join(_HERE, ".."))   # = experiments/, чтобы "../results" -> <repo>/results
+os.makedirs(os.path.join(_HERE, "..", "..", "results", "e63"), exist_ok=True)   # каталога results/e63 в репо нет
+sys.path.insert(0, _HERE)
 from exp62_batt_lib import curve_u  # тот же оценщик касательных
 
 NPZ="/data/prism_kernels/exp62/gen_layers_qwen.npz"; L="23"
@@ -85,5 +88,5 @@ for dm in ["all"]+["wiki","math","code","chat"]:
              "seg":segs}
     print(dm,"E(real-blk32) med by seg:",segs,flush=True)
 res={"seg_E":out,"curves_k1_96":{f:{n:list(np.round(curves[f][n],4)) for n in names} for f in fams}}
-json.dump(res,open("../results/e63/t25_ekurve.json","w"))
+json.dump(res,open("../results/e63/t25_ekurve.json","w"), default=float)
 print("saved t25_ekurve.json")

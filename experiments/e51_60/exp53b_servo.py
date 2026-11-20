@@ -9,6 +9,8 @@
 Данные: /data/prism_kernels/exp47b (T=384, d=1024, 64 дока).
 """
 import os
+import os as _os
+_RES = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))), "results")
 for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(_v, "1")
 import json
@@ -24,7 +26,7 @@ LAGS = (1, 2, 3, 4, 8, 16)
 
 def load_real():
     z = np.load("/data/prism_kernels/exp47b/exp47b_gen_kinematics.npz", allow_pickle=True)
-    docs = json.load(open("../results/exp47b_gen_kinematics.json"))["docs"]
+    docs = json.load(open(_RES + "/exp47b_gen_kinematics.json"))["docs"]
     out = []
     for d in docs:
         k = f"{d['dom']}_{d['si']}"
@@ -390,7 +392,7 @@ def main():
     out["stage3_pred_curve"] = lag_curve(fit, null=False)
     print("[3] pred", {k: round(v["median"], 4) for k, v in out["stage3_pred_curve"].items()}, flush=True)
 
-    json.dump(out, open("../results/exp53b_servo.json", "w"), indent=1, ensure_ascii=False)
+    json.dump(out, open(_RES + "/exp53b_servo.json", "w"), indent=1, ensure_ascii=False)
     print("saved -> results/exp53b_servo.json")
 
 
