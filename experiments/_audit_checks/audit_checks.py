@@ -30,7 +30,9 @@
                             воспроизвелась — см. артефакт (медиана 0.186).
   C6_pinv_conditioning    — E-1/E-5: точность fp32-pinv vs kappa(G):
                             max|GG+ - I| при kappa 5e5 и 3.8e7.
-
+  C7_subspace_overlap_null — E-38g: распределение overlap ||V^T W||_F^2/r1 двух
+                            независимых случайных подпространств (r1=12, r2=102,
+                            D=1024) против наблюдаемого 0.0596 и «окна» кода.
 Все проверки — только numpy/torch, CPU, детерминированы по seed. Артефакт:
 results/_audit_checks/audit_checks.json (+ meta с sha скрипта и started_at).
 """
@@ -277,6 +279,36 @@ def c6_pinv_conditioning(rng: np.random.Generator) -> dict:
     }
 
 
+# ------------------------------------------------------------------- check C7
+def c7_subspace_overlap_null(rng: np.random.Generator, n_draws: int = 2000) -> dict:
+    """E-38g: нуль для overlap = ||V^T W||_F^2 / r1 двух НЕЗАВИСИМЫХ
+    случайных подпространств (r1=12, r2=102 в R^1024). Аналитика E = r2/D,
+    но вердикт карточки («at_random») сравнивает с этим средним БЕЗ разброса.
+    """
+    D, r1, r2 = 1024, 12, 102
+    vals = np.empty(n_draws)
+    for i in range(n_draws):
+        V = np.linalg.qr(rng.standard_normal((D, r1)))[0]
+        W = np.linalg.qr(rng.standard_normal((D, r2)))[0]
+        vals[i] = float(((V.T @ W) ** 2).sum()) / r1
+    obs = 0.05959700668851534                      # artifact exp38g primary median
+    sd = float(vals.std(ddof=1))
+    return {
+        "null": {"mean": float(vals.mean()), "sd": sd,
+                 "q01": float(np.quantile(vals, 0.01)),
+                 "q05": float(np.quantile(vals, 0.05)),
+                 "q99": float(np.quantile(vals, 0.99))},
+        "analytic_r2_over_D": r2 / D,
+        "observed_overlap": obs,
+        "z_vs_null": (obs - float(vals.mean())) / sd,
+        "observed_below_q01": bool(obs < np.quantile(vals, 0.01)),
+        "code_window_at_random": [0.5 * r2 / D, 3.0 * r2 / D],
+        "anticorrelated_branch_threshold": 0.5 * r2 / D,
+        "params": {"D": D, "r1": r1, "r2": r2, "n_draws": n_draws},
+        "audit_claim": {"card_label": "at_random", "card_note": "overlap ~0.1 = random independence"},
+    }
+
+
 # ----------------------------------------------------------------------- main
 def main(argv=None) -> int:
     import argparse
@@ -291,6 +323,7 @@ def main(argv=None) -> int:
     n5 = 8 if a.smoke else 200
     n5_dist = 64 if a.smoke else 4096
     n5_sim = 50 if a.smoke else 2000
+    n7 = 10 if a.smoke else 2000
     t0 = time.time()
     started_at = datetime.now(timezone.utc).isoformat()
     script = os.path.abspath(__file__)
@@ -305,6 +338,7 @@ def main(argv=None) -> int:
         ("C4_rho_null_random_j", lambda: c4_rho_null_random_j(rng, n4)),
         ("C5_degeneracy_noise", lambda: c5_degeneracy_noise(rng, n5, n5_dist, n5_sim)),
         ("C6_pinv_conditioning", lambda: c6_pinv_conditioning(rng)),
+        ("C7_subspace_overlap_null", lambda: c7_subspace_overlap_null(rng, n7)),
     ]
     for name, fn in order:
         ts = time.time()
