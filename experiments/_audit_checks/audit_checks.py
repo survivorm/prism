@@ -30,6 +30,8 @@
                             воспроизвелась — см. артефакт (медиана 0.186).
   C6_pinv_conditioning    — E-1/E-5: точность fp32-pinv vs kappa(G):
                             max|GG+ - I| при kappa 5e5 и 3.8e7.
+  C8_surgery_identity     — E-39a: kappa' dry-run = тождество (V_new _|_ u_t ⇒
+                            разброс 0); principal angles между позициями.
   C7_subspace_overlap_null — E-38g: распределение overlap ||V^T W||_F^2/r1 двух
                             независимых случайных подпространств (r1=12, r2=102,
                             D=1024) против наблюдаемого 0.0596 и «окна» кода.
@@ -309,6 +311,69 @@ def c7_subspace_overlap_null(rng: np.random.Generator, n_draws: int = 2000) -> d
     }
 
 
+# ------------------------------------------------------------------- check C8
+def c8_surgery_identity(rng: np.random.Generator, T: int = 16) -> dict:
+    """E-39a: kappa' dry-run — тождество конструкции, а не измерение физики.
+
+    M_kp = U_top s_top V_new^T + M_rest с ОДНИМ V_new на все позиции. Если
+    V_new _|_ u_t, то V_new — инвариантное правое подпространство
+    J_t' = M_kp (I - u_t u_t^T) с теми же sigma, значит топ-16 правых СВ у всех t
+    ОДНО И ТО ЖЕ V_new, и Procrustes-разброс (kappa') = 0 ТОЧНО. Проверяем это
+    прямым счётом principal angles: (A) V_new _|_ u  (B) V_new произвольный.
+    """
+    K, D, R = 128, 1024, 16
+    Q1 = np.linalg.qr(rng.standard_normal((K, K)))[0]
+    Q2 = np.linalg.qr(rng.standard_normal((D, K)))[0]
+    s = np.concatenate([np.linspace(8.0, 4.0, R), np.linspace(1.0, 0.05, K - R)])
+    M = Q1 @ np.diag(s) @ Q2.T
+    Uk, sk, Vk = np.linalg.svd(M, full_matrices=False)
+    U_top, s_top, V_top = Uk[:, :R], sk[:R], Vk[:R, :].T
+    M_rest = Uk[:, R:] @ np.diag(sk[R:]) @ Vk[R:, :]
+    Uu = rng.standard_normal((T, D))
+    Uu /= np.linalg.norm(Uu, axis=1, keepdims=True)
+    Qu = np.linalg.qr(Uu.T)[0]
+    Pperp = np.eye(D) - Qu @ Qu.T
+
+    def top_right(Mk):
+        out = []
+        for t in range(T):
+            J = Mk @ (np.eye(D) - np.outer(Uu[t], Uu[t]))
+            _, _, Vt = np.linalg.svd(J, full_matrices=False)
+            out.append(Vt[:R, :].T)
+        return out
+
+    def max_angle(Vs):
+        worst = 0.0
+        for i in range(len(Vs)):
+            for j in range(i + 1, len(Vs)):
+                c = np.linalg.svd(Vs[i].T @ Vs[j], compute_uv=False)
+                worst = max(worst, float(np.degrees(np.arccos(np.clip(c.min(), -1, 1)))))
+        return worst
+
+    res = {}
+    for tag, Vn in [("A_perp", np.linalg.qr(Pperp @ rng.standard_normal((D, R)))[0][:, :R]),
+                    ("B_not_perp", np.linalg.qr(rng.standard_normal((D, R)))[0]),
+                    ("C_noop_V_top", V_top)]:
+        Mk = U_top @ np.diag(s_top) @ Vn.T + M_rest
+        Vs = top_right(Mk)
+        res[tag] = {
+            "rho_noise": float(np.mean((Uu @ Vn) ** 2)),
+            "max_angle_deg_between_positions": max_angle(Vs),
+            "max_angle_deg_to_V_new": max(
+                float(np.degrees(np.arccos(np.clip(
+                    np.linalg.svd(V.T @ Vn, compute_uv=False).min(), -1, 1))))
+                for V in Vs),
+        }
+    return {
+        "cases": res,
+        "identity_claim": ("V_new _|_ u_t  =>  топ-16 правых СВ J_t' = V_new для всех t "
+                           "=> Procrustes-разброс kappa' = 0 ТОЧНО (не 'измерение')"),
+        "audit_claim": {"card": "E-39a: flattening 54x (kappa 0.0162 -> 0.00030)",
+                        "card_inference": "основание для E-39c/d/e"},
+        "params": {"K": K, "D": D, "R": R, "T": T},
+    }
+
+
 # ----------------------------------------------------------------------- main
 def main(argv=None) -> int:
     import argparse
@@ -339,6 +404,7 @@ def main(argv=None) -> int:
         ("C5_degeneracy_noise", lambda: c5_degeneracy_noise(rng, n5, n5_dist, n5_sim)),
         ("C6_pinv_conditioning", lambda: c6_pinv_conditioning(rng)),
         ("C7_subspace_overlap_null", lambda: c7_subspace_overlap_null(rng, n7)),
+        ("C8_surgery_identity", lambda: c8_surgery_identity(rng)),
     ]
     for name, fn in order:
         ts = time.time()

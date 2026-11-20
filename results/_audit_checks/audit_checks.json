@@ -3,10 +3,10 @@
   "experiment": "audit_checks (docs/strayed_experiments.md, «проверено исполнением»)",
   "purpose": "воспроизвести из репо ad-hoc числа аудита (замечание внешнего ревью 12.11)",
   "script": "experiments/_audit_checks/audit_checks.py",
-  "script_sha256": "ef16134e131908fda4fd8801777487ceebb05040dd6b096f555ae6685895597d",
+  "script_sha256": "dbd5882729160211b1dd0dab2f1f174e35503bae00fc6b13ca1bea2d25fc33e4",
   "device": "cpu",
   "seed": 4242,
-  "started_at": "2026-11-20T13:45:38.041012+00:00",
+  "started_at": "2026-11-20T13:54:30.780197+00:00",
   "torch": "2.13.0+cu130",
   "numpy": "2.5.2",
   "note": "Числа аудита получены на другой машине/сиде; критерий — не побитовое совпадение, а согласие порядка: см. поле agreement в каждом чеке.",
@@ -27,7 +27,7 @@
     "random_J_E_L_ne_E_S": 1.025,
     "random_J_E_rank_V_minus_2": 3.8e-06
    },
-   "wall_s": 3.91
+   "wall_s": 7.97
   },
   "C2_cosine_floor": {
    "r=16": {
@@ -98,7 +98,7 @@
      "B1B2": 0.0039
     }
    },
-   "wall_s": 6.5
+   "wall_s": 12.28
   },
   "C3_overlap_null": {
    "mean": 0.12489893922501748,
@@ -113,7 +113,7 @@
     "mean": 0.1245,
     "sd": 0.0186
    },
-   "wall_s": 0.2
+   "wall_s": 0.39
   },
   "C4_rho_null_random_j": {
    "p_uniform": {
@@ -132,7 +132,7 @@
    "audit_claim": {
     "p_uniform_mean": 0.023
    },
-   "wall_s": 0.18
+   "wall_s": 0.26
   },
   "C5_degeneracy_noise": {
    "per_draw": {
@@ -175,7 +175,7 @@
     "gap_min_over_sigma1sq": 0.00051,
     "min_ratio_t": 0.051
    },
-   "wall_s": 107.67
+   "wall_s": 152.8
   },
   "C6_pinv_conditioning": {
    "levels": {
@@ -198,7 +198,7 @@
     "kappa_5e5": 0.04,
     "kappa_3.8e7": 0.44
    },
-   "wall_s": 1.8
+   "wall_s": 3.26
   },
   "C7_subspace_overlap_null": {
    "null": {
@@ -227,8 +227,39 @@
     "card_label": "at_random",
     "card_note": "overlap ~0.1 = random independence"
    },
-   "wall_s": 51.91
+   "wall_s": 57.05
+  },
+  "C8_surgery_identity": {
+   "cases": {
+    "A_perp": {
+     "rho_noise": 7.046496416198413e-34,
+     "max_angle_deg_between_positions": 0.05255742705486495,
+     "max_angle_deg_to_V_new": 0.5730301980580239
+    },
+    "B_not_perp": {
+     "rho_noise": 0.0008441216484987881,
+     "max_angle_deg_between_positions": 9.752941152096156,
+     "max_angle_deg_to_V_new": 8.719884057423299
+    },
+    "C_noop_V_top": {
+     "rho_noise": 0.0009723656604554056,
+     "max_angle_deg_between_positions": 10.378683406752836,
+     "max_angle_deg_to_V_new": 9.201317094111541
+    }
+   },
+   "identity_claim": "V_new _|_ u_t  =>  топ-16 правых СВ J_t' = V_new для всех t => Procrustes-разброс kappa' = 0 ТОЧНО (не 'измерение')",
+   "audit_claim": {
+    "card": "E-39a: flattening 54x (kappa 0.0162 -> 0.00030)",
+    "card_inference": "основание для E-39c/d/e"
+   },
+   "params": {
+    "K": 128,
+    "D": 1024,
+    "R": 16,
+    "T": 16
+   },
+   "wall_s": 3.28
   }
  },
- "duration_s": 172.17
+ "duration_s": 237.31
 }
