@@ -1,0 +1,425 @@
+{
+ "broken": [
+  {
+   "file": "experiments/e41_50/exp45_strip_seednull.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'results', 'exp45_damage_vs_structure.partial.json')",
+     "kind": "dir_missing",
+     "line": 9,
+     "resolved": "experiments/results/exp45_damage_vs_structure.partial.json",
+     "segments": [
+      "..",
+      "results",
+      "exp45_damage_vs_structure.partial.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e41_50/exp46_verdicts.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'results', 'exp46_frame_as_memory.json.gz')",
+     "kind": "dir_missing",
+     "line": 26,
+     "resolved": "experiments/results/exp46_frame_as_memory.json.gz",
+     "segments": [
+      "..",
+      "results",
+      "exp46_frame_as_memory.json.gz"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp53c_gamma_fit.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'results', 'exp53b_servo.json')",
+     "kind": "dir_missing",
+     "line": 15,
+     "resolved": "experiments/results/exp53b_servo.json",
+     "segments": [
+      "..",
+      "results",
+      "exp53b_servo.json"
+     ]
+    },
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'results', 'exp53c_gammafit.json')",
+     "kind": "dir_missing",
+     "line": 108,
+     "resolved": "experiments/results/exp53c_gammafit.json",
+     "segments": [
+      "..",
+      "results",
+      "exp53c_gammafit.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp55_jrecal.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'results', 'exp55_sbi_gate.json')",
+     "kind": "file_missing",
+     "line": 57,
+     "resolved": "results/exp55_sbi_gate.json",
+     "segments": [
+      "..",
+      "..",
+      "results",
+      "exp55_sbi_gate.json"
+     ]
+    },
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'results', 'exp55_jrecal.json')",
+     "kind": "file_missing",
+     "line": 96,
+     "resolved": "results/exp55_jrecal.json",
+     "segments": [
+      "..",
+      "..",
+      "results",
+      "exp55_jrecal.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp55_modes.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'results', 'exp55_stage-1.json')",
+     "kind": "file_missing",
+     "line": 256,
+     "resolved": "results/exp55_stage-1.json",
+     "segments": [
+      "..",
+      "..",
+      "results",
+      "exp55_stage-1.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp55_sbi.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'results', 'exp55_sbi_gate.json')",
+     "kind": "file_missing",
+     "line": 181,
+     "resolved": "results/exp55_sbi_gate.json",
+     "segments": [
+      "..",
+      "..",
+      "results",
+      "exp55_sbi_gate.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp60b.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60.json')",
+     "kind": "dir_missing",
+     "line": 19,
+     "resolved": "experiments/results/exp60.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60.json"
+     ]
+    },
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60b.json')",
+     "kind": "dir_missing",
+     "line": 215,
+     "resolved": "experiments/results/exp60b.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60b.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp60c.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60c.json')",
+     "kind": "dir_missing",
+     "line": 107,
+     "resolved": "experiments/results/exp60c.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60c.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp60d.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60b.json')",
+     "kind": "dir_missing",
+     "line": 21,
+     "resolved": "experiments/results/exp60b.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60b.json"
+     ]
+    },
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60d.json')",
+     "kind": "dir_missing",
+     "line": 118,
+     "resolved": "experiments/results/exp60d.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60d.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp60e.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60e.json')",
+     "kind": "dir_missing",
+     "line": 125,
+     "resolved": "experiments/results/exp60e.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60e.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp60f.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60d.json')",
+     "kind": "dir_missing",
+     "line": 17,
+     "resolved": "experiments/results/exp60d.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60d.json"
+     ]
+    },
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60b.json')",
+     "kind": "dir_missing",
+     "line": 18,
+     "resolved": "experiments/results/exp60b.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60b.json"
+     ]
+    },
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60f.json')",
+     "kind": "dir_missing",
+     "line": 89,
+     "resolved": "experiments/results/exp60f.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60f.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp60g.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60g.json')",
+     "kind": "dir_missing",
+     "line": 115,
+     "resolved": "experiments/results/exp60g.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60g.json"
+     ]
+    },
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60d.json')",
+     "kind": "dir_missing",
+     "line": 17,
+     "resolved": "experiments/results/exp60d.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60d.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e51_60/exp60h.py",
+   "paths": [
+    {
+     "depth": 1,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(__file__), '..', 'results', 'exp60h.json')",
+     "kind": "dir_missing",
+     "line": 85,
+     "resolved": "experiments/results/exp60h.json",
+     "segments": [
+      "..",
+      "results",
+      "exp60h.json"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e31_40/exp39_supp_pscale_probe.py",
+   "paths": [
+    {
+     "depth": 2,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'results')",
+     "kind": "file_missing",
+     "line": 26,
+     "resolved": "experiments/results",
+     "segments": [
+      "results"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "experiments/e61_70/exp64_mark.py",
+   "paths": [
+    {
+     "depth": 2,
+     "exists": false,
+     "expr": "os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'results/e64/e64c_markov.json')",
+     "kind": "dir_missing",
+     "line": 83,
+     "resolved": "experiments/results/e64/e64c_markov.json",
+     "segments": [
+      "results/e64/e64c_markov.json"
+     ]
+    }
+   ]
+  }
+ ],
+ "broken_unique_targets": {
+  "experiments/results": [
+   "experiments/e31_40/exp39_supp_pscale_probe.py:26"
+  ],
+  "experiments/results/e64/e64c_markov.json": [
+   "experiments/e61_70/exp64_mark.py:83"
+  ],
+  "experiments/results/exp45_damage_vs_structure.partial.json": [
+   "experiments/e41_50/exp45_strip_seednull.py:9"
+  ],
+  "experiments/results/exp46_frame_as_memory.json.gz": [
+   "experiments/e41_50/exp46_verdicts.py:26"
+  ],
+  "experiments/results/exp53b_servo.json": [
+   "experiments/e51_60/exp53c_gamma_fit.py:15"
+  ],
+  "experiments/results/exp53c_gammafit.json": [
+   "experiments/e51_60/exp53c_gamma_fit.py:108"
+  ],
+  "experiments/results/exp60.json": [
+   "experiments/e51_60/exp60b.py:19"
+  ],
+  "experiments/results/exp60b.json": [
+   "experiments/e51_60/exp60b.py:215",
+   "experiments/e51_60/exp60d.py:21",
+   "experiments/e51_60/exp60f.py:18"
+  ],
+  "experiments/results/exp60c.json": [
+   "experiments/e51_60/exp60c.py:107"
+  ],
+  "experiments/results/exp60d.json": [
+   "experiments/e51_60/exp60d.py:118",
+   "experiments/e51_60/exp60f.py:17",
+   "experiments/e51_60/exp60g.py:17"
+  ],
+  "experiments/results/exp60e.json": [
+   "experiments/e51_60/exp60e.py:125"
+  ],
+  "experiments/results/exp60f.json": [
+   "experiments/e51_60/exp60f.py:89"
+  ],
+  "experiments/results/exp60g.json": [
+   "experiments/e51_60/exp60g.py:115"
+  ],
+  "experiments/results/exp60h.json": [
+   "experiments/e51_60/exp60h.py:85"
+  ],
+  "results/exp55_jrecal.json": [
+   "experiments/e51_60/exp55_jrecal.py:96"
+  ],
+  "results/exp55_sbi_gate.json": [
+   "experiments/e51_60/exp55_jrecal.py:57",
+   "experiments/e51_60/exp55_sbi.py:181"
+  ],
+  "results/exp55_stage-1.json": [
+   "experiments/e51_60/exp55_modes.py:256"
+  ]
+ },
+ "checked": 353,
+ "with_file_paths": 76
+}
