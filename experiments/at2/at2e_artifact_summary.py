@@ -10,14 +10,20 @@ N2 — единый критерий verify["mode"], явные скобки, м
      (единый критерий: verify["mode"] ∈ {normal, denom_below_floor}),
      κ-статистики по всем k (сырые s_k — БЕЗ шумовой классификации: S_floor,k
      в артефакте r3 отсутствует — measure_floor сохраняет только q(k=0);
-     самокалибруемый запас — только в r4, TZ r6 п.4), pre-U1 контрфактуал
-     (L1+L2 без κ-конъюнкции);
+     самокалибруемый запас — только в r4, TZ r6 п.4), linear_ok_pre_U1
+     (пересчёт ЛИНЕЙНОГО гейта L1+L2 без κ-конъюнкции; не «клетка прошла бы»);
   3. ascent_table — 16 клеток: t/t'-подъёмы (converged, stop, gnorm — на
      состоянии стопа / ПОСЛЕДНИЙ ИЗМЕРЕННЫЙ для не-сошедшихся), gain_t /
      gain_tprime (λ(v*)/λ(v0) — собственный выигрыш подъёма), gain_1st_step,
-     needed_tprime = gap/GAP_MARGIN (во сколько раз должен вырасти
-     знаменатель для 1d-pass), pencil/λ(v*) (Rayleigh-Ritz-сертификат),
-     1d gap, ratio λ(v*;t')/λ(v*_t';t') = 1/gap (точно из артефакта).
+     needed_tprime = gap/GAP_MARGIN (требуемый множитель: >1 — подъём нужен;
+     <1 — уже pass с запасом), pencil/λ(v*) (Rayleigh-Ritz-сертификат),
+     1d gap, ratio_tprime_to_tstar = 1/gap = λ(v*_{t′};t′)/λ(v*;t′)
+     (точно из артефакта; р7 M1: имя/комментарий раньше были инвертированы),
+     stop_iter_tprime (r3: выведено — при conv: n_traj+1, иначе None);
+  4. run_summary: global_under_r6_tree (машинная метка r3 по новому дереву —
+     р8: иначе N1 в новом месте), gaps_to_labels.blockers, и
+     tprime_fix_monotonicity (формальное свойство: t'-фикс монотонен —
+     только добавляет кандидатов; r3 — нижняя граница кандидатного множества).
 
 Использование:
     python3 experiments/at2/at2e_artifact_summary.py <путь к артефакту.json>
@@ -70,7 +76,9 @@ def run_summary(d):
                 if c["verify"]["denom_gate_cell"] and c["verify"]["companion_ok"]
                 and c["verdict"] != "NOT_TESTABLE")
     n_ps = sum(1 for c in cells if c.get("pos_spec"))
-    # контрфактуалы до меток §5
+    # контрфактуалы до меток §5 (+ blockers — р8: где стоит 0, а есть блокер)
+    def _blockers():
+        return [f"n_found_sho={n_found_sho}≠0"] if n_found_sho > 0 else []
     gaps = {
         "SCRATCHPAD_CANDIDATE": {
             "n_found_sho": max(0, 4 - n_found_sho),
@@ -78,12 +86,57 @@ def run_summary(d):
             "docs": max(0, 2 - len(docs_found)),
         },
         "POSITION_GENERIC_DOMINANT": {"n_found_sho": max(0, 1 - n_found_sho),
-                                      "n_pg": max(0, 8 - n_pg)},
+                                      "n_pg": max(0, 8 - n_pg),
+                                      "blockers": _blockers()},
         "REDUNDANT_DOMINANT": {"n_found_sho": max(0, 1 - n_found_sho),
-                               "n_red": max(0, 8 - n_red)},
+                               "n_red": max(0, 8 - n_red),
+                               "blockers": _blockers()},
         "NOT_FOUND_IN_SUBSPACE": {"n_found_sho": max(0, 1 - n_found_sho),
-                                  "n_ok8": max(0, 8 - n_ok8)},
+                                  "n_ok8": max(0, 8 - n_ok8),
+                                  "blockers": _blockers()},
     }
+    # р6-дерево (р7 п.3): + SUB_THRESHOLD_FOUND (n_found_sho>=1, n_found>=1,
+    # docs>=1) перед старыми ветками; r3 по нему — вычисляется машинно,
+    # не из прозы (р8: иначе N1 в новом месте)
+    if n_found_sho >= 4 and len(found) >= 2 and len(docs_found) >= 2:
+        g_r6 = "SCRATCHPAD_CANDIDATE"
+    elif n_found_sho >= 1 and len(found) >= 1 and len(docs_found) >= 1:
+        g_r6 = "SUB_THRESHOLD_FOUND"
+    elif n_found_sho == 0 and n_pg >= 8:
+        g_r6 = "POSITION_GENERIC_DOMINANT"
+    elif n_found_sho == 0 and n_red >= 8:
+        g_r6 = "REDUNDANT_DOMINANT"
+    elif n_found_sho == 0 and n_ok8 >= 8 and n_pg < 8 and n_red < 8:
+        g_r6 = "NOT_FOUND_IN_SUBSPACE"
+    else:
+        g_r6 = "NOT_RESOLVED"
+    # т'-фикс монотонен (р8 §3): больше поиска в t' ⇒ λ(v*_t')↑ ⇒ gap↓ ⇒
+    # pass легче. Кандидаты, у которых t'-подъём полный (траектория
+    # не изменится после фикса) ИЛИ уже pass с gain=1.0 — робастны;
+    # PG-клетки с gain=1.0 — их gap = ВЕРХНЯЯ граница (могут pass).
+    # t-фикс НЕ монотонен по v*, но на r3 данных трогает только
+    # early-stop клетки (все blocked или rank1_K1=0) — тоже только добавляет.
+    mono = {"robust_found_sho": [], "pg_upper_bound_gap": [],
+            "t_ascent_early_stop_cells": []}
+    for c in cells:
+        s1d = c.get("stage1d")
+        a = c["ascent"]
+        if a["ascent_converged"] and len(a["traj"]) == 0:
+            mono["t_ascent_early_stop_cells"].append(f"c{c['cell_id']}")
+        if s1d is None:
+            continue
+        atp = s1d["ascent_tprime"]
+        tp_early = bool(atp["ascent_converged"] and len(atp["traj"]) == 0)
+        gap = s1d["gap"]
+        if c["verdict"] in ("FOUND", "SHORT_HORIZON_ONLY") and \
+                (not tp_early or (gap is not None and gap < GAP_MARGIN)):
+            mono["robust_found_sho"].append(f"c{c['cell_id']}")
+        elif c["verdict"] == "POSITION_GENERIC" and tp_early:
+            mono["pg_upper_bound_gap"].append(f"c{c['cell_id']}")
+    mono["property"] = ("t'-фикс монотонен (больше поиска ⇒ gap падает ⇒ "
+                        "pass легче): текущие FOUND/SHO робастны, PG с "
+                        "gain=1.0 имеют gap-верхнюю границу — r3 = нижняя "
+                        "граница кандидатного множества по t'-оси")
     return {"per_cell": {f"c{c['cell_id']}": f"{c['doc']} L{c['L']} t{c['t']}={c['verdict']}"
                          for c in cells},
             "n_found": len(found), "n_sho": len(sho), "n_found_sho": n_found_sho,
@@ -91,7 +144,9 @@ def run_summary(d):
             "n_not_testable": n_nt, "n_not_found": n_nf, "n_ok8": n_ok8,
             "pos_spec_n": n_ps,
             "global": d["verdicts"]["global"], "final": d["verdicts"]["final"],
+            "global_under_r6_tree": g_r6,
             "gaps_to_labels": gaps,
+            "tprime_fix_monotonicity": mono,
             "ascent_not_converged_n": sum(
                 1 for c in cells if not c["ascent"]["ascent_converged"]),
             # r3: точные early_stop_iter t'-подъёма не в артефакте (N3);
@@ -153,7 +208,8 @@ def linear_gate_decomp(d):
         stats = {str(k): round(float(abs(2.0 * per["kappa"][str(k)]
                                         - per["q"][str(k)]) / max(per["q"][str(k)], fq)), 4)
                  for k in range(9)}
-        # pre-U1 контрфактуал (L1+L2 без κ-конъюнкции) — тем же критерием (mode)
+        # linear_ok_pre_U1: пересчёт ЛИНЕЙНОГО гейта (L1+L2 без κ) — тем же
+        # критерием (mode); клетка всё равно может пасть по denom/fallback
         if mode == "normal":
             pre_u1 = bool(l1 <= L1_MAX and L2_MIN <= l2 <= L2_MAX)
         else:
@@ -161,7 +217,9 @@ def linear_gate_decomp(d):
         out[f"c{c['cell_id']}"] = {
             "cell": f"{c['doc']} L{c['L']} t{c['t']}", "mode": mode,
             "sub_gates": sub, "kappa_stats_per_k": stats,
-            "pre_U1_counterfactual": pre_u1,
+            # р8: pre-U1 = пересчёт ЛИНЕЙНОГО гейта (L1+L2 без κ) — клетка всё
+            # равно может пасть по denom/fallback; имя без «прошла бы»
+            "linear_ok_pre_U1": pre_u1,
             "linear_ok": lin["ok"]}
     return out
 
@@ -209,10 +267,16 @@ def ascent_table(d):
                 "gain_tprime": lam_vs_tp / lam_v0_tp,
                 "gain_1st_step_tprime": (atp["traj"][0]["lambda_K1"] / lam_v0_tp
                                          if atp["traj"] else None),
-                # 1/gap = λ(v*;t')/λ(v*_t';t') — точно из артефакта (числитель gap)
-                "ratio_tstar_to_tprime": (1.0 / gap if gap else None),
-                # во сколько раз λ(v*_t') должен вырасти ДОПОЛНИТЕЛЬНО для 1d-pass
+                # r8 M1: 1/gap = λ(v*_{t′};t′)/λ(v*;t′) — tprime over tstar
+                # (ранее имя/комментарий были инвертированы)
+                "ratio_tprime_to_tstar": (1.0 / gap if gap else None),
+                # требуемый множитель: во сколько раз λ(v*_t';t') должен
+                # превзойти λ(v*;t') для 1d-pass; >1 — нужен рост, <1 — pass
+                # с запасом (c15: 0.513 = уже pass, c0: 0.064 = pass с запасом)
                 "needed_tprime": (gap / GAP_MARGIN if gap else None),
+                # r8: выведено бесплатно (N3-часть): conv=True ⇒ записей
+                # i−1 ⇒ stop_iter = n_traj+1 (0→1, 7→8); не-conv → None
+                "stop_iter_tprime": (n + 1 if tp_conv else None),
                 "gap_1d": gap,
                 "near_threshold": s1d.get("near_threshold_flag"),
             }

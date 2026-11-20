@@ -34,6 +34,7 @@
   "pos_spec_n": 12,
   "global": "NOT_RESOLVED",
   "final": "NOT_RESOLVED",
+  "global_under_r6_tree": "SUB_THRESHOLD_FOUND",
   "gaps_to_labels": {
    "SCRATCHPAD_CANDIDATE": {
     "n_found_sho": 1,
@@ -42,16 +43,47 @@
    },
    "POSITION_GENERIC_DOMINANT": {
     "n_found_sho": 0,
-    "n_pg": 4
+    "n_pg": 4,
+    "blockers": [
+     "n_found_sho=3≠0"
+    ]
    },
    "REDUNDANT_DOMINANT": {
     "n_found_sho": 0,
-    "n_red": 8
+    "n_red": 8,
+    "blockers": [
+     "n_found_sho=3≠0"
+    ]
    },
    "NOT_FOUND_IN_SUBSPACE": {
     "n_found_sho": 0,
-    "n_ok8": 0
+    "n_ok8": 0,
+    "blockers": [
+     "n_found_sho=3≠0"
+    ]
    }
+  },
+  "tprime_fix_monotonicity": {
+   "robust_found_sho": [
+    "c0",
+    "c8",
+    "c15"
+   ],
+   "pg_upper_bound_gap": [
+    "c2",
+    "c10",
+    "c4",
+    "c7"
+   ],
+   "t_ascent_early_stop_cells": [
+    "c3",
+    "c11",
+    "c5",
+    "c13",
+    "c6",
+    "c14"
+   ],
+   "property": "t'-фикс монотонен (больше поиска ⇒ gap падает ⇒ pass легче): текущие FOUND/SHO робастны, PG с gain=1.0 имеют gap-верхнюю границу — r3 = нижняя граница кандидатного множества по t'-оси"
   },
   "ascent_not_converged_n": 10,
   "tprime_early_stop_n": 6
@@ -94,7 +126,7 @@
     "7": 0.2444,
     "8": 0.7076
    },
-   "pre_U1_counterfactual": true,
+   "linear_ok_pre_U1": true,
    "linear_ok": false
   },
   "c9": {
@@ -135,7 +167,7 @@
     "7": 0.5463,
     "8": 0.8192
    },
-   "pre_U1_counterfactual": true,
+   "linear_ok_pre_U1": true,
    "linear_ok": false
   },
   "c3": {
@@ -179,7 +211,7 @@
     "7": 2.0003,
     "8": 0.2554
    },
-   "pre_U1_counterfactual": true,
+   "linear_ok_pre_U1": true,
    "linear_ok": false
   },
   "c11": {
@@ -222,7 +254,7 @@
     "7": 1.9698,
     "8": 0.039
    },
-   "pre_U1_counterfactual": true,
+   "linear_ok_pre_U1": true,
    "linear_ok": false
   },
   "c12": {
@@ -262,7 +294,7 @@
     "7": 0.802,
     "8": 0.0447
    },
-   "pre_U1_counterfactual": true,
+   "linear_ok_pre_U1": true,
    "linear_ok": false
   },
   "c13": {
@@ -303,7 +335,7 @@
     "7": 0.0107,
     "8": 0.5368
    },
-   "pre_U1_counterfactual": true,
+   "linear_ok_pre_U1": true,
    "linear_ok": false
   },
   "c6": {
@@ -342,7 +374,7 @@
     "7": 0.3922,
     "8": 0.0377
    },
-   "pre_U1_counterfactual": false,
+   "linear_ok_pre_U1": false,
    "linear_ok": false
   }
  },
@@ -376,8 +408,9 @@
     "lambda_vstar_tprime": 5.4416753127512605,
     "gain_tprime": 24.673919140469074,
     "gain_1st_step_tprime": 3.1706552509523167,
-    "ratio_tstar_to_tprime": 51.85714764432253,
+    "ratio_tprime_to_tstar": 51.85714764432253,
     "needed_tprime": 0.0642791492543319,
+    "stop_iter_tprime": null,
     "gap_1d": 0.019283744776299568,
     "near_threshold": false
    }
@@ -411,8 +444,9 @@
     "lambda_vstar_tprime": 1.9583180567283998,
     "gain_tprime": 22.765261208659332,
     "gain_1st_step_tprime": 0.42165508742562646,
-    "ratio_tstar_to_tprime": 114.85009138956796,
+    "ratio_tprime_to_tstar": 114.85009138956796,
     "needed_tprime": 0.029023340713128124,
+    "stop_iter_tprime": null,
     "gap_1d": 0.008707002213938437,
     "near_threshold": false
    }
@@ -446,8 +480,9 @@
     "lambda_vstar_tprime": 7.083507148121172,
     "gain_tprime": 25.167083415968822,
     "gain_1st_step_tprime": 3.594016402346401,
-    "ratio_tstar_to_tprime": 60.4003847447831,
+    "ratio_tprime_to_tstar": 60.4003847447831,
     "needed_tprime": 0.05518728642901964,
+    "stop_iter_tprime": null,
     "gap_1d": 0.01655618592870589,
     "near_threshold": false
    }
@@ -481,8 +516,9 @@
     "lambda_vstar_tprime": 2.695319449383011,
     "gain_tprime": 37.906753932797635,
     "gain_1st_step_tprime": 0.5442890695389596,
-    "ratio_tstar_to_tprime": 216.47364435685117,
+    "ratio_tprime_to_tstar": 216.47364435685117,
     "needed_tprime": 0.015398333331693813,
+    "stop_iter_tprime": null,
     "gap_1d": 0.004619499999508144,
     "near_threshold": false
    }
@@ -516,8 +552,9 @@
     "lambda_vstar_tprime": 0.0050152380992403624,
     "gain_tprime": 1.0,
     "gain_1st_step_tprime": null,
-    "ratio_tstar_to_tprime": 0.43876323787638577,
+    "ratio_tprime_to_tstar": 0.43876323787638577,
     "needed_tprime": 7.597111712154072,
+    "stop_iter_tprime": 1,
     "gap_1d": 2.2791335136462214,
     "near_threshold": false
    }
@@ -575,8 +612,9 @@
     "lambda_vstar_tprime": 0.013580568352286796,
     "gain_tprime": 1.0,
     "gain_1st_step_tprime": null,
-    "ratio_tstar_to_tprime": 0.9344047227824668,
+    "ratio_tprime_to_tstar": 0.9344047227824668,
     "needed_tprime": 3.5673335676293956,
+    "stop_iter_tprime": 1,
     "gap_1d": 1.0702000702888186,
     "near_threshold": false
    }
@@ -634,8 +672,9 @@
     "lambda_vstar_tprime": 2.8017229814136893,
     "gain_tprime": 1.0,
     "gain_1st_step_tprime": null,
-    "ratio_tstar_to_tprime": 2.8362299549211256,
+    "ratio_tprime_to_tstar": 2.8362299549211256,
     "needed_tprime": 1.1752690671465784,
+    "stop_iter_tprime": 1,
     "gap_1d": 0.3525807201439735,
     "near_threshold": true
    }
@@ -693,8 +732,9 @@
     "lambda_vstar_tprime": 1.3198877921065553,
     "gain_tprime": 1.0,
     "gain_1st_step_tprime": null,
-    "ratio_tstar_to_tprime": 1.3409840855701485,
+    "ratio_tprime_to_tstar": 1.3409840855701485,
     "needed_tprime": 2.485736683382111,
+    "stop_iter_tprime": 1,
     "gap_1d": 0.7457210050146332,
     "near_threshold": false
    }
@@ -776,8 +816,9 @@
     "lambda_vstar_tprime": 0.2900797836041734,
     "gain_tprime": 1.0,
     "gain_1st_step_tprime": null,
-    "ratio_tstar_to_tprime": 2.2427532670871946,
+    "ratio_tprime_to_tstar": 2.2427532670871946,
     "needed_tprime": 1.4862684104625312,
+    "stop_iter_tprime": 1,
     "gap_1d": 0.44588052313875937,
     "near_threshold": true
    }
@@ -835,8 +876,9 @@
     "lambda_vstar_tprime": 0.33072568662564683,
     "gain_tprime": 1.0,
     "gain_1st_step_tprime": null,
-    "ratio_tstar_to_tprime": 6.495768314571688,
+    "ratio_tprime_to_tstar": 6.495768314571688,
     "needed_tprime": 0.5131545910983009,
+    "stop_iter_tprime": 1,
     "gap_1d": 0.15394637732949026,
     "near_threshold": false
    }
